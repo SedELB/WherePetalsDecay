@@ -46,9 +46,10 @@ describe('MainPageComponent', () => {
     });
 
     it('should have three menu buttons', () => {
-        const compiled = fixture.nativeElement;
-        const buttons = compiled.querySelectorAll('.menu-button');
-        expect(buttons.length).toBe(3);
+    const expectedButtonCount = 3;
+    const compiled = fixture.nativeElement;
+    const buttons = compiled.querySelectorAll('.menu-button');
+    expect(buttons.length).toBe(expectedButtonCount);
     });
 
     it('should have the "Joindre une partie" button disabled', () => {
