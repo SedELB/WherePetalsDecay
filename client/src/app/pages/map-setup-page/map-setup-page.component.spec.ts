@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ManagerPageComponent } from './admin-page.component';
+import { MapSetupPageComponent } from './map-setup-page.component';
 
-describe('ManagerPageComponent', () => {
-  let component: ManagerPageComponent;
-  let fixture: ComponentFixture<ManagerPageComponent>;
+describe('MapSetupPageComponent', () => {
+  let component: MapSetupPageComponent;
+  let fixture: ComponentFixture<MapSetupPageComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ManagerPageComponent]
+      imports: [MapSetupPageComponent]
     })
       .compileComponents();
 
-    fixture = TestBed.createComponent(ManagerPageComponent);
+    fixture = TestBed.createComponent(MapSetupPageComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
