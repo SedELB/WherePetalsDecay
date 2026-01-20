@@ -8,10 +8,10 @@ import { RouterLink } from '@angular/router';
     imports: [RouterLink],
 })
 export class MainPageComponent {
-    readonly gameTitle: string = 'Nom du Jeu';
-    
-    readonly teamNumber: string = '310 ?';
-    
+    readonly gameTitle: string = 'GrimStone';
+
+    readonly teamNumber: string = '310';
+
     readonly teamMembers: string[] = [
         'Aymene Adaouri',
         'Aly Abdoulaye-Idriss',
