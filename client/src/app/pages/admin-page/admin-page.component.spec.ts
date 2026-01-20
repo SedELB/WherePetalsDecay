@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ManagerPageComponent } from './manager-page.component';
+import { ManagerPageComponent } from './admin-page.component';
 
 describe('ManagerPageComponent', () => {
   let component: ManagerPageComponent;
