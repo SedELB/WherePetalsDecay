@@ -7,31 +7,10 @@
 
 <body>
     <button class="button" routerLink="/home">Retour</button>
-    <div class="game-list-container">
-        <div class="game-card">
-            <div class="image-frame">
-                <img class="thumbnail" src="../../../assets/filler.png" alt="gojo sensei">
-            </div>
-            <div class="card-info">
-                <ul>
-                    <li>Nom</li>
-                    <li>Taille</li>
-                    <li>Mode de jeu</li>
-                    <li>Date de Modification</li>
-                </ul>
-                <div class="card-buttons">
-                    <button class="button">modifier</button>
-                    <button class="button">caché</button>
-                    <button class="button">supprimer</button>
-                </div>
-            </div>
-        </div>
-        <div class="game-card">
-            Carte!
-        </div>
-        <div class="game-card">
-            Carte!
-        </div>
-    </div>
+    <ul class="game-list-container">
+        <li><app-game-card></app-game-card></li>
+        <li><app-game-card></app-game-card></li>
+        <li><app-game-card></app-game-card></li>
+    </ul>
 </body>
 </html>
