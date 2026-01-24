@@ -1,0 +1,16 @@
+@use "../../../const.scss" as *;
+
+
+.button {
+    color: $text-color;
+    background-color: $rose-button;
+    font-size: large;
+    border-radius: 15px;
+    width: auto;
+    height: auto;
+    padding: 10px;
+}
+
+.disabled {
+    opacity: 0.5;
+}

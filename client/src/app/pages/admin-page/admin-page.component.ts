@@ -1,10 +1,11 @@
 import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
+import { ButtonComponent } from '@app/components/button/button.component';
 
 @Component({
   selector: 'app-admin-page',
-  imports: [RouterLink, GameCardComponent],
+  imports: [GameCardComponent, ButtonComponent],
   templateUrl: './admin-page.component.html',
   styleUrl: './admin-page.component.scss',
 })

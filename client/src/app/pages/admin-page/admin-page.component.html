@@ -6,8 +6,8 @@
 </head>
 
 <body>
-    <button class="button" routerLink="/home">Retour</button>
-    <ul class="game-list-container">
+    <app-button [width]="100" [route]="'/home'">Retour</app-button>
+    <ul class="list-container">
         <li><app-game-card></app-game-card></li>
         <li><app-game-card></app-game-card></li>
         <li><app-game-card></app-game-card></li>
