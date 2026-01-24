@@ -1,34 +1,14 @@
-import { HttpResponse } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Routes, provideRouter } from '@angular/router';
-import { MainPageComponent } from '@app/pages/main-page/main-page.component';
-import { CommunicationService } from '@app/services/communication.service';
-import { of, throwError } from 'rxjs';
-import SpyObj = jasmine.SpyObj;
-
-const routes: Routes = [];
+import { MainPageComponent } from './main-page.component';
+import { RouterTestingModule } from '@angular/router/testing';
 
 describe('MainPageComponent', () => {
     let component: MainPageComponent;
     let fixture: ComponentFixture<MainPageComponent>;
-    let communicationServiceSpy: SpyObj<CommunicationService>;
 
     beforeEach(async () => {
-        communicationServiceSpy = jasmine.createSpyObj('ExampleService', ['basicGet', 'basicPost']);
-        communicationServiceSpy.basicGet.and.returnValue(of({ title: '', body: '' }));
-        communicationServiceSpy.basicPost.and.returnValue(of(new HttpResponse<string>({ status: 201, statusText: 'Created' })));
-
         await TestBed.configureTestingModule({
-            imports: [MainPageComponent],
-            providers: [
-                {
-                    provide: CommunicationService,
-                    useValue: communicationServiceSpy,
-                },
-                provideHttpClientTesting(),
-                provideRouter(routes),
-            ],
+            imports: [MainPageComponent, RouterTestingModule],
         }).compileComponents();
     });
 
@@ -42,34 +22,39 @@ describe('MainPageComponent', () => {
         expect(component).toBeTruthy();
     });
 
-    it("should have as title 'LOG2995'", () => {
-        expect(component.title).toEqual('LOG2995');
+    it('should have a game title', () => {
+        expect(component.gameTitle).toBeDefined();
     });
 
-    it('should call basicGet when calling getMessagesFromServer', () => {
-        component.getMessagesFromServer();
-        expect(communicationServiceSpy.basicGet).toHaveBeenCalled();
+    it('should have a team number', () => {
+        expect(component.teamNumber).toBeDefined();
     });
 
-    it('should call basicPost when calling sendTimeToServer', () => {
-        component.sendTimeToServer();
-        expect(communicationServiceSpy.basicPost).toHaveBeenCalled();
+    it('should have team members', () => {
+        expect(component.teamMembers).toBeDefined();
+        expect(component.teamMembers.length).toBeGreaterThan(0);
     });
 
-    it('should handle basicPost that returns a valid HTTP response', () => {
-        component.sendTimeToServer();
-        component.message.subscribe((res) => {
-            expect(res).toContain('201 : Created');
-        });
+    it('should display the game title in the template', () => {
+        const compiled = fixture.nativeElement;
+        expect(compiled.querySelector('.game-title').textContent).toContain(component.gameTitle);
     });
 
-    it('should handle basicPost that returns an invalid HTTP response', () => {
-        communicationServiceSpy.basicPost.and.returnValue(throwError(() => new Error('test')));
-        component.sendTimeToServer();
-        component.message.subscribe({
-            next: (res) => {
-                expect(res).toContain('Le serveur ne répond pas');
-            },
-        });
+    it('should display team information in the template', () => {
+        const compiled = fixture.nativeElement;
+        expect(compiled.querySelector('.team-info')).toBeTruthy();
+    });
+
+    it('should have three menu buttons', () => {
+    const expectedButtonCount = 3;
+    const compiled = fixture.nativeElement;
+    const buttons = compiled.querySelectorAll('.menu-button');
+    expect(buttons.length).toBe(expectedButtonCount);
+    });
+
+    it('should have the "Joindre une partie" button disabled', () => {
+        const compiled = fixture.nativeElement;
+        const buttons = compiled.querySelectorAll('.menu-button');
+        expect(buttons[0].disabled).toBeTrue();
     });
 });
