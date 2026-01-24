@@ -2,10 +2,11 @@ import { provideHttpClient } from '@angular/common/http';
 import { enableProdMode, enableProfiling, provideZoneChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { Routes, provideRouter, withHashLocation } from '@angular/router';
+import { AdminPageComponent } from '@app/pages/admin-page/admin-page.component';
 import { AppComponent } from '@app/pages/app/app.component';
 import { GamePageComponent } from '@app/pages/game-page/game-page.component';
 import { MainPageComponent } from '@app/pages/main-page/main-page.component';
-import { AdminPageComponent } from '@app/pages/admin-page/admin-page.component';
+import { MapSetupPageComponent } from '@app/pages/map-setup-page/map-setup-page.component';
 import { MaterialPageComponent } from '@app/pages/material-page/material-page.component';
 import { environment } from './environments/environment';
 
@@ -20,6 +21,7 @@ const routes: Routes = [
     { path: 'game', component: GamePageComponent },
     { path: 'material', component: MaterialPageComponent },
     { path: 'admin', component: AdminPageComponent },
+    { path: 'admin/map-setup', component: MapSetupPageComponent },
     { path: '**', redirectTo: '/home' },
 ];
 
