@@ -1,5 +1,7 @@
-import { IsString, MaxLength, IsDate, IsBoolean } from 'class-validator';
+import { IsString, MaxLength, IsBoolean, IsNumber } from 'class-validator';
 import { GAME_NAME_MAX_LENGTH } from './game.dto.constants';
+import { Tile } from '@app/model/schema/game.schema';
+
 
 export class CreateGameDto {
     @IsString()
@@ -7,25 +9,22 @@ export class CreateGameDto {
     name: string;
 
     @IsString()
-    size: string;
-
-    @IsString()
-    _id: string;
+    size: object;
 
     @IsString()
     gameMode: string;
-
-    @IsDate()
-    lastModified: Date;
 
     @IsString()
     thumbnail: string;
 
     // The grid validation will be in the Controller method.
-    grid: number[][];
+    grid: Tile[][];
 
     @IsBoolean()
     isVisible: boolean;
+
+    @IsNumber()
+    maxPlayers: number;
 
     @IsString()
     description: string;
