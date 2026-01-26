@@ -3,9 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Game } from '@app/model/schema/game.schema';
 
-// Schema = template du document
-// Model = objet que Mongoose cree et qui permet linteraction avec mongodb ex. find()
-// represente la collection de Game
+*/
 
 @Injectable()
 export class GameService {
@@ -15,8 +13,12 @@ export class GameService {
         return await this.gameModel.find().exec();
     }
 
-    async getGameById(id: string): Promise<Game> {
-        return await this.gameModel.findOne({ wantedId: id }).exec();
+    async getGameById(wantedId: string): Promise<Game> {
+        return await this.gameModel.findOne({id: wantedId}).exec();
+    }
+
+    async addGame() {
+
     }
 }
 
