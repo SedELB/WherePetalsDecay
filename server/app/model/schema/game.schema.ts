@@ -22,7 +22,7 @@ export class Game {
 
     @Prop({type: [[Number]], required: true}) // verifie que le array dans le array contient un number.
     grid: number[][];
-
+    
 }
 
-export const GameSchema = SchemaFactory.createForClass(Game);
+export const gameSchema = SchemaFactory.createForClass(Game);
