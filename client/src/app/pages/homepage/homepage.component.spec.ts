@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { MainPageComponent } from './main-page.component';
 import { RouterTestingModule } from '@angular/router/testing';
+import { MainPageComponent } from './homepage.component';
 
 describe('MainPageComponent', () => {
     let component: MainPageComponent;
@@ -46,10 +46,10 @@ describe('MainPageComponent', () => {
     });
 
     it('should have three menu buttons', () => {
-    const expectedButtonCount = 3;
-    const compiled = fixture.nativeElement;
-    const buttons = compiled.querySelectorAll('.menu-button');
-    expect(buttons.length).toBe(expectedButtonCount);
+        const expectedButtonCount = 3;
+        const compiled = fixture.nativeElement;
+        const buttons = compiled.querySelectorAll('.menu-button');
+        expect(buttons.length).toBe(expectedButtonCount);
     });
 
     it('should have the "Joindre une partie" button disabled', () => {

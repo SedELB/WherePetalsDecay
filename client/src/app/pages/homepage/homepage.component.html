@@ -5,17 +5,18 @@
     </header>
 
     <nav class="menu-options">
-        <button class="menu-button" disabled title="Disponible prochainement">
+        <app-button [disabled]="true" >
             Joindre une partie
-        </button>
+        </app-button>
 
-        <button class="menu-button" routerLink="/create">
+        <app-button>
             Créer une partie
-        </button>
+        </app-button>
 
-        <button class="menu-button" routerLink="/admin">
+
+        <app-button [route]="'/admin'">
             Administrer les jeux
-        </button>
+        </app-button>
     </nav>
 
     <footer class="team-info">
