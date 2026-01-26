@@ -1,4 +1,4 @@
-import { Prop, Schema, SchemaFactory} from '@nestjs/mongoose';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
 @Schema()
 export class Game {
@@ -23,6 +23,8 @@ export class Game {
     @Prop({type: [[Number]], required: true}) // verifie que le array dans le array contient un number.
     grid: number[][];
 
+    @Prop()
+    isVisible: boolean;
 }
 
-export const GameSchema = SchemaFactory.createForClass(Game);
+export const gameSchema = SchemaFactory.createForClass(Game);
