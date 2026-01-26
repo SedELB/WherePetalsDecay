@@ -1,0 +1,171 @@
+@use "src/const.scss" as *;
+
+.container {
+    background-image: url('/assets/background.png');
+    background-size: cover;
+    min-height: 100vh;
+    padding: 2rem;
+    box-sizing: border-box;
+}
+
+.container > app-button {
+    position: absolute;
+    top: 75px;
+    left: 60px;
+}
+
+h1 {
+    color: $text-color;
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+p {
+    color: $text-color;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.game-selection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 100px;
+}
+
+.character-creation {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 100px;
+}
+
+.form-container {
+    background-color: $transparent-background;
+    border-radius: 20px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 700px;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+
+    label {
+        display: block;
+        color: $text-color;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+
+    input[type="text"] {
+        width: 100%;
+        padding: 0.75rem;
+        font-size: 1rem;
+        border: none;
+        border-radius: 8px;
+        box-sizing: border-box;
+    }
+}
+
+.avatar-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+
+    .avatar-item {
+        cursor: pointer;
+        border: 3px solid transparent;
+        border-radius: 8px;
+        padding: 0.5rem;
+        background-color: $frame-color;
+        transition: all 0.2s ease;
+
+        &:hover {
+            border-color: $rose-button;
+        }
+
+        &.selected {
+            border-color: $green-button;
+        }
+
+        img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+    }
+}
+
+.attributes-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+
+    .attribute {
+        padding: 1rem;
+        background-color: $frame-color;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        text-align: center;
+
+        &.has-bonus {
+            border-color: $green-button;
+        }
+
+        .attribute-name {
+            display: block;
+            color: $text-color;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .attribute-value {
+            display: block;
+            font-size: 2rem;
+            font-weight: bold;
+            color: $text-color;
+            margin: 0.5rem 0;
+        }
+
+        .attribute-dice {
+            display: inline-block;
+            background-color: $rose-button;
+            color: $text-color;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .attribute-description {
+            display: block;
+            font-size: 0.8rem;
+            color: $text-color;
+            opacity: 0.8;
+        }
+    }
+}
+
+.bonus-selection,
+.dice-selection {
+    display: flex;
+    gap: 1rem;
+
+    app-button {
+        flex: 1;
+    }
+}
+
+.random-button {
+    display: flex;
+    justify-content: center;
+    margin: 1.5rem 0;
+}
+
+.navigation-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    justify-content: center;
+}

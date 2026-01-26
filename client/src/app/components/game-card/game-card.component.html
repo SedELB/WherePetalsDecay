@@ -1,18 +1,18 @@
-
-
-<li><div class="game-card">
-    <div class="image-frame">
-        <img class="thumbnail" src="../../../assets/filler.png" alt="reddit">
-    </div>
-    <div class="card-info">
-        <ul>
-            <li>Nom</li>
-            <li>Taille</li>
-            <li>Mode de jeu</li>
-            <li>Date de Modification</li>
-        </ul>
-        <div class="card-buttons">
-            <ng-content></ng-content>
+<li>
+    <div class="game-card">
+        <div class="image-frame">
+            <img class="thumbnail" [src]="image" [alt]="name">
+        </div>
+        <div class="card-info">
+            <ul>
+                <li>{{ name }}</li>
+                <li>{{ size }}</li>
+                <li>{{ mode }}</li>
+                <li>{{ lastModified }}</li>
+            </ul>
+            <div class="card-buttons">
+                <ng-content></ng-content>
+            </div>
         </div>
     </div>
-</div></li>
+</li>

@@ -1,22 +1,24 @@
-// @use "src/const.scss" as *;
+@use "src/const.scss" as *;
 
-
-body {
+.admin-container {
     background-image: url("/assets/background.png");
     background-size: cover;
+    min-height: 100vh;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
+    padding: 2rem;
+    box-sizing: border-box;
 }
 
-body>app-button{
+.admin-container > app-button {
     position: absolute;
     top: 75px;
     left: 60px;
 }
 
-.add-button{
+.add-button {
     width: auto;
     height: auto;
     display: flex;
@@ -24,7 +26,7 @@ body>app-button{
     align-items: center;
     justify-content: center;
 
-    svg{
+    svg {
         width: 30px;  
         height: 30px;
     }
