@@ -1,13 +1,13 @@
 import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ButtonComponent } from '@app/components/button/button.component';
 
 @Component({
     selector: 'app-main-page',
-    templateUrl: './main-page.component.html',
-    styleUrls: ['./main-page.component.scss'],
-    imports: [RouterLink],
+    templateUrl: './homepage.component.html',
+    styleUrls: ['./homepage.component.scss'],
+    imports: [ButtonComponent],
 })
-export class MainPageComponent {
+export class HomePageComponent {
     readonly gameTitle: string = 'GrimStone';
 
     readonly teamNumber: string = '310';
