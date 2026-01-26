@@ -20,8 +20,8 @@ export class Game {
     @Prop()
     thumbnail: string;
 
-    @Prop({type: [[Number]], required: true}) // verifie que le array dans le array contient un number.
-    grid: number[][];
+    @Prop({type: [[Object]], required: true}) // verifie que le array dans le array contient un number.
+    grid: object[][];
 
     @Prop()
     isVisible: boolean;
