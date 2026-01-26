@@ -25,6 +25,7 @@ export class ButtonComponent {
   @Input() disabled: boolean = false;
   @Input() backgroundPath?: string;
   @Input() route?: string;
+  @Input() selected: boolean = false;
 
   // here is what we call a getter in Angular, it acts as an attribute that returns the return value in question
   // For example : this.backgroundImage = "url(random/path)" if i define background path as "random/path"
