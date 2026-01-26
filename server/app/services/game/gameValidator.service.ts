@@ -7,14 +7,13 @@ import { Game } from '@app/model/schema/game.schema';
 export class GameValidatorService {
     constructor(@InjectModel(Game.name) private gameModel: Model<Game>) {}
 
-
     /*
     Tile.type returns a TileType (floor, ice, etc.)
     property: [type, item, doorState]
     returns: occ = {property: no. of occurence}
     ex. {ice: 3, floor: 40, water: 21}
     */
-    countByProperty(game: Game, property: string): object{
+    countByProperty(game: Game, property: string): Record<string, number>{
         const occ = game.grid.flat().reduce((acc, currentObject) => {
             const type = currentObject[property]; // currentObject: Tile
             if (type !== undefined && type !== null) acc[type] = (acc[type] || 0) + 1;
@@ -48,5 +47,5 @@ export class GameValidatorService {
         }
     }
 
-    
+
 }

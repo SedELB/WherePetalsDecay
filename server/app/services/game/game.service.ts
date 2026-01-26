@@ -2,6 +2,7 @@ import { Model } from 'mongoose';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Game } from '@app/model/schema/game.schema';
+import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 
 
 @Injectable()
@@ -25,10 +26,7 @@ export class GameService {
                 gameMode: 'classic',
                 thumbnail: 'hello',
                 maxPlayers: 6,
-                grid:[
-                    [{type:'floor', item: undefined, doorState: undefined}],
-                    ],
-                
+                grid: Array(10).fill(null).map(() => Array(10).fill({type: 'floor'})),
                 isVisible: false,
             },
         ];
