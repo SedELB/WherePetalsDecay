@@ -8,7 +8,8 @@
     [style.width.px]="width" 
     [style.height.px]="height"
     [disabled]="disabled"
-    [ngClass]="{ button: true, disabled: disabled }">
+    [ngClass]="{ button: true, disabled: disabled }"
+    (click)="onClick()">
 
     <ng-content></ng-content>
 

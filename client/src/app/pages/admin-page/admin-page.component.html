@@ -6,25 +6,23 @@
 </head>
 
 <body>
+
     <app-button [width]="100" [route]="'/home'">Retour</app-button>
-    <app-list-container>
-        <app-game-card>
+
+    <div class="list-container" >
+        <app-game-card
+            *ngFor="let game of games"
+            [game]="game"
+            (removeParent)="removeGame(game.id)">
             <app-button [height]="50" [route]="'/editor'">Modifier</app-button>
-            <app-button [height]="50">Cacher</app-button>
-            <app-button [height]="50">Supprimer</app-button>
+            <app-button [height]="50" (clicked)="changeVisibility(game.id)">{{ game.visible ? 'Afficher' : 'Cacher' }}</app-button>
+            <app-button [height]="50" (clicked)="removeGame(game.id)">Supprimer</app-button>
         </app-game-card>
-        <app-game-card>
-            <app-button [height]="50" [route]="'/editor'">Modifier</app-button>
-            <app-button [height]="50">Cacher</app-button>
-            <app-button [height]="50">Supprimer</app-button></app-game-card>
-        <app-game-card>
-            <app-button [height]="50" [route]="'/editor'">Modifier</app-button>
-            <app-button [height]="50">Cacher</app-button>
-            <app-button [height]="50">Supprimer</app-button></app-game-card>
-        <app-button class="add-button" [route]="'/editor'">
+        
+
+        <app-button class="add-button" [route]="'./create'">
             <svg fill="#FFF" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-	            width="800px" height="800px" viewBox="0 0 459.325 459.325"
-	            xml:space="preserve">
+                width="800px" height="800px" viewBox="0 0 459.325 459.325" xml:space="preserve">
                 <g>
                     <path d="M459.319,229.668c0,22.201-17.992,40.193-40.205,40.193H269.85v149.271c0,22.207-17.998,40.199-40.196,40.193
                         c-11.101,0-21.149-4.492-28.416-11.763c-7.276-7.281-11.774-17.324-11.769-28.419l-0.006-149.288H40.181
@@ -34,6 +32,30 @@
                 </g>
             </svg>
         </app-button>
-    </app-list-container>
+
+    </div>
 </body>
 </html>
+<!-- <li><app-game-card #card1>
+            <app-button [height]="50" [route]="'/editor'">Modifier</app-button>
+            <app-button [height]="50" (clicked)="card1.changeVisibility()">
+                {{ card1.hidden ? 'Afficher' : 'Cacher' }}
+            </app-button>
+            <app-button [height]="50" (clicked)="card1.delete()">Supprimer</app-button>
+        </app-game-card></li>
+
+        <li><app-game-card #card2>
+            <app-button [height]="50" [route]="'/editor'">Modifier</app-button>
+            <app-button [height]="50" (clicked)="card2.changeVisibility()">
+                {{ card2.hidden ? 'Afficher' : 'Cacher' }}
+            </app-button>
+            <app-button [height]="50" (clicked)="card2.delete()">Supprimer</app-button>
+        </app-game-card></li>
+
+        <li><app-game-card #card3>
+            <app-button [height]="50" [route]="'/editor'">Modifier</app-button>
+            <app-button [height]="50" (clicked)="card3.changeVisibility()">
+                {{ card3.hidden ? 'Afficher' : 'Cacher' }}
+            </app-button>
+            <app-button [height]="50" (clicked)="card3.delete()">Supprimer</app-button>
+        </app-game-card></li> -->

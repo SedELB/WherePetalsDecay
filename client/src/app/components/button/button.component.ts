@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, EventEmitter, Output } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
@@ -9,6 +9,14 @@ import { RouterLink } from '@angular/router';
   styleUrl: './button.component.scss',
 })
 export class ButtonComponent {
+
+  @Output() clicked = new EventEmitter<void>();
+
+  onClick(){
+    if (!this.disabled){
+      this.clicked.emit();
+    }
+  }
 
   @Input() color: string = 'white';
   @Input() backgroundColor: string = '#95698D';
