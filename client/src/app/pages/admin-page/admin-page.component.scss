@@ -1,4 +1,4 @@
-// @use "src/const.scss" as *;
+@use "src/const.scss" as *;
 
 
 body {
@@ -28,4 +28,19 @@ body>app-button{
         width: 30px;  
         height: 30px;
     }
+}
+
+.list-container {
+    background-color: $transparent-background;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    gap: 10px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: 600px;
+    width: 800px;
+    justify-content: center;
+    align-items: center;
 }

@@ -1,6 +1,6 @@
-@use "../../../const.scss" as *;
+@use "src/const.scss" as *;
 
-.game-card {
+.gameCard {
     background-color: $frame-color;
     display: flex;
     flex-direction: row;
@@ -54,4 +54,16 @@
     border-radius: 15px;
     width: auto;
     height: 50px;
+}
+
+.hidden{
+    background-color: red;
+    transition: all 0.3s ease;
+}
+
+.deleted {
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
 }
