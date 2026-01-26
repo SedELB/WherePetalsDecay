@@ -8,6 +8,7 @@ import { GamePageComponent } from '@app/pages/game-page/game-page.component';
 import { HomePageComponent } from '@app/pages/homepage/homepage.component';
 import { MapSetupPageComponent } from '@app/pages/map-setup-page/map-setup-page.component';
 import { MaterialPageComponent } from '@app/pages/material-page/material-page.component';
+import { EditorPageComponent } from '@app/pages/editor-page/editor-page.component';
 import { environment } from './environments/environment';
 
 if (environment.production) {
@@ -22,6 +23,7 @@ const routes: Routes = [
     { path: 'material', component: MaterialPageComponent },
     { path: 'admin', component: AdminPageComponent },
     { path: 'admin/map-setup', component: MapSetupPageComponent },
+    { path: 'editor', component: EditorPageComponent },
     { path: '**', redirectTo: '/home' },
 ];
 

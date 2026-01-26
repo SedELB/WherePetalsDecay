@@ -16,4 +16,16 @@ body>app-button{
     left: 60px;
 }
 
+.add-button{
+    width: auto;
+    height: auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
 
+    svg{
+        width: 30px;  
+        height: 30px;
+    }
+}
