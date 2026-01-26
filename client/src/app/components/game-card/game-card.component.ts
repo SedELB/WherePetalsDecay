@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 
 @Component({
   selector: 'app-game-card',
@@ -8,5 +8,9 @@ import { Component } from '@angular/core';
   standalone: true,
 })
 export class GameCardComponent {
-
+  @Input() name: string = 'Nom du jeu';
+  @Input() size: string = 'Taille';
+  @Input() mode: string = 'Mode de jeu';
+  @Input() lastModified: string = 'Date de modification';
+  @Input() image: string = 'assets/filler.png';
 }

@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { AdminPageComponent } from './admin-page.component';
+import { WaitingRoomComponent } from './waiting-room.component';
 
-describe('AdminPageComponent', () => {
-    let component: AdminPageComponent;
-    let fixture: ComponentFixture<AdminPageComponent>;
+describe('WaitingRoomComponent', () => {
+    let component: WaitingRoomComponent;
+    let fixture: ComponentFixture<WaitingRoomComponent>;
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
-            imports: [AdminPageComponent],
+            imports: [WaitingRoomComponent],
             providers: [provideRouter([])],
         }).compileComponents();
 
-        fixture = TestBed.createComponent(AdminPageComponent);
+        fixture = TestBed.createComponent(WaitingRoomComponent);
         component = fixture.componentInstance;
         fixture.detectChanges();
     });
