@@ -119,7 +119,6 @@ export class GameCreationComponent {
             this.attackDiceD6,
         );
 
-        console.log('Personnage créé:', this.characterName, this.selectedAvatarIndex, this.lifeBonusSelected, this.attackDiceD6);
-        this.router.navigate([this.routes.WAITING_ROOM]);
+        this.router.navigate([this.routes.waitingRoom]);
     }
 }
