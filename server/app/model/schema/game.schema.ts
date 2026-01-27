@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { GameMode, TileType, DoorState, TileItem } from '@app/model/schema/game.constants';
 
-
+export type GameDocument = Game & Document;
 // TILE — sous-schéma (case)
 
 @Schema({ _id: false }) // pas d'_id pour chaque case, une tuile nexiste pas seule
@@ -16,7 +16,7 @@ export class Tile {
     doorState?: DoorState;
 }
 
-// export const tileSchema = SchemaFactory.createForClass(Tile); // si on separe dans un nouveau fichier
+export const tileSchema = SchemaFactory.createForClass(Tile); // si on separe dans un nouveau fichier
 
 
 // GAME — schéma principal
@@ -44,7 +44,7 @@ export class Game {
     @Prop({ required: true, min: 2, max: 6})
     maxPlayers: number;
     
-    @Prop({ type: [[Tile]], required: true })
+    @Prop({ type: [[tileSchema]], required: true })
     grid: Tile[][];
 
     @Prop({ default: false })

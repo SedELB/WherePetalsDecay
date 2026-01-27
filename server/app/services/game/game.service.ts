@@ -1,15 +1,18 @@
 import { Model } from 'mongoose';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Game } from '@app/model/schema/game.schema';
+import { Game, GameDocument } from '@app/model/schema/game.schema';
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 
 
 @Injectable()
 export class GameService {
     constructor(
-        @InjectModel(Game.name) private gameModel: Model<Game>,
-    ) {}
+        @InjectModel(Game.name) private gameModel: Model<GameDocument>,
+        private readonly logger: Logger,
+    ) {
+        this.start();
+    }
 
     async start() {
         if ((await this.gameModel.countDocuments()) === 0) {
@@ -30,6 +33,7 @@ export class GameService {
                 isVisible: false,
             },
         ];
+        this.logger.log('THIS ADDS DATA TO THE DATABASE, DO NOT USE OTHERWISE');
         await this.gameModel.insertMany(defaultGames);
     }
 
