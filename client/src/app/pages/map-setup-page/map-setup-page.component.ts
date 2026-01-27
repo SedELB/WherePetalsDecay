@@ -1,17 +1,25 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 
 @Component({
   selector: 'app-map-setup-page',
-  imports: [ButtonComponent],
+  imports: [FormsModule, RouterLink, ButtonComponent],
   templateUrl: './map-setup-page.component.html',
   styleUrl: './map-setup-page.component.scss',
 })
 export class MapSetupPageComponent {
+  private readonly router = inject(Router);
 
-  onCreateMap() {
-    // console.log('Carte créée et affichée sur le canvas !');
+  gameName = '';
+  gameDescription = '';
+
+  onBack(): void {
+    this.router.navigate(['/admin']);
+  }
+
+  onSave(): void {
+    // TODO
   }
 }
-
-

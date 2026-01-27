@@ -16,6 +16,62 @@
     opacity: 0.5;
 }
 
+.btn {
+  appearance: none;
+  border: 0;
+  cursor: pointer; // pour l'instant on garde ca mais sa va probablement changer au cours de la session
+  user-select: none;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #fff;
+  background-color: #63b85d;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn--back {
+  padding: 14px 22px;
+  border-radius: 18px;
+  background: #7e6a96;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.25);
+}
+
+.btn--back:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* Variant: Sauvegarder (maquette) */
+.btn--save {
+  padding: 18px 28px;
+  border-radius: 18px;
+  background: #63b85d;
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.25);
+  font-weight: 900;
+  letter-spacing: 0.8px;
+}
+// etat presse, mais uniquement si cliquable donc disabled == faux. 
+
+.btn--save:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.25);
+}
+
+.btn--default {
+  padding: 12px 24px;
+  border-radius: 10px;
+  background: #95698d;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.18);
+}
+// etat presse, mais uniquement si cliquable donc disabled == faux. 
+.btn--default:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18);
+}
+
 .selected {
     background-color: #78BC75 !important;
     border: 2px solid #78BC75;

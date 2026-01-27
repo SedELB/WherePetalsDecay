@@ -1,59 +1,82 @@
-@use "src/const.scss" as *;
-.map-setup-container {
-  display: flex;
-  flex-direction: column;
+.editor-bg {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+  background: url('/assets/background.png') center / cover no-repeat;
+}
+
+.editor-stage {
+  position: relative;
+  height: calc(100vh - 48px);
+}
+
+.pos-back {
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+}
+
+.info-card {
+  position: absolute;
+  left: 12px;
+  top: 140px;
+  width: 320px;
+  border-radius: 14px;
+  background: rgba(12, 14, 34, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  padding: 16px 18px;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
   align-items: center;
-  justify-content: center;
-  height: 100vh;
-  background-color: #f0f0f0;
-  padding: 20px;
+  column-gap: 12px;
+  margin-bottom: 14px;
 }
 
-h1 {
-  color: #333;
-  margin-bottom: 30px;
+.info-row--top {
+  align-items: start;
 }
 
-.setup-form {
-  background-color: white;
-  padding: 30px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.info-label {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 14px;
+}
+
+.info-input {
   width: 100%;
-  max-width: 400px;
-  margin-bottom: 30px;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
-  color: #555;
-}
-
-input, select {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: #fff;
   font-size: 16px;
+  padding: 6px 0;
+  border-bottom: 2px dashed rgba(255, 255, 255, 0.72);
 }
 
-.map-preview {
-  background-color: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.info-textarea {
   width: 100%;
-  max-width: 450px;
-  text-align: center;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: #fff;
+  font-size: 16px;
+  padding: 6px 0;
+  resize: none;
+  border-bottom: 2px dashed rgba(255, 255, 255, 0.72);
 }
 
-canvas {
-  border: 1px solid #ccc;
-  background-color: #fff;
+
+
+.pos-save {
+  position: absolute;
+  right: 24px;
+  bottom: 26px;
+  display: inline-block;
 }
