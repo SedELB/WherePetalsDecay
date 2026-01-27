@@ -20,6 +20,6 @@ export class MapSetupPageComponent {
   }
 
   onSave(): void {
-    console.log('Sauvegarder (placeholder)');
+    // TODO
   }
 }
