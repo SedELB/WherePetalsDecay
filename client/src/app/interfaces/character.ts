@@ -10,6 +10,14 @@ export interface Character {
     defenseDice: 'D4' | 'D6';
 }
 
+export interface Game {
+    name: string;
+    size: string;
+    mode: string;
+    lastModified: string;
+    image?: string;
+}
+
 export const BASE_STATS = {
     life: 6,
     speed: 6,
@@ -18,7 +26,7 @@ export const BASE_STATS = {
     bonus: 2,
 };
 
-export const AVATARS: string[] = [
+export const AVATARS: readonly string[] = [
     'assets/filler.png',
     'assets/filler.png',
     'assets/filler.png',
@@ -31,9 +39,9 @@ export const AVATARS: string[] = [
     'assets/filler.png',
     'assets/filler.png',
     'assets/filler.png',
-];
+] as const;
 
-export const RANDOM_NAMES: string[] = [
+export const RANDOM_NAMES: readonly string[] = [
     'Shadowblade',
     'Ironheart',
     'Stormwalker',
@@ -44,4 +52,6 @@ export const RANDOM_NAMES: string[] = [
     'Darkwind',
     'Lightseeker',
     'Steelclaw',
-];
+] as const;
+
+export const RANDOM_PROBABILITY = 0.5;
