@@ -50,9 +50,13 @@ describe('GameCardComponent', () => {
   it('should add hidden class when visible is false', () => {
     const testFixture = TestBed.createComponent(GameCardComponent);
     const testComponent = testFixture.componentInstance;
+
     testComponent.game = { ...mockGame, visible: false };
+
     testFixture.detectChanges();
-    const card = testFixture.nativeElement.querySelector('.gameCard');
+    expect(testFixture).toBeDefined();
+    const card: HTMLElement = testFixture.nativeElement.querySelector('.gameCard');
+    expect(card).toBeTruthy();
     expect(card.classList.contains('hidden')).toBeTrue();
   });
 
