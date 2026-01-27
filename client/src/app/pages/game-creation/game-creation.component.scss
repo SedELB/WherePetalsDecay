@@ -80,9 +80,16 @@ p {
         padding: 0.5rem;
         background-color: $frame-color;
         transition: all 0.2s ease;
+        border: none;
+        background: none;
 
         &:hover {
             border-color: $rose-button;
+        }
+
+        &:focus {
+            outline: 2px solid $rose-button;
+            outline-offset: 2px;
         }
 
         &.selected {
