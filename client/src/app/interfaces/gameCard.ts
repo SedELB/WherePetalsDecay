@@ -7,4 +7,5 @@ export interface GameCard {
     mode: string;
     date: string;
     visible: boolean;
+    imgDescription: string;
 }
