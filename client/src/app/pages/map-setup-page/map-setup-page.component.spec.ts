@@ -8,7 +8,7 @@ describe('MapSetupPageComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MapSetupPageComponent, RouterTestingModule]
+      imports: [MapSetupPageComponent, RouterTestingModule],
     })
       .compileComponents();
 
