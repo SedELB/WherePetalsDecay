@@ -9,7 +9,7 @@
 
     <app-button [width]="100" [route]="'/home'">Retour</app-button>
 
-    <div class="list-container" >
+    <div class="list-container">
         @for(game of games; track game.id){
             <app-game-card
             [game]="game"
