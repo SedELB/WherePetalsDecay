@@ -1,10 +1,10 @@
-import { NgClass, NgIf } from '@angular/common';
+import { NgClass} from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { GameCard } from '@app/interfaces/gameCard';
 
 @Component({
   selector: 'app-game-card',
-  imports: [NgClass, NgIf],
+  imports: [NgClass],
   templateUrl: './game-card.component.html',
   styleUrl: './game-card.component.scss',
   standalone: true,
