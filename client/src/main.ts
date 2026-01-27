@@ -9,12 +9,13 @@ import { HomePageComponent } from '@app/pages/homepage/homepage.component';
 import { MaterialPageComponent } from '@app/pages/material-page/material-page.component';
 import { EditorPageComponent } from '@app/pages/editor-page/editor-page.component';
 import { CreateGamePageComponent } from '@app/pages/create-game-page/create-game-page.component';
+import { GameCreationComponent } from '@app/pages/game-creation/game-creation.component';
+import { WaitingRoomComponent } from '@app/pages/waiting-room/waiting-room.component';
 import { environment } from './environments/environment';
 
 if (environment.production) {
     enableProdMode();
 }
-
 
 const routes: Routes = [
     { path: '', redirectTo: '/home', pathMatch: 'full' },
@@ -24,6 +25,8 @@ const routes: Routes = [
     { path: 'admin', component: AdminPageComponent },
     { path: 'admin/create', component: CreateGamePageComponent },
     { path: 'editor', component: EditorPageComponent },
+    { path: 'create', component: GameCreationComponent },
+    { path: 'waiting-room', component: WaitingRoomComponent },
     { path: '**', redirectTo: '/home' },
 ];
 
