@@ -14,4 +14,6 @@ export class GameCardComponent {
   @Input() game!: GameCard;
   @Output() removeParent = new EventEmitter<void>();
 
+  show = true;
+
 }
