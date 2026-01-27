@@ -2,13 +2,6 @@ import { Logger, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Game, gameSchema } from '@app/model/schema/game.schema';
-import { CourseController } from '@app/controllers/course/course.controller';
-import { CourseService } from '@app/services/course/course.service';
-import { DateController } from '@app/controllers/date/date.controller';
-import { DateService } from '@app/services/date/date.service';
-import { ChatGateway } from '@app/gateways/chat/chat.gateway';
-import { ExampleService } from '@app/services/example/example.service';
-import { ExampleController } from '@app/controllers/example/example.controller';
 import { GameService } from './services/game/game.service';
 
 @Module({
