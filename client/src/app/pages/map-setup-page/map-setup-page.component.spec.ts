@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { RouterTestingModule } from '@angular/router/testing';
 import { MapSetupPageComponent } from './map-setup-page.component';
 
 describe('MapSetupPageComponent', () => {
@@ -8,13 +8,13 @@ describe('MapSetupPageComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MapSetupPageComponent]
+      imports: [MapSetupPageComponent, RouterTestingModule],
     })
       .compileComponents();
 
     fixture = TestBed.createComponent(MapSetupPageComponent);
     component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {
