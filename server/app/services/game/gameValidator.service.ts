@@ -1,7 +1,8 @@
-import { Model } from 'mongoose';
+import { TileItem, TileType } from '@app/model/schema/game.constants';
+import { Game, GameDocument } from '@app/model/schema/game.schema';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Game, GameDocument } from '@app/model/schema/game.schema';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class GameValidatorService {
@@ -13,7 +14,7 @@ export class GameValidatorService {
     returns: occ = {property: no. of occurence}
     ex. {ice: 3, floor: 40, water: 21}
     */
-    countByProperty(game: Game, property: string): Record<string, number>{
+    countByProperty(game: Game, property: string): Record<string, number> {
         const occ = game.grid.flat().reduce((acc, currentObject) => {
             const type = currentObject[property]; // currentObject: Tile
             if (type !== undefined && type !== null) acc[type] = (acc[type] || 0) + 1;
@@ -23,15 +24,33 @@ export class GameValidatorService {
         return occ;
     }
 
+    // Uniquement pour type et item (pas DoorState)
+    getTilePosition(game: Game, wantedTile: string): { row: number; col: number }[] {
+        const tilePositions: { row: number; col: number }[] = [];
+
+        for (let i = 0; i < game.grid.length; i++) {
+            for (let j = 0; j < game.grid[0].length; j++) {
+                if (Object.values(TileType).includes(wantedTile as TileType) &&
+                    game.grid[i][j].type === wantedTile) {
+                    tilePositions.push({ row: i, col: j });
+                } else if (Object.values(TileItem).includes(wantedTile as TileItem) &&
+                    game.grid[i][j].item === wantedTile) {
+                    tilePositions.push({ row: i, col: j });
+                }
+            }
+        }
+        return tilePositions;
+    }
+
     async isGameNameUnique(gameName: string): Promise<boolean> {
-        const nameExists = await this.gameModel.findOne({name: gameName});
+        const nameExists = await this.gameModel.findOne({ name: gameName });
         return !nameExists;
     }
 
     isGameSurfaceValid(game: Game): boolean {
         const types = this.countByProperty(game, 'type');
         const terrainTilesNumber = (types.floor || 0) + (types.ice || 0) + (types.water || 0);
-        if (terrainTilesNumber >= ((game.size.cols * game.size.rows) / 2)) {
+        if (terrainTilesNumber > ((game.size.cols * game.size.rows) / 2)) {
             return true;
         } else {
             return false;
@@ -49,25 +68,25 @@ export class GameValidatorService {
 
     areThereInacessibleTiles(game: Game): boolean {
         let startPos = null;
-        for (let r = 0; r < game.grid.length; r++){
-            for (let c = 0; c < game.grid[r].length; c++){
-                if (game.grid[r][c].type !== 'wall'){
-                    startPos = {row: r, col: c};
+        for (let r = 0; r < game.grid.length; r++) {
+            for (let c = 0; c < game.grid[r].length; c++) {
+                if (game.grid[r][c].type !== 'wall') {
+                    startPos = { row: r, col: c };
                     break;
                 }
             }
             if (startPos) break;
         }
 
-        const totalWalkable = this.countByProperty(game, 'item').floor;
+        const totalWalkable = this.countByProperty(game, 'type').floor;
         const queue = [startPos];
         const visited = new Set();
         visited.add(`${startPos.r}, ${startPos.c}`);
 
-        while (queue.length > 0){
+        while (queue.length > 0) {
             const currentTile = queue.shift();
             const neighbours = [
-                {r: currentTile.row - 1, c: currentTile.col}, // Up
+                { r: currentTile.row - 1, c: currentTile.col }, // Up
                 { r: currentTile.row + 1, c: currentTile.col }, // Down
                 { r: currentTile.row, c: currentTile.col - 1 }, // Left
                 { r: currentTile.row, c: currentTile.col + 1 },  // Right
@@ -90,6 +109,43 @@ export class GameValidatorService {
         if (visited.size !== totalWalkable) {
             return true;
         } else {
+            return false;
+        }
+    }
+
+    isDoorPlacementValid(game: Game): boolean {
+        const allDoorsPos = this.getTilePosition(game, 'door');
+        for (const { row, col } of allDoorsPos) {
+
+            const rows = game.grid.length;
+            const cols = game.grid[0].length;
+
+            const isInsideGrid =
+                row > 0 &&
+                row < rows - 1 &&
+                col > 0 &&
+                col < cols - 1;
+
+            if (!isInsideGrid) {
+                return false;
+            }
+
+            const up = game.grid[row - 1][col];
+            const down = game.grid[row + 1][col];
+            const left = game.grid[row][col - 1];
+            const right = game.grid[row][col + 1];
+
+            // S'il y a deux portes dans un des axes
+            if ((up.type === 'wall' && down.type === 'wall') || (
+                left.type === 'wall' && right.type === 'wall')) {
+
+                // S'il y a une 3e porte
+                if (left.type === 'wall' || right.type === 'wall' ||
+                    up.type === 'wall' || down.type === 'wall') {
+                    return false;
+                }
+                return true;
+            }
             return false;
         }
     }
