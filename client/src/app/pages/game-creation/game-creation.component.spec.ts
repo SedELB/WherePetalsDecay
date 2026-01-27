@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { GameCreationComponent } from './game-creation.component';
 import { AVATARS, RANDOM_NAMES } from '@app/interfaces/character';
+import { GameCreationComponent } from './game-creation.component';
 
 describe('GameCreationComponent', () => {
     let component: GameCreationComponent;
@@ -134,6 +134,16 @@ describe('GameCreationComponent', () => {
         expect(component.selectedAvatarIndex).not.toBeNull();
         expect(component.selectedAvatarIndex).toBeGreaterThanOrEqual(0);
         expect(component.selectedAvatarIndex).toBeLessThan(AVATARS.length);
+    });
+
+    it('should not navigate when form is invalid', () => {
+        component.characterName = '';
+        component.selectedAvatarIndex = null;
+        const navigateSpy = spyOn(component['router'], 'navigate');
+
+        component.confirmCharacter();
+
+        expect(navigateSpy).not.toHaveBeenCalled();
     });
 
     it('should validate form as invalid when name is empty', () => {

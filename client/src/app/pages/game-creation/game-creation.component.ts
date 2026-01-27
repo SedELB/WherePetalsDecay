@@ -1,11 +1,14 @@
-import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { ListContainerComponent } from '@app/components/list-container/list-container.component';
-import { BASE_STATS, AVATARS, RANDOM_NAMES } from '@app/interfaces/character';
+import { AVAILABLE_GAMES } from '@app/constants/games.constants';
+import { ROUTES } from '@app/constants/routes.constants';
+import { AVATARS, BASE_STATS } from '@app/interfaces/character';
+import { CharacterService } from '@app/services/character.service';
 
 @Component({
     selector: 'app-game-creation',
@@ -30,10 +33,10 @@ export class GameCreationComponent {
 
     readonly avatars = AVATARS;
     readonly baseStats = BASE_STATS;
-    readonly randomNames = RANDOM_NAMES;
-    readonly avatarCount = 12;
+    readonly availableGames = AVAILABLE_GAMES;
+    readonly routes = ROUTES;
 
-    constructor(private router: Router) {}
+    constructor(private readonly router: Router, private readonly characterService: CharacterService) {}
 
     get lifeValue(): number {
         return this.baseStats.life + (this.lifeBonusSelected ? this.baseStats.bonus : 0);
@@ -90,34 +93,33 @@ export class GameCreationComponent {
     }
 
     generateRandomCharacter(): void {
-        const randomNameIndex = Math.floor(Math.random() * this.randomNames.length);
-        this.characterName = this.randomNames[randomNameIndex];
-
-        this.selectedAvatarIndex = Math.floor(Math.random() * this.avatarCount);
-
-        this.lifeBonusSelected = Math.random() < 0.5;
-
-        this.attackDiceD6 = Math.random() < 0.5;
+        const random = this.characterService.generateRandomCharacter();
+        this.characterName = random.name;
+        this.selectedAvatarIndex = random.avatarIndex;
+        this.lifeBonusSelected = random.lifeBonus;
+        this.attackDiceD6 = random.attackDiceD6;
     }
 
     isFormValid(): boolean {
-        return this.characterName.trim().length > 0 && this.selectedAvatarIndex !== null;
+        return (
+            this.characterService.isValidName(this.characterName) &&
+            this.characterService.isValidAvatar(this.selectedAvatarIndex)
+        );
     }
 
     confirmCharacter(): void {
-        if (this.isFormValid()) {
-            const character = {
-                name: this.characterName,
-                avatar: this.avatars[this.selectedAvatarIndex!],
-                life: this.lifeValue,
-                speed: this.speedValue,
-                attack: this.attackValue,
-                defense: this.defenseValue,
-                attackDice: this.attackDice,
-                defenseDice: this.defenseDice,
-            };
-            console.log('Personnage créé:', character);
-            this.router.navigate(['/waiting-room']);
+        if (!this.isFormValid() || this.selectedAvatarIndex === null) {
+            return;
         }
+
+        this.characterService.createCharacter(
+            this.characterName,
+            this.selectedAvatarIndex,
+            this.lifeBonusSelected,
+            this.attackDiceD6,
+        );
+
+        console.log('Personnage créé:', this.characterName, this.selectedAvatarIndex, this.lifeBonusSelected, this.attackDiceD6);
+        this.router.navigate([this.routes.WAITING_ROOM]);
     }
 }
