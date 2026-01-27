@@ -8,7 +8,7 @@ describe('EditorPageComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [EditorPageComponent]
+      imports: [EditorPageComponent],
     })
     .compileComponents();
 

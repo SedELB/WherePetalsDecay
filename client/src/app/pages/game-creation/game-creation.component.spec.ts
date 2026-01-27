@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { AVATARS, RANDOM_NAMES } from '@app/interfaces/character';
+import { AVATARS, BASE_STATS, RANDOM_NAMES } from '@app/interfaces/character';
 import { GameCreationComponent } from './game-creation.component';
 
 describe('GameCreationComponent', () => {
@@ -40,30 +40,30 @@ describe('GameCreationComponent', () => {
 
     it('should have life value of 8 when life bonus is selected', () => {
         component.lifeBonusSelected = true;
-        expect(component.lifeValue).toBe(8);
+        expect(component.lifeValue).toBe(BASE_STATS.life + BASE_STATS.bonus);
     });
 
     it('should have speed value of 8 when speed bonus is selected', () => {
         component.lifeBonusSelected = false;
-        expect(component.speedValue).toBe(8);
+        expect(component.speedValue).toBe(BASE_STATS.speed + BASE_STATS.bonus);
     });
 
     it('should have life value of 6 when speed bonus is selected', () => {
         component.lifeBonusSelected = false;
-        expect(component.lifeValue).toBe(6);
+        expect(component.lifeValue).toBe(BASE_STATS.life);
     });
 
     it('should have speed value of 6 when life bonus is selected', () => {
         component.lifeBonusSelected = true;
-        expect(component.speedValue).toBe(6);
+        expect(component.speedValue).toBe(BASE_STATS.speed);
     });
 
     it('should have attack value of 4', () => {
-        expect(component.attackValue).toBe(4);
+        expect(component.attackValue).toBe(BASE_STATS.attack);
     });
 
     it('should have defense value of 4', () => {
-        expect(component.defenseValue).toBe(4);
+        expect(component.defenseValue).toBe(BASE_STATS.defense);
     });
 
     it('should assign D6 to attack and D4 to defense when attackDiceD6 is true', () => {
