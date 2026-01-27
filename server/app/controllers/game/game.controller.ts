@@ -34,7 +34,7 @@ export class GameController {
     @ApiNotFoundResponse({
         description: 'Return NOT_FOUND http status when request fails',
     })
-    @Post('/game')
+    @Post('/addGame')
     async addGame(@Body() gameDto: CreateGameDto, @Res() response: Response) {
         try {
             await this.gameService.addGame(gameDto);
@@ -51,7 +51,7 @@ export class GameController {
     @ApiNotFoundResponse({
         description: 'Return NOT_FOUND http status when request fails',
     })
-    @Patch('/game')
+    @Patch('/modifyGame')
     async modifyGame(@Body() gameDto: CreateGameDto, @Res() response: Response) {
         try {
             await this.gameService.modifyGame(gameDto);
