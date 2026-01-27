@@ -1,9 +1,9 @@
 export const ROUTES = {
-    HOME: '/home',
-    CREATE: '/create',
-    WAITING_ROOM: '/waiting-room',
-    GAME: '/game',
-    ADMIN: '/admin',
-    MATERIAL: '/material',
-    EDITOR: '/editor',
+    home: '/home',
+    create: '/create',
+    waitingRoom: '/waiting-room',
+    game: '/game',
+    admin: '/admin',
+    material: '/material',
+    editor: '/editor',
 } as const;
