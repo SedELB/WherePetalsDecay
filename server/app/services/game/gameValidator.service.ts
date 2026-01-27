@@ -151,8 +151,8 @@ export class GameValidatorService {
     }
 
     isGameValid(game: Game): boolean {
-        if (isDoorPlacementValid(game) && areThereInacessibleTiles(game) &&
-            isGameSurfaceValid(game) && areAllSpawnPointsPlaced(game)) {
+        if (this.isDoorPlacementValid(game) && this.areThereInacessibleTiles(game) &&
+            this.isGameSurfaceValid(game) && this.areAllSpawnPointsPlaced(game)) {
             return true;
         }
     }
