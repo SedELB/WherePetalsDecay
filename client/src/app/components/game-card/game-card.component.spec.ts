@@ -13,7 +13,7 @@ describe('GameCardComponent', () => {
     mode: 'Solo',
     date: '2026-01-01',
     visible: true,
-    imgDescription: 'test description'
+    imgDescription: 'test description',
   };
 
   beforeEach(async () => {
