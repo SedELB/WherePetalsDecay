@@ -4,12 +4,15 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Game, gameSchema } from '@app/model/schema/game.schema';
 import { GameService } from './services/game/game.service';
 import { GameValidatorService } from './services/game/gameValidator.service';
+import { GameController } from './controllers/game/game.controller';
+import { GameMode } from './model/schema/game.constants';
+import { GameModule } from './modules/game.module';
 
 @Module({
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),
         MongooseModule.forRootAsync({
-            imports: [ConfigModule],
+            imports: [ConfigModule, GameModule],
             inject: [ConfigService],
             useFactory: async (config: ConfigService) => ({
                 uri: config.get<string>('DATABASE_CONNECTION_STRING'), // Loaded from .env
@@ -20,7 +23,7 @@ import { GameValidatorService } from './services/game/gameValidator.service';
     // controllers: [CourseController, DateController, ExampleController],
     // providers: [ChatGateway, CourseService, DateService, ExampleService, Logger],
     controllers: [],
-    providers: [GameService, GameValidatorService, Logger],
+    providers: [],
 
 })
 export class AppModule {}
