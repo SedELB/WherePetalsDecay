@@ -1,8 +1,10 @@
+import { NgClass } from '@angular/common';
 import { Component, Input } from '@angular/core';
 
 @Component({
   selector: 'app-game-card',
-  imports: [],
+  imports: [NgClass],
+  standalone: true,
   templateUrl: './game-card.component.html',
   styleUrl: './game-card.component.scss',
   standalone: true,
