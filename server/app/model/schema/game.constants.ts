@@ -1,3 +1,5 @@
+// TODO: If the class becomes complex, we should split the constants and the enums, bakas.
+
 export enum GameMode {
     CLASSIC = 'classic',
     CTF = 'ctf'
