@@ -1,5 +1,5 @@
 <div class="container">
-    <app-button [width]="100" [route]="'/home'">Retour</app-button>
+    <app-button [width]="100" [route]="routes.HOME">Retour</app-button>
 
     <section *ngIf="currentPhase === 'game-selection'" class="game-selection">
         <h1>Créer une partie</h1>
@@ -7,28 +7,14 @@
 
         <app-list-container [height]="'auto'">
             <app-game-card
-                [name]="'Donjon Sombre'"
-                [size]="'Petite (10x10)'"
-                [mode]="'Classique'"
-                [lastModified]="'26 janvier 2026'"
+                *ngFor="let game of availableGames"
+                [name]="game.name"
+                [size]="game.size"
+                [mode]="game.mode"
+                [lastModified]="game.lastModified"
+                [image]="game.image ?? 'assets/filler.png'"
             >
-                <app-button [height]="50" (click)="selectGame('Donjon Sombre')">Sélectionner</app-button>
-            </app-game-card>
-            <app-game-card
-                [name]="'Forêt Enchantée'"
-                [size]="'Moyenne (15x15)'"
-                [mode]="'Classique'"
-                [lastModified]="'25 janvier 2026'"
-            >
-                <app-button [height]="50" (click)="selectGame('Forêt Enchantée')">Sélectionner</app-button>
-            </app-game-card>
-            <app-game-card
-                [name]="'Château Maudit'"
-                [size]="'Grande (20x20)'"
-                [mode]="'Classique'"
-                [lastModified]="'24 janvier 2026'"
-            >
-                <app-button [height]="50" (click)="selectGame('Château Maudit')">Sélectionner</app-button>
+                <app-button [height]="50" (click)="selectGame(game.name)">Sélectionner</app-button>
             </app-game-card>
         </app-list-container>
     </section>
@@ -51,14 +37,15 @@
             <div class="form-group">
                 <label>Choisissez un avatar</label>
                 <div class="avatar-grid">
-                    <div
+                    <button
                         *ngFor="let avatar of avatars; let i = index"
+                        type="button"
                         class="avatar-item"
                         [class.selected]="selectedAvatarIndex === i"
                         (click)="selectAvatar(i)"
                     >
                         <img [src]="avatar" [alt]="'Avatar ' + (i + 1)" />
-                    </div>
+                    </button>
                 </div>
             </div>
 
