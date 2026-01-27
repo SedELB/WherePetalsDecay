@@ -1,19 +1,20 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { MainPageComponent } from './homepage.component';
+import { HomePageComponent } from './homepage.component';
 
-describe('MainPageComponent', () => {
-    let component: MainPageComponent;
-    let fixture: ComponentFixture<MainPageComponent>;
+describe('HomePageComponent', () => {
+    let component: HomePageComponent;
+    let fixture: ComponentFixture<HomePageComponent>;
+    const EXPECTED_MENU_BUTTONS_COUNT = 3;
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
-            imports: [MainPageComponent, RouterTestingModule],
+            imports: [HomePageComponent, RouterTestingModule],
         }).compileComponents();
     });
 
     beforeEach(() => {
-        fixture = TestBed.createComponent(MainPageComponent);
+        fixture = TestBed.createComponent(HomePageComponent);
         component = fixture.componentInstance;
         fixture.detectChanges();
     });
@@ -46,15 +47,15 @@ describe('MainPageComponent', () => {
     });
 
     it('should have three menu buttons', () => {
-        const expectedButtonCount = 3;
         const compiled = fixture.nativeElement;
-        const buttons = compiled.querySelectorAll('.menu-button');
-        expect(buttons.length).toBe(expectedButtonCount);
+        const buttons = compiled.querySelectorAll('app-button');
+        expect(buttons.length).toBe(EXPECTED_MENU_BUTTONS_COUNT);
     });
 
     it('should have the "Joindre une partie" button disabled', () => {
         const compiled = fixture.nativeElement;
-        const buttons = compiled.querySelectorAll('.menu-button');
-        expect(buttons[0].disabled).toBeTrue();
+        const buttons = compiled.querySelectorAll('app-button');
+        const firstButton = buttons[0].querySelector('button');
+        expect(firstButton?.disabled).toBeTrue();
     });
 });
