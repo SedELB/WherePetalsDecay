@@ -10,7 +10,7 @@ describe('GameCardComponent', () => {
     await TestBed.configureTestingModule({
       imports: [GameCardComponent],
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(GameCardComponent);
     component = fixture.componentInstance;
@@ -19,5 +19,49 @@ describe('GameCardComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should display game info', () => {
+    const compiled = fixture.nativeElement;
+    const listItems = compiled.querySelectorAll('.card-info li');
+    expect(listItems[0].textContent).toContain(mockGame.name);
+    expect(listItems[1].textContent).toContain(mockGame.size);
+    expect(listItems[2].textContent).toContain(mockGame.mode);
+    expect(listItems[3].textContent).toContain(mockGame.date);
+  });
+
+  it('should display image correctly', () => {
+    const compiled = fixture.nativeElement;
+    const img = compiled.querySelector('.thumbnail');
+    expect(img.src).toContain(mockGame.image);
+    expect(img.alt).toBe(mockGame.name);
+  });
+
+  it('should add hidden class when visible is false', () => {
+    const testFixture = TestBed.createComponent(GameCardComponent);
+    const testComponent = testFixture.componentInstance;
+
+    testComponent.game = { ...mockGame, visible: false };
+
+    testFixture.detectChanges();
+    expect(testFixture).toBeDefined();
+    const card: HTMLElement = testFixture.nativeElement.querySelector('.gameCard');
+    expect(card).toBeTruthy();
+    console.debug(card.classList);
+    expect(card.classList.contains('hidden')).toBeTrue();
+  });
+
+  it('should toggle tooltip on hover events', () => {
+    const compiled = fixture.nativeElement;
+    const img = compiled.querySelector('.thumbnail');
+
+    component.show = false;
+    expect(component.show).toBeFalse();
+
+    img.dispatchEvent(new Event('mouseenter'));
+    expect(component.show).toBeTrue();
+
+    img.dispatchEvent(new Event('mouseleave'));
+    expect(component.show).toBeFalse();
   });
 });

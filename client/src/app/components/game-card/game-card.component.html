@@ -1,18 +1,30 @@
-<li>
-    <div class="game-card">
-        <div class="image-frame">
-            <img class="thumbnail" [src]="image" [alt]="name">
-        </div>
-        <div class="card-info">
-            <ul>
-                <li>{{ name }}</li>
-                <li>{{ size }}</li>
-                <li>{{ mode }}</li>
-                <li>{{ lastModified }}</li>
-            </ul>
-            <div class="card-buttons">
-                <ng-content></ng-content>
-            </div>
-        </div>
+<div class="gameCard" 
+  [ngClass]="{hidden: !game.visible}">
+  <div class="image-frame">
+    <img
+      class="thumbnail"
+      [src]="game.image"
+      [alt]="game.name"
+      (mouseenter)="show = true"
+      (mouseleave)="show = false"
+    />
+
+    @if (show) {
+      <div class="tooltip">
+        {{ game.imgDescription }}
+      </div>
+    }
+  </div>
+
+  <div class="card-info">
+    <ul>
+      <li>{{ game.name }}</li>
+      <li>{{ game.size }}</li>
+      <li>{{ game.mode }}</li>
+      <li>{{ game.date }}</li>
+    </ul>
+
+    <div class="card-buttons">
+      <ng-content></ng-content>
     </div>
 </li>
