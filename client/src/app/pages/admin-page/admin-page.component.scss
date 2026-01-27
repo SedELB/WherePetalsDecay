@@ -1,6 +1,6 @@
-@use "src/const.scss" as *;
+@use "../../../const.scss" as *;
 
-.admin-container {
+body {
     background-image: url("/assets/background.png");
     background-size: cover;
     min-height: 100vh;
@@ -12,7 +12,7 @@
     box-sizing: border-box;
 }
 
-.admin-container > app-button {
+body > app-button {
     position: absolute;
     top: 75px;
     left: 60px;

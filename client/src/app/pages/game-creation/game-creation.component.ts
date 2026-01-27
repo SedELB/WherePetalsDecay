@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
-import { ListContainerComponent } from '@app/components/list-container/list-container.component';
 import { AVAILABLE_GAMES } from '@app/constants/games.constants';
 import { ROUTES } from '@app/constants/routes.constants';
 import { AVATARS, BASE_STATS } from '@app/interfaces/character';
@@ -18,7 +17,6 @@ import { CharacterService } from '@app/services/character.service';
         FormsModule,
         ButtonComponent,
         GameCardComponent,
-        ListContainerComponent,
     ],
     templateUrl: './game-creation.component.html',
     styleUrls: ['./game-creation.component.scss'],
