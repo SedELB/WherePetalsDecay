@@ -149,4 +149,12 @@ export class GameValidatorService {
             return false;
         }
     }
+
+    isGameValid(game: Game): boolean {
+        if (isDoorPlacementValid(game) && areThereInacessibleTiles(game) &&
+            isGameSurfaceValid(game) && areAllSpawnPointsPlaced(game)) {
+            return true;
+        }
+    }
+
 }

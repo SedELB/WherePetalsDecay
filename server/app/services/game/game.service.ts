@@ -1,10 +1,10 @@
-import { Model } from 'mongoose';
+import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
+import { GameMode } from '@app/model/schema/game.constants';
+import { Game, GameDocument } from '@app/model/schema/game.schema';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Game, GameDocument } from '@app/model/schema/game.schema';
-import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
+import { Model } from 'mongoose';
 import { GameValidatorService } from './gameValidator.service';
-import { GameMode } from '@app/model/schema/game.constants';
 
 
 @Injectable()
@@ -12,7 +12,7 @@ export class GameService {
     constructor(
         @InjectModel(Game.name) private gameModel: Model<GameDocument>,
         private readonly logger: Logger,
-        private readonly gameValidatorService: GameValidatorService
+        private readonly gameValidatorService: GameValidatorService,
     ) {
         this.start();
     }
