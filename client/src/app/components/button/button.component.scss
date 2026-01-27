@@ -1,3 +1,20 @@
+@use "src/const.scss" as *;
+
+
+.button {
+    color: $text-color;
+    background-color: $rose-button;
+    font-size: large;
+    border-radius: 15px;
+    width: auto;
+    height: auto;
+    padding: 10px;
+    cursor: pointer;
+}
+
+.disabled {
+    opacity: 0.5;
+}
 .btn {
   appearance: none;
   border: 0;
@@ -6,6 +23,7 @@
   font-weight: 800;
   letter-spacing: 0.5px;
   color: #fff;
+  background-color: #63b85d;
 }
 
 .btn:disabled {

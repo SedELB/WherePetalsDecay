@@ -1,0 +1,16 @@
+
+
+<button 
+    [routerLink]="route"
+    [style.background-image]="backgroundImage"
+    [style.color]="color" 
+    [style.background-color]="backgroundColor" 
+    [style.width.px]="width" 
+    [style.height.px]="height"
+    [disabled]="disabled"
+    [ngClass]="['btn', 'btn--' + variant, disabled ? 'disabled' : '']"
+    (click)="onClick()">
+
+    <ng-content></ng-content>
+
+</button>

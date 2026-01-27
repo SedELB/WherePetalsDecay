@@ -1,5 +1,5 @@
 <main class="editor-bg" aria-label="Vue d'édition (Sprint 1)">
-  <app-button-component class="pos-back" [text]="'Retour'" [variant]="'back'" (clicked)="onBack()"></app-button-component>
+  <app-button class="pos-back"  [variant]="'back'" (clicked)="onBack()">Retour</app-button>
 
   <section class="editor-stage">
     <aside class="info-card">
@@ -15,6 +15,6 @@
     </aside>
 
 
-    <app-button-component class="pos-save" [text]="'Sauvegarder'" [variant]="'save'" (clicked)="onSave()"></app-button-component>
+    <app-button class="pos-save"  [variant]="'default'" (clicked)="onSave()">Sauvegarder</app-button>
   </section>
 </main>

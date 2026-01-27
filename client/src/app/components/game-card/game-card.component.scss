@@ -1,0 +1,84 @@
+@use "src/const.scss" as *;
+
+.gameCard {
+    background-color: $frame-color;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    border: 1px solid black;
+    border-radius: 15px;
+    height: 250px;
+    width: 800px;
+    color: $text-color;
+}
+
+.card-info{
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    ul {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+}
+
+.card-buttons{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-evenly;
+}
+
+.image-frame{
+    flex: 1;
+    width: 220px;
+    height: 250px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.thumbnail{
+    width: 200px;
+    height: 200px;
+}
+
+.button {
+    color: $text-color;
+    background-color: $rose-button;
+    font-size: large;
+    border-radius: 15px;
+    width: auto;
+    height: 50px;
+}
+
+.hidden{
+    background-color: red;
+    transition: all 0.3s ease;
+}
+
+.deleted {
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.tooltip{
+    position: absolute;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 20px;
+    pointer-events: none;
+    background: rgba(0,0,0,0.85);
+    top: 50%;
+    left: 20px;
+    width: 300px;
+    height: auto;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}

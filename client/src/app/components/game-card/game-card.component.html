@@ -1,0 +1,25 @@
+
+
+
+<div [ngClass]="{ gameCard: true, hidden: !game.visible }">
+    <div class="image-frame">
+        <img class="thumbnail" src="{{game.image}}" alt="{{game.name}}"
+            (mouseenter)="show = true" (mouseleave)="show = false">
+        @if (show) {
+            <div class="tooltip">
+            {{ game.imgDescription }}
+            </div>
+        }
+    </div>
+    <div class="card-info">
+        <ul>
+            <li>{{game.name}}</li>
+            <li>{{game.size}}</li>
+            <li>{{game.mode}}</li>
+            <li>{{game.date}}</li>
+        </ul>
+        <div class="card-buttons">
+            <ng-content></ng-content>
+        </div>
+    </div>
+</div>
