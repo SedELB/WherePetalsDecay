@@ -48,7 +48,7 @@ export class GameService {
         return await this.gameModel.findById({wantedId}).exec();
     }
 
-    async addGame(game: CreateGameDto): Promise<Game> {
+    async addGame(game: CreateGameDto): Promise<void> {
         if (!await this.gameValidatorService.isGameNameUnique(game.name)) {
             return Promise.reject('Le jeu existe déjà.');
             // throw new Error('Le nom du jeu existe déjà.'); 
@@ -71,8 +71,29 @@ export class GameService {
             // this.logger.error(`Erreur lors de la création du jeu: ${error.message}`);
             // throw new InternalServerErrorException('Échec de l’insertion du jeu dans la base de données');
         }
-
     }
+
+    async modifyGame(game: CreateGameDto): Promise<void> {
+        const filterQuery = {gameMode: game.gameMode};
+        try {
+            const res = await this.gameModel.updateOne(filterQuery, game);
+            if (res.matchedCount === 0){
+                return Promise.reject('Could not find game');
+            }
+        } catch (error) {
+            return Promise.reject(`Failed to update game: ${error}`);
+        }
+    }
+
+    async deleteGame(id: string): Promise<void> {
+        const deletedGame = await this.gameModel.findByIdAndDelete(id);
+        if (!deletedGame) {
+            this.logger.log('No game found with this id');
+        } else {
+            this.logger.log(`Game with ID: ${id} was successfully deleted.`);
+        }
+    }
+
     
     async updateVisibility(id: string, isVisible: boolean): Promise<Game> {
         try {
