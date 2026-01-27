@@ -1,23 +1,23 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { GameMode, TileType, DoorState, TileItem } from '@app/model/schema/game.constants';
+import { Document } from 'mongoose';
 
 export type GameDocument = Game & Document;
 // TILE — sous-schéma (case)
 
 @Schema({ _id: false }) // pas d'_id pour chaque case, une tuile nexiste pas seule
 export class Tile {
-    @Prop({ enum: TileType, required: true})
+    @Prop({ type: String, enum: Object.values(TileType), required: true})
     type: TileType;
 
-    @Prop({enum: TileItem, default: null})
+    @Prop({ type: String, enum: Object.values(TileItem), default: null})
     item?: TileItem | null;
 
-    @Prop({enum : DoorState})
+    @Prop({ type: String, enum : Object.values(DoorState)})
     doorState?: DoorState;
 }
 
 export const tileSchema = SchemaFactory.createForClass(Tile); // si on separe dans un nouveau fichier
-
 
 // GAME — schéma principal
 
@@ -35,7 +35,7 @@ export class Game {
         cols: number
     };
 
-    @Prop({ enum: GameMode, required: true })
+    @Prop({ type: String, enum: Object.values(GameMode), required: true })
     gameMode: GameMode;
 
     @Prop({ required: true })
@@ -49,14 +49,6 @@ export class Game {
 
     @Prop({ default: false })
     isVisible: boolean;
-
-    // On utilise dorenavant { timestamps: true }
-
-    // @Prop({ default: Date.now })
-    // creationDate: Date;
-
-    // @Prop({ default: Date.now })
-    // lastModified: Date;
 }
 
 export const gameSchema = SchemaFactory.createForClass(Game);

@@ -10,6 +10,7 @@ import { ChatGateway } from '@app/gateways/chat/chat.gateway';
 import { ExampleService } from '@app/services/example/example.service';
 import { ExampleController } from '@app/controllers/example/example.controller';
 import { GameService } from './services/game/game.service';
+import { GameValidatorService } from './services/game/gameValidator.service';
 
 @Module({
     imports: [
@@ -26,7 +27,7 @@ import { GameService } from './services/game/game.service';
     // controllers: [CourseController, DateController, ExampleController],
     // providers: [ChatGateway, CourseService, DateService, ExampleService, Logger],
     controllers: [],
-    providers: [GameService, Logger],
+    providers: [GameService, GameValidatorService, Logger],
 
 })
 export class AppModule {}

@@ -1,11 +1,11 @@
 import { Model } from 'mongoose';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Game } from '@app/model/schema/game.schema';
+import { Game, GameDocument } from '@app/model/schema/game.schema';
 
 @Injectable()
 export class GameValidatorService {
-    constructor(@InjectModel(Game.name) private gameModel: Model<Game>) {}
+    constructor(@InjectModel(Game.name) private gameModel: Model<GameDocument>) {}
 
     /*
     Tile.type returns a TileType (floor, ice, etc.)
@@ -24,13 +24,13 @@ export class GameValidatorService {
     }
 
     async isGameNameUnique(gameName: string): Promise<boolean> {
-        const nameExists = await this.gameModel.findOne({name: gameName}) !== null;
-        if (!nameExists) return true;
+        const nameExists = await this.gameModel.findOne({name: gameName});
+        return !nameExists;
     }
 
     isGameSurfaceValid(game: Game): boolean {
-        const items = this.countByProperty(game, 'item');
-        const terrainTilesNumber = items.floor + items.ice + items.water;
+        const types = this.countByProperty(game, 'type');
+        const terrainTilesNumber = (types.floor || 0) + (types.ice || 0) + (types.water || 0);
         if (terrainTilesNumber >= ((game.size.cols * game.size.rows) / 2)) {
             return true;
         } else {
@@ -40,7 +40,7 @@ export class GameValidatorService {
 
     areAllSpawnPointsPlaced(game: Game): boolean {
         const items = this.countByProperty(game, 'item');
-        if (items.start === game.maxPlayers) {
+        if ((items.start || 0) === game.maxPlayers) {
             return true;
         } else {
             return false;
