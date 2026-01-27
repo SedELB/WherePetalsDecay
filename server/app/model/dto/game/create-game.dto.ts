@@ -1,8 +1,8 @@
-import { IsString, MaxLength, IsBoolean, IsNumber, IsEnum, IsObject, IsArray, ValidateNested, IsOptional} from 'class-validator';
-import { GAME_NAME_MAX_LENGTH } from './game.dto.constants';
 import { Type } from 'class-transformer';
+import { IsArray, IsBoolean, IsEnum, IsNumber, IsObject, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
+import { GAME_DESCRIPTION_AND_NAME_MIN_LENGTH, GAME_NAME_MAX_LENGTH } from './game.dto.constants';
 // import { Tile } from '@app/model/schema/game.schema';
-import { GameMode, TileType, DoorState, TileItem } from '@app/model/schema/game.constants';
+import { DoorState, GameMode, TileItem, TileType } from '@app/model/schema/game.constants';
 
 export class TileDto {
     @IsEnum(TileType)
@@ -28,9 +28,11 @@ class GameSizeDto {
 export class CreateGameDto {
     @IsString()
     @MaxLength(GAME_NAME_MAX_LENGTH)
+    @MinLength(GAME_DESCRIPTION_AND_NAME_MIN_LENGTH)
     name: string;
 
     @IsString()
+    @MinLength(GAME_DESCRIPTION_AND_NAME_MIN_LENGTH)
     description: string;
 
     @IsObject()
@@ -46,7 +48,7 @@ export class CreateGameDto {
 
     @IsNumber()
     maxPlayers: number;
-    
+
     // The grid validation will be in the Controller method.
     @IsArray() // verifie que cest un tableau
     @IsArray({ each: true }) // ... un tableau de tableaux
