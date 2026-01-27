@@ -15,6 +15,7 @@
 .disabled {
     opacity: 0.5;
 }
+
 .btn {
   appearance: none;
   border: 0;
@@ -69,4 +70,9 @@
 .btn--default:active:not(:disabled) {
   transform: translateY(2px);
   box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18);
+}
+
+.selected {
+    background-color: #78BC75 !important;
+    border: 2px solid #78BC75;
 }
