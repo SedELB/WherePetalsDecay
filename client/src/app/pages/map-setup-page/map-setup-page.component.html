@@ -1,7 +1,20 @@
-<div class="map-setup-container">
-  <h1>Configuration de la Carte</h1>
-  <div class="setup-form">
-    <div class="form-group">
-    <app-button (clicked)="onCreateMap()">Créer la Carte</app-button>
-</div>
-</div>
+<main class="editor-bg" aria-label="Vue d'édition (Sprint 1)">
+  <app-button class="pos-back"  [variant]="'back'" (clicked)="onBack()">Retour</app-button>
+
+  <section class="editor-stage">
+    <aside class="info-card">
+      <div class="info-row">
+        <span class="info-label">Nom:</span>
+        <input class="info-input" [(ngModel)]="gameName" />
+      </div>
+
+      <div class="info-row info-row--top">
+        <span class="info-label">Description:</span>
+        <textarea class="info-textarea" rows="1" [(ngModel)]="gameDescription"></textarea>
+      </div>
+    </aside>
+
+
+    <app-button class="pos-save"  [variant]="'default'" (clicked)="onSave()">Sauvegarder</app-button>
+  </section>
+</main>
