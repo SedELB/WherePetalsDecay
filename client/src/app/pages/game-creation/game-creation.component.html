@@ -6,16 +6,13 @@
         <p>Sélectionnez un jeu pour créer une nouvelle partie</p>
 
         <app-list-container [height]="'auto'">
+        @for(game of availableGames; track game.id){
             <app-game-card
-                *ngFor="let game of availableGames"
-                [name]="game.name"
-                [size]="game.size"
-                [mode]="game.mode"
-                [lastModified]="game.lastModified"
-                [image]="game.image ?? 'assets/filler.png'"
+                [game]="game"
             >
                 <app-button [height]="50" (click)="selectGame(game.name)">Sélectionner</app-button>
             </app-game-card>
+        }
         </app-list-container>
     </section>
 
