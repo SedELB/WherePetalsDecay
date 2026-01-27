@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Game, gameSchema } from '@app/model/schema/game.schema';
 import { GameService } from './services/game/game.service';
+import { GameValidatorService } from './services/game/gameValidator.service';
 
 @Module({
     imports: [
@@ -19,7 +20,7 @@ import { GameService } from './services/game/game.service';
     // controllers: [CourseController, DateController, ExampleController],
     // providers: [ChatGateway, CourseService, DateService, ExampleService, Logger],
     controllers: [],
-    providers: [GameService, Logger],
+    providers: [GameService, GameValidatorService, Logger],
 
 })
 export class AppModule {}
