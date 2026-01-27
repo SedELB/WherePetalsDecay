@@ -72,11 +72,61 @@
   border-bottom: 2px dashed rgba(255, 255, 255, 0.72);
 }
 
-
+.pos-reset {
+  position: absolute;
+  left: 70px;
+  bottom: 26px;
+  display: inline-block;
+}
 
 .pos-save {
   position: absolute;
   right: 24px;
   bottom: 26px;
   display: inline-block;
+}
+
+.map-frame {
+  position: absolute;
+  left: 50%;
+  top: 58px;
+  transform: translateX(-50%);
+  width: min(560px, 65vw);
+  height: min(620px, 72vh);
+  border-radius: 12px;
+  background: rgba(10, 12, 34, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.4);
+  padding: 16px;
+  display: grid;
+  grid-template-rows: 34px 1fr;
+  gap: 12px;
+}
+
+.map-title {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.grid {
+  border-radius: 8px;
+  overflow: hidden;
+  display: grid;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.cell {
+  background: #69b04c; /* tuile de base (placeholder) */
+  border-right: 1px solid rgba(255, 255, 255, 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.cell:nth-child(10n) {
+  /* évite un double trait à droite (approx, ok pour structure) */
+  border-right: 0;
 }
