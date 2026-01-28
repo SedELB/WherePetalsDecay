@@ -1,11 +1,7 @@
-import { Logger, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Game, gameSchema } from '@app/model/schema/game.schema';
-import { GameService } from './services/game/game.service';
-import { GameValidatorService } from './services/game/gameValidator.service';
-import { GameController } from './controllers/game/game.controller';
-import { GameMode } from './model/schema/game.constants';
 import { GameModule } from './modules/game.module';
 
 @Module({
