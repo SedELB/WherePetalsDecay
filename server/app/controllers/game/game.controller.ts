@@ -1,10 +1,10 @@
-import { CreateGameDto } from "@app/model/dto/game/create-game.dto";
-import { UpdateGameDto } from "@app/model/dto/game/update-game.dto";
-import { Game } from "@app/model/schema/game.schema";
-import { GameService } from "@app/services/game/game.service";
-import { Body, Controller, Get, HttpStatus, Param, Patch, Post, Res } from "@nestjs/common";
-import { ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiTags } from "@nestjs/swagger";
-import { response, Response } from 'express';
+import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
+import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
+import { Game } from '@app/model/schema/game.schema';
+import { GameService } from '@app/services/game/game.service';
+import { Body, Controller, Get, HttpStatus, Param, Patch, Post, Res } from '@nestjs/common';
+import { ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
 
 @ApiTags('Games')
 @Controller('game')

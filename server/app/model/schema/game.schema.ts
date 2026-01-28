@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { GameMode, TileItem, TileTexture } from '@app/model/schema/game.constants';
 import { Document } from 'mongoose';
-import { MIN_LENGTH, MAX_LENGTH, MIN_PLAYERS, MAX_PLAYERS } from '@app/model/dto/game/game.dto.constants';
+import { MIN_LENGTH, MIN_PLAYERS, MAX_PLAYERS } from '@app/model/dto/game/game.dto.constants';
 
 export type GameDocument = Game & Document;
 // TILE — sous-schéma (case)
