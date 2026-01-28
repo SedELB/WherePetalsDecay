@@ -1,20 +1,16 @@
 import { Type } from 'class-transformer';
 import { IsArray, IsBoolean, IsEnum, IsNumber, IsObject, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
-import { GAME_DESCRIPTION_AND_NAME_MIN_LENGTH, GAME_NAME_MAX_LENGTH } from './game.dto.constants';
+import { MAX_LENGTH, MAX_PLAYERS, MIN_LENGTH, MIN_PLAYERS  } from './game.dto.constants';
 // import { Tile } from '@app/model/schema/game.schema';
-import { DoorState, GameMode, TileItem, TileType } from '@app/model/schema/game.constants';
+import { GameMode, TileItem, TileTexture } from '@app/model/schema/game.constants';
 
 export class TileDto {
-    @IsEnum(TileType)
-    type: TileType;
+    @IsEnum(TileTexture)
+    type: TileTexture;
 
     @IsOptional() // car on peut avoir une tuile sans item
     @IsEnum(TileItem)
-    item?: TileItem | null;
-
-    @IsOptional()
-    @IsEnum(DoorState)
-    doorState?: DoorState;
+    item?: TileItem;
 }
 
 class GameSizeDto {
@@ -27,12 +23,12 @@ class GameSizeDto {
 
 export class CreateGameDto {
     @IsString()
-    @MaxLength(GAME_NAME_MAX_LENGTH)
-    @MinLength(GAME_DESCRIPTION_AND_NAME_MIN_LENGTH)
+    @MaxLength(MAX_LENGTH)
+    @MinLength(MIN_LENGTH)
     name: string;
 
     @IsString()
-    @MinLength(GAME_DESCRIPTION_AND_NAME_MIN_LENGTH)
+    @MinLength(MIN_LENGTH)
     description: string;
 
     @IsObject()
@@ -47,6 +43,8 @@ export class CreateGameDto {
     thumbnail: string;
 
     @IsNumber()
+    @MinLength(MIN_PLAYERS)
+    @MaxLength(MAX_PLAYERS)
     maxPlayers: number;
 
     // The grid validation will be in the Controller method.
