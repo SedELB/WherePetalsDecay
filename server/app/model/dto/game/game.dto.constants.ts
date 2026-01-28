@@ -1,0 +1,2 @@
+export const GAME_NAME_MAX_LENGTH = 20;
+export const GAME_DESCRIPTION_AND_NAME_MIN_LENGTH = 1;
