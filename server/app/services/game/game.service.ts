@@ -5,7 +5,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { GameValidatorService } from './gameValidator.service';
-
+const TEN = 10;
 
 @Injectable()
 export class GameService {
@@ -29,10 +29,10 @@ export class GameService {
                 name: 'BakaJanaino',
                 description: 'BakaJanainoSaadSama',
                 size: {rows: 10, cols: 10},
-                gameMode: GameMode.CLASSIC,
+                gameMode: GameMode.Classic,
                 thumbnail: 'hello',
                 maxPlayers: 6,
-                grid: Array(10).fill(null).map(() => Array(10).fill({type: 'floor'})),
+                grid: Array(TEN).fill(null).map(() => Array(TEN).fill({type: 'floor'})),
                 isVisible: false,
             },
         ];
