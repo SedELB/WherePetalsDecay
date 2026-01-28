@@ -1,32 +1,29 @@
 // TODO: If the class becomes complex, we should split the constants and the enums, bakas.
 
 export enum GameMode {
-    CLASSIC = 'classic',
-    CTF = 'ctf'
+    Classic = 'classic',
+    Ctf = 'ctf'
 }
 
-export enum TileType {
-    FLOOR = 'floor',
-    WALL = 'wall',
-    WATER = 'water',
-    ICE = 'ice',
-    DOOR = 'door'
-}
+export enum TileTexture {
+    Floor = 'floor',
+    Wall = 'wall',
+    Water = 'water',
+    Ice = 'ice',
+    DoorOpened = 'doorOpened',
+    DoorClosed = 'doorClosed',
 
-export enum DoorState {
-    OPEN = 'open',
-    CLOSED = 'closed'
 }
 
 export enum TileItem {
-    START = 'start',
-    FLAG = 'flag',
-    HEALING_SANCTUARY = 'healingSanctuary',
-    COMBAT_SANCTUARY = 'combatSanctuary',
+    Spawn = 'spawn',
+    Flag = 'flag',
+    HealingSanctuary = 'healingSanctuary',
+    CombatSanctuary = 'combatSanctuary',
 }
 
-export const GRID_SIZES = {
-    SMALL: 10,
-    MEDIUM: 15,
-    LARGE: 20,
+export enum GridSizes {
+    Small = 10,
+    Medium = 15,
+    Large = 20,
 };

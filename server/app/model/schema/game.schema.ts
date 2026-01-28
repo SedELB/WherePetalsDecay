@@ -1,20 +1,19 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { GameMode, TileType, DoorState, TileItem } from '@app/model/schema/game.constants';
+import { GameMode, TileItem, TileTexture } from '@app/model/schema/game.constants';
 import { Document } from 'mongoose';
+import { MIN_LENGTH, MAX_LENGTH, MIN_PLAYERS, MAX_PLAYERS } from '@app/model/dto/game/game.dto.constants';
 
 export type GameDocument = Game & Document;
 // TILE — sous-schéma (case)
 
 @Schema({ _id: false }) // pas d'_id pour chaque case, une tuile nexiste pas seule
 export class Tile {
-    @Prop({ type: String, enum: Object.values(TileType), required: true})
-    type: TileType;
+    @Prop({ type: String, enum: Object.values(TileTexture), required: true})
+    type: TileTexture;
 
     @Prop({ type: String, enum: Object.values(TileItem), default: null})
-    item?: TileItem | null;
+    item?: TileItem;
 
-    @Prop({ type: String, enum : Object.values(DoorState)})
-    doorState?: DoorState;
 }
 
 export const tileSchema = SchemaFactory.createForClass(Tile); // si on separe dans un nouveau fichier
@@ -26,7 +25,7 @@ export class Game {
     @Prop({ required: true, trim: true }) // trim gere les espaces vides pour un meilleur rendu
     name: string;
 
-    @Prop({ required: true, trim: true })
+    @Prop({ required: true, trim: true, min: MIN_LENGTH})
     description: string;
 
     @Prop({ type: {rows: Number, cols: Number}, required: true })
@@ -41,7 +40,7 @@ export class Game {
     @Prop({ required: true })
     thumbnail: string;
     
-    @Prop({ required: true, min: 2, max: 6})
+    @Prop({ required: true, min: MIN_PLAYERS, max: MAX_PLAYERS})
     maxPlayers: number;
     
     @Prop({ type: [[tileSchema]], required: true })
