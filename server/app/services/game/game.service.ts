@@ -73,16 +73,16 @@ export class GameService {
         }
     }
 
-    async modifyGame(game: CreateGameDto): Promise<void> {
-        const filterQuery = {gameMode: game.gameMode};
+    async modifyGame(id: string, game: CreateGameDto): Promise<void> {
         try {
-            const res = await this.gameModel.updateOne(filterQuery, game);
-            if (res.matchedCount === 0){
-                return Promise.reject('Could not find game');
+            const updatedGame = await this.gameModel.findByIdAndUpdate(id, game, { new: true }).exec();
+            if (!updatedGame) {
+                return Promise.reject('No game found with this id');
             }
         } catch (error) {
             return Promise.reject(`Failed to update game: ${error}`);
         }
+        
     }
 
     async deleteGame(id: string): Promise<void> {

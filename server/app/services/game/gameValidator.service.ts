@@ -9,19 +9,17 @@ export class GameValidatorService {
     constructor(@InjectModel(Game.name) private gameModel: Model<GameDocument>) {}
 
     /*
-    Tile.type returns a TileType (floor, ice, etc.)
-    property: [type, item, doorState]
-    returns: occ = {property: no. of occurence}
-    ex. {ice: 3, floor: 40, water: 21}
+    @param property: string representing the property to count (e.g., 'type' or 'item')
+    ex. returns ex. {ice: 3, floor: 40, water: 21}
     */
     countByProperty(game: Game, property: string): Record<string, number> {
-        const occ = game.grid.flat().reduce((acc, currentObject) => {
-            const type = currentObject[property]; // currentObject: Tile
-            if (type !== undefined && type !== null) acc[type] = (acc[type] || 0) + 1;
+        return game.grid.flat().reduce((acc, tile) => {
+            const value = tile[property]; // ex. value = tile['type'] or tile['item'] = 'ice', 'floor', etc.
+            if (value) {
+                acc[value] = (acc[value] ?? 0) + 1; // acc[value] starts at 0 if undefined
+            }
             return acc;
         }, {});
-
-        return occ;
     }
 
     // Uniquement pour type et item (pas DoorState)
@@ -66,7 +64,7 @@ export class GameValidatorService {
         }
     }
 
-    areThereInacessibleTiles(game: Game): boolean {
+    areThereUnreachableTiles(game: Game): boolean {
         let startPos = null;
         for (let r = 0; r < game.grid.length; r++) {
             for (let c = 0; c < game.grid[r].length; c++) {
@@ -151,7 +149,7 @@ export class GameValidatorService {
     }
 
     isGameValid(game: Game): boolean {
-        if (this.isDoorPlacementValid(game) && this.areThereInacessibleTiles(game) &&
+        if (this.isDoorPlacementValid(game) && this.areThereUnreachableTiles(game) &&
             this.isGameSurfaceValid(game) && this.areAllSpawnPointsPlaced(game)) {
             return true;
         }
