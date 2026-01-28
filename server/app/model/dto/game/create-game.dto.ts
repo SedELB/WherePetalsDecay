@@ -1,7 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsArray, IsBoolean, IsEnum, IsNumber, IsObject, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
 import { MAX_LENGTH, MAX_PLAYERS, MIN_LENGTH, MIN_PLAYERS  } from './game.dto.constants';
-// import { Tile } from '@app/model/schema/game.schema';
 import { GameMode, TileItem, TileTexture } from '@app/model/schema/game.constants';
 
 export class TileDto {
