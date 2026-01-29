@@ -49,27 +49,12 @@ export class GameService {
     }
 
     async addGame(game: CreateGameDto): Promise<void> {
-        if (!await this.gameValidatorService.isGameNameUnique(game.name)) {
-            return Promise.reject('Le jeu existe déjà.');
-            // throw new Error('Le nom du jeu existe déjà.'); 
-        }
-
-        if (!this.gameValidatorService.isGameSurfaceValid(game)) {
-            return Promise.reject("La surface du jeu n'est pas valide.");
-            // throw new Error('La surface du jeu n’est pas valide .');
-        }
-
-        if (!this.gameValidatorService.areAllSpawnPointsPlaced(game)) {
-            return Promise.reject("Les points de départs n'ont pas tous été mis.");
-            // throw new Error("Les points de départs n'ont pas tous été mis.");
-        }
-
         try {
+            this.gameValidatorService.isGameValid(game);
             await this.gameModel.create(game);
         } catch (error) {
-            return Promise.reject(`Failed to insert game: ${error}`);
-            // this.logger.error(`Erreur lors de la création du jeu: ${error.message}`);
-            // throw new InternalServerErrorException('Échec de l’insertion du jeu dans la base de données');
+            this.logger.log(`Failed to create game: ${error.message}`);
+            return Promise.reject(`Failed to create game: ${error.message}`);
         }
     }
 
@@ -89,6 +74,7 @@ export class GameService {
         const deletedGame = await this.gameModel.findByIdAndDelete(id);
         if (!deletedGame) {
             this.logger.log('No game found with this id');
+            return Promise.reject('No game found with this id');
         } else {
             this.logger.log(`Game with ID: ${id} was successfully deleted.`);
         }
