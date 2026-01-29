@@ -1,4 +1,4 @@
-import { TileItem, TileType } from '@app/model/schema/game.constants';
+import { TileItem, TileTexture } from '@app/model/schema/game.constants';
 import { Game, GameDocument } from '@app/model/schema/game.schema';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -28,7 +28,7 @@ export class GameValidatorService {
 
         for (let i = 0; i < game.grid.length; i++) {
             for (let j = 0; j < game.grid[0].length; j++) {
-                if (Object.values(TileType).includes(wantedTile as TileType) &&
+                if (Object.values(TileTexture).includes(wantedTile as TileTexture) &&
                     game.grid[i][j].type === wantedTile) {
                     tilePositions.push({ row: i, col: j });
                 } else if (Object.values(TileItem).includes(wantedTile as TileItem) &&
@@ -51,7 +51,8 @@ export class GameValidatorService {
         if (terrainTilesNumber > ((game.size.cols * game.size.rows) / 2)) {
             return true;
         } else {
-            return false;
+            throw new Error('Less than 50% of tiles are walkable!');
+            // return false;
         }
     }
 
@@ -60,7 +61,8 @@ export class GameValidatorService {
         if ((items.start || 0) === game.maxPlayers) {
             return true;
         } else {
-            return false;
+            throw new Error('Not all spawn points are placed!');
+            // return false;
         }
     }
 
@@ -107,7 +109,8 @@ export class GameValidatorService {
         if (visited.size !== totalWalkable) {
             return true;
         } else {
-            return false;
+            throw new Error('Une ou plusieurs tuiles sont inaccessibles !');
+            // return false;
         }
     }
 
@@ -125,7 +128,8 @@ export class GameValidatorService {
                 col < cols - 1;
 
             if (!isInsideGrid) {
-                return false;
+                throw new Error('Invalid door placement (outside grid)!');
+                // return false;
             }
 
             const up = game.grid[row - 1][col];
@@ -144,15 +148,42 @@ export class GameValidatorService {
                 }
                 return true;
             }
-            return false;
+            
+            throw new Error('Invalid door placement!');
+            // return false;
         }
     }
 
     isGameValid(game: Game): boolean {
-        if (this.isDoorPlacementValid(game) && this.areThereUnreachableTiles(game) &&
-            this.isGameSurfaceValid(game) && this.areAllSpawnPointsPlaced(game)) {
-            return true;
+        const errors: string[] = [];
+        try {
+            this.isDoorPlacementValid(game);
+        } catch (error) {
+            errors.push(error.message);
         }
-    }
 
+        try {
+        this.areThereUnreachableTiles(game);
+        } catch (error) {
+            errors.push(error.message);
+        }
+
+        try {
+            this.isGameSurfaceValid(game);
+        } catch (error) {
+            errors.push(error.message);
+        }
+
+        try {
+            this.areAllSpawnPointsPlaced(game);
+        } catch (error) {
+            errors.push(error.message);
+        }
+
+        if (errors.length > 0) {
+            throw new Error(`Validation errors: ${errors.join('; ')}`);
+        }
+
+        return true;
+    }
 }

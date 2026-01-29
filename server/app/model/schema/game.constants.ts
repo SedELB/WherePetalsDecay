@@ -12,7 +12,6 @@ export enum TileTexture {
     Ice = 'ice',
     DoorOpened = 'doorOpened',
     DoorClosed = 'doorClosed',
-
 }
 
 export enum TileItem {
