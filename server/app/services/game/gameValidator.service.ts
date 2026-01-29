@@ -42,7 +42,11 @@ export class GameValidatorService {
 
     async isGameNameUnique(gameName: string): Promise<boolean> {
         const nameExists = await this.gameModel.findOne({ name: gameName });
-        return !nameExists;
+        if (nameExists){
+            return true;
+        } else {
+            throw new Error('The name of the game is not unique!');
+        }
     }
 
     isGameSurfaceValid(game: Game): boolean {
@@ -78,7 +82,8 @@ export class GameValidatorService {
             if (startPos) break;
         }
 
-        const totalWalkable = this.countByProperty(game, 'type').floor;
+        const types = this.countByProperty(game, 'type');
+        const totalWalkable = types.floor + types.water + types.ice;
         const queue = [startPos];
         const visited = new Set();
         visited.add(`${startPos.r}, ${startPos.c}`);
@@ -106,7 +111,7 @@ export class GameValidatorService {
             }
         }
 
-        if (visited.size !== totalWalkable) {
+        if (visited.size === totalWalkable) {
             return true;
         } else {
             throw new Error('Une ou plusieurs tuiles sont inaccessibles !');
@@ -156,6 +161,12 @@ export class GameValidatorService {
 
     isGameValid(game: Game): boolean {
         const errors: string[] = [];
+        try {
+            this.isGameNameUnique(game.name);
+        } catch (error) {
+            errors.push(error.message);
+        }
+
         try {
             this.isDoorPlacementValid(game);
         } catch (error) {
