@@ -45,7 +45,7 @@ export class GameService {
     }
 
     async getGameById(wantedId: string): Promise<Game> {
-        return await this.gameModel.findById({wantedId}).exec();
+        return await this.gameModel.findById(wantedId).exec();
     }
 
     async addGame(game: CreateGameDto): Promise<void> {
