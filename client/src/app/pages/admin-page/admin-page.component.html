@@ -11,12 +11,11 @@
 
     <div class="list-container">
         @for(game of games; track game.id){
-            <app-game-card
-            [game]="game"
+            <app-game-card [game]="game"
             (removeParent)="removeGame(game.id)">
-            <app-button [height]="50" [route]="'/editor'">Modifier</app-button>
-            <app-button [height]="50" (clicked)="changeVisibility(game.id)">{{ game.visible ? 'Afficher' : 'Cacher' }}</app-button>
-            <app-button [height]="50" (clicked)="removeGame(game.id)">Supprimer</app-button>
+                <app-button [height]="50" [route]="'/editor'">Modifier</app-button>
+                <app-button [height]="50" (clicked)="changeVisibility(game.id)">{{ game.visible ? 'Afficher' : 'Cacher' }}</app-button>
+                <app-button [height]="50" (clicked)="removeGame(game.id)">Supprimer</app-button>
             </app-game-card>
         }
 
@@ -32,7 +31,6 @@
                 </g>
             </svg>
         </app-button>
-
     </div>
 </body>
 </html>

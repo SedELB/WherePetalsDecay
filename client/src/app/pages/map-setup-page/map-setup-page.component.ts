@@ -1,11 +1,11 @@
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 
 @Component({
   selector: 'app-map-setup-page',
-  imports: [FormsModule, RouterLink, ButtonComponent],
+  imports: [FormsModule, ButtonComponent],
   templateUrl: './map-setup-page.component.html',
   styleUrl: './map-setup-page.component.scss',
 })
