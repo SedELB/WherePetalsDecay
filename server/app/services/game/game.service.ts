@@ -1,11 +1,11 @@
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
-import { GameMode } from '@app/model/schema/game.constants';
+import { GameMode } from '@app/utils/game.enum';
 import { Game, GameDocument } from '@app/model/schema/game.schema';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { GameValidatorService } from './gameValidator.service';
-const TEN = 10;
+const TEN = 10; // TODO: a supprimer plus tard
 
 @Injectable()
 export class GameService {

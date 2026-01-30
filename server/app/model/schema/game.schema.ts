@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { GameMode, TileItem, TileTexture } from '@app/model/schema/game.constants';
+import { GameMode, TileItem, TileTexture } from '@app/utils/game.enum';
 import { Document } from 'mongoose';
-import { MIN_LENGTH, MIN_PLAYERS, MAX_PLAYERS } from '@app/model/dto/game/game.dto.constants';
+import { TEXT_MIN_LENGTH, NAME_MAX_LENGTH, DESC_MAX_LENGHT, MIN_PLAYERS, MAX_PLAYERS } from '@app/utils/game.constants';
 
 export type GameDocument = Game & Document;
 // TILE — sous-schéma (case)
@@ -22,10 +22,10 @@ export const tileSchema = SchemaFactory.createForClass(Tile); // si on separe da
 
 @Schema({ timestamps: true }) // ajoute et modifie createdAt et updatedAt automatiquement
 export class Game {
-    @Prop({ required: true, trim: true }) // trim gere les espaces vides pour un meilleur rendu
+    @Prop({ required: true, trim: true, min: TEXT_MIN_LENGTH, max: NAME_MAX_LENGTH }) // trim gere les espaces vides pour un meilleur rendu
     name: string;
 
-    @Prop({ required: true, trim: true, min: MIN_LENGTH})
+    @Prop({ required: true, trim: true, min: TEXT_MIN_LENGTH, max: DESC_MAX_LENGHT })
     description: string;
 
     @Prop({ type: {rows: Number, cols: Number}, required: true })

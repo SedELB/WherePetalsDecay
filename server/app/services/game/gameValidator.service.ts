@@ -1,4 +1,5 @@
-import { TileItem, TileTexture } from '@app/model/schema/game.constants';
+import { TEXT_MIN_LENGTH } from '@app/utils/game.constants';
+import { TileItem, TileTexture } from '@app/utils/game.enum';
 import { Game, GameDocument } from '@app/model/schema/game.schema';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -22,17 +23,19 @@ export class GameValidatorService {
         }, {});
     }
 
-    // Uniquement pour type et item (pas DoorState)
+    // Pour type et item
     getTilePosition(game: Game, wantedTile: string): { row: number; col: number }[] {
         const tilePositions: { row: number; col: number }[] = [];
 
         for (let i = 0; i < game.grid.length; i++) {
             for (let j = 0; j < game.grid[0].length; j++) {
+                const currentTile = game.grid[i][j];
+
                 if (Object.values(TileTexture).includes(wantedTile as TileTexture) &&
-                    game.grid[i][j].type === wantedTile) {
+                    currentTile.type === wantedTile) {
                     tilePositions.push({ row: i, col: j });
                 } else if (Object.values(TileItem).includes(wantedTile as TileItem) &&
-                    game.grid[i][j].item === wantedTile) {
+                    currentTile.item === wantedTile) {
                     tilePositions.push({ row: i, col: j });
                 }
             }
@@ -41,14 +44,32 @@ export class GameValidatorService {
     }
 
     async isGameNameUnique(gameName: string): Promise<boolean> {
-        const nameExists = await this.gameModel.findOne({ name: gameName });
-        if (nameExists){
+        const nameExists = await this.gameModel.findOne({ name: gameName }).exec();
+        if (!nameExists){
             return true;
         } else {
-            throw new Error('The name of the game is not unique!');
+            throw new Error('The name of the game is not unique!'); // A voir si cest ca qui fait crash le serv (mettre promise.reject)
         }
     }
 
+    isTextLenghtValid(game: Game): boolean {
+        if (game.name.length < TEXT_MIN_LENGTH && game.description.length < TEXT_MIN_LENGTH) {
+            throw new Error('The name and the description field are empty!');
+            // return false;
+        }
+
+        if (game.name.length < TEXT_MIN_LENGTH) {
+            throw new Error('The name field is empty!');
+            // return false;
+        }
+        
+        if (game.description.length < TEXT_MIN_LENGTH) {
+            throw new Error('The description field is empty.');
+            // return false;
+        }
+        return true;
+    }
+    
     isGameSurfaceValid(game: Game): boolean {
         const types = this.countByProperty(game, 'type');
         const terrainTilesNumber = (types.floor || 0) + (types.ice || 0) + (types.water || 0);
@@ -159,6 +180,18 @@ export class GameValidatorService {
         }
     }
 
+    isFlagPlaced(game: Game): boolean {
+        if (game.gameMode === 'ctf') {
+            const nbFlag = this.countByProperty(game, 'item').flag;
+            if (nbFlag === 0) {
+                throw new Error("The Flag isn't placed!");
+                // return false;
+            }
+            return true; // il a été placé
+        }
+        return true; // Cas : gameMode = classic
+    }
+
     isGameValid(game: Game): boolean {
         const errors: string[] = [];
         try {
@@ -168,13 +201,19 @@ export class GameValidatorService {
         }
 
         try {
+            this.isTextLenghtValid(game);
+        } catch (error) {
+            error.push(error.message);
+        }
+
+        try {
             this.isDoorPlacementValid(game);
         } catch (error) {
             errors.push(error.message);
         }
 
         try {
-        this.areThereUnreachableTiles(game);
+            this.areThereUnreachableTiles(game);
         } catch (error) {
             errors.push(error.message);
         }
@@ -187,6 +226,12 @@ export class GameValidatorService {
 
         try {
             this.areAllSpawnPointsPlaced(game);
+        } catch (error) {
+            errors.push(error.message);
+        }
+
+        try {
+            this.isFlagPlaced(game);
         } catch (error) {
             errors.push(error.message);
         }
