@@ -1,7 +1,8 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsEnum, IsNumber, IsObject, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
-import { MAX_LENGTH, MAX_PLAYERS, MIN_LENGTH, MIN_PLAYERS  } from './game.dto.constants';
-import { GameMode, TileItem, TileTexture } from '@app/model/schema/game.constants';
+import { IsArray, IsBoolean, IsEnum, IsNumber, IsObject, IsOptional, IsString, 
+        Max, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
+import { NAME_MAX_LENGTH, DESC_MAX_LENGHT, MAX_PLAYERS, TEXT_MIN_LENGTH, MIN_PLAYERS  } from '@app/utils/game.constants';
+import { GameMode, TileItem, TileTexture } from '@app/utils/game.enum';
 
 export class TileDto {
     @IsEnum(TileTexture)
@@ -23,13 +24,14 @@ class GameSizeDto {
 export class UpdateGameDto {
     @IsOptional()
     @IsString()
-    @MaxLength(MAX_LENGTH)
-    @MinLength(MIN_LENGTH)
+    @MaxLength(NAME_MAX_LENGTH)
+    @MinLength(TEXT_MIN_LENGTH)
     name: string;
 
     @IsOptional()
     @IsString()
-    @MinLength(MIN_LENGTH)
+    @MaxLength(DESC_MAX_LENGHT)
+    @MinLength(TEXT_MIN_LENGTH)
     description: string;
 
     @IsOptional()
@@ -46,17 +48,17 @@ export class UpdateGameDto {
     @IsString()
     thumbnail: string;
 
+    @IsOptional()
     @IsNumber()
-    @MinLength(MIN_PLAYERS)
-    @MaxLength(MAX_PLAYERS)
+    @Min(MIN_PLAYERS)
+    @Max(MAX_PLAYERS)
     maxPlayers: number;
 
-    // The grid validation will be in the Controller method.
+    @IsOptional()
     @IsArray() // verifie que cest un tableau
     @IsArray({ each: true }) // ... un tableau de tableaux
     @ValidateNested({ each: true }) // entre dans TileDto et verifie selon les decorateurs
     @Type(() => TileDto) // transforme JSON en instance de TileDto
-    @IsOptional()
     grid: TileDto[][];
 
     @IsOptional()

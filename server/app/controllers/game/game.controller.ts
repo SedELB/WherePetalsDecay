@@ -30,7 +30,7 @@ export class GameController {
     }
 
     @ApiCreatedResponse({
-            description: 'Add new game',
+        description: 'Add new game',
         })
     @ApiNotFoundResponse({
         description: 'Return NOT_FOUND http status when request fails',
