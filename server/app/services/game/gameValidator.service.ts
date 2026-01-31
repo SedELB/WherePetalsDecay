@@ -1,6 +1,7 @@
-import { TEXT_MIN_LENGTH } from '@app/utils/game.constants';
-import { TileItem, TileTexture } from '@app/utils/game.enum';
-import { Game, GameDocument } from '@app/model/schema/game.schema';
+import { TEXT_MIN_LENGTH, NAME_MAX_LENGTH, DESC_MAX_LENGTH } from '@app/utils/game.constants';
+import { TileTexture } from '@app/utils/game.enum';
+import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
+import { Game, GameDocument, Tile } from '@app/model/schema/game.schema';
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -11,9 +12,9 @@ export class GameValidatorService {
 
     /*
     @param property: string representing the property to count (e.g., 'type' or 'item')
-    ex. returns ex. {ice: 3, floor: 40, water: 21}
+    ex. returns ex. {ice: 3, floor: 40, water: 21} ** only the types/items present in the grid + {item: null} is ignored**
     */
-    countByProperty(game: Game, property: string): Record<string, number> {
+    private countByProperty(game: CreateGameDto, property: string): Record<string, number> {
         return game.grid.flat().reduce((acc, tile) => {
             const value = tile[property]; // ex. value = tile['type'] or tile['item'] = 'ice', 'floor', etc.
             if (value) {
@@ -23,19 +24,18 @@ export class GameValidatorService {
         }, {});
     }
 
-    // Pour type et item
-    getTilePosition(game: Game, wantedTile: string): { row: number; col: number }[] {
+    // For type and item
+    private getTilePositions(game: CreateGameDto, wantedTile: string): { row: number; col: number }[] {
+        if (game.grid.length === 0) return [];
+
         const tilePositions: { row: number; col: number }[] = [];
 
         for (let i = 0; i < game.grid.length; i++) {
             for (let j = 0; j < game.grid[0].length; j++) {
                 const currentTile = game.grid[i][j];
 
-                if (Object.values(TileTexture).includes(wantedTile as TileTexture) &&
-                    currentTile.type === wantedTile) {
-                    tilePositions.push({ row: i, col: j });
-                } else if (Object.values(TileItem).includes(wantedTile as TileItem) &&
-                    currentTile.item === wantedTile) {
+                if (currentTile.type === wantedTile || currentTile.item === wantedTile || (wantedTile === 'door' && 
+                    (currentTile.type === TileTexture.DoorClosed || currentTile.type === TileTexture.DoorOpened))) {
                     tilePositions.push({ row: i, col: j });
                 }
             }
@@ -43,89 +43,103 @@ export class GameValidatorService {
         return tilePositions;
     }
 
-    async isGameNameUnique(gameName: string): Promise<boolean> {
+    async isGameNameUnique(gameName: string, gameId?: string): Promise<boolean> {
         const nameExists = await this.gameModel.findOne({ name: gameName }).exec();
-        if (!nameExists){
-            return true;
-        } else {
-            throw new Error('The name of the game is not unique!'); // A voir si cest ca qui fait crash le serv (mettre promise.reject)
-        }
+        // if name is unique
+        if (!nameExists) return true;
+        // if name exist but we're updating a game
+        if (gameId && nameExists._id.toString() === gameId) return true;
+
+        throw new Error('The name of the game is not unique!');
+        
     }
 
-    isTextLenghtValid(game: Game): boolean {
-        if (game.name.length < TEXT_MIN_LENGTH && game.description.length < TEXT_MIN_LENGTH) {
-            throw new Error('The name and the description field are empty!');
-            // return false;
-        }
+    isTextLengthValid(game: CreateGameDto): boolean {
+        const errors: string[] = [];
 
         if (game.name.length < TEXT_MIN_LENGTH) {
-            throw new Error('The name field is empty!');
-            // return false;
+            errors.push('The name field is empty!');
+        } else if (game.name.length > NAME_MAX_LENGTH) {
+            errors.push('The name field exceeds the maximum length!');
         }
-        
+
         if (game.description.length < TEXT_MIN_LENGTH) {
-            throw new Error('The description field is empty.');
-            // return false;
+            errors.push('The description field is empty!');
+        } else if (game.description.length > DESC_MAX_LENGTH) {
+            errors.push('The description field exceeds the maximum length!');
+        }
+        if (errors.length > 0) {
+            throw errors;  // TODO: has to be validate
         }
         return true;
     }
     
-    isGameSurfaceValid(game: Game): boolean {
+    isGameSurfaceValid(game: CreateGameDto): boolean {
         const types = this.countByProperty(game, 'type');
         const terrainTilesNumber = (types.floor || 0) + (types.ice || 0) + (types.water || 0);
         if (terrainTilesNumber > ((game.size.cols * game.size.rows) / 2)) {
             return true;
         } else {
             throw new Error('Less than 50% of tiles are walkable!');
-            // return false;
         }
     }
 
-    areAllSpawnPointsPlaced(game: Game): boolean {
+    areAllSpawnPointsPlaced(game: CreateGameDto): boolean {
         const items = this.countByProperty(game, 'item');
-        if ((items.start || 0) === game.maxPlayers) {
+        if ((items.spawn || 0) === game.maxPlayers) {
             return true;
         } else {
             throw new Error('Not all spawn points are placed!');
-            // return false;
         }
+    }   
+
+    // For areThereUnreachableTiles()
+    private findFirstWalkableTile(grid: Tile[][]): { row: number; col: number } | null {
+        for (let r = 0; r < grid.length; r++) {
+            for (let c = 0; c < grid[r].length; c++) {
+                if (grid[r][c].type !== TileTexture.Wall) return { row: r, col: c };
+            }
+        }
+        return null;
+    }   
+    
+    // For areThereUnreachableTiles()
+    private isTileValidForPath(game: CreateGameDto, r: number, c: number, visited: Set<string>): boolean {
+        const isWithinBounds = r >= 0 && r < game.grid.length && c >= 0 && c < game.grid[0].length;
+        if (!isWithinBounds) return false;
+
+        const isNotWall = game.grid[r][c].type !== TileTexture.Wall;
+        const isNotVisited = !visited.has(`${r}, ${c}`);
+        
+        return isNotWall && isNotVisited;
     }
 
-    areThereUnreachableTiles(game: Game): boolean {
-        let startPos = null;
-        for (let r = 0; r < game.grid.length; r++) {
-            for (let c = 0; c < game.grid[r].length; c++) {
-                if (game.grid[r][c].type !== 'wall') {
-                    startPos = { row: r, col: c };
-                    break;
-                }
-            }
-            if (startPos) break;
+    areThereUnreachableTiles(game: CreateGameDto): boolean {
+        const startPos = this.findFirstWalkableTile(game.grid);
+        if (!startPos) {
+            throw new Error('The map must contain at least 50% of walkable tile (floor, water, or ice)!');
         }
 
         const types = this.countByProperty(game, 'type');
-        const totalWalkable = types.floor + types.water + types.ice;
+        const totalWalkable = (types.floor || 0) + (types.water || 0) + (types.ice || 0) + 
+                            (types.doorOpened || 0) + (types.doorClosed || 0); // Door and terrain
+
         const queue = [startPos];
-        const visited = new Set();
-        visited.add(`${startPos.r}, ${startPos.c}`);
+        const visited = new Set<string>();
+        visited.add(`${startPos.row}, ${startPos.col}`);
 
         while (queue.length > 0) {
-            const currentTile = queue.shift();
+            const currentTile = queue.shift();  // TODO: Can be undefind ?
             const neighbours = [
-                { r: currentTile.row - 1, c: currentTile.col }, // Up
-                { r: currentTile.row + 1, c: currentTile.col }, // Down
-                { r: currentTile.row, c: currentTile.col - 1 }, // Left
-                { r: currentTile.row, c: currentTile.col + 1 },  // Right
+                { row: currentTile.row - 1, col: currentTile.col }, // Up
+                { row: currentTile.row + 1, col: currentTile.col }, // Down
+                { row: currentTile.row, col: currentTile.col - 1 }, // Left
+                { row: currentTile.row, col: currentTile.col + 1 },  // Right
             ];
 
             for (const next of neighbours) {
-                const key = `${next.r}, ${next.c}`; // text name of current tile
-                if (
-                    next.r >= 0 && next.r < game.grid.length &&
-                    next.c >= 0 && next.c < game.grid[0].length &&
-                    game.grid[next.r][next.c].type !== 'wall' &&
-                    !visited.has(key)
-                ) {
+                const key = `${next.row}, ${next.col}`; // text name of current tile
+                if (this.isTileValidForPath(game, next.row, next.col, visited)) {
                     visited.add(key);
                     queue.push(next);
                 }
@@ -136,110 +150,93 @@ export class GameValidatorService {
             return true;
         } else {
             throw new Error('Une ou plusieurs tuiles sont inaccessibles !');
-            // return false;
         }
     }
 
-    isDoorPlacementValid(game: Game): boolean {
-        const allDoorsPos = this.getTilePosition(game, 'door');
+    // For isDoorsPlacementValid()
+    private isDoorInsideGrid(grid: Tile[][], row: number, col: number): boolean {
+        const rows = grid.length;
+        const cols = grid[0].length;
+        const isInside =
+            row > 0 &&
+            row < rows - 1 &&
+            col > 0 &&
+            col < cols - 1;
+        
+        if (isInside) return true;
+        return false;
+    }
+
+    isDoorsPlacementValid(game: CreateGameDto): boolean {
+        const allDoorsPos = this.getTilePositions(game, 'door');
+        const errors: string[] = [];
+        const wall = TileTexture.Wall;
+        const obstacles = [wall, TileTexture.DoorOpened, TileTexture.DoorClosed];
+
         for (const { row, col } of allDoorsPos) {
-
-            const rows = game.grid.length;
-            const cols = game.grid[0].length;
-
-            const isInsideGrid =
-                row > 0 &&
-                row < rows - 1 &&
-                col > 0 &&
-                col < cols - 1;
-
-            if (!isInsideGrid) {
-                throw new Error('Invalid door placement (outside grid)!');
-                // return false;
+            // Grid border is exclude
+            if (!this.isDoorInsideGrid(game.grid, row, col)) {
+                errors.push(`Door at (${row}, ${col}) cannot be on the edge of the map!`);
+                continue;
             }
 
-            const up = game.grid[row - 1][col];
-            const down = game.grid[row + 1][col];
-            const left = game.grid[row][col - 1];
-            const right = game.grid[row][col + 1];
+            const up = game.grid[row - 1][col].type;
+            const down = game.grid[row + 1][col].type;
+            const left = game.grid[row][col - 1].type;
+            const right = game.grid[row][col + 1].type;
 
-            // S'il y a deux portes dans un des axes
-            if ((up.type === 'wall' && down.type === 'wall') || (
-                left.type === 'wall' && right.type === 'wall')) {
+            const verticalSandwich = (up === wall && down === wall) && 
+                                    (!obstacles.includes(left) && !obstacles.includes(right));
 
-                // S'il y a une 3e porte
-                if (left.type === 'wall' || right.type === 'wall' ||
-                    up.type === 'wall' || down.type === 'wall') {
-                    return false;
-                }
-                return true;
+            const horizontalSandwich = (left === wall && right === wall) && 
+                                    (!obstacles.includes(up) && !obstacles.includes(down));
+
+            if (!verticalSandwich && !horizontalSandwich) {
+                errors.push(`Invalid door placement at the position (${row}, ${col})!`);
             }
-            
-            throw new Error('Invalid door placement!');
-            // return false;
         }
+        if (errors.length > 0) throw errors;
+        return true;
     }
 
-    isFlagPlaced(game: Game): boolean {
+    isFlagPlaced(game: CreateGameDto): boolean {
         if (game.gameMode === 'ctf') {
-            const nbFlag = this.countByProperty(game, 'item').flag;
+            const nbFlag = this.countByProperty(game, 'item').flag || 0;
             if (nbFlag === 0) {
                 throw new Error("The Flag isn't placed!");
-                // return false;
             }
-            return true; // il a été placé
+            return true; // has been placed
         }
-        return true; // Cas : gameMode = classic
+        return true; // Case : gameMode = classic
     }
 
-    isGameValid(game: Game): boolean {
-        const errors: string[] = [];
-        try {
-            this.isGameNameUnique(game.name);
-        } catch (error) {
-            errors.push(error.message);
-        }
+    async isGameValid(game: CreateGameDto, id?: string): Promise<boolean> {
+        let errors: string[] = [];
 
-        try {
-            this.isTextLenghtValid(game);
-        } catch (error) {
-            error.push(error.message);
+        const validations = [
+            async () => await this.isGameNameUnique(game.name, id),
+            () => this.isTextLengthValid(game),
+            () => this.isDoorsPlacementValid(game),
+            () => this.areThereUnreachableTiles(game),
+            () => this.isGameSurfaceValid(game),
+            () => this.areAllSpawnPointsPlaced(game),
+            () => this.isFlagPlaced(game),
+        ];
+        
+        for (const validation of validations) {
+            try {
+                await validation();
+            } catch (error) {
+                if (error instanceof Error) {
+                    errors.push(error.message);
+                } else {
+                    errors = errors.concat(error);
+                }
+            }
         }
-
-        try {
-            this.isDoorPlacementValid(game);
-        } catch (error) {
-            errors.push(error.message);
-        }
-
-        try {
-            this.areThereUnreachableTiles(game);
-        } catch (error) {
-            errors.push(error.message);
-        }
-
-        try {
-            this.isGameSurfaceValid(game);
-        } catch (error) {
-            errors.push(error.message);
-        }
-
-        try {
-            this.areAllSpawnPointsPlaced(game);
-        } catch (error) {
-            errors.push(error.message);
-        }
-
-        try {
-            this.isFlagPlaced(game);
-        } catch (error) {
-            errors.push(error.message);
-        }
-
         if (errors.length > 0) {
             throw new Error(`Validation errors: ${errors.join('; ')}`);
         }
-
         return true;
     }
 }
