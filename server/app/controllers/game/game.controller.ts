@@ -41,7 +41,7 @@ export class GameController {
             await this.gameService.addGame(gameDto);
             response.status(HttpStatus.CREATED).send();
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).send(error.message);
+            response.status(HttpStatus.BAD_REQUEST).send(error.message);
         }
     }
 
@@ -58,7 +58,8 @@ export class GameController {
             await this.gameService.modifyGame(id, gameDto);
             response.status(HttpStatus.OK).send('Game updated successfully!');
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).send(error.message);
+            const status = error.message.includes('No game found with this id') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            response.status(status).send(error.message);
         }
     }
 }

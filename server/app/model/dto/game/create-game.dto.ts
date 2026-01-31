@@ -1,7 +1,7 @@
 import { Type } from 'class-transformer';
 import { IsArray, IsBoolean, IsEnum, IsNumber, IsObject, IsOptional, IsString, 
         Max, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
-import { NAME_MAX_LENGTH, DESC_MAX_LENGHT, MAX_PLAYERS, TEXT_MIN_LENGTH, MIN_PLAYERS  } from '@app/utils/game.constants';
+import { NAME_MAX_LENGTH, DESC_MAX_LENGTH, MAX_PLAYERS, TEXT_MIN_LENGTH, MIN_PLAYERS } from '@app/utils/game.constants';
 import { GameMode, TileItem, TileTexture } from '@app/utils/game.enum';
 
 export class TileDto {
@@ -28,7 +28,7 @@ export class CreateGameDto {
     name: string;
 
     @IsString()
-    @MaxLength(DESC_MAX_LENGHT)
+    @MaxLength(DESC_MAX_LENGTH)
     @MinLength(TEXT_MIN_LENGTH)
     description: string;
 
