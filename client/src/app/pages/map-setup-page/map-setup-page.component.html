@@ -14,7 +14,22 @@
       </div>
     </aside>
 
+    <div class="map-frame" aria-label="Grille de carte">
+      <div class="map-title">Mode classique</div>
+      <div
+        class="grid"
+        [style.gridTemplateColumns]="'repeat(' + gridCols + ', 1fr)'"
+        [style.gridTemplateRows]="'repeat(' + gridRows + ', 1fr)'"
+      >
+        @for (row of grid; track $index) {
+          @for (cell of row; track $index) {
+            <div class="cell" [attr.data-tile]="cell.type"></div>
+          }
+        }
+      </div>
+    </div>
 
+    <app-button class=pos-reset [variant]="'default'" (clicked)="onReset()">Réinitialiser</app-button>
     <app-button class="pos-save"  [variant]="'default'" (clicked)="onSave()">Sauvegarder</app-button>
   </section>
 </main>
