@@ -28,7 +28,7 @@ export class Game {
     @Prop({ required: true, trim: true, min: TEXT_MIN_LENGTH, max: DESC_MAX_LENGTH })
     description: string;
 
-    @Prop({ type: {rows: Number, cols: Number}, required: true })
+    @Prop({ type: {rows: Number, cols: Number}, required: true, _id: false})
     size: {
         rows: number, 
         cols: number

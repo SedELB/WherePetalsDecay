@@ -8,7 +8,7 @@ export class TileDto {
     @IsEnum(TileTexture)
     type: TileTexture;
 
-    @IsOptional() // car on peut avoir une tuile sans item
+    @IsOptional()
     @IsEnum(TileItem)
     item?: TileItem;
 }
