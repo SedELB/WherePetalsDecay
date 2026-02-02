@@ -6,8 +6,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { GameValidatorService } from './gameValidator.service';
 import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
-import { MAX_PLAYERS, MIN_PLAYERS } from '@app/utils/game.constants';
-const TEN = 10; // TODO: delete later
+import { MAX_PLAYERS, MIN_PLAYERS, TEN } from '@app/utils/game.constants';
 
 @Injectable()
 export class GameService {
@@ -26,16 +25,17 @@ export class GameService {
     }
 
     // GENERATED
-    private generateValidGrid(rows: number, cols: number): TileDto[][] {
+    generateValidGrid(rows: number, cols: number): TileDto[][] {
         const grid: TileDto[][] = Array.from({ length: rows }, () =>
             Array.from({ length: cols }, (): TileDto => ({ type: TileTexture.Floor, item: null })),
         );
 
-        for (let i = 0; i < rows; i++) {
-            for (let j = 0; j < cols; j++) {
-                if (Math.random() < 0.3) grid[i][j].type = TileTexture.Wall;
-            }
-        }
+        // Places random walls at 30% rate
+        // for (let i = 0; i < rows; i++) {
+        //     for (let j = 0; j < cols; j++) {
+        //         if (Math.random() < 0.3) grid[i][j].type = TileTexture.Wall;
+        //     }
+        // }
 
         let spawnCount = 0;
         while (spawnCount < MAX_PLAYERS) {
@@ -51,7 +51,7 @@ export class GameService {
     }
 
 
-    private generateInvalidGrid(rows: number, cols: number): TileDto[][] {
+    generateInvalidGrid(rows: number, cols: number): TileDto[][] {
         return Array.from({ length: rows }, () =>
             Array.from({ length: cols }, (): TileDto => ({ type: TileTexture.Wall, item: null })),  // Tout en murs = invalide
         );
@@ -164,21 +164,24 @@ export class GameService {
     }
 
     async deleteGame(id: string): Promise<void> {
-        const deletedGame = await this.gameModel.findByIdAndDelete(id);
-        if (!deletedGame) {
-            this.logger.log('No game found with this id');
-            throw new Error('No game found with this id');
-        } else {
+        try {
+            const deletedGame = await this.gameModel.findByIdAndDelete(id).exec();
+            if (!deletedGame) {
+                this.logger.log('No game found with this id');
+                throw new Error('No game found with this id');
+            }
             this.logger.log(`Game with ID: ${id} was successfully deleted.`);
+        } catch (error) {
+            this.logger.log(`Error during game deletion: ${error.message}`);
+            throw new Error(`Error during game deletion: ${error.message}`);
         }
     }
 
     
-    async updateVisibility(id: string, isVisible: boolean): Promise<void> {
-        try {
-            await this.gameModel.findByIdAndUpdate(id, { isVisible }, { new: true }).exec();
-        } catch (error) {
-            throw new Error(`Failed to update game visibility: ${error}`);
+    async updateVisibility(id: string, newVisibility: boolean): Promise<void> {
+        const result = await this.gameModel.findByIdAndUpdate(id, {isVisible: newVisibility }, { new: true }).exec();
+        if (!result) {
+            throw new Error('No game found with this id');
         }
     }
 }
