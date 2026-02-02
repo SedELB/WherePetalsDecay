@@ -1,1 +1,58 @@
-<p>create-game-page works!</p>
+
+<body>
+
+    <app-button [width]="100" [route]="'/admin'">Retour</app-button>
+
+    <div class="list-container">
+        <div class="choice-card">
+            <h1>Choisir une taille :</h1>
+            <div>
+                <div class="size-card">
+                    <app-button [selected]="mapSize === 'large'" 
+                                (clicked)="mapSizeSelected('large')"
+                                [width]="150">Grande</app-button>
+                    <p>20 X 20</p>
+                    <p>2 - 6 joueurs</p>
+                </div>
+                <div class="size-card">
+                    <app-button [selected]="mapSize === 'medium'" 
+                                (clicked)="mapSizeSelected('medium')"
+                                [width]="150">Moyenne</app-button>
+                    <p>15 X 15</p>
+                    <p>2 - 4 joueurs</p>
+                </div>
+                <div class="small-adjust size-card">
+                    <app-button id="translate-left-button"[selected]="mapSize === 'small'" 
+                                (clicked)="mapSizeSelected('small')"
+                                [width]="150">
+                                Petite
+                    </app-button>
+                    <p id="translate-left-2">10 X 10</p>
+                    <p id="translate-left-1">2 joueurs</p>
+                </div>
+            </div>
+        </div>
+        <div class="gamemode-choice">
+            <h1>Choisir un mode de jeu :</h1>
+            <div class="gamemode-button">
+                <app-button [selected]="gameMode === 'Classic'" 
+                            (clicked)="gameModeSelected('Classic')" 
+                            [width]="250">
+                            Classique
+                </app-button>
+
+                <app-button [selected]="gameMode === 'CTF'" 
+                            (clicked)="gameModeSelected('CTF')" 
+                            [width]="250">
+                            CTF
+                </app-button>
+            </div>
+        </div>
+        
+        <div class="save-button-container">
+            <app-button [disabled]="!canCreateGame" [width]="300" id="save-button" [route]="'/editor'">Create</app-button>
+        </div>
+        
+    </div>
+
+</body>
