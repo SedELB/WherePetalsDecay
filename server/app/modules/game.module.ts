@@ -5,13 +5,14 @@ import { GameValidatorService } from '@app/services/game/gameValidator.service';
 import { Logger, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
+// Encapsulates the Game logic.
 @Module({
     imports: [
         MongooseModule.forFeature([{name: Game.name, schema: gameSchema}]),
     ],
     controllers: [GameController],
     providers: [GameService, GameValidatorService, Logger],
-    exports: [GameService],
+    exports: [GameService], // Seul GameService sera accessible a lexterieur.
 })
 export class GameModule {}
 
