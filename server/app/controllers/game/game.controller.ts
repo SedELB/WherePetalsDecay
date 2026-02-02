@@ -2,7 +2,7 @@ import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
 import { Game } from '@app/model/schema/game.schema';
 import { GameService } from '@app/services/game/game.service';
-import { Body, Controller, Get, HttpStatus, Param, Patch, Post, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpStatus, Param, Patch, Post, Res } from '@nestjs/common';
 import { ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 
@@ -60,6 +60,23 @@ export class GameController {
         } catch (error) {
             const status = error.message.includes('No game found with this id') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
             response.status(status).send(error.message);
+        }
+    }
+
+    @ApiOkResponse({
+            description: 'Delete a game',
+            type: Game,
+        })
+    @ApiNotFoundResponse({
+        description: 'Return NOT_FOUND http status when request fails',
+    })
+    @Delete('/:id') 
+    async deleteGame(@Param('id') id: string, @Res() response: Response) {
+        try {
+            await this.gameService.deleteGame(id);
+            response.status(HttpStatus.NO_CONTENT).send();
+        } catch (error) {
+            response.status(HttpStatus.NOT_FOUND).send(error.message);
         }
     }
 }

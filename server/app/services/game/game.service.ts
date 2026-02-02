@@ -143,7 +143,6 @@ export class GameService {
         } catch (error) {
             this.logger.log(`Failed to create game: ${error.message}`);
             throw new Error(`Failed to create game: ${error.message}`);
-            // return Promise.reject(`Failed to create game: ${error.message}`);
         }
     }
 

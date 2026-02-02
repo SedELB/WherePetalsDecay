@@ -24,34 +24,12 @@ export class GameValidatorService {
         }, {});
     }
 
-    // For type and item
-    private getTilePositions(game: CreateGameDto, wantedTile: string): { row: number; col: number }[] {
-        if (game.grid.length === 0) return [];
-
-        const tilePositions: { row: number; col: number }[] = [];
-
-        for (let i = 0; i < game.grid.length; i++) {
-            for (let j = 0; j < game.grid[0].length; j++) {
-                const currentTile = game.grid[i][j];
-
-                if (currentTile.type === wantedTile || currentTile.item === wantedTile || (wantedTile === 'door' && 
-                    (currentTile.type === TileTexture.DoorClosed || currentTile.type === TileTexture.DoorOpened))) {
-                    tilePositions.push({ row: i, col: j });
-                }
-            }
-        }
-        return tilePositions;
-    }
-
     async isGameNameUnique(gameName: string, gameId?: string): Promise<boolean> {
         const nameExists = await this.gameModel.findOne({ name: gameName }).exec();
-        // if name is unique
-        if (!nameExists) return true;
-        // if name exist but we're updating a game
-        if (gameId && nameExists._id.toString() === gameId) return true;
+        // if name is unique && if name exists but we're updating a game
+        if (!nameExists || (gameId && nameExists._id.toString() === gameId)) return true;
 
         throw new Error('The name of the game is not unique!');
-        
     }
 
     isTextLengthValid(game: CreateGameDto): boolean {
@@ -104,12 +82,12 @@ export class GameValidatorService {
     }   
     
     // For areThereUnreachableTiles()
-    private isTileValidForPath(game: CreateGameDto, r: number, c: number, visited: Set<string>): boolean {
-        const isWithinBounds = r >= 0 && r < game.grid.length && c >= 0 && c < game.grid[0].length;
+    private isTileValidForPath(game: CreateGameDto, row: number, col: number, visited: Set<string>): boolean {
+        const isWithinBounds = row >= 0 && row < game.grid.length && col >= 0 && col < game.grid[0].length;
         if (!isWithinBounds) return false;
 
-        const isNotWall = game.grid[r][c].type !== TileTexture.Wall;
-        const isNotVisited = !visited.has(`${r}, ${c}`);
+        const isNotWall = game.grid[row][col].type !== TileTexture.Wall;
+        const isNotVisited = !visited.has(`${row}, ${col}`);
         
         return isNotWall && isNotVisited;
     }
@@ -117,7 +95,7 @@ export class GameValidatorService {
     areThereUnreachableTiles(game: CreateGameDto): boolean {
         const startPos = this.findFirstWalkableTile(game.grid);
         if (!startPos) {
-            throw new Error('The map must contain at least 50% of walkable tile (floor, water, or ice)!');
+            throw new Error('There are no walkable tiles!');
         }
 
         const types = this.countByProperty(game, 'type');
@@ -129,7 +107,7 @@ export class GameValidatorService {
         visited.add(`${startPos.row}, ${startPos.col}`);
 
         while (queue.length > 0) {
-            const currentTile = queue.shift();  // TODO: Can be undefind ?
+            const currentTile = queue.shift();
             const neighbours = [
                 { row: currentTile.row - 1, col: currentTile.col }, // Up
                 { row: currentTile.row + 1, col: currentTile.col }, // Down
@@ -154,7 +132,7 @@ export class GameValidatorService {
     }
 
     // For isDoorsPlacementValid()
-    private isDoorInsideGrid(grid: Tile[][], row: number, col: number): boolean {
+    private isDoorOnGridBorder(grid: Tile[][], row: number, col: number): boolean {
         const rows = grid.length;
         const cols = grid[0].length;
         const isInside =
@@ -167,15 +145,33 @@ export class GameValidatorService {
         return false;
     }
 
+    // For type and item
+    private getObjectsPositions(game: CreateGameDto, wantedObject: string): { row: number; col: number }[] {
+        if (game.grid.length === 0) return [];
+
+        const objectPositions: { row: number; col: number }[] = [];
+
+        for (let i = 0; i < game.grid.length; i++) {
+            for (let j = 0; j < game.grid[0].length; j++) {
+                const currentTile = game.grid[i][j];
+                // includes to cover both type of doors
+                if (currentTile.type.includes(wantedObject) || currentTile.item === wantedObject) {
+                    objectPositions.push({ row: i, col: j });
+                }
+            }
+        }
+        return objectPositions;
+    }
+
     isDoorsPlacementValid(game: CreateGameDto): boolean {
-        const allDoorsPos = this.getTilePositions(game, 'door');
+        const allDoorsPos = this.getObjectsPositions(game, 'door');
         const errors: string[] = [];
         const wall = TileTexture.Wall;
         const obstacles = [wall, TileTexture.DoorOpened, TileTexture.DoorClosed];
 
         for (const { row, col } of allDoorsPos) {
-            // Grid border is exclude
-            if (!this.isDoorInsideGrid(game.grid, row, col)) {
+            // Grid border is excluded
+            if (this.isDoorOnGridBorder(game.grid, row, col)) {
                 errors.push(`Door at (${row}, ${col}) cannot be on the edge of the map!`);
                 continue;
             }
