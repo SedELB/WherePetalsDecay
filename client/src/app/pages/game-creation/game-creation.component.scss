@@ -93,7 +93,7 @@ p {
         }
 
         &.selected {
-            border-color: $green-button;
+            border: 3px solid $green-button;
         }
 
         img {
@@ -115,8 +115,10 @@ p {
         border: 2px solid transparent;
         border-radius: 8px;
         text-align: center;
+        cursor: pointer;
 
-        &.has-bonus {
+        &.has-bonus,
+        &.has-dice {
             border-color: $green-button;
         }
 
@@ -151,16 +153,6 @@ p {
             color: $text-color;
             opacity: 0.8;
         }
-    }
-}
-
-.bonus-selection,
-.dice-selection {
-    display: flex;
-    gap: 1rem;
-
-    app-button {
-        flex: 1;
     }
 }
 
