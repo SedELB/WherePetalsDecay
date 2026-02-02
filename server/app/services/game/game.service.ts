@@ -129,11 +129,30 @@ export class GameService {
     }
 
     async getAllGames(): Promise<Game[]> {
-        return await this.gameModel.find().exec();
+        const allGames = await this.gameModel.find().exec();
+        if (!allGames) {
+            this.logger.log('No games found in the database');
+            throw new Error('No games found in the database');
+        }
+        return allGames;
     }
 
     async getGameById(wantedId: string): Promise<Game> {
-        return await this.gameModel.findById(wantedId).exec();
+        const game = await this.gameModel.findById(wantedId).exec();
+        if (!game) {
+            this.logger.log('No game found with this id');
+            throw new Error('No game found with this id');
+        }
+        return game;
+    }
+
+    async getAllVisibleGames(): Promise<Game[]> {
+        const visibleGames = await this.gameModel.find({isVisible: true}).exec();
+        if (!visibleGames) {
+            this.logger.log('No visible games found in the database');
+            throw new Error('No visible games found in the database');
+        }
+        return visibleGames;
     }
 
     async addGame(game: CreateGameDto): Promise<void> {
@@ -175,12 +194,17 @@ export class GameService {
             throw new Error(`Error during game deletion: ${error.message}`);
         }
     }
-
     
     async updateVisibility(id: string, newVisibility: boolean): Promise<void> {
-        const result = await this.gameModel.findByIdAndUpdate(id, {isVisible: newVisibility }, { new: true }).exec();
-        if (!result) {
-            throw new Error('No game found with this id');
+        try {
+            const result = await this.gameModel.findByIdAndUpdate(id, {isVisible: newVisibility }, { new: true }).exec();
+            if (!result) {
+                throw new Error('No game found with this id');
+            }
+            this.logger.log(`Visibility updated to ${newVisibility} for game ${id}`);
+        } catch (error) {
+            this.logger.error(`Failed to update game visibility: ${error.message}`);
+            throw new Error(`Failed to update game visibility: ${error.message}`);
         }
     }
 }
