@@ -10,21 +10,26 @@ export interface PlacedObject {
     size?: { w: number; h: number };
 }
 
-
-
-/**
- * Format compatible backend (sérialisé pour la transmission)
- */
 export interface Game {
     _id?: string;
     name: string;
     description: string;
     mode: GameMode;
     size: { rows: number; cols: number };
-    grid: string; // JSON stringified
-    objects: string; // JSON stringified
+    grid: string;
+    objects: string;
     lastModifiedIso: string;
     createdAt?: string;
     updatedAt?: string;
 }
 
+export interface GameCard {
+    id: number;
+    image: string;
+    name: string;
+    size: string;
+    mode: string;
+    date: string;
+    visible: boolean;
+    imgDescription: string;
+}

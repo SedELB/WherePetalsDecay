@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
@@ -34,7 +34,11 @@ export class GameCreationComponent {
     readonly availableGames = AVAILABLE_GAMES;
     readonly routes = ROUTES;
 
-    constructor(private readonly router: Router, private readonly characterService: CharacterService) {}
+    constructor(
+        private readonly router: Router,
+        private readonly characterService: CharacterService,
+        private readonly cdr: ChangeDetectorRef,
+    ) {}
 
     get lifeValue(): number {
         return this.baseStats.life + (this.lifeBonusSelected ? this.baseStats.bonus : 0);
@@ -96,6 +100,7 @@ export class GameCreationComponent {
         this.selectedAvatarIndex = random.avatarIndex;
         this.lifeBonusSelected = random.lifeBonus;
         this.attackDiceD6 = random.attackDiceD6;
+        this.cdr.detectChanges();
     }
 
     isFormValid(): boolean {

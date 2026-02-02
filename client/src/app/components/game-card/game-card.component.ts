@@ -1,6 +1,6 @@
 import { NgClass } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { GameCard } from '@app/interfaces/gameCard';
+import { GameCard } from '@app/interfaces/game';
 
 @Component({
   selector: 'app-game-card',

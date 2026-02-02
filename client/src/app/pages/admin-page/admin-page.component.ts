@@ -1,7 +1,9 @@
-import { Component } from '@angular/core';
-import { GameCardComponent } from '@app/components/game-card/game-card.component';
+import { Component, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
-import { GameCard } from '@app/interfaces/gameCard';
+import { GameCardComponent } from '@app/components/game-card/game-card.component';
+import { AVAILABLE_GAMES } from '@app/constants/games.constants';
+import { GameCard } from '@app/interfaces/game';
 
 @Component({
   selector: 'app-admin-page',
@@ -9,17 +11,14 @@ import { GameCard } from '@app/interfaces/gameCard';
   templateUrl: './admin-page.component.html',
   styleUrl: './admin-page.component.scss',
 })
-
-
 export class AdminPageComponent {
+  private readonly router = inject(Router);
 
-  games: GameCard[] = [
-    {id: 1, image: '/assets/filler.png', name: 'Game 1', size: '10X10',
-      mode: 'Solo', date: '2026-01-01', visible: true,
-      imgDescription: 'blablabladsssssssssmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm'},
-    {id: 2, image: '/assets/filler.png', name: 'Game 2', size: '20X20', mode: 'Solo', date: '2026-01-05', visible: true, imgDescription: 'blablabla'},
-    {id: 3, image: '/assets/filler.png', name: 'Game 3', size: '5X5', mode: 'Co-op', date: '2026-01-10', visible: true, imgDescription: 'blablabla'},
-  ];
+  games: GameCard[] = AVAILABLE_GAMES.map((g) => ({ ...g }));
+
+  editGame(game: GameCard): void {
+    this.router.navigate(['/editor'], { state: { game } });
+  }
 
   removeGame(id: number) {
     this.games = this.games.filter(game => game.id !== id);

@@ -12,24 +12,111 @@
         <span class="info-label">Description:</span>
         <textarea class="info-textarea" rows="1" [(ngModel)]="gameDescription"></textarea>
       </div>
+
+      <div class="info-row">
+        <span class="info-label">Dimensions:</span>
+        <div class="info-dimensions">
+          <label class="info-dimensions-label">
+            <span class="info-dimensions-hint">Lignes</span>
+            <input
+              type="number"
+              class="info-input info-input--number"
+              [(ngModel)]="gridRows"
+              min="1"
+              max="50"
+              (blur)="onDimensionsChange()"
+            />
+          </label>
+          <span class="info-dimensions-sep">x</span>
+          <label class="info-dimensions-label">
+            <span class="info-dimensions-hint">Colonnes</span>
+            <input
+              type="number"
+              class="info-input info-input--number"
+              [(ngModel)]="gridCols"
+              min="1"
+              max="50"
+              (blur)="onDimensionsChange()"
+            />
+          </label>
+        </div>
+      </div>
+
+      <div class="info-row">
+        <span class="info-label">Type:</span>
+        <select class="info-select" [(ngModel)]="gameType">
+          <option value="Solo">Solo</option>
+          <option value="Co-op">Co-op</option>
+        </select>
+      </div>
     </aside>
 
     <div class="map-frame" aria-label="Grille de carte">
       <div class="map-title">Mode classique</div>
       <div
         class="grid"
-        [style.gridTemplateColumns]="'repeat(' + gridCols + ', 1fr)'"
-        [style.gridTemplateRows]="'repeat(' + gridRows + ', 1fr)'"
+        [style.gridTemplateColumns]="'repeat(' + (grid[0]?.length ?? 0) + ', 1fr)'"
+        [style.gridTemplateRows]="'repeat(' + grid.length + ', 1fr)'"
       >
-        @for (row of grid; track $index) {
-          @for (cell of row; track $index) {
-            <div class="cell" [attr.data-tile]="cell.type"></div>
+        @for (row of grid; track $index; let rowIndex = $index) {
+          @for (cell of row; track $index; let colIndex = $index) {
+            <button
+              type="button"
+              class="cell"
+              [attr.data-tile]="cell.type"
+              [class.cell--clickable]="activeTool !== null || activeObjectTool !== null"
+              [attr.title]="getObjectAt(colIndex, rowIndex) ? getObjectToolDescription(getObjectAt(colIndex, rowIndex)!.type) : null"
+              (click)="onCellClick(rowIndex, colIndex)"
+            >
+              @if (getObjectAt(colIndex, rowIndex); as obj) {
+                <span class="cell-object" [attr.data-object]="obj.type" [title]="getObjectToolDescription(obj.type)">
+                  <img class="cell-object__icon" [src]="getObjectToolImage(obj.type)" [alt]="obj.type" />
+                </span>
+              }
+            </button>
           }
         }
       </div>
     </div>
 
-    <app-button class=pos-reset [variant]="'default'" (clicked)="onReset()">Réinitialiser</app-button>
-    <app-button class="pos-save"  [variant]="'default'" (clicked)="onSave()">Sauvegarder</app-button>
+    <aside class="tools-panel" aria-label="Outils applicateurs de tuiles">
+      @for (tool of tileTools; track tool.type) {
+        <button
+          type="button"
+          class="tool"
+          [class.tool--active]="activeTool === tool.type"
+          [title]="tool.description"
+          (click)="selectTool(tool.type)"
+        >
+          <span class="tool__label">{{ tool.label }}</span>
+          <span class="tool__desc" role="tooltip">{{ tool.description }}</span>
+        </button>
+      }
+    </aside>
+
+    <aside class="object-tools-panel" aria-label="Outils de placement d'objets">
+      @for (objTool of objectPlacementTools; track objTool.type) {
+        <button
+          type="button"
+          class="object-tool"
+          [class.object-tool--active]="activeObjectTool === objTool.type"
+          [class.object-tool--complete]="isObjectTypeComplete(objTool.type)"
+          [title]="objTool.description"
+          (click)="selectObjectTool(objTool.type)"
+        >
+          <span class="object-tool__slot">
+            <img class="object-tool__img" [src]="objTool.image" [alt]="objTool.label" />
+          </span>
+          <span class="object-tool__label">{{ objTool.label }}</span>
+          @if (objTool.type === 'spawn') {
+            <span class="object-tool__count">{{ getPlacedSpawnCount() }} / {{ getRequiredSpawnCount() }}</span>
+          }
+          <span class="object-tool__desc" role="tooltip">{{ objTool.description }}</span>
+        </button>
+      }
+    </aside>
+
+    <app-button class="pos-reset" [variant]="'default'" (clicked)="onReset()">Réinitialiser</app-button>
+    <app-button class="pos-save" [variant]="'default'" (clicked)="onSave()">Sauvegarder</app-button>
   </section>
 </main>
