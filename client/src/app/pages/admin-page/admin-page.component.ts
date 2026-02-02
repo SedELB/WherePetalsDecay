@@ -1,7 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCard } from '@app/interfaces/gameCard';
+import { Game } from '@app/interfaces/game';
+import { CommunicationService } from '@app/services/communication.service';
 
 @Component({
   selector: 'app-admin-page',
@@ -11,9 +13,29 @@ import { GameCard } from '@app/interfaces/gameCard';
 })
 
 
-export class AdminPageComponent {
+export class AdminPageComponent implements OnInit {
 
-  games: GameCard[] = [
+  games: Game[] = [];
+
+  constructor(private communicationService: CommunicationService) {}
+
+  ngOnInit(): void {
+    this.getGames();
+  }
+
+  getGames(): void{
+    this.communicationService.getAllGames().subscribe({
+      next: (games) => {
+        this.games = games;
+        console.log(JSON.stringify(games));
+      },
+      error: (err) => {
+        console.error(JSON.stringify(err.error, null, 2));
+      },
+    });
+  }
+
+  games1: GameCard[] = [
     {id: 1, image: '/assets/filler.png', name: 'Game 1', size: '10X10',
       mode: 'Solo', date: '2026-01-01', visible: true,
       imgDescription: 'blablabladsssssssssmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm'},
@@ -22,11 +44,11 @@ export class AdminPageComponent {
   ];
 
   removeGame(id: number) {
-    this.games = this.games.filter(game => game.id !== id);
+    this.games1 = this.games1.filter(game => game.id !== id);
   }
 
   changeVisibility(id: number) {
-    const game = this.games.find(g => g.id === id);
+    const game = this.games1.find(g => g.id === id);
     if (game) {
       game.visible = !game.visible;
     }

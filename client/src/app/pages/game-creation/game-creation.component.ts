@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
@@ -7,7 +7,9 @@ import { GameCardComponent } from '@app/components/game-card/game-card.component
 import { AVAILABLE_GAMES } from '@app/constants/games.constants';
 import { ROUTES } from '@app/constants/routes.constants';
 import { AVATARS, BASE_STATS } from '@app/interfaces/character';
+import { Game } from '@app/interfaces/game';
 import { CharacterService } from '@app/services/character.service';
+import { CommunicationService } from '@app/services/communication.service';
 
 @Component({
     selector: 'app-game-creation',
@@ -21,7 +23,9 @@ import { CharacterService } from '@app/services/character.service';
     templateUrl: './game-creation.component.html',
     styleUrls: ['./game-creation.component.scss'],
 })
-export class GameCreationComponent {
+
+export class GameCreationComponent implements OnInit {
+
     currentPhase: 'game-selection' | 'character-creation' = 'game-selection';
     selectedGame: string | null = null;
     characterName: string = '';
@@ -34,7 +38,26 @@ export class GameCreationComponent {
     readonly availableGames = AVAILABLE_GAMES;
     readonly routes = ROUTES;
 
-    constructor(private readonly router: Router, private readonly characterService: CharacterService) {}
+    constructor(private readonly router: Router, private readonly characterService: CharacterService,
+                private communicationService: CommunicationService) {}
+
+    games: Game[] = [];
+
+    ngOnInit(): void {
+        return;
+    }
+
+    getGames(){
+        this.communicationService.getVisibleGames().subscribe({
+            next: (games) => { 
+                    this.games = games;
+                    console.log(games);
+                },
+            error: (err) => {
+                console.error('Erreur avec la recherche des jeux visibles : ', err);
+            },
+        });
+    }
 
     get lifeValue(): number {
         return this.baseStats.life + (this.lifeBonusSelected ? this.baseStats.bonus : 0);
