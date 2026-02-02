@@ -29,6 +29,24 @@ export class GameController {
         }
     }
 
+    @ApiOkResponse({
+        description: 'Returns all visible games',
+        type: Game,
+        isArray: true,
+    })
+    @ApiNotFoundResponse({
+        description: 'Return NOT_FOUND http status when request fails.',
+    })
+    @Get('/visibleGames')
+    async visibleGames(@Res() response: Response) {
+        try {
+            const allVisibleGames = await this.gameService.getAllVisibleGames();
+            response.status(HttpStatus.OK).json(allVisibleGames);
+        } catch (error) {
+            response.status(HttpStatus.NOT_FOUND).send(error.message);
+        }
+    }
+
     @ApiCreatedResponse({
         description: 'Add new game',
         })
@@ -60,6 +78,22 @@ export class GameController {
         } catch (error) {
             const status = error.message.includes('No game found with this id') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
             response.status(status).send(error.message);
+        }
+    }
+
+    @ApiOkResponse({
+        description: 'Modify a game visibility',
+    })
+    @ApiNotFoundResponse({
+        description: 'Return NOT_FOUND http status when request fails',
+    })
+    @Patch('/modifyVisibility/:id')
+    async modifyVisibility(@Param('id') id: string, @Body('isVisible') isVisible: boolean, @Res() response: Response): Promise<void> {
+        try {
+            await this.gameService.updateVisibility(id, isVisible);
+            response.status(HttpStatus.OK).send('Game updated successfully!');
+        } catch (error) {
+            response.status(HttpStatus.BAD_REQUEST).send(error.message);
         }
     }
 
