@@ -57,6 +57,8 @@
         class="grid"
         [style.gridTemplateColumns]="'repeat(' + (grid[0]?.length ?? 0) + ', 1fr)'"
         [style.gridTemplateRows]="'repeat(' + grid.length + ', 1fr)'"
+        (mouseleave)="onGridMouseLeave()"
+        (document:mouseup)="onDocumentMouseUp()"
       >
         @for (row of grid; track $index; let rowIndex = $index) {
           @for (cell of row; track $index; let colIndex = $index) {
@@ -67,6 +69,8 @@
               [class.cell--clickable]="activeTool !== null || activeObjectTool !== null"
               [attr.title]="getObjectAt(colIndex, rowIndex) ? getObjectToolDescription(getObjectAt(colIndex, rowIndex)!.type) : null"
               (click)="onCellClick(rowIndex, colIndex)"
+              (mousedown)="onCellMouseDown(rowIndex, colIndex, $event)"
+              (mouseenter)="onCellMouseEnter(rowIndex, colIndex, $event)"
             >
               @if (getObjectAt(colIndex, rowIndex); as obj) {
                 <span class="cell-object" [attr.data-object]="obj.type" [title]="getObjectToolDescription(obj.type)">
