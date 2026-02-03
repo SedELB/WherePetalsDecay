@@ -48,6 +48,8 @@ export class MapSetupPageComponent {
   activeTool: ApplicableTileType | null = null;
 
   activeObjectTool: GameObjectType | null = null;
+  // pour faire le drag des tuiles
+  private isPaintingTiles = false;
 
   readonly tileTools: TileTool[] = [
     { type: 'wall', label: 'Mur', description: 'Bloque le passage des joueurs.' },
@@ -218,11 +220,52 @@ export class MapSetupPageComponent {
       return;
     }
     if (this.activeTool != null) {
-      this.grid[rowIndex][colIndex] = {
-        ...this.grid[rowIndex][colIndex],
-        type: this.activeTool,
-      };
+      this.applyTileIfDifferent(rowIndex, colIndex);
     }
+  }
+
+  onCellMouseDown(rowIndex: number, colIndex: number, event: MouseEvent): void {
+    // seulement bouton gauche
+    if (event.button !== 0) return;
+
+    // drag uniquement pour les outils de tuiles (pas les objets)
+    if (this.activeTool == null || this.activeObjectTool != null) return;
+
+    this.isPaintingTiles = true;
+    this.applyTileIfDifferent(rowIndex, colIndex);
+  }
+
+  onCellMouseEnter(rowIndex: number, colIndex: number, event: MouseEvent): void {
+    if (!this.isPaintingTiles) return;
+
+    // Securite au cas ou , en gros , event.buttons c'est un bitmask et lorsque le bouton gauche est enfonce sa retourne 1 
+    if ((event.buttons & 1) !== 1) {
+      this.isPaintingTiles = false;
+      return;
+    }
+
+    if (this.activeTool == null || this.activeObjectTool != null) return;
+    this.applyTileIfDifferent(rowIndex, colIndex);
+  }
+
+  onGridMouseLeave(): void {
+    this.isPaintingTiles = false;
+  }
+
+  //POur si le user relache la souris hors de la grille
+  onDocumentMouseUp(): void {
+    this.isPaintingTiles = false;
+  }
+
+  private applyTileIfDifferent(rowIndex: number, colIndex: number): void {
+    const current = this.grid[rowIndex]?.[colIndex];
+    if (!current || this.activeTool == null) return;
+    if (current.type === this.activeTool) return;
+
+    this.grid[rowIndex][colIndex] = {
+      ...current,
+      type: this.activeTool,
+    };
   }
 
   onBack(): void {
