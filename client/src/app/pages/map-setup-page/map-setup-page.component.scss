@@ -112,6 +112,23 @@
   margin-bottom: 2px;
 }
 
+.btn-apply-dimensions {
+  align-self: flex-end;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
 .info-select {
   width: 100%;
   background: rgba(255, 255, 255, 0.1);

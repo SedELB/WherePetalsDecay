@@ -24,7 +24,6 @@
               [(ngModel)]="gridRows"
               min="1"
               max="50"
-              (blur)="onDimensionsChange()"
             />
           </label>
           <span class="info-dimensions-sep">x</span>
@@ -36,9 +35,9 @@
               [(ngModel)]="gridCols"
               min="1"
               max="50"
-              (blur)="onDimensionsChange()"
             />
           </label>
+          <button type="button" class="btn-apply-dimensions" (click)="applyDimensions()">Appliquer</button>
         </div>
       </div>
 
