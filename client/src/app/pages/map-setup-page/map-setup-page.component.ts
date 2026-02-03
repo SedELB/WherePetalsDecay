@@ -20,8 +20,6 @@ interface ObjectPlacementTool {
   image: string;
 }
 
-const DIMENSIONS_DEBOUNCE_MS = 150;
-
 @Component({
   selector: 'app-map-setup-page',
   imports: [FormsModule, ButtonComponent],
@@ -30,8 +28,6 @@ const DIMENSIONS_DEBOUNCE_MS = 150;
 })
 export class MapSetupPageComponent {
   private readonly router = inject(Router);
-
-  private dimensionsDebounceId: ReturnType<typeof setTimeout> | null = null;
 
   gameName = '';
   gameDescription = '';
@@ -87,50 +83,42 @@ export class MapSetupPageComponent {
   ];
 
   constructor() {
-    const nav = this.router.getCurrentNavigation();
-    const state = nav?.extras?.state as {
+    this.loadGameFromNavigation();
+  }
+
+  private loadGameFromNavigation(): void {
+    const state = this.router.getCurrentNavigation()?.extras?.state as {
       game?: GameCard & { grid?: string; objects?: string };
-      grid?: string;
-      objects?: string;
     } | undefined;
-    if (state?.game) {
-      this.gameName = state.game.name;
-      const modeStr = state.game.mode?.trim();
-      if (modeStr === 'Co-op' || modeStr === 'Solo') {
-        this.gameType = modeStr;
-      }
-      const rows = Math.max(1, state.game.size?.rows ?? 10);
-      const cols = Math.max(1, state.game.size?.cols ?? 10);
-      this.gridRows = rows;
-      this.gridCols = cols;
-      const gridJson = state.grid ?? state.game.grid;
-      if (gridJson) {
-        try {
-          const parsed = JSON.parse(gridJson) as Tile[][];
-          if (Array.isArray(parsed) && parsed.length === rows && parsed[0]?.length === cols) {
-            this.grid = parsed;
-          } else {
-            this.grid = this.createGrid(rows, cols, 'floor');
-          }
-        } catch {
-          this.grid = this.createGrid(rows, cols, 'floor');
-        }
-      } else {
-        this.grid = this.createGrid(rows, cols, 'floor');
-      }
-      const objectsJson = state.objects ?? (state.game as { objects?: string })?.objects;
-      if (objectsJson) {
-        try {
-          const parsed = JSON.parse(objectsJson) as PlacedObject[];
-          if (Array.isArray(parsed)) {
-            this.placedObjects = parsed.filter(
-              (obj) => obj.position && obj.position.x >= 0 && obj.position.x < cols && obj.position.y >= 0 && obj.position.y < rows,
-            );
-          }
-        } catch {
-          this.placedObjects = [];
-        }
-      }
+
+    if (!state?.game) return;
+
+    this.gameName = state.game.name;
+    if (state.game.mode === 'Co-op' || state.game.mode === 'Solo') {
+      this.gameType = state.game.mode;
+    }
+    const rows = Math.max(1, state.game.size?.rows ?? 10);
+    const cols = Math.max(1, state.game.size?.cols ?? 10);
+    this.gridRows = rows;
+    this.gridCols = cols;
+
+    this.grid = this.parseGrid(state.game.grid, rows, cols);
+    this.placedObjects = this.parseObjects(state.game.objects);
+  }
+
+  private parseGrid(json: string | undefined, rows: number, cols: number): Tile[][] {
+    try {
+      return json ? JSON.parse(json) : this.createGrid(rows, cols, 'floor');
+    } catch {
+      return this.createGrid(rows, cols, 'floor');
+    }
+  }
+
+  private parseObjects(json: string | undefined): PlacedObject[] {
+    try {
+      return json ? JSON.parse(json) : [];
+    } catch {
+      return [];
     }
   }
 
@@ -228,30 +216,24 @@ export class MapSetupPageComponent {
     );
   }
 
-  onDimensionsChange(): void {
-    if (this.dimensionsDebounceId != null) {
-      clearTimeout(this.dimensionsDebounceId);
+  applyDimensions(): void {
+    const rows = Math.max(1, Math.min(50, Number(this.gridRows)));
+    const cols = Math.max(1, Math.min(50, Number(this.gridCols)));
+    this.gridRows = rows;
+    this.gridCols = cols;
+    if (rows === this.grid.length && cols === this.grid[0]?.length) return;
+    const oldRows = this.grid.length;
+    const oldCols = this.grid[0]?.length ?? 0;
+    const newGrid = this.createGrid(rows, cols, 'floor');
+    for (let y = 0; y < Math.min(rows, oldRows); y++) {
+      for (let x = 0; x < Math.min(cols, oldCols); x++) {
+        newGrid[y][x] = this.grid[y][x];
+      }
     }
-    this.dimensionsDebounceId = setTimeout(() => {
-      this.dimensionsDebounceId = null;
-      const rows = Math.max(1, Math.min(50, Number(this.gridRows) || 10));
-      const cols = Math.max(1, Math.min(50, Number(this.gridCols) || 10));
-      if (rows === this.grid.length && cols === (this.grid[0]?.length ?? 0)) return;
-      requestAnimationFrame(() => {
-        this.gridRows = rows;
-        this.gridCols = cols;
-        const newGrid = this.createGrid(rows, cols, 'floor');
-        for (let y = 0; y < Math.min(rows, this.grid.length); y++) {
-          for (let x = 0; x < Math.min(cols, this.grid[0]?.length ?? 0); x++) {
-            newGrid[y][x] = { ...this.grid[y][x], position: { x, y } };
-          }
-        }
-        this.grid = newGrid;
-        this.placedObjects = this.placedObjects.filter(
-          (o) => o.position.x < cols && o.position.y < rows,
-        );
-      });
-    }, DIMENSIONS_DEBOUNCE_MS);
+    this.grid = newGrid;
+    this.placedObjects = this.placedObjects.filter(
+      (o) => o.position.x < cols && o.position.y < rows,
+    );
   }
 
   selectTool(type: ApplicableTileType): void {
