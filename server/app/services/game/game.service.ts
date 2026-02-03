@@ -167,14 +167,14 @@ export class GameService {
 
     async modifyGame(id: string, game: UpdateGameDto): Promise<void> {
         try {
-            const existingGame = await this.gameModel.findById(id).lean(); // TODO: Has _id: can cause crash when calling isGameValid
+            const existingGame = await this.gameModel.findById(id).lean();
             if (!existingGame) {
                 throw new Error('No game found with this id');
             }
             const fullGameData = {...existingGame, ...game}; // new properies from game replace the olds
 
             await this.gameValidatorService.isGameValid(fullGameData, id);
-            await this.gameModel.findByIdAndUpdate(id, fullGameData, {overwrite: true, new: true }).exec();
+            await this.gameModel.findByIdAndUpdate(id, fullGameData, {new: true }).exec();
         } catch (error) {
             this.logger.error(`Failed to update game: ${error.message}`);
             throw new Error(`Failed to update game: ${error.message}`);
