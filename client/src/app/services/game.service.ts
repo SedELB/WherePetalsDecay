@@ -24,6 +24,9 @@ export enum GameEvents {
     GameVisibilityChanged = 'gameVisibilityChanged',
 }
 
+const SMALL_THRESHOLD = 100;
+const MEDIUM_THRESHOLD = 225;
+
 @Injectable({
     providedIn: 'root',
 })
@@ -43,10 +46,6 @@ export class GameService implements OnDestroy {
 
         this.socket = io(this.apiUrl, { transports: ['websocket'] });
 
-        this.socket.on('connect', () => {
-            console.log('WebSocket connected');
-        });
-
         this.socket.on(GameEvents.GameCreated, (game: Game) => {
             const games = this.gamesSubject.value;
             this.gamesSubject.next([...games, game]);
@@ -54,7 +53,7 @@ export class GameService implements OnDestroy {
 
         this.socket.on(GameEvents.GameUpdated, (updatedGame: Game) => {
             const games = this.gamesSubject.value.map((game) =>
-                game._id === updatedGame._id ? updatedGame : game
+                game._id === updatedGame._id ? updatedGame : game,
             );
             this.gamesSubject.next(games);
         });
@@ -66,13 +65,9 @@ export class GameService implements OnDestroy {
 
         this.socket.on(GameEvents.GameVisibilityChanged, (data: { gameId: string; isVisible: boolean }) => {
             const games = this.gamesSubject.value.map((game) =>
-                game._id === data.gameId ? { ...game, isVisible: data.isVisible } : game
+                game._id === data.gameId ? { ...game, isVisible: data.isVisible } : game,
             );
             this.gamesSubject.next(games);
-        });
-
-        this.socket.on('disconnect', () => {
-            console.log('WebSocket disconnected');
         });
     }
 
@@ -86,7 +81,6 @@ export class GameService implements OnDestroy {
     fetchVisibleGames(): void {
         this.http.get<Game[]>(`${environment.serverUrl}/game/visibleGames`).subscribe({
             next: (games) => this.gamesSubject.next(games),
-            error: (error) => console.error('Error fetching games:', error),
         });
     }
 
@@ -100,8 +94,6 @@ export class GameService implements OnDestroy {
 
     getSizeLabel(size: { rows: number; cols: number }): string {
         const total = size.rows * size.cols;
-        const SMALL_THRESHOLD = 100;
-        const MEDIUM_THRESHOLD = 225;
 
         if (total <= SMALL_THRESHOLD) {
             return `Petite (${size.rows}x${size.cols})`;
