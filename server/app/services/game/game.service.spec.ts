@@ -13,6 +13,7 @@ import { GameValidatorService } from './gameValidator.service';
 
 describe('GameServiceE2E', () => {
     let gameService: GameService;
+    let gameValidatorService: GameValidatorService;
     let gameModel: Model<GameDocument>;
     let mongoServer: MongoMemoryServer;
     let connection: Connection;
@@ -38,6 +39,7 @@ describe('GameServiceE2E', () => {
 
         // Gets the GameService instance of the created testModule.
         gameService = testModule.get<GameService>(GameService);
+        gameValidatorService = testModule.get<GameValidatorService>(GameValidatorService);
         // Gets the real gameModel (collection) 
         gameModel = testModule.get<Model<GameDocument>>(getModelToken(Game.name));
         // Gets the Mongoose connection (invisible when interacting w the real DB).
@@ -49,7 +51,7 @@ describe('GameServiceE2E', () => {
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MAX_PLAYERS,
-            grid: gameService.generateValidGrid(TEN, TEN),
+            grid: gameValidatorService.generateValidGrid(TEN, TEN),
             isVisible: true,
         };
 
@@ -60,7 +62,7 @@ describe('GameServiceE2E', () => {
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MIN_PLAYERS,
-            grid: gameService.generateInvalidGrid(TEN, TEN),
+            grid: gameValidatorService.generateInvalidGrid(TEN, TEN),
             isVisible: true,
         };
     });
