@@ -7,6 +7,8 @@ import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { ROUTES } from '@app/constants/routes.constants';
 import { AVATARS, BASE_STATS } from '@app/interfaces/character';
+// import { Game } from '@app/interfaces/game';
+// import { CommunicationService } from '@app/services/communication.service';
 import { CharacterService } from '@app/services/character.service';
 import { GameService, Game } from '@app/services/game.service';
 
