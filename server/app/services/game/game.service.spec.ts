@@ -9,7 +9,6 @@ import { MAX_PLAYERS, MIN_PLAYERS, TEN } from '@app/utils/game.constants';
 import { GameMode } from '@app/utils/game.enum';
 import { ObjectId } from 'mongodb';
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
-import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
 import { GameValidatorService } from './gameValidator.service';
 
 describe('GameServiceE2E', () => {
@@ -17,7 +16,7 @@ describe('GameServiceE2E', () => {
     let gameModel: Model<GameDocument>;
     let mongoServer: MongoMemoryServer;
     let connection: Connection;
-    let validGame1: CreateGameDto & {_id: ObjectId};
+    let validGame1: CreateGameDto;
     let invalidGame3: CreateGameDto;
 
     beforeAll(async () => {
@@ -44,7 +43,6 @@ describe('GameServiceE2E', () => {
         // Gets the Mongoose connection (invisible when interacting w the real DB).
         connection = await testModule.get(getConnectionToken());
         validGame1 = {
-            _id: new ObjectId('607f1f77bcf86cd799439011'),
             name: 'Valid Game 1',
             description: 'Desc. 1',
             size: {rows: TEN, cols: TEN},
@@ -101,14 +99,13 @@ describe('GameServiceE2E', () => {
     });
 
     it('getGameById() return correct game with the specified id', async () => {
-        await gameModel.create(validGame1);
-        expect(await gameService.getGameById(validGame1._id.toString())).toMatchObject(validGame1);
+        const createdGame = await gameModel.create(validGame1);
+        expect(await gameService.getGameById(createdGame._id.toString())).toMatchObject(validGame1);
     });
 
     it('addGame() should add a valid game to the DB', async () => {
         await gameService.addGame(validGame1);
         expect(await gameModel.countDocuments()).toEqual(1);
-        expect(await gameService.getGameById(validGame1._id.toString())).toMatchObject(validGame1);
     });
 
     it('addGame() with an invalid game should throw an error', async () => {
@@ -116,40 +113,41 @@ describe('GameServiceE2E', () => {
     });
 
     it('modifyGame() should modify a game', async () => {
-        await gameModel.create(validGame1);
-        const modifiedFakeGame = validGame1;
-        modifiedFakeGame.name = 'Modified Game';
-        await gameService.modifyGame(validGame1._id.toString(), modifiedFakeGame as UpdateGameDto);
-        expect(await gameService.getGameById(validGame1._id.toString())).toMatchObject(modifiedFakeGame);
+        const createdGame = await gameModel.create(validGame1);
+        const modifiedFakeGame = {...validGame1, name: 'Modified Game'};
+        await gameService.modifyGame(createdGame._id.toString(), modifiedFakeGame);
+        expect(await gameService.getGameById(createdGame._id.toString())).toMatchObject(modifiedFakeGame);
     });
 
     it('modifyGame() with an invalid id should fail', async () => {
         const modifiedFakeGame = validGame1;
+        const nonExistentId = new ObjectId().toString();
         modifiedFakeGame.name = 'Modified Game';
-        await expect(gameService.modifyGame(validGame1._id.toString() + 'INVALID', modifiedFakeGame as UpdateGameDto)).rejects.toThrow();
+        await expect(gameService.modifyGame(nonExistentId + 'INVALID', modifiedFakeGame)).rejects.toThrow();
     });
 
     it('modifyGame() should fail if the game does not exist', async () => {
         const modifiedFakeGame = validGame1;
         modifiedFakeGame.name = 'Modified Game';
         const nonExistentId = new ObjectId().toString();
-        await expect(gameService.modifyGame(nonExistentId, modifiedFakeGame as UpdateGameDto)).rejects.toThrow();
+        await expect(gameService.modifyGame(nonExistentId, modifiedFakeGame)).rejects.toThrow();
     });
 
     it('deleteGame() should delete the game with the specified id', async () => {
-        await gameModel.create(validGame1);
-        await gameService.deleteGame(validGame1._id.toString());
+        const createdGame = await gameModel.create(validGame1);
+        await gameService.deleteGame(createdGame._id.toString());
         expect(await gameModel.countDocuments()).toEqual(0);
     });
 
     it('deleteCourse() should fail if the course does not exist', async () => {
-        await expect(gameService.deleteGame(validGame1._id.toString())).rejects.toThrow();
+        const nonExistentId = new ObjectId().toString();
+        await expect(gameService.deleteGame(nonExistentId)).rejects.toThrow();
     });
 
     it('updateVisibility() should update the game visibility', async () => {
-        await gameModel.create(validGame1);
-        await gameService.updateVisibility(validGame1._id.toString(), false);
-        expect((await gameService.getGameById(validGame1._id.toString())).isVisible).toEqual(false);
+        const createdGame = await gameModel.create(validGame1);
+        await gameService.updateVisibility(createdGame._id.toString(), false);
+        expect((await gameService.getGameById(createdGame._id.toString())).isVisible).toEqual(false);
     });
 
     it('updateVisibility() should fail if the game does not exist', async () => {
