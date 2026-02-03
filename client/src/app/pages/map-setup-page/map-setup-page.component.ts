@@ -48,8 +48,10 @@ export class MapSetupPageComponent {
   activeTool: ApplicableTileType | null = null;
 
   activeObjectTool: GameObjectType | null = null;
-  // pour faire le drag des tuiles
+  // pour faire le drag des tuiles bitmas1k
   private isPaintingTiles = false;
+  // pour faire le drag de suppression avec le clic droit bitmask2
+  private isErasingTiles = false;
 
   readonly tileTools: TileTool[] = [
     { type: 'wall', label: 'Mur', description: 'Bloque le passage des joueurs.' },
@@ -63,6 +65,24 @@ export class MapSetupPageComponent {
       label: 'Point de départ',
       description: 'Emplacement où un joueur apparaît au début de la partie.',
       image: '/assets/icons/spawn.svg',
+    },
+    {
+      type: "flag",
+      label: "Drapeau",
+      description: "Emplacement où un joueur peut placer un drapeau.",
+      image: '/assets/icons/flag.svg',
+    },
+    {
+      type: "healingShrine",
+      label: "Relique de soin",
+      description: "Emplacement où un joueur peut placer une relic de soin.",
+      image: '/assets/icons/healingShrine.svg',
+    },
+    {
+      type: "combatShrine",
+      label: "Relique de combat",
+      description: "Emplacement où un joueur peut placer une relic de combat.",
+      image: '/assets/icons/combatShrine.svg',
     },
   ];
 
@@ -79,7 +99,8 @@ export class MapSetupPageComponent {
       if (modeStr === 'Co-op' || modeStr === 'Solo') {
         this.gameType = modeStr;
       }
-      const [rows, cols] = this.parseSize(state.game.size);
+      const rows = Math.max(1, state.game.size?.rows ?? 10);
+      const cols = Math.max(1, state.game.size?.cols ?? 10);
       this.gridRows = rows;
       this.gridCols = cols;
       const gridJson = state.grid ?? state.game.grid;
@@ -114,18 +135,61 @@ export class MapSetupPageComponent {
   }
 
   getRequiredSpawnCount(): number {
-    const rows = this.grid.length;
-    const cols = this.grid[0]?.length ?? 0;
-    return Math.max(1, Math.min(8, Math.floor((rows * cols) / 25)));
+    // Regle projet askip , 2 4 6 selon petit moyen grand mais a revoir
+    const tier = this.getMapTier();
+    if (tier === 'small') return 2;
+    if (tier === 'medium') return 4;
+    return 6;
   }
 
   getPlacedSpawnCount(): number {
     return this.placedObjects.filter((o) => o.type === 'spawn').length;
   }
 
+  getRequiredFlagCount(): number {
+    return 1;
+  }
+
+  getPlacedFlagCount(): number {
+    return this.placedObjects.filter((o) => o.type === 'flag').length;
+  }
+
+  getRequiredHealingShrineCount(): number {
+    // Règles du projet: 1 / 2 / 4 selon taille petite/moyenne/grande
+    const tier = this.getMapTier();
+    if (tier === 'small') return 1;
+    if (tier === 'medium') return 2;
+    return 4;
+  }
+
+  getPlacedHealingShrineCount(): number {
+    return this.placedObjects.filter((o) => o.type === 'healingShrine').length;
+  }
+
+  getRequiredCombatShrineCount(): number {
+    // Règles du projet: 1 / 2 / 4 selon taille petite/moyenne/grande
+    const tier = this.getMapTier();
+    if (tier === 'small') return 1;
+    if (tier === 'medium') return 2;
+    return 4;
+  }
+
+  getPlacedCombatShrineCount(): number {
+    return this.placedObjects.filter((o) => o.type === 'combatShrine').length;
+  }
+
   isObjectTypeComplete(type: GameObjectType): boolean {
     if (type === 'spawn') {
       return this.getPlacedSpawnCount() >= this.getRequiredSpawnCount();
+    }
+    if (type === 'flag') {
+      return this.getPlacedFlagCount() >= this.getRequiredFlagCount();
+    }
+    if (type === 'healingShrine') {
+      return this.getPlacedHealingShrineCount() >= this.getRequiredHealingShrineCount();
+    }
+    if (type === 'combatShrine') {
+      return this.getPlacedCombatShrineCount() >= this.getRequiredCombatShrineCount();
     }
     return false;
   }
@@ -142,14 +206,17 @@ export class MapSetupPageComponent {
     return this.placedObjects.find((o) => o.position.x === x && o.position.y === y);
   }
 
-  private parseSize(size: string): [number, number] {
-    const match = size.trim().toUpperCase().match(/^(\d+)\s*X\s*(\d+)$/);
-    if (match) {
-      const r = Math.max(1, parseInt(match[1], 10));
-      const c = Math.max(1, parseInt(match[2], 10));
-      return [r, c];
-    }
-    return [10, 10];
+  private getMapTier(): 'small' | 'medium' | 'large' {
+    const rows = this.grid.length || this.gridRows;
+    const cols = this.grid[0]?.length ?? this.gridCols;
+    const maxDim = Math.max(rows, cols);
+    if (maxDim <= 10) return 'small';
+    if (maxDim <= 15) return 'medium';
+    return 'large';
+  }
+
+  private isTerrainTile(type: TileType): boolean {
+    return type === 'floor' || type === 'water' || type === 'ice';
   }
 
   private createGrid(rows: number, cols: number, type: TileType): Tile[][] {
@@ -199,24 +266,55 @@ export class MapSetupPageComponent {
 
   onCellClick(rowIndex: number, colIndex: number): void {
     if (this.activeObjectTool != null) {
+      // Objets uniquement sur tuiles de terrain
+      const tileType = this.grid[rowIndex]?.[colIndex]?.type;
+      if (tileType == null || !this.isTerrainTile(tileType)) return;
+
       const existing = this.getObjectAt(colIndex, rowIndex);
       if (existing?.type === this.activeObjectTool) {
         this.placedObjects = this.placedObjects.filter(
           (o) => !(o.position.x === colIndex && o.position.y === rowIndex),
         );
-      } else if (this.activeObjectTool === 'spawn') {
+
+        return;
+      }
+
+      // Ne pas placer sur une case déjà occupée par un autre objet
+      if (existing != null && existing.type !== this.activeObjectTool) return;
+
+      if (this.activeObjectTool === 'spawn') {
         const placed = this.getPlacedSpawnCount();
         const required = this.getRequiredSpawnCount();
-        if (placed < required) {
-          this.placedObjects = this.placedObjects.filter(
-            (o) => !(o.position.x === colIndex && o.position.y === rowIndex),
-          );
-          this.placedObjects = [
-            ...this.placedObjects,
-            { type: 'spawn', position: { x: colIndex, y: rowIndex } },
-          ];
-        }
+        if (placed >= required) return;
+        this.placedObjects = [...this.placedObjects, { type: 'spawn', position: { x: colIndex, y: rowIndex } }];
+        return;
       }
+
+      if (this.activeObjectTool === 'flag') {
+        // 1 seule instance: si déjà placée ailleurs, on la déplace
+        this.placedObjects = [
+          ...this.placedObjects.filter((o) => o.type !== 'flag'),
+          { type: 'flag', position: { x: colIndex, y: rowIndex } },
+        ];
+        return;
+      }
+
+      if (this.activeObjectTool === 'healingShrine') {
+        const placed = this.getPlacedHealingShrineCount();
+        const required = this.getRequiredHealingShrineCount();
+        if (placed >= required) return;
+        this.placedObjects = [...this.placedObjects, { type: 'healingShrine', position: { x: colIndex, y: rowIndex } }];
+        return;
+      }
+
+      if (this.activeObjectTool === 'combatShrine') {
+        const placed = this.getPlacedCombatShrineCount();
+        const required = this.getRequiredCombatShrineCount();
+        if (placed >= required) return;
+        this.placedObjects = [...this.placedObjects, { type: 'combatShrine', position: { x: colIndex, y: rowIndex } }];
+        return;
+      }
+
       return;
     }
     if (this.activeTool != null) {
@@ -225,17 +323,31 @@ export class MapSetupPageComponent {
   }
 
   onCellMouseDown(rowIndex: number, colIndex: number, event: MouseEvent): void {
-    // seulement bouton gauche
-    if (event.button !== 0) return;
+    if (event.button === 0) {
+      if (this.activeTool == null || this.activeObjectTool != null) return;
+      this.isPaintingTiles = true;
+      this.applyTileIfDifferent(rowIndex, colIndex);
+      return;
+    }
 
-    // drag uniquement pour les outils de tuiles (pas les objets)
-    if (this.activeTool == null || this.activeObjectTool != null) return;
-
-    this.isPaintingTiles = true;
-    this.applyTileIfDifferent(rowIndex, colIndex);
+    if (event.button === 2) {
+      event.preventDefault();
+      this.isErasingTiles = true;
+      this.eraseTileToBase(rowIndex, colIndex);
+    }
   }
 
   onCellMouseEnter(rowIndex: number, colIndex: number, event: MouseEvent): void {
+    if (this.isErasingTiles) {
+      // bitmask 2 = bouton droit enfonce
+      if ((event.buttons & 2) !== 2) {
+        this.isErasingTiles = false;
+        return;
+      }
+      this.eraseTileToBase(rowIndex, colIndex);
+      return;
+    }
+
     if (!this.isPaintingTiles) return;
 
     // Securite au cas ou , en gros , event.buttons c'est un bitmask et lorsque le bouton gauche est enfonce sa retourne 1 
@@ -250,11 +362,13 @@ export class MapSetupPageComponent {
 
   onGridMouseLeave(): void {
     this.isPaintingTiles = false;
+    this.isErasingTiles = false;
   }
 
   //POur si le user relache la souris hors de la grille
   onDocumentMouseUp(): void {
     this.isPaintingTiles = false;
+    this.isErasingTiles = false;
   }
 
   private applyTileIfDifferent(rowIndex: number, colIndex: number): void {
@@ -265,6 +379,18 @@ export class MapSetupPageComponent {
     this.grid[rowIndex][colIndex] = {
       ...current,
       type: this.activeTool,
+    };
+  }
+
+  private eraseTileToBase(rowIndex: number, colIndex: number): void {
+    const current = this.grid[rowIndex]?.[colIndex];
+    if (!current) return;
+
+    if (current.type === 'floor') return;
+
+    this.grid[rowIndex][colIndex] = {
+      ...current,
+      type: 'floor',
     };
   }
 

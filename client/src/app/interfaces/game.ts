@@ -27,7 +27,7 @@ export interface GameCard {
     id: number;
     image: string;
     name: string;
-    size: string;
+    size: { rows: number; cols: number };
     mode: string;
     date: string;
     visible: boolean;
