@@ -15,7 +15,7 @@ export class GameCardComponent {
     id: 0,
     image: '',
     name: '',
-    size: '',
+    size: { rows: 10, cols: 10 },
     mode: '',
     date: '',
     imgDescription: '',

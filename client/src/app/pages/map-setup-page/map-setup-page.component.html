@@ -71,6 +71,7 @@
               (click)="onCellClick(rowIndex, colIndex)"
               (mousedown)="onCellMouseDown(rowIndex, colIndex, $event)"
               (mouseenter)="onCellMouseEnter(rowIndex, colIndex, $event)"
+              (contextmenu)="$event.preventDefault()"
             >
               @if (getObjectAt(colIndex, rowIndex); as obj) {
                 <span class="cell-object" [attr.data-object]="obj.type" [title]="getObjectToolDescription(obj.type)">
@@ -116,6 +117,15 @@
             <span class="object-tool__count">{{ getPlacedSpawnCount() }} / {{ getRequiredSpawnCount() }}</span>
           }
           <span class="object-tool__desc" role="tooltip">{{ objTool.description }}</span>
+          @if (objTool.type === 'flag') {
+            <span class="object-tool__count">{{ getPlacedFlagCount() }} / {{ getRequiredFlagCount() }}</span>
+          }
+          @if (objTool.type === 'healingShrine') {
+            <span class="object-tool__count">{{ getPlacedHealingShrineCount() }} / {{ getRequiredHealingShrineCount() }}</span>
+          }
+          @if (objTool.type === 'combatShrine') {
+            <span class="object-tool__count">{{ getPlacedCombatShrineCount() }} / {{ getRequiredCombatShrineCount() }}</span>
+          }
         </button>
       }
     </aside>
