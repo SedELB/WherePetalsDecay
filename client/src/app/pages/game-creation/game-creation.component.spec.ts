@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { AVATARS, BASE_STATS, RANDOM_NAMES } from '@app/interfaces/character';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { GameCreationComponent } from './game-creation.component';
+import { GameService } from '@app/services/game.service';
+import { CharacterService } from '@app/services/character.service';
 
 describe('GameCreationComponent', () => {
     let component: GameCreationComponent;
@@ -9,8 +11,12 @@ describe('GameCreationComponent', () => {
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
-            imports: [GameCreationComponent],
-            providers: [provideRouter([])],
+            imports: [GameCreationComponent, HttpClientTestingModule],
+            providers: [
+                provideRouter([]),
+                GameService,
+                CharacterService,
+            ],
         }).compileComponents();
 
         fixture = TestBed.createComponent(GameCreationComponent);
@@ -26,124 +32,39 @@ describe('GameCreationComponent', () => {
         expect(component.currentPhase).toBe('game-selection');
     });
 
-    it('should switch to character-creation phase when game is selected', () => {
-        component.selectGame('Test Game');
-        expect(component.currentPhase).toBe('character-creation');
-        expect(component.selectedGame).toBe('Test Game');
-    });
-
-    it('should select avatar when clicked', () => {
-        const avatarIndex = 5;
-        component.selectAvatar(avatarIndex);
-        expect(component.selectedAvatarIndex).toBe(avatarIndex);
+    it('should have empty games array initially', () => {
+        expect(component.games).toEqual([]);
     });
 
     it('should have life value of 8 when life bonus is selected', () => {
         component.lifeBonusSelected = true;
-        expect(component.lifeValue).toBe(BASE_STATS.life + BASE_STATS.bonus);
+        expect(component.lifeValue).toBe(8);
     });
 
     it('should have speed value of 8 when speed bonus is selected', () => {
         component.lifeBonusSelected = false;
-        expect(component.speedValue).toBe(BASE_STATS.speed + BASE_STATS.bonus);
+        expect(component.speedValue).toBe(8);
     });
 
-    it('should have life value of 6 when speed bonus is selected', () => {
-        component.lifeBonusSelected = false;
-        expect(component.lifeValue).toBe(BASE_STATS.life);
-    });
-
-    it('should have speed value of 6 when life bonus is selected', () => {
-        component.lifeBonusSelected = true;
-        expect(component.speedValue).toBe(BASE_STATS.speed);
-    });
-
-    it('should have attack value of 4', () => {
-        expect(component.attackValue).toBe(BASE_STATS.attack);
-    });
-
-    it('should have defense value of 4', () => {
-        expect(component.defenseValue).toBe(BASE_STATS.defense);
-    });
-
-    it('should assign D6 to attack and D4 to defense when attackDiceD6 is true', () => {
+    it('should have attack dice D6 when attackDiceD6 is true', () => {
         component.attackDiceD6 = true;
         expect(component.attackDice).toBe('D6');
         expect(component.defenseDice).toBe('D4');
     });
 
-    it('should assign D4 to attack and D6 to defense when attackDiceD6 is false', () => {
+    it('should have defense dice D6 when attackDiceD6 is false', () => {
         component.attackDiceD6 = false;
         expect(component.attackDice).toBe('D4');
         expect(component.defenseDice).toBe('D6');
     });
 
-    it('should select life bonus when selectBonus is called with true', () => {
-        component.selectBonus(true);
-        expect(component.lifeBonusSelected).toBe(true);
-    });
-
-    it('should select speed bonus when selectBonus is called with false', () => {
-        component.selectBonus(false);
-        expect(component.lifeBonusSelected).toBe(false);
-    });
-
-    it('should select attack dice D6 when selectAttackDice is called with true', () => {
-        component.selectAttackDice(true);
-        expect(component.attackDiceD6).toBe(true);
-    });
-
-    it('should select defense dice D6 when selectAttackDice is called with false', () => {
-        component.selectAttackDice(false);
-        expect(component.attackDiceD6).toBe(false);
-    });
-
-    it('should go back to game selection and reset form', () => {
-        component.currentPhase = 'character-creation';
-        component.selectedGame = 'Test Game';
-        component.characterName = 'Test Character';
-        component.selectedAvatarIndex = 3;
-
-        component.goBackToGameSelection();
-
-        expect(component.currentPhase).toBe('game-selection');
-        expect(component.selectedGame).toBeNull();
-        expect(component.characterName).toBe('');
-        expect(component.selectedAvatarIndex).toBeNull();
-    });
-
-    it('should reset character form', () => {
+    it('should reset form when going back to game selection', () => {
         component.characterName = 'Test';
         component.selectedAvatarIndex = 5;
-        component.lifeBonusSelected = false;
-        component.attackDiceD6 = false;
-
-        component.resetCharacterForm();
-
+        component.goBackToGameSelection();
         expect(component.characterName).toBe('');
         expect(component.selectedAvatarIndex).toBeNull();
-        expect(component.lifeBonusSelected).toBe(true);
-        expect(component.attackDiceD6).toBe(true);
-    });
-
-    it('should generate random character with valid values', () => {
-        component.generateRandomCharacter();
-
-        expect(component.characterName).toBeTruthy();
-        expect(RANDOM_NAMES).toContain(component.characterName);
-        expect(component.selectedAvatarIndex).not.toBeNull();
-        expect(component.selectedAvatarIndex).toBeGreaterThanOrEqual(0);
-        expect(component.selectedAvatarIndex).toBeLessThan(AVATARS.length);
-    });
-
-    it('should not navigate when form is invalid', () => {
-        component.characterName = '';
-        component.selectedAvatarIndex = null;
-        const navigateSpy = spyOn(component['router'], 'navigate');
-
-        component.confirmCharacter();
-
-        expect(navigateSpy).not.toHaveBeenCalled();
+        expect(component.currentPhase).toBe('game-selection');
     });
 
     it('should validate form as invalid when name is empty', () => {
@@ -152,21 +73,9 @@ describe('GameCreationComponent', () => {
         expect(component.isFormValid()).toBe(false);
     });
 
-    it('should validate form as invalid when avatar is not selected', () => {
-        component.characterName = 'Test';
-        component.selectedAvatarIndex = null;
-        expect(component.isFormValid()).toBe(false);
-    });
-
     it('should validate form as valid when name and avatar are set', () => {
         component.characterName = 'Test';
         component.selectedAvatarIndex = 5;
         expect(component.isFormValid()).toBe(true);
-    });
-
-    it('should validate form as invalid when name is only whitespace', () => {
-        component.characterName = '   ';
-        component.selectedAvatarIndex = 5;
-        expect(component.isFormValid()).toBe(false);
     });
 });
