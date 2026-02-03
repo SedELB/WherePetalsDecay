@@ -6,11 +6,24 @@
             <h1>Créer une partie</h1>
             <p>Sélectionnez un jeu pour créer une nouvelle partie</p>
 
-            @for(game of availableGames; track game.id){
+            @if(games.length === 0){
+                <p class="no-games">Aucun jeu disponible</p>
+            }
+
+            @for(game of games; track game._id){
                 <app-game-card
-                    [game]="game"
+                    [game]="{
+                        id: 0,
+                        name: game.name,
+                        size: getGameSizeLabel(game),
+                        mode: game.gameMode,
+                        date: game.updatedAt,
+                        image: game.thumbnail,
+                        visible: game.isVisible,
+                        imgDescription: game.description
+                    }"
                 >
-                    <app-button [height]="50" (click)="selectGame(game.name)">Sélectionner</app-button>
+                    <app-button [height]="50" (click)="selectGame(game)">Sélectionner</app-button>
                 </app-game-card>
             }
         </section>
@@ -18,7 +31,7 @@
     @if(currentPhase === 'character-creation'){
         <section class="character-creation">
             <h1>Création de personnage</h1>
-            <p>Jeu sélectionné : {{ selectedGame }}</p>
+            <p>Jeu sélectionné : {{ selectedGame?.name }}</p>
 
             <div class="form-container">
                 <div class="form-group">
