@@ -1,5 +1,5 @@
-import { CreateGameDto, TileDto } from '@app/model/dto/game/create-game.dto';
-import { GameMode, TileItem, TileTexture } from '@app/utils/game.enum';
+import { CreateGameDto} from '@app/model/dto/game/create-game.dto';
+import { GameMode} from '@app/utils/game.enum';
 import { Game, GameDocument } from '@app/model/schema/game.schema';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -24,67 +24,6 @@ export class GameService {
         }
     }
 
-    // GENERATED
-    generateValidGrid(rows: number, cols: number): TileDto[][] {
-        const grid: TileDto[][] = Array.from({ length: rows }, () =>
-            Array.from({ length: cols }, (): TileDto => ({ type: TileTexture.Floor, item: null })),
-        );
-
-        // Places random walls at 30% rate
-        // for (let i = 0; i < rows; i++) {
-        //     for (let j = 0; j < cols; j++) {
-        //         if (Math.random() < 0.3) grid[i][j].type = TileTexture.Wall;
-        //     }
-        // }
-
-        let spawnCount = 0;
-        while (spawnCount < MAX_PLAYERS) {
-            const r = Math.floor(Math.random() * rows);
-            const c = Math.floor(Math.random() * cols);
-            if (grid[r][c].type !== TileTexture.Wall && !grid[r][c].item) {
-                grid[r][c].item = TileItem.Spawn;
-                spawnCount++;
-            }
-        }
-
-        return grid;
-    }
-
-
-    generateInvalidGrid(rows: number, cols: number): TileDto[][] {
-        return Array.from({ length: rows }, () =>
-            Array.from({ length: cols }, (): TileDto => ({ type: TileTexture.Wall, item: null })),  // Tout en murs = invalide
-        );
-    }
-
-    // GENERATED
-    printGrid(game: Game): void {
-    const symbols = {
-        [TileTexture.Floor]: '.',
-        [TileTexture.Wall]: '#',
-        [TileTexture.DoorOpened]: 'O',
-        [TileTexture.DoorClosed]: 'X',
-        // Ajoutez d'autres types si nécessaire
-    };
-
-    const itemSymbols = {
-        [TileItem.Spawn]: 'S',  // Symbole pour spawn
-        // Ajoutez d'autres items si nécessaire
-    };
-
-    this.logger.log(`Grille pour le jeu "${game.name}":`);
-    game.grid.forEach(row => {
-        const rowString = row.map(tile => {
-            const symbol = symbols[tile.type] || '?';  // Symbole pour le type
-            const itemSymbol = tile.item ? itemSymbols[tile.item] || `(${tile.item})` : '';  // Symbole pour l'item, ou (item) si inconnu
-            return itemSymbol || symbol;  // Priorité à l'item si présent
-        }).join(' ');
-        this.logger.log(rowString);
-    });
-    this.logger.log('');
-}
-
-
     async populateDB(): Promise<void> {
         const validGame1: CreateGameDto = {
             name: 'Valid Game 1',
@@ -93,7 +32,7 @@ export class GameService {
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MAX_PLAYERS,
-            grid: this.generateValidGrid(TEN, TEN),
+            grid: this.gameValidatorService.generateValidGrid(TEN, TEN),
             isVisible: true,
         };
 
@@ -104,7 +43,7 @@ export class GameService {
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MIN_PLAYERS,
-            grid: this.generateValidGrid(TEN, TEN),
+            grid: this.gameValidatorService.generateValidGrid(TEN, TEN),
             isVisible: false,
         };
 
@@ -115,13 +54,9 @@ export class GameService {
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MIN_PLAYERS,
-            grid: this.generateInvalidGrid(TEN, TEN),
+            grid: this.gameValidatorService.generateInvalidGrid(TEN, TEN),
             isVisible: true,
         };
-
-        this.printGrid(validGame1 as Game);
-        this.printGrid(validGame2 as Game);
-        this.printGrid(invalidGame3 as Game);
 
         const defaultGames: CreateGameDto[] = [validGame1, validGame2, invalidGame3];
         this.logger.log('THIS ADDS DATA TO THE DATABASE, DO NOT USE OTHERWISE');

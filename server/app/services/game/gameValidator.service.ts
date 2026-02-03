@@ -1,5 +1,5 @@
-import { TEXT_MIN_LENGTH, NAME_MAX_LENGTH, DESC_MAX_LENGTH } from '@app/utils/game.constants';
-import { TileTexture } from '@app/utils/game.enum';
+import { TEXT_MIN_LENGTH, NAME_MAX_LENGTH, DESC_MAX_LENGTH, MAX_PLAYERS } from '@app/utils/game.constants';
+import { TileTexture, TileItem } from '@app/utils/game.enum';
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { Game, GameDocument, Tile } from '@app/model/schema/game.schema';
 import { Injectable } from '@nestjs/common';
@@ -14,7 +14,7 @@ export class GameValidatorService {
     @param property: string representing the property to count (e.g., 'type' or 'item')
     ex. returns ex. {ice: 3, floor: 40, water: 21} ** only the types/items present in the grid + {item: null} is ignored**
     */
-    private countByProperty(game: CreateGameDto, property: string): Record<string, number> {
+    countByProperty(game: CreateGameDto, property: string): Record<string, number> {
         return game.grid.flat().reduce((acc, tile) => {
             const value = tile[property]; // ex. value = tile['type'] or tile['item'] = 'ice', 'floor', etc.
             if (value) {
@@ -30,6 +30,37 @@ export class GameValidatorService {
         if (!nameExists || (gameId && nameExists._id.toString() === gameId)) return true;
 
         throw new Error('The name of the game is not unique!');
+    }
+
+    generateInvalidGrid(rows: number, cols: number): Tile[][] {
+        return Array.from({ length: rows }, () =>
+            Array.from({ length: cols }, (): Tile => ({ type: TileTexture.Wall, item: null })),  // Tout en murs = invalide
+        );
+    }
+
+    generateValidGrid(rows: number, cols: number): Tile[][] {
+        const grid: Tile[][] = Array.from({ length: rows }, () =>
+            Array.from({ length: cols }, (): Tile => ({ type: TileTexture.Floor, item: null })),
+        );
+
+        // Places random walls at 30% rate
+        // for (let i = 0; i < rows; i++) {
+        //     for (let j = 0; j < cols; j++) {
+        //         if (Math.random() < 0.3) grid[i][j].type = TileTexture.Wall;
+        //     }
+        // }
+
+        let spawnCount = 0;
+        while (spawnCount < MAX_PLAYERS) {
+            const r = Math.floor(Math.random() * rows);
+            const c = Math.floor(Math.random() * cols);
+            if (grid[r][c].type !== TileTexture.Wall && !grid[r][c].item) {
+                grid[r][c].item = TileItem.Spawn;
+                spawnCount++;
+            }
+        }
+
+        return grid;
     }
 
     isTextLengthValid(game: CreateGameDto): boolean {
@@ -72,7 +103,7 @@ export class GameValidatorService {
     }   
 
     // For areThereUnreachableTiles()
-    private findFirstWalkableTile(grid: Tile[][]): { row: number; col: number } | null {
+    findFirstWalkableTile(grid: Tile[][]): { row: number; col: number } | null {
         for (let r = 0; r < grid.length; r++) {
             for (let c = 0; c < grid[r].length; c++) {
                 if (grid[r][c].type !== TileTexture.Wall) return { row: r, col: c };
@@ -82,7 +113,7 @@ export class GameValidatorService {
     }   
     
     // For areThereUnreachableTiles()
-    private isTileValidForPath(game: CreateGameDto, row: number, col: number, visited: Set<string>): boolean {
+    isTileValidForPath(game: CreateGameDto, row: number, col: number, visited: Set<string>): boolean {
         const isWithinBounds = row >= 0 && row < game.grid.length && col >= 0 && col < game.grid[0].length;
         if (!isWithinBounds) return false;
 
