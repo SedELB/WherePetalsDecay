@@ -174,7 +174,7 @@ export class GameService {
             const fullGameData = {...existingGame, ...game}; // new properies from game replace the olds
 
             await this.gameValidatorService.isGameValid(fullGameData, id);
-            await this.gameModel.findByIdAndUpdate(id, game, { new: true }).exec();
+            await this.gameModel.findByIdAndUpdate(id, fullGameData, {overwrite: true, new: true }).exec();
         } catch (error) {
             this.logger.error(`Failed to update game: ${error.message}`);
             throw new Error(`Failed to update game: ${error.message}`);
