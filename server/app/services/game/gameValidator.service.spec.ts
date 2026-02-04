@@ -2,7 +2,7 @@ import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { GameValidatorService } from '@app/services/game/gameValidator.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
-import { MAX_PLAYERS, TEN, MIN_PLAYERS } from '@app/utils/game.constants';
+import { MAX_PLAYERS, TEN, MIN_PLAYERS, DESC_MAX_LENGTH } from '@app/utils/game.constants';
 import { GameMode, TileTexture, TileItem } from '@app/utils/game.enum';
 import { Game, GameDocument } from '@app/model/schema/game.schema';
 import { getModelToken } from '@nestjs/mongoose';
@@ -28,17 +28,6 @@ describe('GameValidator', () => {
         }).compile();
 
         gameValidatorService = module.get<GameValidatorService>(GameValidatorService);
-
-        validGame1 = {
-            name: 'Valid Game 1',
-            description: 'Desc. 1',
-            size: {rows: TEN, cols: TEN},
-            gameMode: GameMode.Classic,
-            thumbnail: 'N/A',
-            maxPlayers: MAX_PLAYERS,
-            grid: gameValidatorService.generateValidGrid(TEN, TEN),
-            isVisible: true,
-        };
 
         invalidGame3 = {
             name: 'Invalid Game 3',
@@ -69,54 +58,85 @@ describe('GameValidator', () => {
     // TEST isGameNameUnique A FAIRE
 
     it('isTextLengthValid() should return true if the game name and desc are valid', () => {
-        expect(gameValidatorService.isTextLengthValid(validGame1)).toEqual(true);
+        expect(gameValidatorService.isTextLengthValid(getFakeGame())).toEqual(true);
     });
 
     it('isTextLengthValid() should fail if the game name is empty', () => {
-        const emptyNameGame = {...validGame1, name: ''};
-        expect(() => gameValidatorService.isTextLengthValid(emptyNameGame)).toThrow('[The name field is empty!]');
+        const emptyNameGame = {...getFakeGame(), name: ''};
+        expect(() => gameValidatorService.isTextLengthValid(emptyNameGame)).toThrow('["The name field is empty!"]');
     });
 
     it('isTextLengthValid() should fail if the game name exceeds max length', () => {
-        const longNameGame = {...validGame1, name: 'QWERTYUIOPASDFGHJKLZXCVBNM'};
-        expect(() => gameValidatorService.isTextLengthValid(longNameGame)).toThrow('[The name field exceeds the maximum length!]');
+        const longNameGame = {...getFakeGame(), name: 'QWERTYUIOPASDFGHJKLZXCVBNM'};
+        expect(() => gameValidatorService.isTextLengthValid(longNameGame)).toThrow('["The name field exceeds the maximum length!"]');
     });
 
     it('isTextLengthValid() should fail if the game desc is empty', () => {
-        const emptyDescGame = {...validGame1, description: ''};
-        expect(() => gameValidatorService.isTextLengthValid(emptyDescGame)).toThrow('[The description field is empty!]');
+        const emptyDescGame = {...getFakeGame(), description: ''};
+        expect(() => gameValidatorService.isTextLengthValid(emptyDescGame)).toThrow('["The description field is empty!"]');
     });
 
     it('isTextLengthValid() should fail if the game desc is exceeds max length', () => {
-        const longDescGame = {...validGame1, description: 'a'.repeat(501)};
-        expect(() => gameValidatorService.isTextLengthValid(longDescGame)).toThrow('[The description field exceeds the maximum length!]');
+        const longDescGame = {...getFakeGame(), description: 'a'.repeat(DESC_MAX_LENGTH + 1)};
+        expect(() => gameValidatorService.isTextLengthValid(longDescGame)).toThrow('["The description field exceeds the maximum length!"]');
     });
 
-    // it('isGameSurfaceValid() should return true if there is more than 50% walkable tiles', () => {
-    //     //...
-    // });
+    it('isGameSurfaceValid() should return true if there is more than 50% walkable tiles', () => {
+        expect(gameValidatorService.isGameSurfaceValid(getFakeGame())).toEqual(true);
+    });
 
     it('areAllSpawnPointsPlaced() should return true if all spawn points are placed', () => {
-        expect(gameValidatorService.areAllSpawnPointsPlaced(validGame1)).toEqual(true);
+        expect(gameValidatorService.areAllSpawnPointsPlaced(getFakeGame())).toEqual(true);
     });
 
     it('areAllSpawnPointsPlaced() should fail if not all spawns are placed', () => {
         expect(() => gameValidatorService.areAllSpawnPointsPlaced(invalidGame3)).toThrow('Not all spawn points are placed!');
     });
 
-    // it('findFirstWalkableTile() should return the first walkable tile');
+    it('findFirstWalkableTile() should return the first walkable tile', () => {
+        expect(gameValidatorService.findFirstWalkableTile(getFakeGame().grid)).toMatchObject({row:0, col:0});
+    });
 
-    // it('findFirstWalkableTile() should return null if there is no walkable tile');
+    it('findFirstWalkableTile() should return null if there is no walkable tile', () => {
+        expect(gameValidatorService.findFirstWalkableTile(invalidGame3.grid)).toEqual(null);
+    });
 
-    // it('isTileValidForPath() should return true if tile isnt surrounded by walls');
+    it('isTileValidForPath() should return true if tile isnt surrounded by walls', () => {
+        const visited = new Set<string>();
+        expect(gameValidatorService.isTileValidForPath(getFakeGame(), 0, 0, visited)).toEqual(true);
+    });
 
-    // it('isTileValidForPath() should return false if tile is surrounded by walls');
+    it('isTileValidForPath() should return false if tile is surrounded by walls', () => {
+        const game = getFakeGame();
+        game.grid[0][0].type = TileTexture.Wall;
+        const visited = new Set<string>();
+        expect(gameValidatorService.isTileValidForPath(game, 0, 0, visited)).toEqual(false);
+    });
 
-    // it('areThereUnreachableTiles() should return true if all tiles are reachable');
+    it('isTileValidForPath() should return false for a tile out of bounds', () => {
+        const game = getFakeGame();
+        const visited = new Set<string>();
+        expect(gameValidatorService.isTileValidForPath(game, -1, 0, visited)).toEqual(false);
+        expect(gameValidatorService.isTileValidForPath(game, 10, 0, visited)).toEqual(false);
+        expect(gameValidatorService.isTileValidForPath(game, 0, 10, visited)).toEqual(false);
+    });
 
-    // it('areThereUnreachableTiles() should fail if there are no walkable tiles');
+    it('areThereUnreachableTiles() should return true if all tiles are reachable', () => {
+        expect(gameValidatorService.areThereUnreachableTiles(getFakeGame())).toEqual(true);
+    });
 
-    // it('areThereUnreachableTiles() should fail if there are unreachable tiles');
+    it('areThereUnreachableTiles() should fail if there are no walkable tiles', () => {
+        expect(() => gameValidatorService.areThereUnreachableTiles(invalidGame3)).toThrow('There are no walkable tiles!');
+    });
+
+    it('areThereUnreachableTiles() should fail if there are unreachable tiles', () => {
+        const game = getFakeGame();
+        game.grid[5][4].type = TileTexture.Wall; // Placing walls around the 5,5 tile.
+        game.grid[4][5].type = TileTexture.Wall;
+        game.grid[5][6].type = TileTexture.Wall;
+        game.grid[6][5].type = TileTexture.Wall;
+        expect(() => gameValidatorService.areThereUnreachableTiles(game)).toThrow('One or more tiles are unreachable!');
+    });
 
     
 });
@@ -128,7 +148,7 @@ const getFakeGame = (): CreateGameDto => ({
     size : { rows: 10, cols: 10 },
     gameMode: GameMode.Classic,
     thumbnail: 'N/A',
-    maxPlayers: 6,
+    maxPlayers: MIN_PLAYERS,
     grid: defaultGrid,
     isVisible: true,
 });

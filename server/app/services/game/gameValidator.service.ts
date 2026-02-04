@@ -78,7 +78,7 @@ export class GameValidatorService {
             errors.push('The description field exceeds the maximum length!');
         }
         if (errors.length > 0) {
-            throw errors;  // TODO: has to be validate
+            throw new Error(JSON.stringify(errors));  // TODO: has to be validate
         }
         return true;
     }
@@ -158,7 +158,7 @@ export class GameValidatorService {
         if (visited.size === totalWalkable) {
             return true;
         } else {
-            throw new Error('Une ou plusieurs tuiles sont inaccessibles !');
+            throw new Error('One or more tiles are unreachable!');
         }
     }
 
