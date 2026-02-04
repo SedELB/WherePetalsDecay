@@ -95,14 +95,32 @@ describe('GameServiceE2E', () => {
         expect(countsAfter).toBeGreaterThan(countsBefore);
     });
 
+    it('isGameNameUnique() should return true if the game name is unique', async () => {
+        expect(await gameService.isGameNameUnique('Completely Unique Name')).toEqual(true);
+    });
+
+    it('isGameNameUnique() should throw error if the game name already exists', async () => {
+        const createdGame = await gameModel.create(validGame1);
+        await expect(gameService.isGameNameUnique(createdGame.name)).rejects.toThrow('The name of the game is not unique!');
+    });
+
     it('getAllGames() return all three games in database', async () => {
         await gameService.populateDB();
         expect((await gameService.getAllGames()).length).toBeGreaterThan(2);
     });
 
+    it('getAllGames() should fail if there are no games in the database', async () => {
+        await expect((gameService.getAllGames())).rejects.toThrow('No games found in the database');
+    });
+
     it('getGameById() return correct game with the specified id', async () => {
         const createdGame = await gameModel.create(validGame1);
         expect(await gameService.getGameById(createdGame._id.toString())).toMatchObject(validGame1);
+    });
+
+    it('getGameById() should fail if there are no game with the specified id', async () => {
+        const nonExistentId = new ObjectId().toString();
+        await expect(gameService.getGameById(nonExistentId)).rejects.toThrow('No game found with this id');
     });
 
     it('addGame() should add a valid game to the DB', async () => {
@@ -132,7 +150,7 @@ describe('GameServiceE2E', () => {
         const modifiedFakeGame = validGame1;
         modifiedFakeGame.name = 'Modified Game';
         const nonExistentId = new ObjectId().toString();
-        await expect(gameService.modifyGame(nonExistentId, modifiedFakeGame)).rejects.toThrow();
+        await expect(gameService.modifyGame(nonExistentId, modifiedFakeGame)).rejects.toThrow('No game found with this id');
     });
 
     it('deleteGame() should delete the game with the specified id', async () => {
@@ -157,4 +175,21 @@ describe('GameServiceE2E', () => {
         const nonExistentId = new ObjectId().toString();
         await expect(gameService.updateVisibility(nonExistentId, false)).rejects.toThrow();
     });
+
+    it('getAllVisibleGames() should return all visible games', async () => {
+        const visibleGame1 = {...validGame1, name: 'Visible game 1'};
+        const visibleGame2 = {...validGame1, name: 'Visible game 2'};
+        const visibleGame3 = {...validGame1, name: 'Visible game 3'};
+        await gameService.addGame(visibleGame1);
+        await gameService.addGame(visibleGame2);
+        await gameService.addGame(visibleGame3);
+        expect((await gameService.getAllVisibleGames()).length).toEqual(3);
+    });
+
+    it('getAllVisibleGames() should fail if there are no visible games in the database', async () => {
+        const nonVisibleGame = {...validGame1, isVisible: false};
+        await gameService.addGame(nonVisibleGame);
+        await expect(gameService.getAllVisibleGames()).rejects.toThrow('No visible games found in the database');
+    });
+
 });

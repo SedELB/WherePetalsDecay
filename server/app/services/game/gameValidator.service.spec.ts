@@ -2,29 +2,16 @@ import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { GameValidatorService } from '@app/services/game/gameValidator.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
-import { MAX_PLAYERS, TEN, MIN_PLAYERS, DESC_MAX_LENGTH } from '@app/utils/game.constants';
+import { TEN, MIN_PLAYERS, DESC_MAX_LENGTH } from '@app/utils/game.constants';
 import { GameMode, TileTexture, TileItem } from '@app/utils/game.enum';
-import { Game, GameDocument } from '@app/model/schema/game.schema';
-import { getModelToken } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
 
 describe('GameValidator', () => {
     let gameValidatorService: GameValidatorService;
-    let validGame1: CreateGameDto;
     let invalidGame3: CreateGameDto;
-    let courseModel: Model<GameDocument>;
 
     beforeAll(async () => {
         const module: TestingModule = await Test.createTestingModule({
-            providers: [
-                GameValidatorService, 
-                Logger,
-                {
-                    // On dit à Nest : "Quand tu cherches le modèle Game, donne cet objet vide"
-                    provide: getModelToken(Game.name),
-                    useValue: courseModel, 
-                },
-            ],
+            providers: [GameValidatorService, Logger],
         }).compile();
 
         gameValidatorService = module.get<GameValidatorService>(GameValidatorService);
@@ -117,8 +104,8 @@ describe('GameValidator', () => {
         const game = getFakeGame();
         const visited = new Set<string>();
         expect(gameValidatorService.isTileValidForPath(game, -1, 0, visited)).toEqual(false);
-        expect(gameValidatorService.isTileValidForPath(game, 10, 0, visited)).toEqual(false);
-        expect(gameValidatorService.isTileValidForPath(game, 0, 10, visited)).toEqual(false);
+        expect(gameValidatorService.isTileValidForPath(game, TEN, 0, visited)).toEqual(false);
+        expect(gameValidatorService.isTileValidForPath(game, 0, TEN, visited)).toEqual(false);
     });
 
     it('areThereUnreachableTiles() should return true if all tiles are reachable', () => {
@@ -138,19 +125,94 @@ describe('GameValidator', () => {
         expect(() => gameValidatorService.areThereUnreachableTiles(game)).toThrow('One or more tiles are unreachable!');
     });
 
-    
+
+    it('isDoorsPlacementValid() should return true for valid vertical door', () => {
+        const game = getCleanGame();
+        game.grid[5][5].type = TileTexture.DoorOpened;
+        game.grid[4][5].type = TileTexture.Wall;
+        game.grid[6][5].type = TileTexture.Wall;  
+        game.grid[5][4].type = TileTexture.Floor;
+        game.grid[5][6].type = TileTexture.Floor; 
+        expect(gameValidatorService.isDoorsPlacementValid(game)).toEqual(true);
+    });
+
+    it('isDoorsPlacementValid() should return true for valid horizontal door', () => {
+        const game = getCleanGame();
+        game.grid[5][5].type = TileTexture.DoorClosed;
+        game.grid[5][4].type = TileTexture.Wall;
+        game.grid[5][6].type = TileTexture.Wall; 
+        game.grid[4][5].type = TileTexture.Floor;
+        game.grid[6][5].type = TileTexture.Floor; 
+        expect(gameValidatorService.isDoorsPlacementValid(game)).toEqual(true);
+    });
+
+    it('isDoorsPlacementValid() should throw for door on border', () => {
+        const game = getCleanGame();
+        game.grid[0][5].type = TileTexture.DoorOpened;
+        expect(() => gameValidatorService.isDoorsPlacementValid(game)).toThrow();
+    });
+
+    it('isDoorsPlacementValid() should throw for invalid door placement', () => {
+        const game = getCleanGame();
+        game.grid[5][5].type = TileTexture.DoorOpened;
+        expect(() => gameValidatorService.isDoorsPlacementValid(game)).toThrow();
+    });
+
+    it('isDoorsPlacementValid() should throw for door with walls on wrong sides', () => {
+        const game = getCleanGame();
+        game.grid[5][5].type = TileTexture.DoorOpened;
+        game.grid[4][5].type = TileTexture.Wall; 
+        expect(() => gameValidatorService.isDoorsPlacementValid(game)).toThrow();
+    });
+
+    it('isDoorsPlacementValid() should return true if no doors', () => {
+        const game = getCleanGame();
+        expect(gameValidatorService.isDoorsPlacementValid(game)).toEqual(true);
+    });
+
+    it('isFlagPlaced() should return true if flag is placed on CTF gamemode', () => {
+        const game = getCleanGame();
+        game.gameMode = GameMode.Ctf;
+        game.grid[0][0].item = TileItem.Flag;
+        expect(gameValidatorService.isFlagPlaced(game)).toEqual(true);
+    });
+
+    it('isFlagPlaced() should return false if gamemode is Classic', () => {
+        const game = getCleanGame();
+        expect(gameValidatorService.isFlagPlaced(game)).toEqual(false);
+    });
+
+    it('isFlagPlaced() should fail if flag is not placed in CTF', () => {
+        const game = getCleanGame();
+        game.gameMode = GameMode.Ctf;
+        expect(() => gameValidatorService.isFlagPlaced(game)).toThrow();
+    });
 });
 
 
 const getFakeGame = (): CreateGameDto => ({
     name: 'GameName 1',
     description: 'Game Description 1',
-    size : { rows: 10, cols: 10 },
+    size : { rows: TEN, cols: TEN },
     gameMode: GameMode.Classic,
     thumbnail: 'N/A',
     maxPlayers: MIN_PLAYERS,
     grid: defaultGrid,
     isVisible: true,
+});
+
+ // cleanGame = grid with only floors for test customization.
+const getCleanGame = (): CreateGameDto => ({
+    name: 'Clean Game',
+    description: 'Test game',
+    size: { rows: TEN, cols: TEN },
+    gameMode: GameMode.Classic,
+    thumbnail: 'N/A',
+    maxPlayers: 4,
+    isVisible: true,
+    grid: Array(TEN).fill(null).map(() => 
+        Array(TEN).fill(null).map(() => ({ type: TileTexture.Floor, item: null })),
+    ),
 });
 
 // const BASE_36 = 36;

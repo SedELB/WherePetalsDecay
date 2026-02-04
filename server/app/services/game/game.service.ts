@@ -63,9 +63,17 @@ export class GameService {
         await this.gameModel.insertMany(defaultGames);
     }
 
+    async isGameNameUnique(gameName: string, gameId?: string): Promise<boolean> {
+        const nameExists = await this.gameModel.findOne({ name: gameName }).exec();
+        // if name is unique && if name exists but we're updating a game
+        if (!nameExists || (gameId && nameExists._id.toString() === gameId)) return true;
+
+        throw new Error('The name of the game is not unique!');
+    }
+
     async getAllGames(): Promise<Game[]> {
         const allGames = await this.gameModel.find().exec();
-        if (!allGames) {
+        if (allGames.length === 0) {
             this.logger.log('No games found in the database');
             throw new Error('No games found in the database');
         }
@@ -83,7 +91,7 @@ export class GameService {
 
     async getAllVisibleGames(): Promise<Game[]> {
         const visibleGames = await this.gameModel.find({isVisible: true}).exec();
-        if (!visibleGames) {
+        if (visibleGames.length === 0) {
             this.logger.log('No visible games found in the database');
             throw new Error('No visible games found in the database');
         }
@@ -92,6 +100,7 @@ export class GameService {
 
     async addGame(game: CreateGameDto): Promise<void> {
         try {
+            await this.isGameNameUnique(game.name);
             await this.gameValidatorService.isGameValid(game);
             await this.gameModel.create(game);
         } catch (error) {
@@ -106,9 +115,16 @@ export class GameService {
             if (!existingGame) {
                 throw new Error('No game found with this id');
             }
-            const fullGameData = {...existingGame, ...game}; // new properies from game replace the olds
 
-            await this.gameValidatorService.isGameValid(fullGameData, id);
+            if (game.name) {
+            await this.isGameNameUnique(game.name, id);
+            }
+
+            const { _id: _, ...gameWithoutId } = existingGame;
+            void _;
+            const fullGameData = {...gameWithoutId, ...game}; // new properies from game replace the olds
+
+            this.gameValidatorService.isGameValid(fullGameData);
             await this.gameModel.findByIdAndUpdate(id, fullGameData, {new: true }).exec();
         } catch (error) {
             this.logger.error(`Failed to update game: ${error.message}`);
