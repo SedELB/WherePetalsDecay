@@ -13,14 +13,13 @@
             @for(game of games; track game._id){
                 <app-game-card
                     [game]="{
-                        id: 0,
                         name: game.name,
+                        description: game.description,
                         size: getGameSizeLabel(game),
-                        mode: game.gameMode,
-                        date: game.updatedAt,
-                        image: game.thumbnail,
-                        visible: game.isVisible,
-                        imgDescription: game.description
+                        gameMode: game.gameMode,
+                        updatedAt: game.updatedAt,
+                        thumbnail: game.thumbnail,
+                        isVisible: game.isVisible,
                     }"
                 >
                     <app-button [height]="50" (click)="selectGame(game)">Sélectionner</app-button>

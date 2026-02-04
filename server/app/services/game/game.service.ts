@@ -88,7 +88,7 @@ export class GameService {
     async populateDB(): Promise<void> {
         const validGame1: CreateGameDto = {
             name: 'Valid Game 1',
-            description: 'Desc. 1',
+            description: 'Desc.  Desc. 1 fsodijfsdifdsifjdsojfdsfjsdoifjsoidfjsodi',
             size: {rows: TEN, cols: TEN},
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',

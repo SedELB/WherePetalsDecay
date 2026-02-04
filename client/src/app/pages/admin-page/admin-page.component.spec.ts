@@ -9,12 +9,12 @@ describe('AdminPageComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AdminPageComponent, RouterTestingModule],
-    })
-      .compileComponents();
+    }).compileComponents();
 
     fixture = TestBed.createComponent(AdminPageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+    
   });
 
   it('should create the component', () => {
@@ -22,39 +22,39 @@ describe('AdminPageComponent', () => {
   });
 
   it('should have games array', () => {
-    expect(component.games1.length).toBeGreaterThan(0);
+    expect(component.gameCards.length).toBeGreaterThan(0);
   });
 
   it('should render all games', () => {
     const compiled = fixture.nativeElement;
     const gameCards = compiled.querySelectorAll('app-game-card');
-    expect(gameCards.length).toBe(component.games1.length);
+    expect(gameCards.length).toBe(component.gameCards.length);
   });
 
   it('should remove game', () => {
-    const initialLength = component.games1.length;
-    const gameId = component.games1[0].id;
+    const initialLength = component.gameCards.length;
+    const gameName = component.gameCards[0].name;
 
-    component.removeGame(gameId);
+    component.removeGame(gameName);
 
-    expect(component.games1.length).toBe(initialLength - 1);
-    expect(component.games1.find(g => g.id === gameId)).toBeUndefined();
+    expect(component.gameCards.length).toBe(initialLength - 1);
+    expect(component.gameCards.find(g => g.name === gameName)).toBeUndefined();
   });
 
   it('should toggle visibility', () => {
-    const game = component.games1[0];
-    const wasVisible = game.visible;
+    const game = component.gameCards[0];
+    const wasVisible = game.isVisible;
 
-    component.changeVisibility(game.id);
+    component.changeVisibility(game.name);
 
-    expect(game.visible).toBe(!wasVisible);
+    expect(game.isVisible).toBe(!wasVisible);
   });
 
   it('should update DOM when game removed', () => {
-    const gameId = component.games1[0].id;
-    const initialLength = component.games1.length;
+    const gamename = component.gameCards[0].name;
+    const initialLength = component.gameCards.length;
 
-    component.removeGame(gameId);
+    component.removeGame(gamename);
     fixture.detectChanges();
 
     const gameCards = fixture.nativeElement.querySelectorAll('app-game-card');

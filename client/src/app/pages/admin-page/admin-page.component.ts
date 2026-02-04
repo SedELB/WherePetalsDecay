@@ -16,6 +16,7 @@ import { CommunicationService } from '@app/services/communication.service';
 export class AdminPageComponent implements OnInit {
 
   games: Game[] = [];
+  gameCards: GameCard[] = [];
 
   constructor(private communicationService: CommunicationService) {}
 
@@ -27,30 +28,32 @@ export class AdminPageComponent implements OnInit {
     this.communicationService.getAllGames().subscribe({
       next: (games) => {
         this.games = games;
-        // console.log(JSON.stringify(games));
+        this.gameCards = this.games.map(game => {
+          return {
+            name: game.name,
+            description: game.description,
+            size: game.size,
+            gameMode: game.gameMode,
+            thumbnail: game.thumbnail,
+            updatedAt: game.updatedAt,
+            isVisible: game.isVisible,
+          };
+        });
       },
-      error: () => {
-        // console.error(JSON.stringify(err.error, null, 2));
+      error: (err) => {
+        throw new Error('games were not loaded correctly : ', err);
       },
     });
   }
 
-  games1: GameCard[] = [
-    {id: 1, image: '/assets/filler.png', name: 'Game 1', size: '10X10',
-      mode: 'Solo', date: '2026-01-01', visible: true,
-      imgDescription: 'blablabladsssssssssmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm'},
-    {id: 2, image: '/assets/filler.png', name: 'Game 2', size: '20X20', mode: 'Solo', date: '2026-01-05', visible: true, imgDescription: 'blablabla'},
-    {id: 3, image: '/assets/filler.png', name: 'Game 3', size: '5X5', mode: 'Co-op', date: '2026-01-10', visible: true, imgDescription: 'blablabla'},
-  ];
-
-  removeGame(id: number) {
-    this.games1 = this.games1.filter(game => game.id !== id);
+  removeGame(name: string) {
+    this.gameCards = this.gameCards.filter(game => game.name !== name);
   }
 
-  changeVisibility(id: number) {
-    const game = this.games1.find(g => g.id === id);
+  changeVisibility(name: string) {
+    const game = this.gameCards.find(g => g.name === name);
     if (game) {
-      game.visible = !game.visible;
+      game.isVisible = !game.isVisible;
     }
   }
 }
