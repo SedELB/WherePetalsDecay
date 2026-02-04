@@ -81,7 +81,7 @@ describe('GameCreationComponent', () => {
         expect(component.defenseDice).toBe('D4');
     });
 
-    it('should assign D4 to attack and D6 to defense when attackDiceD6 is false', () => {
+    it('should have defense dice D6 when attackDiceD6 is false', () => {
         component.attackDiceD6 = false;
         expect(component.attackDice).toBe('D4');
         expect(component.defenseDice).toBe('D6');
