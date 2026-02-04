@@ -6,7 +6,7 @@ export interface Game {
     name: string;
     description: string;
     size: { rows: number, cols: number };
-    gameMode: string;   
+    gameMode: string;
     thumbnail: string;
     maxPlayers: number;
     grid: Tile[][];

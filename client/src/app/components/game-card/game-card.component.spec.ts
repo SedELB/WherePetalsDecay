@@ -6,14 +6,13 @@ describe('GameCardComponent', () => {
   let component: GameCardComponent;
   let fixture: ComponentFixture<GameCardComponent>;
   const mockGame: GameCard = {
-    id: 1,
-    image: '/assets/filler.png',
+    thumbnail: '/assets/filler.png',
     name: 'Game 1',
-    size: '10X10',
-    mode: 'Solo',
-    date: '2026-01-01',
-    visible: true,
-    imgDescription: 'test description',
+    size: { rows: 10, cols: 10 },
+    gameMode: 'Solo',
+    updatedAt: new Date('2026-01-01'),
+    isVisible: true,
+    description: 'test description',
   };
 
   beforeEach(async () => {
@@ -36,14 +35,14 @@ describe('GameCardComponent', () => {
     const listItems = compiled.querySelectorAll('.card-info li');
     expect(listItems[0].textContent).toContain(mockGame.name);
     expect(listItems[1].textContent).toContain(mockGame.size);
-    expect(listItems[2].textContent).toContain(mockGame.mode);
-    expect(listItems[3].textContent).toContain(mockGame.date);
+    expect(listItems[2].textContent).toContain(mockGame.gameMode);
+    expect(listItems[3].textContent).toContain(mockGame.updatedAt);
   });
 
   it('should display image correctly', () => {
     const compiled = fixture.nativeElement;
     const img = compiled.querySelector('.thumbnail');
-    expect(img.src).toContain(mockGame.image);
+    expect(img.src).toContain(mockGame.thumbnail);
     expect(img.alt).toBe(mockGame.name);
   });
 
@@ -51,7 +50,7 @@ describe('GameCardComponent', () => {
     const testFixture = TestBed.createComponent(GameCardComponent);
     const testComponent = testFixture.componentInstance;
 
-    testComponent.game = { ...mockGame, visible: false };
+    testComponent.game = { ...mockGame, isVisible: false };
 
     testFixture.detectChanges();
     expect(testFixture).toBeDefined();
