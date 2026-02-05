@@ -72,7 +72,8 @@
   box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18);
 }
 
-.selected {
-    background-color: #78BC75 !important;
-    border: 2px solid #78BC75;
+.btn.selected {
+  background-color: #78BC75;
+  border: 2px solid #78BC75;
+  box-shadow: none;
 }
