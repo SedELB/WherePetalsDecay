@@ -27,7 +27,9 @@ export class AdminPageComponent implements OnInit {
   getGames(): void{
     this.communicationService.getAllGames().subscribe({
       next: (games) => {
+        this.games = [];
         this.games = games;
+        // keep only the keys you need
         this.gameCards = this.games.map(game => {
           return {
             name: game.name,
@@ -47,13 +49,30 @@ export class AdminPageComponent implements OnInit {
   }
 
   removeGame(name: string) {
-    this.gameCards = this.gameCards.filter(game => game.name !== name);
+    const game = this.games.find(g => g.name !== name);
+
+    if (!game) return;
+
+    this.communicationService.deleteGame(game._id).subscribe({ 
+      next: () => this.getGames(),
+      error: (err) => {
+        throw new Error(`Error while deleting this game : ${game.name}, error : ${err}`);
+      },
+    });
   }
 
   changeVisibility(name: string) {
-    const game = this.gameCards.find(g => g.name === name);
-    if (game) {
-      game.isVisible = !game.isVisible;
-    }
+    const game = this.games.find(g => g.name === name);
+
+    if (!game) return;
+
+    this.communicationService.updateVisiblity(game).subscribe({
+      next: () => {
+        this.getGames();
+      },
+      error: (err) => {
+        throw new Error(`Error when modifying ${game.name}'s visibility : ${err}`);
+      },
+    });
   }
 }

@@ -197,7 +197,7 @@ export class GameService {
     
     async updateVisibility(id: string, newVisibility: boolean): Promise<void> {
         try {
-            const result = await this.gameModel.findByIdAndUpdate(id, {isVisible: newVisibility }, { new: true }).exec();
+            const result = await this.gameModel.findByIdAndUpdate(id, {isVisible: newVisibility }, { new: true, timestamps: false }).exec();
             if (!result) {
                 throw new Error('No game found with this id');
             }

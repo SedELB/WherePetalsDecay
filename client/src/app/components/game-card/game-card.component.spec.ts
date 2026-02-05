@@ -5,14 +5,15 @@ import { GameCardComponent } from './game-card.component';
 describe('GameCardComponent', () => {
   let component: GameCardComponent;
   let fixture: ComponentFixture<GameCardComponent>;
+
   const mockGame: GameCard = {
-    thumbnail: '/assets/filler.png',
     name: 'Game 1',
+    description: 'test description',
     size: { rows: 10, cols: 10 },
-    gameMode: 'Solo',
+    gameMode: 'CTF',
+    thumbnail: '/assets/filler.png',
     updatedAt: new Date('2026-01-01'),
     isVisible: true,
-    description: 'test description',
   };
 
   beforeEach(async () => {
@@ -32,9 +33,9 @@ describe('GameCardComponent', () => {
 
   it('should display game info', () => {
     const compiled = fixture.nativeElement;
-    const listItems = compiled.querySelectorAll('.card-info li');
+    const listItems = compiled.querySelectorAll('.card-info ul li');
     expect(listItems[0].textContent).toContain(mockGame.name);
-    expect(listItems[1].textContent).toContain(mockGame.size);
+    expect(listItems[1].textContent).toContain(mockGame.size.rows);
     expect(listItems[2].textContent).toContain(mockGame.gameMode);
     expect(listItems[3].textContent).toContain(mockGame.updatedAt);
   });

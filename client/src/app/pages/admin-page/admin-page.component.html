@@ -14,7 +14,7 @@
             <app-game-card [game]="game"
             (removeParent)="removeGame(game.name)">
                 <app-button [height]="50" [route]="'/editor'">Modifier</app-button>
-                <app-button [height]="50" (clicked)="changeVisibility(game.name)">{{ game.isVisible ? 'Afficher' : 'Cacher' }}</app-button>
+                <app-button [height]="50" (clicked)="changeVisibility(game.name)">{{ game.isVisible ? 'Cacher' : 'Afficher' }}</app-button>
                 <app-button [height]="50" (clicked)="removeGame(game.name)">Supprimer</app-button>
             </app-game-card>
         }
