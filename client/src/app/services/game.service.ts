@@ -5,28 +5,12 @@ import { io, Socket } from 'socket.io-client';
 import { environment } from 'src/environments/environment';
 import { Game } from '@app/interfaces/game';
 
-// export interface Game {
-//     _id: string;
-//     name: string;
-//     description: string;
-//     size: { rows: number; cols: number };
-//     gameMode: string;
-//     thumbnail: string;
-//     maxPlayers: number;
-//     isVisible: boolean;
-//     createdAt: string;
-//     updatedAt: string;
-// }
-
 export enum GameEvents {
     GameCreated = 'gameCreated',
     GameUpdated = 'gameUpdated',
     GameDeleted = 'gameDeleted',
     GameVisibilityChanged = 'gameVisibilityChanged',
 }
-
-// const SMALL_THRESHOLD = 100;
-// const MEDIUM_THRESHOLD = 225;
 
 @Injectable({
     providedIn: 'root',
@@ -92,11 +76,7 @@ export class GameService implements OnDestroy {
             });
         });
     }
-
-    getSizeLabel(size: { rows: number; cols: number }): { rows: number, cols: number } {
-        return size;
-    }
-
+    
     ngOnDestroy(): void {
         this.disconnect();
     }

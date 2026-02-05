@@ -16,19 +16,4 @@ describe('GameService', () => {
     it('should be created', () => {
         expect(service).toBeTruthy();
     });
-
-    it('should return correct size label for small map', () => {
-        const size = { rows: 10, cols: 10 };
-        expect(service.getSizeLabel(size)).toEqual({ rows: 10, cols: 10 });
-    });
-
-    it('should return correct size label for medium map', () => {
-        const size = { rows: 15, cols: 15 };
-        expect(service.getSizeLabel(size)).toEqual({ rows: 15, cols: 15 });
-    });
-
-    it('should return correct size label for large map', () => {
-        const size = { rows: 20, cols: 20 };
-        expect(service.getSizeLabel(size)).toEqual({ rows: 20, cols: 20 });
-    });
 });

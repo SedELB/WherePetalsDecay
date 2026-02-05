@@ -10,7 +10,6 @@ import { AVATARS, BASE_STATS } from '@app/interfaces/character';
 import { Game } from '@app/interfaces/game';
 import { CharacterService } from '@app/services/character.service';
 import { GameService } from '@app/services/game.service';
-// import { CommunicationService } from '@app/services/communication.service';
 
 @Component({
     selector: 'app-game-creation',
