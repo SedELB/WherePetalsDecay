@@ -25,7 +25,7 @@ export class GameController {
             const allGames = await this.gameService.getAllGames();
             response.status(HttpStatus.OK).json(allGames);
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).send(error.message);
+            response.status(HttpStatus.NOT_FOUND).json(error.message);
         }
     }
 
@@ -43,7 +43,7 @@ export class GameController {
             const allVisibleGames = await this.gameService.getAllVisibleGames();
             response.status(HttpStatus.OK).json(allVisibleGames);
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).send(error.message);
+            response.status(HttpStatus.NOT_FOUND).json(error.message);
         }
     }
 
@@ -57,9 +57,9 @@ export class GameController {
     async addGame(@Body() gameDto: CreateGameDto, @Res() response: Response) {
         try {
             await this.gameService.addGame(gameDto);
-            response.status(HttpStatus.CREATED).send();
+            response.status(HttpStatus.CREATED).json();
         } catch (error) {
-            response.status(HttpStatus.BAD_REQUEST).send(error.message);
+            response.status(HttpStatus.BAD_REQUEST).json(error.message);
         }
     }
 
@@ -74,10 +74,10 @@ export class GameController {
     async modifyGame(@Param('id') id: string, @Body() gameDto: UpdateGameDto, @Res() response: Response) {
         try {
             await this.gameService.modifyGame(id, gameDto);
-            response.status(HttpStatus.OK).send('Game updated successfully!');
+            response.status(HttpStatus.OK).json('Game updated successfully!');
         } catch (error) {
             const status = error.message.includes('No game found with this id') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            response.status(status).send(error.message);
+            response.status(status).json(error.message);
         }
     }
 
@@ -91,9 +91,9 @@ export class GameController {
     async modifyVisibility(@Param('id') id: string, @Body('isVisible') isVisible: boolean, @Res() response: Response): Promise<void> {
         try {
             await this.gameService.updateVisibility(id, isVisible);
-            response.status(HttpStatus.OK).send('Game updated successfully!');
+            response.status(HttpStatus.OK).json('Game updated successfully!');
         } catch (error) {
-            response.status(HttpStatus.BAD_REQUEST).send(error.message);
+            response.status(HttpStatus.BAD_REQUEST).json(error.message);
         }
     }
 
@@ -108,7 +108,7 @@ export class GameController {
     async deleteGame(@Param('id') id: string, @Res() response: Response) {
         try {
             await this.gameService.deleteGame(id);
-            response.status(HttpStatus.NO_CONTENT).send();
+            response.status(HttpStatus.NO_CONTENT).json();
         } catch (error) {
             response.status(HttpStatus.NOT_FOUND).send(error.message);
         }
