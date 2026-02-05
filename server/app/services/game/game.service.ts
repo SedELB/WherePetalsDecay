@@ -102,6 +102,7 @@ export class GameService {
         try {
             await this.isGameNameUnique(game.name);
             await this.gameValidatorService.isGameValid(game);
+            game.isVisible = false;         // Default value should be false when creating game
             await this.gameModel.create(game);
         } catch (error) {
             this.logger.log(`Failed to create game: ${error.message}`);
@@ -117,14 +118,12 @@ export class GameService {
             }
 
             if (game.name) {
-            await this.isGameNameUnique(game.name, id);
+                await this.isGameNameUnique(game.name, id);
             }
 
-            const { _id: _, ...gameWithoutId } = existingGame;
-            void _;
-            const fullGameData = {...gameWithoutId, ...game}; // new properies from game replace the olds
-
+            const fullGameData = {...existingGame, ...game};    // new properies from game replace the olds
             this.gameValidatorService.isGameValid(fullGameData);
+            fullGameData.isVisible = false;                     // Default value of a modified game
             await this.gameModel.findByIdAndUpdate(id, fullGameData, {new: true }).exec();
         } catch (error) {
             this.logger.error(`Failed to update game: ${error.message}`);
@@ -148,7 +147,7 @@ export class GameService {
     
     async updateVisibility(id: string, newVisibility: boolean): Promise<void> {
         try {
-            const result = await this.gameModel.findByIdAndUpdate(id, {isVisible: newVisibility }, { new: true }).exec();
+            const result = await this.gameModel.findByIdAndUpdate(id, {isVisible: newVisibility }, { new: true, timestamps: false }).exec();
             if (!result) {
                 throw new Error('No game found with this id');
             }
