@@ -14,7 +14,7 @@ export class GameCardComponent {
   @Input() game: GameCard = {
     name: '',
     description: '',
-    size: { rows: NaN, cols: NaN},
+    size: { rows: 0, cols: 0},
     gameMode: '',
     thumbnail: '',
     updatedAt: new Date(),
