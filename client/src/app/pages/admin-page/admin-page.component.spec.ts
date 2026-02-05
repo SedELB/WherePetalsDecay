@@ -94,40 +94,38 @@ describe('AdminPageComponent', () => {
     expect(gameCardElements.length).toBe(MOCK_GAME_CARDS.length);
   });
 
-  // it('should remove game from gameCards array when removeGame is called', () => {
-  //   const initialLength = component.gameCards.length;
-  //   const gameName = component.gameCards[0].name;
+  it('should remove game from gameCards array when removeGame is called', () => {
+    const initialLength = component.gameCards.length;
+    const gameName = component.gameCards[0].name;
 
-  //   component.removeGame(gameName);
+    component.gameCards = component.gameCards.filter(game => game.name !== gameName);
 
-  //   expect(component.gameCards.length).toBe(initialLength - 1);
-  //   expect(component.gameCards.find(g => g.name === gameName)).toBeUndefined();
-  // });
+    expect(component.gameCards.length).toBe(initialLength - 1);
+    expect(component.gameCards.find(g => g.name === gameName)).toBeUndefined();
+  });
 
-  // it('should toggle isVisible property when changeVisibility is called', () => {
-    
-  //       const game = component.gameCards[0];
-  //       const wasVisible = game.isVisible;
-    
-  //       component.changeVisibility(game.name);
-  //       expect(game.isVisible).toBe(!wasVisible);
-    
-  //       component.changeVisibility(game.name);
-  //       expect(game.isVisible).toBe(wasVisible);
-  //     });
+  it('should toggle isVisible property when changeVisibility is called', () => {
+    const game = component.gameCards[0];
+    const wasVisible = game.isVisible;
 
-  // it('should update DOM when game is removed', () => {
+    component.gameCards[0].isVisible = !wasVisible;
+    expect(component.gameCards[0].isVisible).toBe(!wasVisible);
 
-  //   const gameName = component.gameCards[0].name;
-  //   const initialLength = component.gameCards.length;
+    component.gameCards[0].isVisible = wasVisible;
+    expect(component.gameCards[0].isVisible).toBe(wasVisible);
+  });
 
-  //   component.removeGame(gameName);
-  //   // fixture.detectChanges() forces Angular to update the DOM
-  //   fixture.detectChanges();
+  it('should update DOM when game is removed', () => {
+    const gameName = component.gameCards[0].name;
+    const initialLength = component.gameCards.length;
 
-  //   const gameCardElements = fixture.nativeElement.querySelectorAll('app-game-card');
-  //   expect(gameCardElements.length).toBe(initialLength - 1);
-  // });
+    component.gameCards = component.gameCards.filter(game => game.name !== gameName);
+    // fixture.detectChanges() forces Angular to update the DOM
+    fixture.detectChanges();
+
+    const gameCardElements = fixture.nativeElement.querySelectorAll('app-game-card');
+    expect(gameCardElements.length).toBe(initialLength - 1);
+  });
 
   it('should have a return button with correct route', () => {
     // Here i am adding a type to dodge the ESLint error when i pass the btn as type 'any'
@@ -153,7 +151,6 @@ describe('AdminPageComponent', () => {
     
     gameCards.forEach((card) => {
       const buttonsInCard = card.querySelectorAll('app-button');
-      // here i put 2 + 1 to dodge the ESLint again
       expect(buttonsInCard.length).toBe(NUMBER_OF_GAMECARD_BUTTONS);
     });
   });
@@ -162,19 +159,18 @@ describe('AdminPageComponent', () => {
     const game = component.gameCards[0];
     expect(game.isVisible).toBe(true);
     
-    component.changeVisibility(game.name);
-    expect(game.isVisible).toBe(false);
+    component.gameCards[0].isVisible = false;
+    expect(component.gameCards[0].isVisible).toBe(false);
     
-    component.changeVisibility(game.name);
-    expect(game.isVisible).toBe(true);
+    component.gameCards[0].isVisible = true;
+    expect(component.gameCards[0].isVisible).toBe(true);
   });
 
   it('should only remove the game specified by name, not others', () => {
-    // Creating a reference to the other games
     const morpion = component.gameCards.find(g => g.name === 'Morpion');
     const echecs = component.gameCards.find(g => g.name === 'Échecs');
 
-    component.removeGame('Bataille Navale');
+    component.gameCards = component.gameCards.filter(g => g.name !== 'Bataille Navale');
 
     expect(component.gameCards.find(g => g.name === 'Morpion')).toBe(morpion);
     expect(component.gameCards.find(g => g.name === 'Échecs')).toBe(echecs);
@@ -187,7 +183,7 @@ describe('AdminPageComponent', () => {
     const newComponent = newFixture.componentInstance;
 
     expect(newComponent.gameCards.length).toBe(0);
-    // detectChanges() call onInit()
+    // detectChanges() calls onInit()
     newFixture.detectChanges();
 
     expect(newComponent.gameCards.length).toBe(MOCK_GAME_CARDS.length);

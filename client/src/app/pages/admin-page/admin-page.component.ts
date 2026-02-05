@@ -49,7 +49,7 @@ export class AdminPageComponent implements OnInit {
   }
 
   removeGame(name: string) {
-    const game = this.games.find(g => g.name !== name);
+    const game = this.games.find(g => g.name === name);
 
     if (!game) return;
 
