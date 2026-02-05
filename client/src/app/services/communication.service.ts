@@ -1,8 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-// import { Message } from '@common/message';
 import { Observable } from 'rxjs';
-// import { catchError } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { Game } from '@app/interfaces/game';
 
