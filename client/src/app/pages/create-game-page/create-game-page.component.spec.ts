@@ -14,7 +14,7 @@ describe('CreateGamePageComponent', () => {
 
     fixture = TestBed.createComponent(CreateGamePageComponent);
     component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {

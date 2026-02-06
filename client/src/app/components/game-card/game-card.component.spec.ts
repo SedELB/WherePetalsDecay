@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { GameCard } from '@app/interfaces/gameCard';
+import { GameCard } from '@app/interfaces/game';
 import { GameCardComponent } from './game-card.component';
 
 describe('GameCardComponent', () => {
@@ -9,7 +9,7 @@ describe('GameCardComponent', () => {
     id: 1,
     image: '/assets/filler.png',
     name: 'Game 1',
-    size: '10X10',
+    size: { rows: 10, cols: 10 },
     mode: 'Solo',
     date: '2026-01-01',
     visible: true,
@@ -35,7 +35,7 @@ describe('GameCardComponent', () => {
     const compiled = fixture.nativeElement;
     const listItems = compiled.querySelectorAll('.card-info li');
     expect(listItems[0].textContent).toContain(mockGame.name);
-    expect(listItems[1].textContent).toContain(mockGame.size);
+    expect(listItems[1].textContent).toContain(`${mockGame.size.rows}X${mockGame.size.cols}`);
     expect(listItems[2].textContent).toContain(mockGame.mode);
     expect(listItems[3].textContent).toContain(mockGame.date);
   });
