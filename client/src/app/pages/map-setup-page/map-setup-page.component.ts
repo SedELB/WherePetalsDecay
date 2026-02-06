@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { Game, GameCard, GameObjectType, PlacedObject } from '@app/interfaces/game';
 import { Tile, TileType } from '@app/interfaces/tile';
+import { GameValidatorService } from '@app/services/game-validator.service';
 
 type ApplicableTileType = 'wall' | 'water' | 'ice';
 
@@ -28,6 +29,7 @@ interface ObjectPlacementTool {
 })
 export class MapSetupPageComponent {
   private readonly router = inject(Router);
+  private readonly gameValidator = inject(GameValidatorService);
 
   gameName = '';
   gameDescription = '';
@@ -381,6 +383,21 @@ export class MapSetupPageComponent {
   }
 
   onSave(): void {
+    const validation = this.gameValidator.validate({
+      name: this.gameName,
+      description: this.gameDescription,
+      mode: 'classic',
+      size: { rows: this.gridRows, cols: this.gridCols },
+      grid: this.grid,
+      placedObjects: this.placedObjects,
+    });
+
+    if (!validation.isValid) {
+      // Minimal UI: empêcher la sauvegarde et afficher les erreurs
+      alert(`Jeu invalide:\n- ${validation.errors.join('\n- ')}`);
+      return;
+    }
+
     const gameToSave: Game = {
       name: this.gameName,
       description: this.gameDescription,
