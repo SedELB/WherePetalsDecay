@@ -1,5 +1,13 @@
+:host {
+  display: block;
+  height: 100vh;
+  overflow: hidden;
+}
+
 .editor-bg {
-  min-height: 100vh;
+  box-sizing: border-box;
+  height: 100%;
+  max-height: 100vh;
   position: relative;
   overflow: hidden;
   padding: 24px;
@@ -9,6 +17,7 @@
 .editor-stage {
   position: relative;
   height: calc(100vh - 48px);
+  overflow: hidden;
 }
 
 .pos-back {
@@ -72,11 +81,324 @@
   border-bottom: 2px dashed rgba(255, 255, 255, 0.72);
 }
 
+.info-dimensions {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
 
+.info-dimensions-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-dimensions-hint {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.info-input--number {
+  width: 4ch;
+  text-align: center;
+}
+
+.info-dimensions-sep {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 700;
+  align-self: center;
+  margin-bottom: 2px;
+}
+
+.btn-apply-dimensions {
+  align-self: flex-end;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+.info-select {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 16px;
+  padding: 8px 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+.pos-reset {
+  position: absolute;
+  left: 70px;
+  bottom: 26px;
+  display: inline-block;
+}
 
 .pos-save {
   position: absolute;
   right: 24px;
   bottom: 26px;
   display: inline-block;
+}
+
+.map-frame {
+  position: absolute;
+  left: 50%;
+  top: 58px;
+  transform: translateX(-50%);
+  width: min(560px, 65vw);
+  height: min(620px, 72vh);
+  border-radius: 12px;
+  background: rgba(10, 12, 34, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.4);
+  padding: 16px;
+  display: grid;
+  grid-template-rows: 34px 1fr;
+  gap: 12px;
+}
+
+.map-title {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.grid {
+  border-radius: 8px;
+  overflow: hidden;
+  display: grid;
+  background: rgba(0, 0, 0, 0.08);
+  min-height: 0;
+  min-width: 0;
+}
+
+.cell {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  cursor: default;
+  transition: background-color 0.15s ease;
+
+  &[data-tile='floor'] {
+    background: #69b04c;
+  }
+
+  &[data-tile='wall'] {
+    background: #4a4a4a;
+  }
+
+  &[data-tile='water'] {
+    background: #2e7dd2;
+  }
+
+  &[data-tile='ice'] {
+    background: #a8d8ea;
+  }
+
+  &.cell--clickable {
+    cursor: pointer;
+  }
+}
+
+.tools-panel {
+  position: absolute;
+  right: 24px;
+  top: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(12, 14, 34, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.tool {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  text-align: left;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  &.tool--active {
+    border-color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.14);
+  }
+}
+
+.tool__label {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.tool__desc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  max-width: 180px;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.tool:hover .tool__desc {
+  visibility: visible;
+  opacity: 1;
+}
+
+.object-tools-panel {
+  position: absolute;
+  right: 24px;
+  top: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(12, 14, 34, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  width: 140px;
+}
+
+.object-tool {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 12px 10px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  text-align: center;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  &.object-tool--active {
+    border-color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  &.object-tool--complete {
+    border-color: rgba(80, 200, 120, 0.8);
+    background: rgba(80, 200, 120, 0.12);
+  }
+}
+
+.object-tool__slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.object-tool__img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: invert(1);
+  display: block;
+}
+
+.object-tool__label {
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.object-tool__count {
+  font-size: 11px;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.8);
+  font-variant-numeric: tabular-nums;
+}
+
+.object-tool__desc {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 100%;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  line-height: 1.3;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 6px;
+  white-space: normal;
+  width: max-content;
+  max-width: 200px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.object-tool:hover .object-tool__desc {
+  visibility: visible;
+  opacity: 1;
+}
+
+.cell-object {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.cell-object__icon {
+  width: 60%;
+  height: 60%;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
 }
