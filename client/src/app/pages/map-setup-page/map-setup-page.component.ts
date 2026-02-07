@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { Game, GameCard, GameObjectType, PlacedObject } from '@app/interfaces/game';
 import { Tile, TileType } from '@app/interfaces/tile';
+import { GameValidatorService } from '@app/services/game-validator.service';
 import { NgClass } from '@angular/common';
 
 type ApplicableTileType = 'wall' | 'water' | 'ice' | 'doorClosed';
@@ -29,6 +30,7 @@ interface ObjectPlacementTool {
 })
 export class MapSetupPageComponent {
   private readonly router = inject(Router);
+  private readonly gameValidator = inject(GameValidatorService);
 
   gameName = '';
   gameDescription = '';
@@ -233,9 +235,13 @@ export class MapSetupPageComponent {
       }
     }
     this.grid = newGrid;
-    this.placedObjects = this.placedObjects.filter(
-      (o) => o.position.x < cols && o.position.y < rows,
-    );
+    // En cas de resize, retirer les objets hors-grille ou sur tuile invalide
+    this.placedObjects = this.placedObjects.filter((o) => {
+      if (o.position.x < 0 || o.position.y < 0) return false;
+      if (o.position.x >= cols || o.position.y >= rows) return false;
+      const tileType = this.grid[o.position.y]?.[o.position.x]?.type;
+      return tileType != null && this.isTerrainTile(tileType);
+    });
   }
 
   selectTool(type: ApplicableTileType): void {
@@ -317,7 +323,7 @@ export class MapSetupPageComponent {
     if (event.button === 2) {
       event.preventDefault();
       this.isErasingTiles = true;
-      this.eraseTileToBase(rowIndex, colIndex);
+      this.eraseWithOptionalShift(rowIndex, colIndex, event.shiftKey);
     }
   }
 
@@ -328,7 +334,8 @@ export class MapSetupPageComponent {
         this.isErasingTiles = false;
         return;
       }
-      this.eraseTileToBase(rowIndex, colIndex);
+      // SHIFT peut être pressé/relâché pendant le drag pour alterner tuile/objet
+      this.eraseWithOptionalShift(rowIndex, colIndex, event.shiftKey);
       return;
     }
 
@@ -364,6 +371,10 @@ export class MapSetupPageComponent {
       ...current,
       type: this.activeTool,
     };
+
+    if (this.activeTool === 'wall') {
+      this.eraseObjectAt(colIndex, rowIndex);
+    }
   }
 
   private eraseTileToBase(rowIndex: number, colIndex: number): void {
@@ -378,11 +389,41 @@ export class MapSetupPageComponent {
     };
   }
 
+  private eraseObjectAt(colIndex: number, rowIndex: number): void {
+    const before = this.placedObjects.length;
+    this.placedObjects = this.placedObjects.filter(
+      (o) => !(o.position.x === colIndex && o.position.y === rowIndex),
+    );
+    if (this.placedObjects.length === before) return;
+  }
+
+  private eraseWithOptionalShift(rowIndex: number, colIndex: number, shiftKey: boolean): void {
+    if (shiftKey) {
+      this.eraseObjectAt(colIndex, rowIndex);
+      return;
+    }
+    this.eraseTileToBase(rowIndex, colIndex);
+  }
+
   onBack(): void {
     this.router.navigate(['/admin']);
   }
 
   onSave(): void {
+    const validation = this.gameValidator.validate({
+      name: this.gameName,
+      description: this.gameDescription,
+      mode: 'classic',
+      size: { rows: this.gridRows, cols: this.gridCols },
+      grid: this.grid,
+      placedObjects: this.placedObjects,
+    });
+
+    if (!validation.isValid) {
+      alert(`Jeu invalide:\n- ${validation.errors.join('\n- ')}`);
+      return;
+    }
+
     const gameToSave: Game = {
       name: this.gameName,
       description: this.gameDescription,

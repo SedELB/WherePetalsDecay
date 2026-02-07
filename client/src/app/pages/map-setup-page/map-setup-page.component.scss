@@ -273,7 +273,7 @@
 
 .tool__label {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .tool__desc {
@@ -375,6 +375,7 @@
   font-size: 12px;
   line-height: 1.2;
   word-break: break-word;
+  max-width: 100%;
 }
 
 .object-tool__count {
