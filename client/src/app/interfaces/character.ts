@@ -19,7 +19,7 @@ export const BASE_STATS = {
     bonus: 2,
 };
 
-const BASE_AVATAR_PATH: string = 'assets/avatars';
+const BASE_AVATAR_PATH = 'assets/avatars';
 
 export const AVATARS_PATH: readonly string[] = [
     `${BASE_AVATAR_PATH}/filler.png`,
@@ -33,7 +33,7 @@ export const AVATARS_PATH: readonly string[] = [
     `${BASE_AVATAR_PATH}/filler.png`,
     `${BASE_AVATAR_PATH}/filler.png`,
     `${BASE_AVATAR_PATH}/filler.png`,
-    `${BASE_AVATAR_PATH}/test.svg`,
+    `${BASE_AVATAR_PATH}/naruto.svg`,
 ] as const;
 
 export const RANDOM_NAMES: readonly string[] = [
@@ -49,4 +49,4 @@ export const RANDOM_NAMES: readonly string[] = [
     'Steelclaw',
 ] as const;
 
-export const RANDOM_PROBABILITY: number = 0.5;
+export const RANDOM_PROBABILITY = 0.5;

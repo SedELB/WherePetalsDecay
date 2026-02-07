@@ -29,6 +29,7 @@ export class AdminPageComponent implements OnInit {
         this.games = games.map((game, index) => this.toGameCard(game, index));
       },
       error: () => {
+        this.games = [];
       },
     });
   }

@@ -60,13 +60,13 @@ describe('WebSocketService', () => {
     describe('on', () => {
         it('should register an event listener on the socket', () => {
             service['socket'] = mockSocket as never;
-            const callback = () => {};
+            const callback = jasmine.createSpy('callback');
             service.on('testEvent', callback);
             expect(mockSocket.on).toHaveBeenCalledWith('testEvent', jasmine.any(Function));
         });
 
         it('should do nothing if socket is null', () => {
-            const callback = () => {};
+            const callback = jasmine.createSpy('callback');
             service.on('testEvent', callback);
             expect(mockSocket.on).not.toHaveBeenCalled();
         });
