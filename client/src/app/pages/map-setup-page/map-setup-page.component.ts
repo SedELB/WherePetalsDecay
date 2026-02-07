@@ -4,8 +4,9 @@ import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { Game, GameCard, GameObjectType, PlacedObject } from '@app/interfaces/game';
 import { Tile, TileType } from '@app/interfaces/tile';
+import { NgClass } from '@angular/common';
 
-type ApplicableTileType = 'wall' | 'water' | 'ice';
+type ApplicableTileType = 'wall' | 'water' | 'ice' | 'doorClosed';
 
 interface TileTool {
   type: ApplicableTileType;
@@ -22,7 +23,7 @@ interface ObjectPlacementTool {
 
 @Component({
   selector: 'app-map-setup-page',
-  imports: [FormsModule, ButtonComponent],
+  imports: [FormsModule, ButtonComponent, NgClass],
   templateUrl: './map-setup-page.component.html',
   styleUrl: './map-setup-page.component.scss',
 })
@@ -53,6 +54,7 @@ export class MapSetupPageComponent {
     { type: 'wall', label: 'Mur', description: 'Bloque le passage des joueurs.' },
     { type: 'water', label: 'Eau', description: 'Zone liquide, ralentit ou bloque selon les règles.' },
     { type: 'ice', label: 'Glace', description: 'Surface glissante qui modifie les déplacements.' },
+    { type: 'doorClosed', label: 'Porte', description: 'Porte qui peut être fermée ou ouverte' },
   ];
 
   readonly objectPlacementTools: ObjectPlacementTool[] = [

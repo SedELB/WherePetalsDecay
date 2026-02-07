@@ -2,6 +2,7 @@
   <app-button class="pos-back"  [variant]="'back'" (clicked)="onBack()">Retour</app-button>
 
   <section class="editor-stage">
+
     <aside class="info-card">
       <div class="info-row">
         <span class="info-label">Nom:</span>
@@ -10,43 +11,7 @@
 
       <div class="info-row info-row--top">
         <span class="info-label">Description:</span>
-        <textarea class="info-textarea" rows="1" [(ngModel)]="gameDescription"></textarea>
-      </div>
-
-      <div class="info-row">
-        <span class="info-label">Dimensions:</span>
-        <div class="info-dimensions">
-          <label class="info-dimensions-label">
-            <span class="info-dimensions-hint">Lignes</span>
-            <input
-              type="number"
-              class="info-input info-input--number"
-              [(ngModel)]="gridRows"
-              min="1"
-              max="50"
-            />
-          </label>
-          <span class="info-dimensions-sep">x</span>
-          <label class="info-dimensions-label">
-            <span class="info-dimensions-hint">Colonnes</span>
-            <input
-              type="number"
-              class="info-input info-input--number"
-              [(ngModel)]="gridCols"
-              min="1"
-              max="50"
-            />
-          </label>
-          <button type="button" class="btn-apply-dimensions" (click)="applyDimensions()">Appliquer</button>
-        </div>
-      </div>
-
-      <div class="info-row">
-        <span class="info-label">Type:</span>
-        <select class="info-select" [(ngModel)]="gameType">
-          <option value="Solo">Solo</option>
-          <option value="Co-op">Co-op</option>
-        </select>
+        <textarea class="info-textarea" rows="5" [(ngModel)]="gameDescription"></textarea>
       </div>
     </aside>
 
@@ -83,53 +48,62 @@
       </div>
     </div>
 
-    <aside class="tools-panel" aria-label="Outils applicateurs de tuiles">
-      @for (tool of tileTools; track tool.type) {
-        <button
-          type="button"
-          class="tool"
-          [class.tool--active]="activeTool === tool.type"
-          [title]="tool.description"
-          (click)="selectTool(tool.type)"
-        >
-          <span class="tool__label">{{ tool.label }}</span>
-          <span class="tool__desc" role="tooltip">{{ tool.description }}</span>
-        </button>
-      }
-    </aside>
+    <aside class="aside-panel">
+      <div class="tools-panel" aria-label="Outils applicateurs de tuiles">
+        <h3 class="panel-title">Tuiles</h3>
+        @for (tool of tileTools; track tool.type) {
+          <button
+            type="button"
+            class="tool"
+            [class.tool--active]="activeTool === tool.type"
+            [title]="tool.description"
+            (click)="selectTool(tool.type)"
+            [disabled]="tool.type === 'doorClosed'"
+            [ngClass]="{ disabled: tool.type === 'doorClosed'}"
+          >
+            <span class="tool__label">{{ tool.label }}</span>
+            <span class="tool__desc" role="tooltip">{{ tool.description }}</span>
+          </button>
+        }
+      </div>
 
-    <aside class="object-tools-panel" aria-label="Outils de placement d'objets">
-      @for (objTool of objectPlacementTools; track objTool.type) {
-        <button
-          type="button"
-          class="object-tool"
-          [class.object-tool--active]="activeObjectTool === objTool.type"
-          [class.object-tool--complete]="isObjectTypeComplete(objTool.type)"
-          [title]="objTool.description"
-          (click)="selectObjectTool(objTool.type)"
-        >
-          <span class="object-tool__slot">
-            <img class="object-tool__img" [src]="objTool.image" [alt]="objTool.label" />
-          </span>
-          <span class="object-tool__label">{{ objTool.label }}</span>
-          @if (objTool.type === 'spawn') {
-            <span class="object-tool__count">{{ getPlacedSpawnCount() }} / {{ getRequiredSpawnCount() }}</span>
-          }
-          <span class="object-tool__desc" role="tooltip">{{ objTool.description }}</span>
-          @if (objTool.type === 'flag') {
-            <span class="object-tool__count">{{ getPlacedFlagCount() }} / {{ getRequiredFlagCount() }}</span>
-          }
-          @if (objTool.type === 'healingShrine') {
-            <span class="object-tool__count">{{ getPlacedHealingShrineCount() }} / {{ getRequiredHealingShrineCount() }}</span>
-          }
-          @if (objTool.type === 'combatShrine') {
-            <span class="object-tool__count">{{ getPlacedCombatShrineCount() }} / {{ getRequiredCombatShrineCount() }}</span>
-          }
-        </button>
-      }
+      <div class="object-tools-panel" aria-label="Outils de placement d'objets">
+        <h3 class="panel-title">Objets</h3>
+        @for (objTool of objectPlacementTools; track objTool.type) {
+          <button
+            type="button"
+            class="object-tool"
+            [class.object-tool--active]="activeObjectTool === objTool.type"
+            [class.object-tool--complete]="isObjectTypeComplete(objTool.type)"
+            [title]="objTool.description"
+            [disabled]="objTool.type === 'combatShrine' || objTool.type === 'healingShrine'"
+            [ngClass]="{ disabled: objTool.type === 'combatShrine' || objTool.type === 'healingShrine'}"
+            (click)="selectObjectTool(objTool.type)"
+          >
+            <span class="object-tool__slot">
+              <img class="object-tool__img" [src]="objTool.image" [alt]="objTool.label" />
+            </span>
+            <span class="object-tool__label">{{ objTool.label }}</span>
+            @if (objTool.type === 'spawn') {
+              <span class="object-tool__count">{{ getPlacedSpawnCount() }} / {{ getRequiredSpawnCount() }}</span>
+            }
+            <span class="object-tool__desc" role="tooltip">{{ objTool.description }}</span>
+            @if (objTool.type === 'flag') {
+              <span class="object-tool__count">{{ getPlacedFlagCount() }} / {{ getRequiredFlagCount() }}</span>
+            }
+            @if (objTool.type === 'healingShrine') {
+              <span class="object-tool__count">{{ getPlacedHealingShrineCount() }} / {{ getRequiredHealingShrineCount() }}</span>
+            }
+            @if (objTool.type === 'combatShrine') {
+              <span class="object-tool__count">{{ getPlacedCombatShrineCount() }} / {{ getRequiredCombatShrineCount() }}</span>
+            }
+          </button>
+        }
+      </div>
     </aside>
+    
 
-    <app-button class="pos-reset" [variant]="'default'" (clicked)="onReset()">Réinitialiser</app-button>
+    <app-button [width]="200" class="pos-reset" [variant]="'default'" (clicked)="onReset()">Réinitialiser</app-button>
     <app-button class="pos-save" [variant]="'default'" (clicked)="onSave()">Sauvegarder</app-button>
   </section>
 </main>

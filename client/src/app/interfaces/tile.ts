@@ -5,6 +5,5 @@ export type TileType = 'floor' | 'wall' | 'water' | 'ice' | 'doorOpen' | 'doorCl
 export interface Tile {
     position: Vec2;
     type: TileType;
-
     isClicked?: boolean;
 }
