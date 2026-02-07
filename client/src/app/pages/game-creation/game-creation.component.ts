@@ -1,16 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { ROUTES } from '@app/constants/routes.constants';
-import { AVATARS, BASE_STATS } from '@app/interfaces/character';
-// import { Game } from '@app/interfaces/game';
-// import { CommunicationService } from '@app/services/communication.service';
+import { AVATARS_PATH, BASE_STATS } from '@app/interfaces/character';
 import { CharacterService } from '@app/services/character.service';
-import { GameService, Game } from '@app/services/game.service';
+import { Game, GameService } from '@app/services/game.service';
+import { Subscription } from 'rxjs';
 
 @Component({
     selector: 'app-game-creation',
@@ -35,7 +33,7 @@ export class GameCreationComponent implements OnInit, OnDestroy {
     games: Game[] = [];
     private gamesSubscription: Subscription | null = null;
 
-    readonly avatars = AVATARS;
+    readonly avatars = AVATARS_PATH;
     readonly baseStats = BASE_STATS;
     readonly routes = ROUTES;
 

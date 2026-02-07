@@ -10,7 +10,7 @@
     <app-button [width]="100" [route]="'/home'">Retour</app-button>
 
     <div class="list-container">
-        @for(game of games1; track game.id){
+        @for(game of games; track game.id) {
             <app-game-card [game]="game"
             (removeParent)="removeGame(game.id)">
                 <app-button [height]="50" [route]="'/editor'">Modifier</app-button>

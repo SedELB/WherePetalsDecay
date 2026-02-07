@@ -1,8 +1,8 @@
-import { Injectable, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { io, Socket } from 'socket.io-client';
 import { environment } from 'src/environments/environment';
+import { WebSocketService } from './web-socket.service';
 
 export interface Game {
     _id: string;
@@ -31,39 +31,36 @@ const MEDIUM_THRESHOLD = 225;
     providedIn: 'root',
 })
 export class GameService implements OnDestroy {
-    private readonly apiUrl = environment.serverUrl.replace('/api', '');
     private readonly gamesSubject = new BehaviorSubject<Game[]>([]);
-    private socket: Socket | null = null;
 
     readonly games$ = this.gamesSubject.asObservable();
 
-    constructor(private readonly http: HttpClient) {}
+    constructor(
+        private readonly http: HttpClient,
+        private readonly webSocketService: WebSocketService,
+    ) {}
 
     connect(): void {
-        if (this.socket?.connected) {
-            return;
-        }
+        this.webSocketService.connect();
 
-        this.socket = io(this.apiUrl, { transports: ['websocket'] });
-
-        this.socket.on(GameEvents.GameCreated, (game: Game) => {
+        this.webSocketService.on<Game>(GameEvents.GameCreated, (game) => {
             const games = this.gamesSubject.value;
             this.gamesSubject.next([...games, game]);
         });
 
-        this.socket.on(GameEvents.GameUpdated, (updatedGame: Game) => {
+        this.webSocketService.on<Game>(GameEvents.GameUpdated, (updatedGame) => {
             const games = this.gamesSubject.value.map((game) =>
                 game._id === updatedGame._id ? updatedGame : game,
             );
             this.gamesSubject.next(games);
         });
 
-        this.socket.on(GameEvents.GameDeleted, (gameId: string) => {
+        this.webSocketService.on<string>(GameEvents.GameDeleted, (gameId) => {
             const games = this.gamesSubject.value.filter((game) => game._id !== gameId);
             this.gamesSubject.next(games);
         });
 
-        this.socket.on(GameEvents.GameVisibilityChanged, (data: { gameId: string; isVisible: boolean }) => {
+        this.webSocketService.on<{ gameId: string; isVisible: boolean }>(GameEvents.GameVisibilityChanged, (data) => {
             const games = this.gamesSubject.value.map((game) =>
                 game._id === data.gameId ? { ...game, isVisible: data.isVisible } : game,
             );
@@ -72,10 +69,7 @@ export class GameService implements OnDestroy {
     }
 
     disconnect(): void {
-        if (this.socket) {
-            this.socket.disconnect();
-            this.socket = null;
-        }
+        this.webSocketService.disconnect();
     }
 
     fetchVisibleGames(): void {

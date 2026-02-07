@@ -1,4 +1,3 @@
-
 export interface GameCard {
     id: number;
     image: string;
