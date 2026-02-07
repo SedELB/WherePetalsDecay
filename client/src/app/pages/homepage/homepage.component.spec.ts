@@ -5,6 +5,7 @@ import { HomePageComponent } from './homepage.component';
 describe('HomePageComponent', () => {
     let component: HomePageComponent;
     let fixture: ComponentFixture<HomePageComponent>;
+    const EXPECTED_MENU_BUTTONS_COUNT = 3;
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
@@ -47,9 +48,15 @@ describe('HomePageComponent', () => {
     });
 
     it('should have three menu buttons', () => {
-        const expectedButtonCount = 3;
         const compiled = fixture.nativeElement;
         const buttons = compiled.querySelectorAll('app-button');
-        expect(buttons.length).toBe(expectedButtonCount);
+        expect(buttons.length).toBe(EXPECTED_MENU_BUTTONS_COUNT);
+    });
+
+    it('should have the "Joindre une partie" button disabled', () => {
+        const compiled = fixture.nativeElement;
+        const buttons = compiled.querySelectorAll('app-button');
+        const firstButton = buttons[0].querySelector('button');
+        expect(firstButton?.disabled).toBeTrue();
     });
 });

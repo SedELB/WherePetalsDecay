@@ -1,40 +1,27 @@
-<div class="admin-container">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+
     <app-button [width]="100" [route]="'/home'">Retour</app-button>
-    <app-list-container [height]="'auto'">
-        <app-game-card
-            [name]="'Donjon Sombre'"
-            [size]="'Petite (10x10)'"
-            [mode]="'Classique'"
-            [lastModified]="'26 janvier 2026'"
-        >
-            <app-button [height]="50" [route]="'/editor'">Modifier</app-button>
-            <app-button [height]="50">Cacher</app-button>
-            <app-button [height]="50">Supprimer</app-button>
-        </app-game-card>
-        <app-game-card
-            [name]="'Forêt Enchantée'"
-            [size]="'Moyenne (15x15)'"
-            [mode]="'Classique'"
-            [lastModified]="'25 janvier 2026'"
-        >
-            <app-button [height]="50" [route]="'/editor'">Modifier</app-button>
-            <app-button [height]="50">Cacher</app-button>
-            <app-button [height]="50">Supprimer</app-button>
-        </app-game-card>
-        <app-game-card
-            [name]="'Château Maudit'"
-            [size]="'Grande (20x20)'"
-            [mode]="'Classique'"
-            [lastModified]="'24 janvier 2026'"
-        >
-            <app-button [height]="50" [route]="'/editor'">Modifier</app-button>
-            <app-button [height]="50">Cacher</app-button>
-            <app-button [height]="50">Supprimer</app-button>
-        </app-game-card>
-        <app-button class="add-button" [route]="'/editor'">
+
+    <div class="list-container">
+        @for(game of games1; track game.id){
+            <app-game-card [game]="game"
+            (removeParent)="removeGame(game.id)">
+                <app-button [height]="50" [route]="'/editor'">Modifier</app-button>
+                <app-button [height]="50" (clicked)="changeVisibility(game.id)">{{ game.visible ? 'Afficher' : 'Cacher' }}</app-button>
+                <app-button [height]="50" (clicked)="removeGame(game.id)">Supprimer</app-button>
+            </app-game-card>
+        }
+
+        <app-button class="add-button" [route]="'./create'">
             <svg fill="#FFF" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-                width="800px" height="800px" viewBox="0 0 459.325 459.325"
-                xml:space="preserve">
+                width="800px" height="800px" viewBox="0 0 459.325 459.325" xml:space="preserve">
                 <g>
                     <path d="M459.319,229.668c0,22.201-17.992,40.193-40.205,40.193H269.85v149.271c0,22.207-17.998,40.199-40.196,40.193
                         c-11.101,0-21.149-4.492-28.416-11.763c-7.276-7.281-11.774-17.324-11.769-28.419l-0.006-149.288H40.181
@@ -44,5 +31,6 @@
                 </g>
             </svg>
         </app-button>
-    </app-list-container>
-</div>
+    </div>
+</body>
+</html>

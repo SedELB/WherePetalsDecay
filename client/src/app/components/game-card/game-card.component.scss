@@ -1,6 +1,6 @@
-@use "../../../const.scss" as *;
+@use "src/const.scss" as *;
 
-.game-card {
+.gameCard {
     background-color: $frame-color;
     display: flex;
     flex-direction: row;
@@ -30,7 +30,6 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-evenly;
-
 }
 
 .image-frame{
@@ -54,4 +53,32 @@
     border-radius: 15px;
     width: auto;
     height: 50px;
+}
+
+.hidden{
+    background-color: red;
+    transition: all 0.3s ease;
+}
+
+.deleted {
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.tooltip{
+    position: absolute;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 20px;
+    pointer-events: none;
+    background: rgba(0,0,0,0.85);
+    top: 50%;
+    left: 20px;
+    width: 300px;
+    height: auto;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }

@@ -10,7 +10,7 @@ describe('EditorPageComponent', () => {
     await TestBed.configureTestingModule({
       imports: [EditorPageComponent],
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(EditorPageComponent);
     component = fixture.componentInstance;

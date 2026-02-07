@@ -1,22 +1,9 @@
-import { Game } from '@app/interfaces/character';
+import { GameCard } from '@app/interfaces/gameCard';
 
-export const AVAILABLE_GAMES: readonly Game[] = [
-    {
-        name: 'Donjon Sombre',
-        size: 'Petite (10x10)',
-        mode: 'Classique',
-        lastModified: '26 janvier 2026',
-    },
-    {
-        name: 'Forêt Enchantée',
-        size: 'Moyenne (15x15)',
-        mode: 'Classique',
-        lastModified: '25 janvier 2026',
-    },
-    {
-        name: 'Château Maudit',
-        size: 'Grande (20x20)',
-        mode: 'Classique',
-        lastModified: '24 janvier 2026',
-    },
+export const AVAILABLE_GAMES: readonly GameCard[] = [
+    {id: 1, image: '/assets/filler.png', name: 'Game 1', size: '10X10',
+      mode: 'Solo', date: '2026-01-01', visible: true,
+      imgDescription: 'blablabladsssssssssmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm'},
+    {id: 2, image: '/assets/filler.png', name: 'Game 2', size: '20X20', mode: 'Solo', date: '2026-01-05', visible: true, imgDescription: 'blablabla'},
+    {id: 3, image: '/assets/filler.png', name: 'Game 3', size: '5X5', mode: 'Co-op', date: '2026-01-10', visible: true, imgDescription: 'blablabla'},
 ] as const;

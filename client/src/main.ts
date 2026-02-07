@@ -4,12 +4,11 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { Routes, provideRouter, withHashLocation } from '@angular/router';
 import { AdminPageComponent } from '@app/pages/admin-page/admin-page.component';
 import { AppComponent } from '@app/pages/app/app.component';
-import { GamePageComponent } from '@app/pages/game-page/game-page.component';
+import { CreateGamePageComponent } from '@app/pages/create-game-page/create-game-page.component';
+import { GameCreationComponent } from '@app/pages/game-creation/game-creation.component';
 import { HomePageComponent } from '@app/pages/homepage/homepage.component';
 import { MapSetupPageComponent } from '@app/pages/map-setup-page/map-setup-page.component';
 import { MaterialPageComponent } from '@app/pages/material-page/material-page.component';
-import { EditorPageComponent } from '@app/pages/editor-page/editor-page.component';
-import { GameCreationComponent } from '@app/pages/game-creation/game-creation.component';
 import { WaitingRoomComponent } from '@app/pages/waiting-room/waiting-room.component';
 import { environment } from './environments/environment';
 
@@ -20,11 +19,10 @@ if (environment.production) {
 const routes: Routes = [
     { path: '', redirectTo: '/home', pathMatch: 'full' },
     { path: 'home', component: HomePageComponent },
-    { path: 'game', component: GamePageComponent },
     { path: 'material', component: MaterialPageComponent },
     { path: 'admin', component: AdminPageComponent },
-    { path: 'admin/map-setup', component: MapSetupPageComponent },
-    { path: 'editor', component: EditorPageComponent },
+    { path: 'admin/create', component: CreateGamePageComponent },
+    { path: 'editor', component: MapSetupPageComponent },
     { path: 'create', component: GameCreationComponent },
     { path: 'waiting-room', component: WaitingRoomComponent },
     { path: '**', redirectTo: '/home' },
