@@ -142,7 +142,11 @@ describe('GameCreationComponent', () => {
         expect(RANDOM_NAMES).toContain(component.characterName);
         expect(component.selectedAvatarIndex).not.toBeNull();
         expect(component.selectedAvatarIndex).toBeGreaterThanOrEqual(0);
+<<<<<<< HEAD
         expect(component.selectedAvatarIndex).toBeLessThan(AVATARS_PATH.length);
+=======
+        expect(component.selectedAvatarIndex).toBeLessThan(AVATARS.length);
+>>>>>>> 4e0b9d8e25aa5af0e2837e87fd8fd892070e3c5a
     });
 
     it('should not navigate when form is invalid', () => {
