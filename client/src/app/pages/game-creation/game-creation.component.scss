@@ -81,7 +81,7 @@ p {
         background-color: $frame-color;
         transition: all 0.2s ease;
         border: none;
-        background-color: rgba(0, 0, 0, 0.30);
+        background-color: none;
 
         &:hover {
             border-color: $rose-button;
