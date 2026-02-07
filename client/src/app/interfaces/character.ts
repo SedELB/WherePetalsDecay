@@ -22,18 +22,18 @@ export const BASE_STATS = {
 const BASE_AVATAR_PATH = 'assets/avatars';
 
 export const AVATARS_PATH: readonly string[] = [
-    `${BASE_AVATAR_PATH}/filler.png`,
-    `${BASE_AVATAR_PATH}/filler.png`,
-    `${BASE_AVATAR_PATH}/filler.png`,
-    `${BASE_AVATAR_PATH}/filler.png`,
-    `${BASE_AVATAR_PATH}/filler.png`,
-    `${BASE_AVATAR_PATH}/filler.png`,
-    `${BASE_AVATAR_PATH}/filler.png`,
-    `${BASE_AVATAR_PATH}/filler.png`,
-    `${BASE_AVATAR_PATH}/filler.png`,
-    `${BASE_AVATAR_PATH}/filler.png`,
-    `${BASE_AVATAR_PATH}/filler.png`,
-    `${BASE_AVATAR_PATH}/naruto.svg`,
+    `${BASE_AVATAR_PATH}/asset1.png`,
+    `${BASE_AVATAR_PATH}/asset2.png`,
+    `${BASE_AVATAR_PATH}/asset3.png`,
+    `${BASE_AVATAR_PATH}/asset4.png`,
+    `${BASE_AVATAR_PATH}/asset5.png`,
+    `${BASE_AVATAR_PATH}/asset6.png`,
+    `${BASE_AVATAR_PATH}/asset7.png`,
+    `${BASE_AVATAR_PATH}/asset8.png`,
+    `${BASE_AVATAR_PATH}/asset9.png`,
+    `${BASE_AVATAR_PATH}/naruto.png`,
+    `${BASE_AVATAR_PATH}/sakura.png`,
+    `${BASE_AVATAR_PATH}/sasuke.png`,
 ] as const;
 
 export const RANDOM_NAMES: readonly string[] = [
