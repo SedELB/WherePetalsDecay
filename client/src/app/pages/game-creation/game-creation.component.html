@@ -45,17 +45,22 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Choisissez un avatar</label>
+                <label>Choisissez un avatar</label>
+
                     <div class="avatar-grid">
+                        @for (avatar of avatars; track avatar; let i = $index) {
                         <button
-                            *ngFor="let avatar of avatars; let i = index"
                             type="button"
                             class="avatar-item"
                             [class.selected]="selectedAvatarIndex === i"
                             (click)="selectAvatar(i)"
                         >
-                            <img [src]="avatar" [alt]="'Avatar ' + (i + 1)" />
+                            <img
+                            [src]="avatar"
+                            [alt]="'Avatar ' + (i + 1)"
+                            />
                         </button>
+                        }
                     </div>
                 </div>
 

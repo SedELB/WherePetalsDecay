@@ -1,10 +1,10 @@
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { GameCreationComponent } from './game-creation.component';
-import { GameService } from '@app/services/game.service';
+import { AVATARS_PATH, BASE_STATS, RANDOM_NAMES } from '@app/interfaces/character';
 import { CharacterService } from '@app/services/character.service';
-import { AVATARS, BASE_STATS, RANDOM_NAMES } from '@app/interfaces/character';
+import { GameService } from '@app/services/game.service';
+import { GameCreationComponent } from './game-creation.component';
 
 const LIFE_WITH_BONUS = BASE_STATS.life + BASE_STATS.bonus;
 const SPEED_WITH_BONUS = BASE_STATS.speed + BASE_STATS.bonus;
@@ -142,7 +142,7 @@ describe('GameCreationComponent', () => {
         expect(RANDOM_NAMES).toContain(component.characterName);
         expect(component.selectedAvatarIndex).not.toBeNull();
         expect(component.selectedAvatarIndex).toBeGreaterThanOrEqual(0);
-        expect(component.selectedAvatarIndex).toBeLessThan(AVATARS.length);
+        expect(component.selectedAvatarIndex).toBeLessThan(AVATARS_PATH.length);
     });
 
     it('should not navigate when form is invalid', () => {

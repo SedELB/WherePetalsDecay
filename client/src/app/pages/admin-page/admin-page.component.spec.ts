@@ -22,27 +22,27 @@ describe('AdminPageComponent', () => {
   });
 
   it('should have games array', () => {
-    expect(component.games1.length).toBeGreaterThan(0);
+    expect(component.games.length).toBeGreaterThan(0);
   });
 
   it('should render all games', () => {
     const compiled = fixture.nativeElement;
     const gameCards = compiled.querySelectorAll('app-game-card');
-    expect(gameCards.length).toBe(component.games1.length);
+    expect(gameCards.length).toBe(component.games.length);
   });
 
   it('should remove game', () => {
-    const initialLength = component.games1.length;
-    const gameId = component.games1[0].id;
+    const initialLength = component.games.length;
+    const gameId = component.games[0].id;
 
     component.removeGame(gameId);
 
-    expect(component.games1.length).toBe(initialLength - 1);
-    expect(component.games1.find(g => g.id === gameId)).toBeUndefined();
+    expect(component.games.length).toBe(initialLength - 1);
+    expect(component.games.find(g => g.id === gameId)).toBeUndefined();
   });
 
   it('should toggle visibility', () => {
-    const game = component.games1[0];
+    const game = component.games[0];
     const wasVisible = game.visible;
 
     component.changeVisibility(game.id);
@@ -51,8 +51,8 @@ describe('AdminPageComponent', () => {
   });
 
   it('should update DOM when game removed', () => {
-    const gameId = component.games1[0].id;
-    const initialLength = component.games1.length;
+    const gameId = component.games[0].id;
+    const initialLength = component.games.length;
 
     component.removeGame(gameId);
     fixture.detectChanges();

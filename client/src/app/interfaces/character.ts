@@ -19,19 +19,21 @@ export const BASE_STATS = {
     bonus: 2,
 };
 
-export const AVATARS: readonly string[] = [
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
+const BASE_AVATAR_PATH: string = 'assets/avatars';
+
+export const AVATARS_PATH: readonly string[] = [
+    `${BASE_AVATAR_PATH}/filler.png`,
+    `${BASE_AVATAR_PATH}/filler.png`,
+    `${BASE_AVATAR_PATH}/filler.png`,
+    `${BASE_AVATAR_PATH}/filler.png`,
+    `${BASE_AVATAR_PATH}/filler.png`,
+    `${BASE_AVATAR_PATH}/filler.png`,
+    `${BASE_AVATAR_PATH}/filler.png`,
+    `${BASE_AVATAR_PATH}/filler.png`,
+    `${BASE_AVATAR_PATH}/filler.png`,
+    `${BASE_AVATAR_PATH}/filler.png`,
+    `${BASE_AVATAR_PATH}/filler.png`,
+    `${BASE_AVATAR_PATH}/test.svg`,
 ] as const;
 
 export const RANDOM_NAMES: readonly string[] = [
@@ -47,4 +49,4 @@ export const RANDOM_NAMES: readonly string[] = [
     'Steelclaw',
 ] as const;
 
-export const RANDOM_PROBABILITY = 0.5;
+export const RANDOM_PROBABILITY: number = 0.5;
