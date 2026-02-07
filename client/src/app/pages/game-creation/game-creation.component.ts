@@ -7,8 +7,9 @@ import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { ROUTES } from '@app/constants/routes.constants';
 import { AVATARS, BASE_STATS } from '@app/interfaces/character';
+import { Game } from '@app/interfaces/game';
 import { CharacterService } from '@app/services/character.service';
-import { GameService, Game } from '@app/services/game.service';
+import { GameService } from '@app/services/game.service';
 
 @Component({
     selector: 'app-game-creation',
@@ -150,7 +151,7 @@ export class GameCreationComponent implements OnInit, OnDestroy {
         this.router.navigate([this.routes.waitingRoom]);
     }
 
-    getGameSizeLabel(game: Game): string {
-        return this.gameService.getSizeLabel(game.size);
+    getGameSizeLabel(game: Game): { rows: number, cols: number } {
+        return game.size;
     }
 }

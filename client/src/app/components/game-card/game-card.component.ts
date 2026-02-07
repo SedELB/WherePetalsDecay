@@ -12,14 +12,13 @@ import { GameCard } from '@app/interfaces/gameCard';
 
 export class GameCardComponent {
   @Input() game: GameCard = {
-    id: 0,
-    image: '',
     name: '',
-    size: '',
-    mode: '',
-    date: '',
-    imgDescription: '',
-    visible: true,
+    description: '',
+    size: { rows: 0, cols: 0},
+    gameMode: '',
+    thumbnail: '',
+    updatedAt: new Date(),
+    isVisible: true,
   };
 
   @Output() removeParent = new EventEmitter<void>();

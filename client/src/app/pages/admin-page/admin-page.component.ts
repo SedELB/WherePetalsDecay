@@ -1,7 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCard } from '@app/interfaces/gameCard';
+import { Game } from '@app/interfaces/game';
+import { CommunicationService } from '@app/services/communication.service';
 
 @Component({
   selector: 'app-admin-page',
@@ -11,24 +13,66 @@ import { GameCard } from '@app/interfaces/gameCard';
 })
 
 
-export class AdminPageComponent {
+export class AdminPageComponent implements OnInit {
 
-  games: GameCard[] = [
-    {id: 1, image: '/assets/filler.png', name: 'Game 1', size: '10X10',
-      mode: 'Solo', date: '2026-01-01', visible: true,
-      imgDescription: 'blablabladsssssssssmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm'},
-    {id: 2, image: '/assets/filler.png', name: 'Game 2', size: '20X20', mode: 'Solo', date: '2026-01-05', visible: true, imgDescription: 'blablabla'},
-    {id: 3, image: '/assets/filler.png', name: 'Game 3', size: '5X5', mode: 'Co-op', date: '2026-01-10', visible: true, imgDescription: 'blablabla'},
-  ];
+  games: Game[] = [];
+  gameCards: GameCard[] = [];
 
-  removeGame(id: number) {
-    this.games = this.games.filter(game => game.id !== id);
+  constructor(private communicationService: CommunicationService) {}
+
+  ngOnInit(): void {
+    this.getGames();
   }
 
-  changeVisibility(id: number) {
-    const game = this.games.find(g => g.id === id);
-    if (game) {
-      game.visible = !game.visible;
-    }
+  getGames(): void{
+    this.communicationService.getAllGames().subscribe({
+      next: (games) => {
+        this.games = [];
+        this.games = games;
+        // keep only the keys you need
+        this.gameCards = this.games.map(game => {
+          return {
+            name: game.name,
+            description: game.description,
+            size: game.size,
+            gameMode: game.gameMode,
+            thumbnail: game.thumbnail,
+            updatedAt: game.updatedAt,
+            isVisible: game.isVisible,
+          };
+        });
+      },
+      error: (err) => {
+        throw new Error('games were not loaded correctly : ', err);
+      },
+    });
+  }
+
+  removeGame(name: string) {
+    const game = this.games.find(g => g.name === name);
+
+    if (!game) return;
+
+    this.communicationService.deleteGame(game._id).subscribe({ 
+      next: () => this.getGames(),
+      error: (err) => {
+        throw new Error(`Error while deleting this game : ${game.name}, error : ${err}`);
+      },
+    });
+  }
+
+  changeVisibility(name: string) {
+    const game = this.games.find(g => g.name === name);
+
+    if (!game) return;
+
+    this.communicationService.updateVisiblity(game).subscribe({
+      next: () => {
+        this.getGames();
+      },
+      error: (err) => {
+        throw new Error(`Error when modifying ${game.name}'s visibility : ${err}`);
+      },
+    });
   }
 }
