@@ -10,13 +10,6 @@ export interface Character {
     defenseDice: 'D4' | 'D6';
 }
 
-export interface Game {
-    name: string;
-    size: string;
-    mode: string;
-    lastModified: string;
-    image?: string;
-}
 
 export const BASE_STATS = {
     life: 6,

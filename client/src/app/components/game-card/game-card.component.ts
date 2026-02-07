@@ -1,5 +1,6 @@
 import { NgClass } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { GameCard } from '@app/interfaces/gameCard';
 
 @Component({
   selector: 'app-game-card',
@@ -7,12 +8,20 @@ import { Component, Input } from '@angular/core';
   standalone: true,
   templateUrl: './game-card.component.html',
   styleUrl: './game-card.component.scss',
-  standalone: true,
 })
+
 export class GameCardComponent {
-  @Input() name: string = 'Nom du jeu';
-  @Input() size: string = 'Taille';
-  @Input() mode: string = 'Mode de jeu';
-  @Input() lastModified: string = 'Date de modification';
-  @Input() image: string = 'assets/filler.png';
+  @Input() game: GameCard = {
+    id: 0,
+    image: '',
+    name: '',
+    size: '',
+    mode: '',
+    date: '',
+    imgDescription: '',
+    visible: true,
+  };
+
+  @Output() removeParent = new EventEmitter<void>();
+  show = false;
 }

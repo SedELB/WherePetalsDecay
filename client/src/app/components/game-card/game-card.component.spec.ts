@@ -1,20 +1,30 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { GameCard } from '@app/interfaces/gameCard';
 import { GameCardComponent } from './game-card.component';
 
 describe('GameCardComponent', () => {
   let component: GameCardComponent;
   let fixture: ComponentFixture<GameCardComponent>;
+  const mockGame: GameCard = {
+    id: 1,
+    image: '/assets/filler.png',
+    name: 'Game 1',
+    size: '10X10',
+    mode: 'Solo',
+    date: '2026-01-01',
+    visible: true,
+    imgDescription: 'test description',
+  };
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [GameCardComponent],
     })
       .compileComponents();
-
     fixture = TestBed.createComponent(GameCardComponent);
     component = fixture.componentInstance;
-    await fixture.whenStable();
+    component.game = mockGame;
+    fixture.detectChanges();
   });
 
   it('should create', () => {
@@ -47,7 +57,6 @@ describe('GameCardComponent', () => {
     expect(testFixture).toBeDefined();
     const card: HTMLElement = testFixture.nativeElement.querySelector('.gameCard');
     expect(card).toBeTruthy();
-    console.debug(card.classList);
     expect(card.classList.contains('hidden')).toBeTrue();
   });
 
