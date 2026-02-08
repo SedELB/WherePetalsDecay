@@ -7,8 +7,9 @@ import { GameCardComponent } from '@app/components/game-card/game-card.component
 import { ROUTES } from '@app/constants/routes.constants';
 import { AVATARS_PATH, BASE_STATS } from '@app/interfaces/character';
 import { CharacterService } from '@app/services/character.service';
-import { Game, GameService } from '@app/services/game.service';
+import { GameService } from '@app/services/game.service';
 import { Subscription } from 'rxjs';
+import { Game } from '@app/interfaces/game';
 
 @Component({
     selector: 'app-game-creation',
