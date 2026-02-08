@@ -150,7 +150,7 @@ export class GameCreationComponent implements OnInit, OnDestroy {
         this.router.navigate([this.routes.waitingRoom]);
     }
 
-    getGameSizeLabel(game: Game): string {
-        return this.gameService.getSizeLabel(game.size);
+    getGameSizeLabel(game: Game): { rows: number, cols: number } {
+        return game.size;
     }
 }

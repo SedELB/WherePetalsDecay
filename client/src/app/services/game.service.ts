@@ -3,19 +3,7 @@ import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { WebSocketService } from './web-socket.service';
-
-export interface Game {
-    _id: string;
-    name: string;
-    description: string;
-    size: { rows: number; cols: number };
-    gameMode: string;
-    thumbnail: string;
-    maxPlayers: number;
-    isVisible: boolean;
-    createdAt: string;
-    updatedAt: string;
-}
+import { Game } from '@app/interfaces/game';
 
 export enum GameEvents {
     GameCreated = 'gameCreated',
@@ -23,9 +11,6 @@ export enum GameEvents {
     GameDeleted = 'gameDeleted',
     GameVisibilityChanged = 'gameVisibilityChanged',
 }
-
-const SMALL_THRESHOLD = 100;
-const MEDIUM_THRESHOLD = 225;
 
 @Injectable({
     providedIn: 'root',
@@ -85,19 +70,7 @@ export class GameService implements OnDestroy {
             });
         });
     }
-
-    getSizeLabel(size: { rows: number; cols: number }): string {
-        const total = size.rows * size.cols;
-
-        if (total <= SMALL_THRESHOLD) {
-            return `Petite (${size.rows}x${size.cols})`;
-        }
-        if (total <= MEDIUM_THRESHOLD) {
-            return `Moyenne (${size.rows}x${size.cols})`;
-        }
-        return `Grande (${size.rows}x${size.cols})`;
-    }
-
+    
     ngOnDestroy(): void {
         this.disconnect();
     }
