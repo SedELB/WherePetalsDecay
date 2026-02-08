@@ -1,8 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-// import { Message } from '@common/message';
 import { Observable } from 'rxjs';
-// import { catchError } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { Game } from '@app/interfaces/game';
 
@@ -15,23 +13,6 @@ export class CommunicationService {
     private readonly baseUrl: string = environment.serverUrl;
 
     constructor(private readonly http: HttpClient) {}
-
-    
-    // private readonly baseUrl: string = environment.serverUrl;
-
-    // constructor(private readonly http: HttpClient) {}
-
-    // basicGet(): Observable<Message> {
-    //     return this.http.get<Message>(`${this.baseUrl}/example`).pipe(catchError(this.handleError<Message>('basicGet')));
-    // }
-
-    // basicPost(message: Message): Observable<HttpResponse<string>> {
-    //     return this.http.post(`${this.baseUrl}/example/send`, message, { observe: 'response', responseType: 'text' });
-    // }
-
-    // private handleError<T>(request: string, result?: T): (error: Error) => Observable<T> {
-    //     return () => of(result as T);
-    // }
 
     getAllGames(): Observable<Game[]> {
         return this.http.get<Game[]>(`${this.baseUrl}/game/games`);
@@ -46,7 +27,7 @@ export class CommunicationService {
     }
 
     updateVisiblity(game: Game): Observable<void> {
-        return this.http.patch<void>(`${this.baseUrl}/game/delete/${game._id}`, !game.isVisible);
+        return this.http.patch<void>(`${this.baseUrl}/game/modifyVisibility/${game._id}`, { isVisible: !game.isVisible });
     }
 
     createGame(game: Game): Observable<void> {

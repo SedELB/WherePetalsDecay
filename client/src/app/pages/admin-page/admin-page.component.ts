@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
-import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
-import { Game } from '@app/interfaces/game';
 import { GameCard } from '@app/interfaces/gameCard';
+import { Game } from '@app/interfaces/game';
 import { CommunicationService } from '@app/services/communication.service';
+import { ButtonComponent } from '@app/components/button/button.component';
 
 @Component({
   selector: 'app-admin-page',
@@ -15,7 +15,8 @@ import { CommunicationService } from '@app/services/communication.service';
 
 export class AdminPageComponent implements OnInit {
 
-  games: GameCard[] = [];
+  games: Game[] = [];
+  gameCards: GameCard[] = [];
 
   constructor(private communicationService: CommunicationService) {}
 
@@ -23,38 +24,55 @@ export class AdminPageComponent implements OnInit {
     this.getGames();
   }
 
-  getGames(): void {
+  getGames(): void{
     this.communicationService.getAllGames().subscribe({
       next: (games) => {
-        this.games = games.map((game, index) => this.toGameCard(game, index));
-      },
-      error: () => {
         this.games = [];
+        this.games = games;
+        // keep only the keys you need
+        this.gameCards = this.games.map(game => {
+          return {
+            name: game.name,
+            description: game.description,
+            size: game.size,
+            gameMode: game.gameMode,
+            thumbnail: game.thumbnail,
+            updatedAt: game.updatedAt,
+            isVisible: game.isVisible,
+          };
+        });
+      },
+      error: (err) => {
+        throw new Error('games were not loaded correctly : ', err);
       },
     });
   }
 
-  removeGame(id: number) {
-    this.games = this.games.filter(game => game.id !== id);
+  removeGame(name: string) {
+    const game = this.games.find(g => g.name === name);
+
+    if (!game) return;
+
+    this.communicationService.deleteGame(game._id).subscribe({ 
+      next: () => this.getGames(),
+      error: (err) => {
+        throw new Error(`Error while deleting this game : ${game.name}, error : ${err}`);
+      },
+    });
   }
 
-  changeVisibility(id: number) {
-    const game = this.games.find(g => g.id === id);
-    if (game) {
-      game.visible = !game.visible;
-    }
-  }
+  changeVisibility(name: string) {
+    const game = this.games.find(g => g.name === name);
 
-  private toGameCard(game: Game, index: number): GameCard {
-    return {
-      id: index,
-      image: game.thumbnail || '/assets/filler.png',
-      name: game.name,
-      size: `${game.size.rows}x${game.size.cols}`,
-      mode: game.gameMode,
-      date: new Date(game.createdAt).toLocaleDateString(),
-      visible: game.isVisible,
-      imgDescription: game.description,
-    };
+    if (!game) return;
+
+    this.communicationService.updateVisiblity(game).subscribe({
+      next: () => {
+        this.getGames();
+      },
+      error: (err) => {
+        throw new Error(`Error when modifying ${game.name}'s visibility : ${err}`);
+      },
+    });
   }
 }
