@@ -2,7 +2,6 @@ import { Logger, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ChatGateway } from '@app/gateways/chat/chat.gateway';
-import { GameGateway } from '@app/gateways/game/game.gateway';
 import { GameModule } from './modules/game.module';
 
 @Module({
@@ -18,6 +17,6 @@ import { GameModule } from './modules/game.module';
         GameModule,
     ],
     controllers: [],
-    providers: [ChatGateway, GameGateway, Logger],
+    providers: [ChatGateway, Logger],
 })
 export class AppModule {}

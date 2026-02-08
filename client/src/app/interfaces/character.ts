@@ -19,19 +19,21 @@ export const BASE_STATS = {
     bonus: 2,
 };
 
-export const AVATARS: readonly string[] = [
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
-    'assets/filler.png',
+const BASE_AVATAR_PATH = 'assets/avatars';
+
+export const AVATARS_PATH: readonly string[] = [
+    `${BASE_AVATAR_PATH}/archer.png`,
+    `${BASE_AVATAR_PATH}/assassin.png`,
+    `${BASE_AVATAR_PATH}/axe_warrior.png`,
+    `${BASE_AVATAR_PATH}/centaur.png`,
+    `${BASE_AVATAR_PATH}/dark_elf.png`,
+    `${BASE_AVATAR_PATH}/druid.png`,
+    `${BASE_AVATAR_PATH}/elf.png`,
+    `${BASE_AVATAR_PATH}/farmer.png`,
+    `${BASE_AVATAR_PATH}/mage.png`,
+    `${BASE_AVATAR_PATH}/magic_lancer.png`,
+    `${BASE_AVATAR_PATH}/marksman.png`,
+    `${BASE_AVATAR_PATH}/unknown_being.png`,
 ] as const;
 
 export const RANDOM_NAMES: readonly string[] = [
