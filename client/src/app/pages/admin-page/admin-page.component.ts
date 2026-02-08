@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
-import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCard } from '@app/interfaces/gameCard';
 import { Game } from '@app/interfaces/game';
 import { CommunicationService } from '@app/services/communication.service';
+import { ButtonComponent } from '@app/components/button/button.component';
 
 @Component({
   selector: 'app-admin-page',

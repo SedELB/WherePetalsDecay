@@ -1,4 +1,3 @@
-
 export interface GameCard {
     name: string;
     description: string;
