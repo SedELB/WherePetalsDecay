@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Game, PlacedObject } from '@app/interfaces/game';
-import { Tile, TileType } from '@app/interfaces/tile';
+import { TileType } from '@app/interfaces/tile';
 
 const NAME_MAX_LENGTH = 20;
 const DESC_MAX_LENGTH = 500;
@@ -17,7 +17,7 @@ export interface GameDraftForValidation {
     description: string;
     mode: Game['mode'];
     size: { rows: number; cols: number };
-    grid: Tile[][];
+    grid: TileType[][];
     placedObjects: PlacedObject[];
     existingNames?: string[];
 }
@@ -66,7 +66,7 @@ export class GameValidatorService {
         return errors;
     }
 
-    private validateSurface(grid: Tile[][]): string[] {
+    private validateSurface(grid: TileType[][]): string[] {
         const rows = grid.length;
         const cols = grid[0]?.length ?? 0;
         if (rows === 0 || cols === 0) return ['Grid is empty!'];
@@ -74,8 +74,8 @@ export class GameValidatorService {
         const terrain = new Set<TileType>(['floor', 'ice', 'water']);
         let terrainCount = 0;
         for (const row of grid) {
-            for (const tile of row) {
-                if (terrain.has(tile.type)) terrainCount++;
+            for (const tileType of row) {
+                if (terrain.has(tileType)) terrainCount++;
             }
         }
 
@@ -97,7 +97,7 @@ export class GameValidatorService {
         return ["The Flag isn't placed!"];
     }
 
-    private validateReachability(grid: Tile[][]): string[] {
+    private validateReachability(grid: TileType[][]): string[] {
         const start = this.findFirstWalkableTile(grid);
         if (!start) return ['There are no walkable tiles!'];
 
@@ -130,36 +130,36 @@ export class GameValidatorService {
         return ['Une ou plusieurs tuiles sont inaccessibles !'];
     }
 
-    private findFirstWalkableTile(grid: Tile[][]): { row: number; col: number } | null {
+    private findFirstWalkableTile(grid: TileType[][]): { row: number; col: number } | null {
         for (let r = 0; r < grid.length; r++) {
             for (let c = 0; c < grid[r].length; c++) {
-                if (grid[r][c].type !== 'wall') return { row: r, col: c };
+                if (grid[r][c] !== 'wall') return { row: r, col: c };
             }
         }
         return null;
     }
 
-    private isTileValidForPath(grid: Tile[][], row: number, col: number, visited: Set<string>): boolean {
+    private isTileValidForPath(grid: TileType[][], row: number, col: number, visited: Set<string>): boolean {
         const isWithinBounds = row >= 0 && row < grid.length && col >= 0 && col < (grid[0]?.length ?? 0);
         if (!isWithinBounds) return false;
 
-        const isNotWall = grid[row][col].type !== 'wall';
+        const isNotWall = grid[row][col] !== 'wall';
         const isNotVisited = !visited.has(`${row},${col}`);
         return isNotWall && isNotVisited;
     }
 
-    private countWalkableTiles(grid: Tile[][]): number {
+    private countWalkableTiles(grid: TileType[][]): number {
         const walkable = new Set<TileType>(['floor', 'water', 'ice', 'doorOpen', 'doorClosed']);
         let count = 0;
         for (const row of grid) {
-            for (const tile of row) {
-                if (walkable.has(tile.type)) count++;
+            for (const tileType of row) {
+                if (walkable.has(tileType)) count++;
             }
         }
         return count;
     }
 
-    private validateDoorsPlacement(grid: Tile[][]): string[] {
+    private validateDoorsPlacement(grid: TileType[][]): string[] {
         const errors: string[] = [];
         const rows = grid.length;
         const cols = grid[0]?.length ?? 0;
@@ -168,7 +168,7 @@ export class GameValidatorService {
         const doors: Array<{ row: number; col: number }> = [];
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
-                const type = grid[r][c].type;
+                const type = grid[r][c];
                 if (type === 'doorOpen' || type === 'doorClosed') {
                     doors.push({ row: r, col: c });
                 }
@@ -185,10 +185,10 @@ export class GameValidatorService {
                 continue;
             }
 
-            const up = grid[row - 1][col].type;
-            const down = grid[row + 1][col].type;
-            const left = grid[row][col - 1].type;
-            const right = grid[row][col + 1].type;
+            const up = grid[row - 1][col];
+            const down = grid[row + 1][col];
+            const left = grid[row][col - 1];
+            const right = grid[row][col + 1];
 
             const verticalSandwich = up === 'wall' && down === 'wall' && !obstacles.has(left) && !obstacles.has(right);
             const horizontalSandwich = left === 'wall' && right === 'wall' && !obstacles.has(up) && !obstacles.has(down);

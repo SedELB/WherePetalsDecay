@@ -1,11 +1,11 @@
+import { NgClass } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { Game, GameCard, GameObjectType, PlacedObject } from '@app/interfaces/game';
-import { Tile, TileType } from '@app/interfaces/tile';
+import { TileType } from '@app/interfaces/tile';
 import { GameValidatorService } from '@app/services/game-validator.service';
-import { NgClass } from '@angular/common';
 
 type ApplicableTileType = 'wall' | 'water' | 'ice' | 'doorClosed';
 
@@ -40,7 +40,7 @@ export class MapSetupPageComponent {
   gridRows = 10;
   gridCols = 10;
 
-  grid: Tile[][] = this.createGrid(this.gridRows, this.gridCols, 'floor');
+  grid: TileType[][] = this.createGrid(this.gridRows, this.gridCols, 'floor');
 
   placedObjects: PlacedObject[] = [];
 
@@ -110,7 +110,7 @@ export class MapSetupPageComponent {
     this.placedObjects = this.parseObjects(state.game.objects);
   }
 
-  private parseGrid(json: string | undefined, rows: number, cols: number): Tile[][] {
+  private parseGrid(json: string | undefined, rows: number, cols: number): TileType[][] {
     try {
       return json ? JSON.parse(json) : this.createGrid(rows, cols, 'floor');
     } catch {
@@ -211,12 +211,9 @@ export class MapSetupPageComponent {
     return type === 'floor' || type === 'water' || type === 'ice';
   }
 
-  private createGrid(rows: number, cols: number, type: TileType): Tile[][] {
-    return Array.from({ length: rows }, (_, y) =>
-      Array.from({ length: cols }, (_, x) => ({
-        position: { x, y },
-        type,
-      })),
+  private createGrid(rows: number, cols: number, type: TileType): TileType[][] {
+    return Array.from({ length: rows }, () =>
+      Array.from({ length: cols }, () => type),
     );
   }
 
@@ -239,7 +236,7 @@ export class MapSetupPageComponent {
     this.placedObjects = this.placedObjects.filter((o) => {
       if (o.position.x < 0 || o.position.y < 0) return false;
       if (o.position.x >= cols || o.position.y >= rows) return false;
-      const tileType = this.grid[o.position.y]?.[o.position.x]?.type;
+      const tileType = this.grid[o.position.y]?.[o.position.x];
       return tileType != null && this.isTerrainTile(tileType);
     });
   }
@@ -257,7 +254,7 @@ export class MapSetupPageComponent {
   onCellClick(rowIndex: number, colIndex: number): void {
     if (this.activeObjectTool != null) {
       // Objets uniquement sur tuiles de terrain
-      const tileType = this.grid[rowIndex]?.[colIndex]?.type;
+      const tileType = this.grid[rowIndex]?.[colIndex];
       if (tileType == null || !this.isTerrainTile(tileType)) return;
 
       const existing = this.getObjectAt(colIndex, rowIndex);
@@ -364,13 +361,10 @@ export class MapSetupPageComponent {
 
   private applyTileIfDifferent(rowIndex: number, colIndex: number): void {
     const current = this.grid[rowIndex]?.[colIndex];
-    if (!current || this.activeTool == null) return;
-    if (current.type === this.activeTool) return;
+    if (current == null || this.activeTool == null) return;
+    if (current === this.activeTool) return;
 
-    this.grid[rowIndex][colIndex] = {
-      ...current,
-      type: this.activeTool,
-    };
+    this.grid[rowIndex][colIndex] = this.activeTool;
 
     if (this.activeTool === 'wall') {
       this.eraseObjectAt(colIndex, rowIndex);
@@ -379,14 +373,11 @@ export class MapSetupPageComponent {
 
   private eraseTileToBase(rowIndex: number, colIndex: number): void {
     const current = this.grid[rowIndex]?.[colIndex];
-    if (!current) return;
+    if (current == null) return;
 
-    if (current.type === 'floor') return;
+    if (current === 'floor') return;
 
-    this.grid[rowIndex][colIndex] = {
-      ...current,
-      type: 'floor',
-    };
+    this.grid[rowIndex][colIndex] = 'floor';
   }
 
   private eraseObjectAt(colIndex: number, rowIndex: number): void {
