@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Game, PlacedObject } from '@app/interfaces/game';
-import { TileType } from '@app/interfaces/tile';
+import { PlacedObject } from '@app/interfaces/game';
+import { TileItem, TileTexture } from '@common/enums';
 
 const NAME_MAX_LENGTH = 20;
 const DESC_MAX_LENGTH = 500;
@@ -15,9 +15,9 @@ export interface GameDraftForValidation {
     id?: string;
     name: string;
     description: string;
-    mode: Game['mode'];
+    mode: string;
     size: { rows: number; cols: number };
-    grid: TileType[][];
+    grid: TileTexture[][];
     placedObjects: PlacedObject[];
     existingNames?: string[];
 }
@@ -66,12 +66,12 @@ export class GameValidatorService {
         return errors;
     }
 
-    private validateSurface(grid: TileType[][]): string[] {
+    private validateSurface(grid: TileTexture[][]): string[] {
         const rows = grid.length;
         const cols = grid[0]?.length ?? 0;
         if (rows === 0 || cols === 0) return ['Grid is empty!'];
 
-        const terrain = new Set<TileType>(['floor', 'ice', 'water']);
+        const terrain = new Set<TileTexture>([TileTexture.Floor, TileTexture.Ice, TileTexture.Water]);
         let terrainCount = 0;
         for (const row of grid) {
             for (const tileType of row) {
@@ -85,19 +85,19 @@ export class GameValidatorService {
 
     private validateSpawnPoints(size: { rows: number; cols: number }, placedObjects: PlacedObject[]): string[] {
         const maxPlayers = this.getMaxPlayers(size);
-        const spawns = placedObjects.filter((o) => o.type === 'spawn').length;
+        const spawns = placedObjects.filter((o) => o.type === TileItem.Spawn).length;
         if (spawns === maxPlayers) return [];
         return ['Not all spawn points are placed!'];
     }
 
-    private validateFlagPlaced(mode: Game['mode'], placedObjects: PlacedObject[]): string[] {
+    private validateFlagPlaced(mode: string, placedObjects: PlacedObject[]): string[] {
         if (mode !== 'ctf') return [];
-        const flags = placedObjects.filter((o) => o.type === 'flag').length;
+        const flags = placedObjects.filter((o) => o.type === TileItem.Flag).length;
         if (flags > 0) return [];
         return ["The Flag isn't placed!"];
     }
 
-    private validateReachability(grid: TileType[][]): string[] {
+    private validateReachability(grid: TileTexture[][]): string[] {
         const start = this.findFirstWalkableTile(grid);
         if (!start) return ['There are no walkable tiles!'];
 
@@ -130,26 +130,26 @@ export class GameValidatorService {
         return ['Une ou plusieurs tuiles sont inaccessibles !'];
     }
 
-    private findFirstWalkableTile(grid: TileType[][]): { row: number; col: number } | null {
+    private findFirstWalkableTile(grid: TileTexture[][]): { row: number; col: number } | null {
         for (let r = 0; r < grid.length; r++) {
             for (let c = 0; c < grid[r].length; c++) {
-                if (grid[r][c] !== 'wall') return { row: r, col: c };
+                if (grid[r][c] !== TileTexture.Wall) return { row: r, col: c };
             }
         }
         return null;
     }
 
-    private isTileValidForPath(grid: TileType[][], row: number, col: number, visited: Set<string>): boolean {
+    private isTileValidForPath(grid: TileTexture[][], row: number, col: number, visited: Set<string>): boolean {
         const isWithinBounds = row >= 0 && row < grid.length && col >= 0 && col < (grid[0]?.length ?? 0);
         if (!isWithinBounds) return false;
 
-        const isNotWall = grid[row][col] !== 'wall';
+        const isNotWall = grid[row][col] !== TileTexture.Wall;
         const isNotVisited = !visited.has(`${row},${col}`);
         return isNotWall && isNotVisited;
     }
 
-    private countWalkableTiles(grid: TileType[][]): number {
-        const walkable = new Set<TileType>(['floor', 'water', 'ice', 'doorOpen', 'doorClosed']);
+    private countWalkableTiles(grid: TileTexture[][]): number {
+        const walkable = new Set<TileTexture>([TileTexture.Floor, TileTexture.Water, TileTexture.Ice, TileTexture.DoorOpened, TileTexture.DoorClosed]);
         let count = 0;
         for (const row of grid) {
             for (const tileType of row) {
@@ -159,7 +159,7 @@ export class GameValidatorService {
         return count;
     }
 
-    private validateDoorsPlacement(grid: TileType[][]): string[] {
+    private validateDoorsPlacement(grid: TileTexture[][]): string[] {
         const errors: string[] = [];
         const rows = grid.length;
         const cols = grid[0]?.length ?? 0;
@@ -169,13 +169,13 @@ export class GameValidatorService {
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
                 const type = grid[r][c];
-                if (type === 'doorOpen' || type === 'doorClosed') {
+                if (type === TileTexture.DoorOpened || type === TileTexture.DoorClosed) {
                     doors.push({ row: r, col: c });
                 }
             }
         }
 
-        const obstacles = new Set<TileType>(['wall', 'doorOpen', 'doorClosed']);
+        const obstacles = new Set<TileTexture>([TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed]);
 
         for (const { row, col } of doors) {
             // Porte ne peut etre sur le bord de la map
@@ -190,8 +190,8 @@ export class GameValidatorService {
             const left = grid[row][col - 1];
             const right = grid[row][col + 1];
 
-            const verticalSandwich = up === 'wall' && down === 'wall' && !obstacles.has(left) && !obstacles.has(right);
-            const horizontalSandwich = left === 'wall' && right === 'wall' && !obstacles.has(up) && !obstacles.has(down);
+            const verticalSandwich = up === TileTexture.Wall && down === TileTexture.Wall && !obstacles.has(left) && !obstacles.has(right);
+            const horizontalSandwich = left === TileTexture.Wall && right === TileTexture.Wall && !obstacles.has(up) && !obstacles.has(down);
 
             if (!verticalSandwich && !horizontalSandwich) {
                 errors.push(`Invalid door placement at the position (${row}, ${col})!`);

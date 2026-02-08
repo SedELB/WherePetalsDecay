@@ -6,12 +6,12 @@
     <aside class="info-card">
       <div class="info-row">
         <span class="info-label">Nom:</span>
-        <input class="info-input" [(ngModel)]="gameName" />
+        <input class="info-input" [(ngModel)]="game.name" />
       </div>
 
       <div class="info-row info-row--top">
         <span class="info-label">Description:</span>
-        <textarea class="info-textarea" rows="5" [(ngModel)]="gameDescription"></textarea>
+        <textarea class="info-textarea" rows="5" [(ngModel)]="game.description"></textarea>
       </div>
     </aside>
 
@@ -19,27 +19,27 @@
       <div class="map-title">Mode classique</div>
       <div
         class="grid"
-        [style.gridTemplateColumns]="'repeat(' + (grid[0]?.length ?? 0) + ', 1fr)'"
-        [style.gridTemplateRows]="'repeat(' + grid.length + ', 1fr)'"
+        [style.gridTemplateColumns]="'repeat(' + (game.grid[0]?.length ?? 0) + ', 1fr)'"
+        [style.gridTemplateRows]="'repeat(' + game.grid.length + ', 1fr)'"
         (mouseleave)="onGridMouseLeave()"
         (document:mouseup)="onDocumentMouseUp()"
       >
-        @for (row of grid; track $index; let rowIndex = $index) {
+        @for (row of game.grid; track $index; let rowIndex = $index) {
           @for (cell of row; track $index; let colIndex = $index) {
             <button
               type="button"
               class="cell"
-              [attr.data-tile]="cell"
-              [class.cell--clickable]="activeTool !== null || activeObjectTool !== null"
-              [attr.title]="getObjectAt(colIndex, rowIndex) ? getObjectToolDescription(getObjectAt(colIndex, rowIndex)!.type) : null"
+              [attr.data-tile]="cell.type"
+              [class.cell--clickable]="activeTileTexture !== null || activeTileItem !== null"
+              [attr.title]="game.grid[rowIndex][colIndex].item ? objectPlacementTools[game.grid[rowIndex][colIndex].item!].description : null"
               (click)="onCellClick(rowIndex, colIndex)"
               (mousedown)="onCellMouseDown(rowIndex, colIndex, $event)"
               (mouseenter)="onCellMouseEnter(rowIndex, colIndex, $event)"
               (contextmenu)="$event.preventDefault()"
             >
-              @if (getObjectAt(colIndex, rowIndex); as obj) {
-                <span class="cell-object" [attr.data-object]="obj.type" [title]="getObjectToolDescription(obj.type)">
-                  <img class="cell-object__icon" [src]="getObjectToolImage(obj.type)" [alt]="obj.type" />
+              @if (game.grid[rowIndex][colIndex].item; as obj) {
+                <span class="cell-object" [attr.data-object]="obj" [title]="objectPlacementTools[obj].description">
+                  <img class="cell-object__icon" [src]="objectPlacementTools[obj].image" [alt]="obj" />
                 </span>
               }
             </button>
@@ -55,11 +55,9 @@
           <button
             type="button"
             class="tool"
-            [class.tool--active]="activeTool === tool.type"
+            [class.tool--active]="activeTileTexture === tool.type"
             [title]="tool.description"
-            (click)="selectTool(tool.type)"
-            [disabled]="tool.type === 'doorClosed'"
-            [ngClass]="{ disabled: tool.type === 'doorClosed'}"
+            (click)="selectTileTexture(tool.type)"
           >
             <span class="tool__label">{{ tool.label }}</span>
             <span class="tool__desc" role="tooltip">{{ tool.description }}</span>
@@ -69,39 +67,36 @@
 
       <div class="object-tools-panel" aria-label="Outils de placement d'objets">
         <h3 class="panel-title">Objets</h3>
-        @for (objTool of objectPlacementTools; track objTool.type) {
+        @for (objTool of objectPlacementToolsArray; track objTool.type) {
           <button
             type="button"
             class="object-tool"
-            [class.object-tool--active]="activeObjectTool === objTool.type"
+            [class.object-tool--active]="activeTileItem === objTool.type"
             [class.object-tool--complete]="isObjectTypeComplete(objTool.type)"
             [title]="objTool.description"
-            [disabled]="objTool.type === 'combatShrine' || objTool.type === 'healingShrine'"
-            [ngClass]="{ disabled: objTool.type === 'combatShrine' || objTool.type === 'healingShrine'}"
-            (click)="selectObjectTool(objTool.type)"
+            (click)="selectTileItem(objTool.type)"
           >
             <span class="object-tool__slot">
               <img class="object-tool__img" [src]="objTool.image" [alt]="objTool.label" />
             </span>
             <span class="object-tool__label">{{ objTool.label }}</span>
-            @if (objTool.type === 'spawn') {
+            @if (objTool.type === TileItem.Spawn) {
               <span class="object-tool__count">{{ getPlacedSpawnCount() }} / {{ getRequiredSpawnCount() }}</span>
             }
             <span class="object-tool__desc" role="tooltip">{{ objTool.description }}</span>
-            @if (objTool.type === 'flag') {
+            @if (objTool.type === TileItem.Flag) {
               <span class="object-tool__count">{{ getPlacedFlagCount() }} / {{ getRequiredFlagCount() }}</span>
             }
-            @if (objTool.type === 'healingShrine') {
-              <span class="object-tool__count">{{ getPlacedHealingShrineCount() }} / {{ getRequiredHealingShrineCount() }}</span>
+            @if (objTool.type === TileItem.HealingSanctuary) {
+              <span class="object-tool__count">{{ getPlacedHealingSanctuaryCount() }} / {{ getRequiredHealingSanctuaryCount() }}</span>
             }
-            @if (objTool.type === 'combatShrine') {
-              <span class="object-tool__count">{{ getPlacedCombatShrineCount() }} / {{ getRequiredCombatShrineCount() }}</span>
+            @if (objTool.type === TileItem.CombatSanctuary) {
+              <span class="object-tool__count">{{ getPlacedCombatSanctuaryCount() }} / {{ getRequiredCombatSanctuaryCount() }}</span>
             }
           </button>
         }
       </div>
     </aside>
-    
 
     <app-button [width]="200" class="pos-reset" [variant]="'default'" (clicked)="onReset()">Réinitialiser</app-button>
     <app-button class="pos-save" [variant]="'default'" (clicked)="onSave()">Sauvegarder</app-button>

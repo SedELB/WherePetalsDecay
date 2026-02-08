@@ -1,9 +1,10 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
-import { AVAILABLE_GAMES } from '@app/constants/games.constants';
-import { GameCard } from '@app/interfaces/game';
+import { Game } from '@app/interfaces/game';
+import { GameCard } from '@app/interfaces/gameCard';
+import { CommunicationService } from '@app/services/communication.service';
 
 @Component({
   selector: 'app-admin-page',
@@ -11,23 +12,72 @@ import { GameCard } from '@app/interfaces/game';
   templateUrl: './admin-page.component.html',
   styleUrl: './admin-page.component.scss',
 })
-export class AdminPageComponent {
+
+export class AdminPageComponent implements OnInit {
   private readonly router = inject(Router);
 
-  games: GameCard[] = AVAILABLE_GAMES.map((g) => ({ ...g }));
+  games: Game[] = [];
+  gameCards: GameCard[] = [];
 
-  editGame(game: GameCard): void {
-    this.router.navigate(['/editor'], { state: { game } });
+  constructor(private communicationService: CommunicationService) {}
+
+  ngOnInit(): void {
+    this.getGames();
   }
 
-  removeGame(id: number) {
-    this.games = this.games.filter(game => game.id !== id);
+  getGames(): void {
+    this.communicationService.getAllGames().subscribe({
+      next: (games) => {
+        this.games = games;
+        // keep only the keys you need
+        this.gameCards = this.games.map(game => {
+          return {
+            name: game.name,
+            description: game.description,
+            size: game.size,
+            gameMode: game.gameMode,
+            thumbnail: game.thumbnail,
+            updatedAt: game.updatedAt,
+            isVisible: game.isVisible,
+          };
+        });
+      },
+      error: (err) => {
+        throw new Error('games were not loaded correctly : ', err);
+      },
+    });
   }
 
-  changeVisibility(id: number) {
-    const game = this.games.find(g => g.id === id);
-    if (game) {
-      game.visible = !game.visible;
-    }
+  removeGame(name: string) {
+    const game = this.games.find(g => g.name === name);
+
+    if (!game) return;
+
+    this.communicationService.deleteGame(game._id).subscribe({
+      next: () => this.getGames(),
+      error: (err) => {
+        throw new Error(`Error while deleting this game : ${game.name}, error : ${err}`);
+      },
+    });
+  }
+
+  navigateToGameEditor(name: string): void {
+    const game = this.games.find((g) => (g.name === name));
+    this.router.navigate(['/editor'], { state: { game, mode: 'edit' } });
+  }
+
+  changeVisibility(name: string) {
+    const game = this.games.find(g => g.name === name);
+
+    if (!game) return;
+
+    this.communicationService.updateVisiblity(game).subscribe({
+      next: () => {
+        this.getGames();
+      },
+      error: (err) => {
+        throw new Error(`Error when modifying ${game.name}'s visibility : ${err}`);
+      },
+    });
   }
 }

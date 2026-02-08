@@ -35,14 +35,14 @@
         <div class="gamemode-choice">
             <h1>Choisir un mode de jeu :</h1>
             <div class="gamemode-button">
-                <app-button [selected]="gameMode === 'Classic'" 
-                            (clicked)="gameModeSelected('Classic')" 
+                <app-button [selected]="gameMode === GameMode.Classic"
+                            (clicked)="gameModeSelected(GameMode.Classic)"
                             [width]="250">
                             Classique
                 </app-button>
 
-                <app-button [selected]="gameMode === 'CTF'" 
-                            (clicked)="gameModeSelected('CTF')" 
+                <app-button [selected]="gameMode === GameMode.Ctf"
+                            (clicked)="gameModeSelected(GameMode.Ctf)"
                             [width]="250">
                             CTF
                 </app-button>
@@ -50,7 +50,7 @@
         </div>
         
         <div class="save-button-container">
-            <app-button [disabled]="!canCreateGame" [width]="300" id="save-button" [route]="'/editor'">Create</app-button>
+            <app-button [disabled]="!canCreateGame" [width]="300" id="save-button" (clicked)="createAndNavigateToGameEditor()">Create</app-button>
         </div>
         
     </div>

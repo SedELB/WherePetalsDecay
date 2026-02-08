@@ -212,6 +212,14 @@
     background: #a8d8ea;
   }
 
+  &[data-tile='doorOpened'] {
+    background: #8b7355;
+  }
+
+  &[data-tile='doorClosed'] {
+    background: #5d4a3a;
+  }
+
   &.cell--clickable {
     cursor: pointer;
   }
