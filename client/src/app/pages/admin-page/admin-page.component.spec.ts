@@ -1,8 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { Game } from '@app/interfaces/game';
-import { CommunicationService } from '@app/services/communication.service';
-import { of } from 'rxjs';
 import { AdminPageComponent } from './admin-page.component';
 import { CommunicationService } from '@app/services/communication.service';
 import { Game } from '@app/interfaces/game';
