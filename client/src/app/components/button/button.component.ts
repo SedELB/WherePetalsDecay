@@ -12,7 +12,7 @@ import { RouterLink } from '@angular/router';
 
 export class ButtonComponent {
     @Input() color: string = 'white';
-    @Input() backgroundColor: string = '#95698D';
+    @Input() backgroundColor: string | null = null;
     @Input() width?: number;
     @Input() height?: number;
     @Input() disabled: boolean = false;

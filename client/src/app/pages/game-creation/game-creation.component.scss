@@ -80,17 +80,6 @@ p {
         padding: 0.5rem;
         background-color: $frame-color;
         transition: all 0.2s ease;
-        border: none;
-        background-color: none;
-
-        &:hover {
-            border-color: $rose-button;
-        }
-
-        &:focus {
-            outline: 2px solid $rose-button;
-            outline-offset: 2px;
-        }
 
         &.selected {
             border-color: $green-button;
@@ -103,6 +92,12 @@ p {
         }
     }
 }
+
+.avatar-item:hover:not(.selected) {
+    border-color: $rose-button;
+}
+
+
 
 .attributes-container {
     display: grid;
@@ -151,16 +146,6 @@ p {
             color: $text-color;
             opacity: 0.8;
         }
-    }
-}
-
-.bonus-selection,
-.dice-selection {
-    display: flex;
-    gap: 1rem;
-
-    app-button {
-        flex: 1;
     }
 }
 
