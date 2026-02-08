@@ -29,7 +29,7 @@
             <button
               type="button"
               class="cell"
-              [attr.data-tile]="cell.type"
+              [attr.data-tile]="cell"
               [class.cell--clickable]="activeTool !== null || activeObjectTool !== null"
               [attr.title]="getObjectAt(colIndex, rowIndex) ? getObjectToolDescription(getObjectAt(colIndex, rowIndex)!.type) : null"
               (click)="onCellClick(rowIndex, colIndex)"
