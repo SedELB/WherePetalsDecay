@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { ROUTES } from '@app/constants/routes.constants';
-import { AVATARS, BASE_STATS } from '@app/interfaces/character';
+import { AVATARS_PATH, BASE_STATS } from '@app/interfaces/character';
 import { Game } from '@app/interfaces/game';
 import { CharacterService } from '@app/services/character.service';
 import { GameService } from '@app/services/game.service';
@@ -35,7 +35,7 @@ export class GameCreationComponent implements OnInit {
     games: Game[] = [];
     private gamesSubscription: Subscription | null = null;
 
-    readonly avatars = AVATARS;
+    readonly avatars = AVATARS_PATH;
     readonly baseStats = BASE_STATS;
     readonly routes = ROUTES;
 
