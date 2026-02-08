@@ -1,5 +1,4 @@
 import { ChatGateway } from '@app/gateways/chat/chat.gateway';
-import { GameGateway } from '@app/gateways/game/game.gateway';
 import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -18,6 +17,6 @@ import { GameModule } from './modules/game.module';
         GameModule,
     ],
     controllers: [],
-    providers: [ChatGateway, GameGateway, Logger],
+    providers: [ChatGateway, Logger],
 })
 export class AppModule {}
