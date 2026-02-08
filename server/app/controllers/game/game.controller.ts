@@ -91,7 +91,7 @@ export class GameController {
     async modifyVisibility(@Param('id') id: string, @Body('isVisible') isVisible: boolean, @Res() response: Response): Promise<void> {
         try {
             await this.gameService.updateVisibility(id, isVisible);
-            response.status(HttpStatus.OK).send('Game updated successfully!');
+            response.status(HttpStatus.OK).json('Game updated successfully!');
         } catch (error) {
             response.status(HttpStatus.BAD_REQUEST).send(error.message);
         }

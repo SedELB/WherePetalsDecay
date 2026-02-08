@@ -1,351 +1,256 @@
-import { NgClass } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
-import { Game, GameCard, GameObjectType, PlacedObject } from '@app/interfaces/game';
-import { TileType } from '@app/interfaces/tile';
+import { Game } from '@app/interfaces/game';
+import { Tile } from '@app/interfaces/tile';
+import { MAP_LARGE_SIZE, MAP_MEDIUM_SIZE, MAP_SMALL_SIZE, MOUSE_EVENT, OBJECT_PLACEMENT_TOOL, TILE_TOOLS } from '@app/pages/map-setup-page/map-setup-page-constant';
+import { CommunicationService } from '@app/services/communication.service';
 import { GameValidatorService } from '@app/services/game-validator.service';
+import { GameMode, TileItem, TileTexture } from '@common/enums';
 
-type ApplicableTileType = 'wall' | 'water' | 'ice' | 'doorClosed';
-
-interface TileTool {
-  type: ApplicableTileType;
-  label: string;
-  description: string;
-}
-
-interface ObjectPlacementTool {
-  type: GameObjectType;
-  label: string;
-  description: string;
-  image: string;
-}
 
 @Component({
   selector: 'app-map-setup-page',
-  imports: [FormsModule, ButtonComponent, NgClass],
+  imports: [FormsModule, ButtonComponent],
   templateUrl: './map-setup-page.component.html',
   styleUrl: './map-setup-page.component.scss',
 })
-export class MapSetupPageComponent {
+export class MapSetupPageComponent implements OnInit {
   private readonly router = inject(Router);
+  private readonly communicationService = inject(CommunicationService);
   private readonly gameValidator = inject(GameValidatorService);
 
-  gameName = '';
-  gameDescription = '';
+  game: Game;
+  mode: 'create' | 'edit' = 'edit';
 
-  gameType: 'Solo' | 'Co-op' = 'Solo';
+  activeTileTexture: TileTexture | null = null;
+  activeTileItem: TileItem | null = null;
 
-  gridRows = 10;
-  gridCols = 10;
+  readonly objectPlacementTools = OBJECT_PLACEMENT_TOOL;
+  readonly objectPlacementToolsArray = Object.values(OBJECT_PLACEMENT_TOOL);
+  readonly tileTools = Object.values(TILE_TOOLS);
 
-  grid: TileType[][] = this.createGrid(this.gridRows, this.gridCols, 'floor');
+  readonly TileItem = TileItem;
+  readonly TileTexture = TileTexture;
 
-  placedObjects: PlacedObject[] = [];
-
-  activeTool: ApplicableTileType | null = null;
-
-  activeObjectTool: GameObjectType | null = null;
-  // pour faire le drag des tuiles bitmas1k
   private isPaintingTiles = false;
-  // pour faire le drag de suppression avec le clic droit bitmask2
   private isErasingTiles = false;
 
-  readonly tileTools: TileTool[] = [
-    { type: 'wall', label: 'Mur', description: 'Bloque le passage des joueurs.' },
-    { type: 'water', label: 'Eau', description: 'Zone liquide, ralentit ou bloque selon les règles.' },
-    { type: 'ice', label: 'Glace', description: 'Surface glissante qui modifie les déplacements.' },
-    { type: 'doorClosed', label: 'Porte', description: 'Porte qui peut être fermée ou ouverte' },
-  ];
+  spawnCount: number = 0;
+  healingSanctuaryCount: number = 0;
+  combatSanctuaryCount: number = 0;
+  flagCount: number = 0;
 
-  readonly objectPlacementTools: ObjectPlacementTool[] = [
-    {
-      type: 'spawn',
-      label: 'Point de départ',
-      description: 'Emplacement où un joueur apparaît au début de la partie.',
-      image: '/assets/icons/spawn.svg',
-    },
-    {
-      type: "flag",
-      label: "Drapeau",
-      description: "Emplacement où un joueur peut placer un drapeau.",
-      image: '/assets/icons/flag.svg',
-    },
-    {
-      type: "healingShrine",
-      label: "Relique de soin",
-      description: "Emplacement où un joueur peut placer une relic de soin.",
-      image: '/assets/icons/healingShrine.svg',
-    },
-    {
-      type: "combatShrine",
-      label: "Relique de combat",
-      description: "Emplacement où un joueur peut placer une relic de combat.",
-      image: '/assets/icons/combatShrine.svg',
-    },
-  ];
+  constructor() {}
 
-  constructor() {
+  ngOnInit(): void {
     this.loadGameFromNavigation();
+    this.initializeGridIfEmpty();
+    this.initRequiredCount();
+    this.adjustCountsForExistingItems();
   }
 
   private loadGameFromNavigation(): void {
-    const state = this.router.getCurrentNavigation()?.extras?.state as {
-      game?: GameCard & { grid?: string; objects?: string };
-    } | undefined;
+    const state = history.state as { game?: Game; mode?: 'create' | 'edit' };
 
-    if (!state?.game) return;
-
-    this.gameName = state.game.name;
-    if (state.game.mode === 'Co-op' || state.game.mode === 'Solo') {
-      this.gameType = state.game.mode;
+    if (!state?.game) {
+      // Did not send a game object (did not come from our predifined path, fallback)
+      this.router.navigate(['/games']);
+      return;
     }
-    const rows = Math.max(1, state.game.size?.rows ?? 10);
-    const cols = Math.max(1, state.game.size?.cols ?? 10);
-    this.gridRows = rows;
-    this.gridCols = cols;
 
-    this.grid = this.parseGrid(state.game.grid, rows, cols);
-    this.placedObjects = this.parseObjects(state.game.objects);
+    this.game = state.game;
+    this.mode = state.mode ?? 'edit';
   }
 
-  private parseGrid(json: string | undefined, rows: number, cols: number): TileType[][] {
-    try {
-      return json ? JSON.parse(json) : this.createGrid(rows, cols, 'floor');
-    } catch {
-      return this.createGrid(rows, cols, 'floor');
-    }
-  }
-
-  private parseObjects(json: string | undefined): PlacedObject[] {
-    try {
-      return json ? JSON.parse(json) : [];
-    } catch {
-      return [];
+  private initializeGridIfEmpty(): void {
+    // If grid is empty or doesn't match the expected size, initialize it
+    if (!this.game.grid || this.game.grid.length === 0 ||
+      this.game.grid.length !== this.game.size.rows ||
+      this.game.grid[0]?.length !== this.game.size.cols) {
+      this.game.grid = Array.from({ length: this.game.size.rows }, () =>
+        Array.from({ length: this.game.size.cols }, (): Tile => ({
+          type: TileTexture.Floor,
+          item: null
+        }))
+      );
     }
   }
 
   getRequiredSpawnCount(): number {
-    // Regle projet askip , 2 4 6 selon petit moyen grand mais a revoir
-    const tier = this.getMapTier();
-    if (tier === 'small') return 2;
-    if (tier === 'medium') return 4;
-    return 6;
-  }
-
-  getPlacedSpawnCount(): number {
-    return this.placedObjects.filter((o) => o.type === 'spawn').length;
+    if (this.game.size.rows === MAP_SMALL_SIZE) return 2;
+    if (this.game.size.rows === MAP_MEDIUM_SIZE) return 4;
+    if (this.game.size.rows === MAP_LARGE_SIZE) return 6;
+    throw new Error("The size selected is not currently supported (SpawnCount)");
   }
 
   getRequiredFlagCount(): number {
-    return 1;
+    if (this.game.gameMode === GameMode.Classic) return 0;
+    if (this.game.gameMode === GameMode.Ctf) return 1;
+    throw new Error("The game mode is not currently supported (GameMode)");
+  }
+
+  getRequiredHealingSanctuaryCount(): number {
+    if (this.game.size.rows === MAP_SMALL_SIZE) return 1;
+    if (this.game.size.rows === MAP_MEDIUM_SIZE) return 2;
+    if (this.game.size.rows === MAP_LARGE_SIZE) return 4;
+    throw new Error("The size selected is not currently supported (HealingSanctuary)");
+  }
+
+  getRequiredCombatSanctuaryCount(): number {
+    if (this.game.size.rows === MAP_SMALL_SIZE) return 1;
+    if (this.game.size.rows === MAP_MEDIUM_SIZE) return 2;
+    if (this.game.size.rows === MAP_LARGE_SIZE) return 4;
+    throw new Error("The size selected is not currently supported (CombatSanctuary)");
+  }
+
+  initRequiredCount(): void {
+    this.spawnCount = this.getRequiredSpawnCount();
+    this.healingSanctuaryCount = this.getRequiredHealingSanctuaryCount();
+    this.combatSanctuaryCount = this.getRequiredCombatSanctuaryCount();
+    this.flagCount = this.getRequiredFlagCount();
+  }
+
+  adjustCountsForExistingItems(): void {
+    this.spawnCount -= this.countTileItem(TileItem.Spawn);
+    this.healingSanctuaryCount -= this.countTileItem(TileItem.HealingSanctuary);
+    this.combatSanctuaryCount -= this.countTileItem(TileItem.CombatSanctuary);
+    this.flagCount -= this.countTileItem(TileItem.Flag);
+  }
+
+  countTileTexture(tileTexture: TileTexture): number {
+    let count = 0;
+    this.game.grid.forEach((row) =>
+      count += row.filter((tile) => tile.type === tileTexture).length
+    );
+
+    return count;
+  }
+
+  countTileItem(tileItem: TileItem): number {
+    let count = 0;
+    this.game.grid.forEach((row) =>
+      count += row.filter((tile) => tile.item === tileItem).length
+    );
+
+    return count;
+  }
+
+  getPlacedSpawnCount(): number {
+    return this.countTileItem(TileItem.Spawn);
   }
 
   getPlacedFlagCount(): number {
-    return this.placedObjects.filter((o) => o.type === 'flag').length;
+    return this.countTileItem(TileItem.Flag);
   }
 
-  getRequiredHealingShrineCount(): number {
-    // Règles du projet: 1 / 2 / 4 selon taille petite/moyenne/grande
-    const tier = this.getMapTier();
-    if (tier === 'small') return 1;
-    if (tier === 'medium') return 2;
-    return 4;
+  getPlacedHealingSanctuaryCount(): number {
+    return this.countTileItem(TileItem.HealingSanctuary);
   }
 
-  getPlacedHealingShrineCount(): number {
-    return this.placedObjects.filter((o) => o.type === 'healingShrine').length;
+  getPlacedCombatSanctuaryCount(): number {
+    return this.countTileItem(TileItem.CombatSanctuary);
   }
 
-  getRequiredCombatShrineCount(): number {
-    // Règles du projet: 1 / 2 / 4 selon taille petite/moyenne/grande
-    const tier = this.getMapTier();
-    if (tier === 'small') return 1;
-    if (tier === 'medium') return 2;
-    return 4;
-  }
-
-  getPlacedCombatShrineCount(): number {
-    return this.placedObjects.filter((o) => o.type === 'combatShrine').length;
-  }
-
-  isObjectTypeComplete(type: GameObjectType): boolean {
-    if (type === 'spawn') {
-      return this.getPlacedSpawnCount() >= this.getRequiredSpawnCount();
+  isObjectTypeComplete(type: TileItem): boolean {
+    const placed = this.countTileItem(type);
+    switch (type) {
+      case TileItem.Spawn:
+        return placed >= this.getRequiredSpawnCount();
+      case TileItem.Flag:
+        return placed >= this.getRequiredFlagCount();
+      case TileItem.HealingSanctuary:
+        return placed >= this.getRequiredHealingSanctuaryCount();
+      case TileItem.CombatSanctuary:
+        return placed >= this.getRequiredCombatSanctuaryCount();
+      default:
+        return false;
     }
-    if (type === 'flag') {
-      return this.getPlacedFlagCount() >= this.getRequiredFlagCount();
-    }
-    if (type === 'healingShrine') {
-      return this.getPlacedHealingShrineCount() >= this.getRequiredHealingShrineCount();
-    }
-    if (type === 'combatShrine') {
-      return this.getPlacedCombatShrineCount() >= this.getRequiredCombatShrineCount();
-    }
-    return false;
   }
 
-  getObjectToolDescription(type: GameObjectType): string {
-    return this.objectPlacementTools.find((t) => t.type === type)?.description ?? '';
+  getObjectAt(x: number, y: number): Tile | undefined {
+    return this.game.grid[x]?.[y];
   }
 
-  getObjectToolImage(type: GameObjectType): string {
-    return this.objectPlacementTools.find((t) => t.type === type)?.image ?? '';
+  selectTileTexture(type: TileTexture): void {
+    this.activeTileTexture = this.activeTileTexture === type ? null : type;
+    if (this.activeTileTexture != null) this.activeTileItem = null;
   }
 
-  getObjectAt(x: number, y: number): PlacedObject | undefined {
-    return this.placedObjects.find((o) => o.position.x === x && o.position.y === y);
-  }
-
-  private getMapTier(): 'small' | 'medium' | 'large' {
-    const rows = this.grid.length || this.gridRows;
-    const cols = this.grid[0]?.length ?? this.gridCols;
-    const maxDim = Math.max(rows, cols);
-    if (maxDim <= 10) return 'small';
-    if (maxDim <= 15) return 'medium';
-    return 'large';
-  }
-
-  private isTerrainTile(type: TileType): boolean {
-    return type === 'floor' || type === 'water' || type === 'ice';
-  }
-
-  private createGrid(rows: number, cols: number, type: TileType): TileType[][] {
-    return Array.from({ length: rows }, () =>
-      Array.from({ length: cols }, () => type),
-    );
-  }
-
-  applyDimensions(): void {
-    const rows = Math.max(1, Math.min(50, Number(this.gridRows)));
-    const cols = Math.max(1, Math.min(50, Number(this.gridCols)));
-    this.gridRows = rows;
-    this.gridCols = cols;
-    if (rows === this.grid.length && cols === this.grid[0]?.length) return;
-    const oldRows = this.grid.length;
-    const oldCols = this.grid[0]?.length ?? 0;
-    const newGrid = this.createGrid(rows, cols, 'floor');
-    for (let y = 0; y < Math.min(rows, oldRows); y++) {
-      for (let x = 0; x < Math.min(cols, oldCols); x++) {
-        newGrid[y][x] = this.grid[y][x];
-      }
-    }
-    this.grid = newGrid;
-    // En cas de resize, retirer les objets hors-grille ou sur tuile invalide
-    this.placedObjects = this.placedObjects.filter((o) => {
-      if (o.position.x < 0 || o.position.y < 0) return false;
-      if (o.position.x >= cols || o.position.y >= rows) return false;
-      const tileType = this.grid[o.position.y]?.[o.position.x];
-      return tileType != null && this.isTerrainTile(tileType);
-    });
-  }
-
-  selectTool(type: ApplicableTileType): void {
-    this.activeTool = this.activeTool === type ? null : type;
-    if (this.activeTool != null) this.activeObjectTool = null;
-  }
-
-  selectObjectTool(type: GameObjectType): void {
-    this.activeObjectTool = this.activeObjectTool === type ? null : type;
-    if (this.activeObjectTool != null) this.activeTool = null;
+  selectTileItem(type: TileItem): void {
+    this.activeTileItem = this.activeTileItem === type ? null : type;
+    if (this.activeTileItem != null) this.activeTileTexture = null;
   }
 
   onCellClick(rowIndex: number, colIndex: number): void {
-    if (this.activeObjectTool != null) {
-      // Objets uniquement sur tuiles de terrain
-      const tileType = this.grid[rowIndex]?.[colIndex];
-      if (tileType == null || !this.isTerrainTile(tileType)) return;
-
-      const existing = this.getObjectAt(colIndex, rowIndex);
-      if (existing?.type === this.activeObjectTool) {
-        this.placedObjects = this.placedObjects.filter(
-          (o) => !(o.position.x === colIndex && o.position.y === rowIndex),
-        );
-
-        return;
-      }
-
-      // Ne pas placer sur une case déjà occupée par un autre objet
-      if (existing != null && existing.type !== this.activeObjectTool) return;
-
-      if (this.activeObjectTool === 'spawn') {
-        const placed = this.getPlacedSpawnCount();
-        const required = this.getRequiredSpawnCount();
-        if (placed >= required) return;
-        this.placedObjects = [...this.placedObjects, { type: 'spawn', position: { x: colIndex, y: rowIndex } }];
-        return;
-      }
-
-      if (this.activeObjectTool === 'flag') {
-        // 1 seule instance: si déjà placée ailleurs, on la déplace
-        this.placedObjects = [
-          ...this.placedObjects.filter((o) => o.type !== 'flag'),
-          { type: 'flag', position: { x: colIndex, y: rowIndex } },
-        ];
-        return;
-      }
-
-      if (this.activeObjectTool === 'healingShrine') {
-        const placed = this.getPlacedHealingShrineCount();
-        const required = this.getRequiredHealingShrineCount();
-        if (placed >= required) return;
-        this.placedObjects = [...this.placedObjects, { type: 'healingShrine', position: { x: colIndex, y: rowIndex } }];
-        return;
-      }
-
-      if (this.activeObjectTool === 'combatShrine') {
-        const placed = this.getPlacedCombatShrineCount();
-        const required = this.getRequiredCombatShrineCount();
-        if (placed >= required) return;
-        this.placedObjects = [...this.placedObjects, { type: 'combatShrine', position: { x: colIndex, y: rowIndex } }];
-        return;
-      }
-
+    //  if tile texture is not null, apply tile texture
+    if (this.activeTileTexture) {
+      this.applyTile(rowIndex, colIndex, this.activeTileTexture);
+    } // if tile item is not null, apply tile texture
+    else if (this.activeTileItem) {
+      this.applyTile(rowIndex, colIndex, this.activeTileItem);
+    } else {
       return;
-    }
-    if (this.activeTool != null) {
-      this.applyTileIfDifferent(rowIndex, colIndex);
     }
   }
 
   onCellMouseDown(rowIndex: number, colIndex: number, event: MouseEvent): void {
-    if (event.button === 0) {
-      if (this.activeTool == null || this.activeObjectTool != null) return;
+    if (event.button === MOUSE_EVENT.LeftClick) {
       this.isPaintingTiles = true;
-      this.applyTileIfDifferent(rowIndex, colIndex);
+      if (this.activeTileTexture) {
+        this.applyTile(rowIndex, colIndex, this.activeTileTexture);
+      } else if (this.activeTileItem) {
+        this.applyTile(rowIndex, colIndex, this.activeTileItem);
+      }
       return;
     }
 
-    if (event.button === 2) {
+    if (event.button === MOUSE_EVENT.RightClick) {
       event.preventDefault();
       this.isErasingTiles = true;
-      this.eraseWithOptionalShift(rowIndex, colIndex, event.shiftKey);
+      if (this.activeTileTexture) {
+        this.deleteTile(rowIndex, colIndex, this.activeTileTexture, event);
+      } else if (this.activeTileItem) {
+        this.deleteTile(rowIndex, colIndex, this.activeTileItem, event);
+      }
     }
   }
 
   onCellMouseEnter(rowIndex: number, colIndex: number, event: MouseEvent): void {
     if (this.isErasingTiles) {
-      // bitmask 2 = bouton droit enfonce
-      if ((event.buttons & 2) !== 2) {
+      if (event.buttons !== MOUSE_EVENT.RightDrag) {
         this.isErasingTiles = false;
-        return;
+      } else {
+        if (event.shiftKey && this.activeTileItem) {
+          this.deleteTile(rowIndex, colIndex, this.activeTileItem, event);
+        } else if (this.activeTileTexture) {
+          this.deleteTile(rowIndex, colIndex, this.activeTileTexture, event);
+        }
       }
-      // SHIFT peut être pressé/relâché pendant le drag pour alterner tuile/objet
-      this.eraseWithOptionalShift(rowIndex, colIndex, event.shiftKey);
       return;
     }
 
     if (!this.isPaintingTiles) return;
 
-    // Securite au cas ou , en gros , event.buttons c'est un bitmask et lorsque le bouton gauche est enfonce sa retourne 1 
-    if ((event.buttons & 1) !== 1) {
+    if (event.buttons !== MOUSE_EVENT.LeftDrag) {
       this.isPaintingTiles = false;
       return;
     }
 
-    if (this.activeTool == null || this.activeObjectTool != null) return;
-    this.applyTileIfDifferent(rowIndex, colIndex);
+    const gameTile = this.game.grid[rowIndex][colIndex]
+
+    if (this.activeTileTexture) {
+      if (
+        [TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed].includes(this.activeTileTexture) &&
+        gameTile.item
+      ) {
+        const removedItem = gameTile.item;
+        gameTile.item = null;
+        this.increaseTileItemCount(removedItem);
+      }
+      this.applyTile(rowIndex, colIndex, this.activeTileTexture);
+    }
   }
 
   onGridMouseLeave(): void {
@@ -353,47 +258,88 @@ export class MapSetupPageComponent {
     this.isErasingTiles = false;
   }
 
-  //POur si le user relache la souris hors de la grille
   onDocumentMouseUp(): void {
     this.isPaintingTiles = false;
     this.isErasingTiles = false;
   }
 
-  private applyTileIfDifferent(rowIndex: number, colIndex: number): void {
-    const current = this.grid[rowIndex]?.[colIndex];
-    if (current == null || this.activeTool == null) return;
-    if (current === this.activeTool) return;
-
-    this.grid[rowIndex][colIndex] = this.activeTool;
-
-    if (this.activeTool === 'wall') {
-      this.eraseObjectAt(colIndex, rowIndex);
+  private verifyEnoughTileItem(item: TileItem): boolean {
+    switch (item) {
+      case TileItem.Spawn:
+        return this.spawnCount > 0;
+      case TileItem.HealingSanctuary:
+        return this.healingSanctuaryCount > 0;
+      case TileItem.CombatSanctuary:
+        return this.combatSanctuaryCount > 0;
+      case TileItem.Flag:
+        return this.flagCount > 0;
+      default:
+        return false;
     }
   }
 
-  private eraseTileToBase(rowIndex: number, colIndex: number): void {
-    const current = this.grid[rowIndex]?.[colIndex];
-    if (current == null) return;
-
-    if (current === 'floor') return;
-
-    this.grid[rowIndex][colIndex] = 'floor';
-  }
-
-  private eraseObjectAt(colIndex: number, rowIndex: number): void {
-    const before = this.placedObjects.length;
-    this.placedObjects = this.placedObjects.filter(
-      (o) => !(o.position.x === colIndex && o.position.y === rowIndex),
-    );
-    if (this.placedObjects.length === before) return;
-  }
-
-  private eraseWithOptionalShift(rowIndex: number, colIndex: number, shiftKey: boolean): void {
-    if (shiftKey) {
-      this.eraseObjectAt(colIndex, rowIndex);
-      return;
+  private decreaseTileItemCount(item: TileItem): void {
+    switch (item) {
+      case TileItem.Spawn:
+        this.spawnCount--;
+        break;
+      case TileItem.HealingSanctuary:
+        this.healingSanctuaryCount--;
+        break;
+      case TileItem.CombatSanctuary:
+        this.combatSanctuaryCount--;
+        break;
+      case TileItem.Flag:
+        this.flagCount--;
+        break;
     }
-    this.eraseTileToBase(rowIndex, colIndex);
+  }
+
+  private increaseTileItemCount(item: TileItem): void {
+    switch (item) {
+      case TileItem.Spawn:
+        this.spawnCount++;
+        break;
+      case TileItem.HealingSanctuary:
+        this.healingSanctuaryCount++;
+        break;
+      case TileItem.CombatSanctuary:
+        this.combatSanctuaryCount++;
+        break;
+      case TileItem.Flag:
+        this.flagCount++;
+        break;
+    }
+  }
+
+  private applyTile(rowIndex: number, colIndex: number, tileAttribute: TileItem | TileTexture): void {
+    const currentTile = this.game.grid[rowIndex]?.[colIndex];
+
+    if (Object.values(TileItem).includes(tileAttribute as TileItem)) {
+      if ([TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed].includes(currentTile.type))
+        throw new Error("This Item cannot be place on a terrain tile");
+      if (!currentTile.item && this.verifyEnoughTileItem(tileAttribute as TileItem)) {
+        currentTile.item = tileAttribute as TileItem;
+        this.decreaseTileItemCount(tileAttribute as TileItem);
+      }
+    } else {
+      if (currentTile.type !== tileAttribute) {
+        currentTile.type = tileAttribute as TileTexture;
+      }
+    }
+    return;
+  }
+
+  private deleteTile(rowIndex: number, colIndex: number, tileAttribute: TileItem | TileTexture, event: MouseEvent): void {
+    const currentTile = this.game.grid[rowIndex]?.[colIndex];
+    const currItem = currentTile.item;
+
+    if (currItem && Object.values(TileItem).includes(tileAttribute as TileItem) && event.shiftKey) {
+      currentTile.item = null;
+      this.increaseTileItemCount(currItem);
+    } else {
+      currentTile.type = TileTexture.Floor;
+    }
   }
 
   onBack(): void {
@@ -401,13 +347,30 @@ export class MapSetupPageComponent {
   }
 
   onSave(): void {
+    // Extract grid types for validation
+    const gridTypes = this.game.grid.map(row => row.map(tile => tile.type));
+
+    // Extract placed objects from grid
+    const placedObjects = [];
+    for (let row = 0; row < this.game.grid.length; row++) {
+      for (let col = 0; col < this.game.grid[row].length; col++) {
+        const tile = this.game.grid[row][col];
+        if (tile.item) {
+          placedObjects.push({
+            type: tile.item,
+            position: { x: col, y: row }
+          });
+        }
+      }
+    }
+
     const validation = this.gameValidator.validate({
-      name: this.gameName,
-      description: this.gameDescription,
-      mode: 'classic',
-      size: { rows: this.gridRows, cols: this.gridCols },
-      grid: this.grid,
-      placedObjects: this.placedObjects,
+      name: this.game.name,
+      description: this.game.description,
+      mode: this.game.gameMode,
+      size: this.game.size,
+      grid: gridTypes,
+      placedObjects: placedObjects,
     });
 
     if (!validation.isValid) {
@@ -415,25 +378,34 @@ export class MapSetupPageComponent {
       return;
     }
 
-    const gameToSave: Game = {
-      name: this.gameName,
-      description: this.gameDescription,
-      mode: 'classic',
-      size: { rows: this.gridRows, cols: this.gridCols },
-      grid: JSON.stringify(this.grid),
-      objects: JSON.stringify(this.placedObjects),
-      lastModifiedIso: new Date().toISOString(),
-    };
-    console.log('Game à sauvegarder:', gameToSave, 'type:', this.gameType);
+    const saveOperation = this.mode === 'create'
+      ? this.communicationService.createGame(this.game)
+      : this.communicationService.modifyGame(this.game);
+
+    saveOperation.subscribe({
+      next: () => {
+        alert(`Game ${this.mode === 'create' ? 'created' : 'saved'} successfully!`);
+        this.router.navigate(['/admin']);
+      },
+      error: (error) => {
+        console.error('Error saving game:', error);
+        const errorMessage = error.error || error.message || 'Unknown error';
+        alert(`Error saving game: ${errorMessage}`);
+      }
+    });
   }
 
   onReset(): void {
-    this.gameName = '';
-    this.gameDescription = '';
-    this.gameType = 'Solo';
-    this.grid = this.createGrid(this.gridRows, this.gridCols, 'floor');
-    this.placedObjects = [];
-    this.activeTool = null;
-    this.activeObjectTool = null;
+    this.game.grid.forEach((row) => {
+      row.forEach((tile) => {
+        tile.type = TileTexture.Floor;
+        tile.item = null;
+      });
+    });
+
+    this.activeTileTexture = null;
+    this.activeTileItem = null;
+
+    this.initRequiredCount();
   }
 }

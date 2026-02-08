@@ -1,6 +1,8 @@
-import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
+import { ChatGateway } from '@app/gateways/chat/chat.gateway';
+import { GameGateway } from '@app/gateways/game/game.gateway';
+import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
 import { GameModule } from './modules/game.module';
 
 @Module({
@@ -10,15 +12,12 @@ import { GameModule } from './modules/game.module';
             imports: [ConfigModule],
             inject: [ConfigService],
             useFactory: async (config: ConfigService) => ({
-                uri: config.get<string>('DATABASE_CONNECTION_STRING'), // Loaded from .env
+                uri: config.get<string>('DATABASE_CONNECTION_STRING'),
             }),
         }),
-        GameModule, // Rend son export GameService injectable ailleurs ex. game.controller.ts
+        GameModule,
     ],
-    // controllers: [CourseController, DateController, ExampleController],
-    // providers: [ChatGateway, CourseService, DateService, ExampleService, Logger],
     controllers: [],
-    providers: [],
-
+    providers: [ChatGateway, GameGateway, Logger],
 })
 export class AppModule {}

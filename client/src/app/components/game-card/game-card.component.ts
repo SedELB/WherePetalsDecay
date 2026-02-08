@@ -1,6 +1,6 @@
 import { NgClass } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { GameCard } from '@app/interfaces/game';
+import { GameCard } from '@app/interfaces/gameCard';
 
 @Component({
   selector: 'app-game-card',
@@ -12,14 +12,13 @@ import { GameCard } from '@app/interfaces/game';
 
 export class GameCardComponent {
   @Input() game: GameCard = {
-    id: 0,
-    image: '',
     name: '',
-    size: { rows: 10, cols: 10 },
-    mode: '',
-    date: '',
-    imgDescription: '',
-    visible: true,
+    description: '',
+    size: { rows: 0, cols: 0 },
+    gameMode: '',
+    thumbnail: '',
+    updatedAt: new Date(),
+    isVisible: true,
   };
 
   @Output() removeParent = new EventEmitter<void>();

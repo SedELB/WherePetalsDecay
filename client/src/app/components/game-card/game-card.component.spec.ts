@@ -1,19 +1,19 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { GameCard } from '@app/interfaces/game';
+import { GameCard } from '@app/interfaces/gameCard';
 import { GameCardComponent } from './game-card.component';
 
 describe('GameCardComponent', () => {
   let component: GameCardComponent;
   let fixture: ComponentFixture<GameCardComponent>;
+
   const mockGame: GameCard = {
-    id: 1,
-    image: '/assets/filler.png',
     name: 'Game 1',
+    description: 'test description',
     size: { rows: 10, cols: 10 },
-    mode: 'Solo',
-    date: '2026-01-01',
-    visible: true,
-    imgDescription: 'test description',
+    gameMode: 'CTF',
+    thumbnail: '/assets/filler.png',
+    updatedAt: new Date('2026-01-01'),
+    isVisible: true,
   };
 
   beforeEach(async () => {
@@ -33,17 +33,17 @@ describe('GameCardComponent', () => {
 
   it('should display game info', () => {
     const compiled = fixture.nativeElement;
-    const listItems = compiled.querySelectorAll('.card-info li');
+    const listItems = compiled.querySelectorAll('.card-info ul li');
     expect(listItems[0].textContent).toContain(mockGame.name);
-    expect(listItems[1].textContent).toContain(`${mockGame.size.rows}X${mockGame.size.cols}`);
-    expect(listItems[2].textContent).toContain(mockGame.mode);
-    expect(listItems[3].textContent).toContain(mockGame.date);
+    expect(listItems[1].textContent).toContain(mockGame.size.rows);
+    expect(listItems[2].textContent).toContain(mockGame.gameMode);
+    expect(listItems[3].textContent).toContain(mockGame.updatedAt);
   });
 
   it('should display image correctly', () => {
     const compiled = fixture.nativeElement;
     const img = compiled.querySelector('.thumbnail');
-    expect(img.src).toContain(mockGame.image);
+    expect(img.src).toContain(mockGame.thumbnail);
     expect(img.alt).toBe(mockGame.name);
   });
 
@@ -51,7 +51,7 @@ describe('GameCardComponent', () => {
     const testFixture = TestBed.createComponent(GameCardComponent);
     const testComponent = testFixture.componentInstance;
 
-    testComponent.game = { ...mockGame, visible: false };
+    testComponent.game = { ...mockGame, isVisible: false };
 
     testFixture.detectChanges();
     expect(testFixture).toBeDefined();
