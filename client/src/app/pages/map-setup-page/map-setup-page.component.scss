@@ -176,6 +176,7 @@
   border-radius: 8px;
   overflow: hidden;
   display: grid;
+  gap: 0px;
   background: rgba(0, 0, 0, 0.08);
   min-height: 0;
   min-width: 0;
@@ -188,30 +189,31 @@
   min-height: 0;
   padding: 0;
   cursor: default;
-  transition: background-color 0.15s ease;
+  background-size:cover;
+  transition: background 0.15s ease;
 
   &[data-tile='floor'] {
-    background: #69b04c;
+    background-image: url('/assets/tiles/default.png');
   }
 
   &[data-tile='wall'] {
-    background: #4a4a4a;
+    background-image: url('/assets/tiles/wall.png');
   }
 
   &[data-tile='water'] {
-    background: #2e7dd2;
+    background-image: url('/assets/tiles/water.png');
   }
 
   &[data-tile='ice'] {
-    background: #a8d8ea;
+    background-image: url('/assets/tiles/ice.png');
   }
 
   &[data-tile='doorOpened'] {
-    background: #8b7355;
+    background-image: url('/assets/tiles/opened_door.png');
   }
 
   &[data-tile='doorClosed'] {
-    background: #5d4a3a;
+    background-image: url('/assets/tiles/closed_door.png');
   }
 
   &.cell--clickable {
