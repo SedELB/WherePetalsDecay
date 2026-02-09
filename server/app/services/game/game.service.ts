@@ -1,8 +1,8 @@
-import { CreateGameDto, TileDto } from '@app/model/dto/game/create-game.dto';
+import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
 import { Game, GameDocument } from '@app/model/schema/game.schema';
 import { MAX_PLAYERS, MIN_PLAYERS, TEN } from '@app/utils/game.constants';
-import { GameMode, TileItem, TileTexture } from '@app/utils/game.enum';
+import { GameMode } from '@app/utils/game.enum';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -98,7 +98,7 @@ export class GameService {
         return visibleGames;
     }
 
-    async addGame(game: CreateGameDto): Promise<Game> {
+    async addGame(game: CreateGameDto): Promise<void> {
         try {
             await this.isGameNameUnique(game.name);
             await this.gameValidatorService.isGameValid(game);
@@ -110,7 +110,7 @@ export class GameService {
         }
     }
 
-    async modifyGame(id: string, game: UpdateGameDto): Promise<Game> {
+    async modifyGame(id: string, game: UpdateGameDto): Promise<void> {
         try {
             const existingGame = await this.gameModel.findById(id).lean();
             if (!existingGame) {

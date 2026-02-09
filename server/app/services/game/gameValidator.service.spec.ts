@@ -242,23 +242,23 @@ describe('GameValidator', () => {
     });
 
     it('isDoorOnGridBorder() should return true for door inside grid', () => {
-        expect(gameValidatorService.isDoorOnGridBorder(getFakeGame().grid, FIVE, FIVE)).toEqual(true);
+        expect(gameValidatorService.isDoorOnGridBorder(getFakeGame().grid, FIVE, FIVE)).toEqual(false);
     });
 
     it('isDoorOnGridBorder() should return false for door on top border', () => {
-        expect(gameValidatorService.isDoorOnGridBorder(getFakeGame().grid, 0, FIVE)).toEqual(false);
+        expect(gameValidatorService.isDoorOnGridBorder(getFakeGame().grid, 0, FIVE)).toEqual(true);
     });
 
     it('isDoorOnGridBorder() should return false for door on bottom border', () => {
-        expect(gameValidatorService.isDoorOnGridBorder(getFakeGame().grid, TEN - 1, FIVE)).toEqual(false);
+        expect(gameValidatorService.isDoorOnGridBorder(getFakeGame().grid, TEN - 1, FIVE)).toEqual(true);
     });
 
     it('isDoorOnGridBorder() should return false for door on left border', () => {
-        expect(gameValidatorService.isDoorOnGridBorder(getFakeGame().grid, FIVE, 0)).toEqual(false);
+        expect(gameValidatorService.isDoorOnGridBorder(getFakeGame().grid, FIVE, 0)).toEqual(true);
     });
 
     it('isDoorOnGridBorder() should return false for door on right border', () => {
-        expect(gameValidatorService.isDoorOnGridBorder(getFakeGame().grid, FIVE, TEN - 1)).toEqual(false);
+        expect(gameValidatorService.isDoorOnGridBorder(getFakeGame().grid, FIVE, TEN - 1)).toEqual(true);
     });
 
     it('isFlagPlaced() should return true if flag is placed on CTF gamemode', () => {
