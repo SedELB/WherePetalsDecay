@@ -56,6 +56,10 @@ export class MapSetupService {
         this.tileItemCountService.decreaseTileItemCount(counts, tileAttribute as TileItem);
       }
     } else {
+      // Prevent placing non-walkable textures on cells with items
+      if ([TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed].includes(tileAttribute as TileTexture) && currentTile.item) {
+        throw new Error('Cannot place blocking texture on a cell with an item');
+      }
       if (currentTile.type !== tileAttribute) {
         currentTile.type = tileAttribute as TileTexture;
       }
@@ -67,9 +71,12 @@ export class MapSetupService {
     const currentTile = game.grid[rowIndex]?.[colIndex];
     const currItem = currentTile.item;
 
-    if (currItem && Object.values(TileItem).includes(tileAttribute as TileItem) && event.shiftKey) {
+    // If shift key is pressed delete the item
+    if (currItem && event.shiftKey) {
       currentTile.item = null;
       this.tileItemCountService.increaseTileItemCount(counts, currItem);
+    } else if (Object.values(TileItem).includes(tileAttribute as TileItem)) {
+      return;
     } else {
       currentTile.type = TileTexture.Floor;
     }
@@ -146,12 +153,19 @@ export class MapSetupService {
     } = params;
 
     if (event.button === MouseEventType.LeftClick) {
+      // Only set isPaintingTiles to true if we have something selected to paint
       if (activeTileTexture) {
-        this.applyTile(game, rowIndex, colIndex, activeTileTexture, counts);
+        try {
+          this.applyTile(game, rowIndex, colIndex, activeTileTexture, counts);
+          return { isPaintingTiles: true, isErasingTiles };
+        } catch {
+          return { isPaintingTiles: false, isErasingTiles };
+        }
       } else if (activeTileItem) {
         this.applyTile(game, rowIndex, colIndex, activeTileItem, counts);
+        return { isPaintingTiles: true, isErasingTiles };
       }
-      return { isPaintingTiles: true, isErasingTiles };
+      return { isPaintingTiles: false, isErasingTiles };
     }
 
     if (event.button === MouseEventType.RightClick) {
@@ -203,30 +217,35 @@ export class MapSetupService {
       isPaintingTiles,
       isErasingTiles,
     } = params;
+    let gameTile = game.grid[rowIndex][colIndex];
 
     if (isErasingTiles) {
       if (event.buttons !== MouseEventType.RightDrag) {
         return { isPaintingTiles, isErasingTiles: false };
       }
 
-      if (event.shiftKey && activeTileItem) {
-        this.deleteTile({
-          game,
-          rowIndex,
-          colIndex,
-          tileAttribute: activeTileItem,
-          event,
-          counts,
-        });
-      } else if (activeTileTexture) {
-        this.deleteTile({
-          game,
-          rowIndex,
-          colIndex,
-          tileAttribute: activeTileTexture,
-          event,
-          counts,
-        });
+      // When right-dragging (erasing), handle deletion with shift key for items
+      try {
+        if (event.shiftKey) {
+          // With shift, delete items if present
+          const tile = game.grid[rowIndex][colIndex];
+          if (tile.item) {
+            this.deleteTile({
+              game,
+              rowIndex,
+              colIndex,
+              tileAttribute: tile.item,
+              event,
+              counts,
+            });
+          }
+        } else {
+          // Without shift, always delete texture regardless of what is selected
+          gameTile = game.grid[rowIndex][colIndex];
+          gameTile.type = TileTexture.Floor;
+        }
+      } catch {
+        throw new Error(`Error while handeling cell mouse enter`);
       }
       return { isPaintingTiles, isErasingTiles };
     }
@@ -237,10 +256,21 @@ export class MapSetupService {
       return { isPaintingTiles: false, isErasingTiles };
     }
 
-    const gameTile = game.grid[rowIndex][colIndex];
+    gameTile = game.grid[rowIndex][colIndex];
     if (activeTileTexture) {
+      // Remove items before applying a texture that blocks walking
       this.removeBlockingItemIfNeeded(gameTile, activeTileTexture, counts);
-      this.applyTile(game, rowIndex, colIndex, activeTileTexture, counts);
+      try {
+        this.applyTile(game, rowIndex, colIndex, activeTileTexture, counts);
+      } catch {
+        throw new Error(`Error while handeling cell mouse enter`);
+      }
+    } else if (activeTileItem) {
+      try {
+        this.applyTile(game, rowIndex, colIndex, activeTileItem, counts);
+      } catch {
+        throw new Error(`Error while handeling cell mouse enter`);
+      }
     }
 
     return { isPaintingTiles, isErasingTiles };

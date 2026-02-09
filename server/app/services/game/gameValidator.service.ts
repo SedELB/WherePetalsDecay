@@ -212,7 +212,6 @@ export class GameValidatorService {
         const validations = [
             async () => await this.isGameNameUnique(game.name, id),
             () => this.isTextLengthValid(game),
-            () => this.isDoorsPlacementValid(game),
             () => this.areThereUnreachableTiles(game),
             () => this.isGameSurfaceValid(game),
             () => this.areAllSpawnPointsPlaced(game),
