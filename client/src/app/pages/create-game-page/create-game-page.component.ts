@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { Game } from '@app/interfaces/game';
-import { GameMode } from '@common/enums';
+import { GameMode, MaxPlayers } from '@common/enums';
 
 @Component({
   selector: 'app-create-game-page',
@@ -10,6 +10,7 @@ import { GameMode } from '@common/enums';
   templateUrl: './create-game-page.component.html',
   styleUrl: './create-game-page.component.scss',
 })
+
 export class CreateGamePageComponent {
   private readonly router = inject(Router);
 
@@ -35,7 +36,15 @@ export class CreateGamePageComponent {
     return !!this.gameMode && !!this.mapSize;
   }
 
+  private get getMaxPlayers(){
+    if (this.mapSize === 'large') return MaxPlayers.Large;
+    else if (this.mapSize === 'medium') return MaxPlayers.Medium;
+    else if (this.mapSize === 'small') return MaxPlayers.Small;
+    else throw new Error(`Error while defining maxPlayer for the game object`);
+  }
+
   createAndNavigateToGameEditor(): void {
+
     const game: Game = {
       _id: '',
       name: '',
@@ -43,7 +52,7 @@ export class CreateGamePageComponent {
       size: this.sizes[this.mapSize ?? ''] ?? { rows: 0, cols: 0 },
       gameMode: this.gameMode ?? '',
       thumbnail: '',
-      maxPlayers: 2,
+      maxPlayers: this.getMaxPlayers, // Always 6 players: server expects this for spawn validation
       grid: [],
       isVisible: true,
       createdAt: new Date(),
