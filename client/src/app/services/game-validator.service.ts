@@ -1,10 +1,13 @@
 import { Injectable } from '@angular/core';
 import { PlacedObject } from '@app/interfaces/game';
-import { TileItem, TileTexture } from '@common/enums';
+import { GameMode, TileItem, TileTexture } from '@common/enums';
 
 const NAME_MAX_LENGTH = 20;
 const DESC_MAX_LENGTH = 500;
 const TEXT_MIN_LENGTH = 1;
+const MAP_SMALL_SIZE = 10;
+const MAP_MEDIUM_SIZE = 15;
+const MAP_LARGE_SIZE = 20;
 
 export interface GameValidationResult {
     isValid: boolean;
@@ -29,35 +32,56 @@ export class GameValidatorService {
     validate(draft: GameDraftForValidation): GameValidationResult {
         const errors: string[] = [];
 
-        if (draft.existingNames && draft.existingNames.includes(draft.name) && (!draft.id || draft.name !== draft.id)) {
-            errors.push('The name of the game is not unique!');
-        }
-
+        errors.push(...this.validateRequiredFields(draft));
         errors.push(...this.validateTextLength(draft.name, draft.description));
-
-        errors.push(...this.validateDoorsPlacement(draft.grid));
-
-        errors.push(...this.validateReachability(draft.grid));
-
-        errors.push(...this.validateSurface(draft.grid));
-
-        errors.push(...this.validateSpawnPoints(draft.size, draft.placedObjects));
-
-        errors.push(...this.validateFlagPlaced(draft.mode, draft.placedObjects));
+        errors.push(...this.validateGameMode(draft.mode));
+        errors.push(...this.validateGridSize(draft.size, draft.grid));
+        errors.push(...this.validateTileTypes(draft.grid));
+        errors.push(...this.validatePlacedObjects(draft));
 
         return { isValid: errors.length === 0, errors };
+    }
+
+    private validateRequiredFields(draft: GameDraftForValidation): string[] {
+        const errors: string[] = [];
+
+        if (!draft.name || typeof draft.name !== 'string') {
+            errors.push('Game name is required!');
+        }
+
+        if (!draft.description || typeof draft.description !== 'string') {
+            errors.push('Game description is required!');
+        }
+
+        if (!draft.mode || typeof draft.mode !== 'string') {
+            errors.push('Game mode is required!');
+        }
+
+        if (!draft.grid || !Array.isArray(draft.grid)) {
+            errors.push('Game grid is required!');
+        }
+
+        if (!draft.size || typeof draft.size.rows !== 'number' || typeof draft.size.cols !== 'number') {
+            errors.push('Game size is invalid!');
+        }
+
+        if (!draft.placedObjects || !Array.isArray(draft.placedObjects)) {
+            errors.push('Placed objects are required!');
+        }
+
+        return errors;
     }
 
     private validateTextLength(name: string, description: string): string[] {
         const errors: string[] = [];
 
-        if ((name ?? '').length < TEXT_MIN_LENGTH) {
+        if ((name ?? '').trim().length < TEXT_MIN_LENGTH) {
             errors.push('The name field is empty!');
         } else if (name.length > NAME_MAX_LENGTH) {
             errors.push('The name field exceeds the maximum length!');
         }
 
-        if ((description ?? '').length < TEXT_MIN_LENGTH) {
+        if ((description ?? '').trim().length < TEXT_MIN_LENGTH) {
             errors.push('The description field is empty!');
         } else if (description.length > DESC_MAX_LENGTH) {
             errors.push('The description field exceeds the maximum length!');
@@ -66,146 +90,172 @@ export class GameValidatorService {
         return errors;
     }
 
-    private validateSurface(grid: TileTexture[][]): string[] {
-        const rows = grid.length;
-        const cols = grid[0]?.length ?? 0;
-        if (rows === 0 || cols === 0) return ['Grid is empty!'];
-
-        const terrain = new Set<TileTexture>([TileTexture.Floor, TileTexture.Ice, TileTexture.Water]);
-        let terrainCount = 0;
-        for (const row of grid) {
-            for (const tileType of row) {
-                if (terrain.has(tileType)) terrainCount++;
-            }
+    private validateGameMode(mode: string): string[] {
+        const validModes = Object.values(GameMode);
+        if (!validModes.includes(mode as GameMode)) {
+            return [`Game mode must be one of: ${validModes.join(', ')}`];
         }
-
-        if (terrainCount > (rows * cols) / 2) return [];
-        return ['Less than 50% of tiles are walkable!'];
+        return [];
     }
 
-    private validateSpawnPoints(size: { rows: number; cols: number }, placedObjects: PlacedObject[]): string[] {
-        const maxPlayers = this.getMaxPlayers(size);
-        const spawns = placedObjects.filter((o) => o.type === TileItem.Spawn).length;
-        if (spawns === maxPlayers) return [];
-        return ['Not all spawn points are placed!'];
-    }
-
-    private validateFlagPlaced(mode: string, placedObjects: PlacedObject[]): string[] {
-        if (mode !== 'ctf') return [];
-        const flags = placedObjects.filter((o) => o.type === TileItem.Flag).length;
-        if (flags > 0) return [];
-        return ["The Flag isn't placed!"];
-    }
-
-    private validateReachability(grid: TileTexture[][]): string[] {
-        const start = this.findFirstWalkableTile(grid);
-        if (!start) return ['There are no walkable tiles!'];
-
-        const totalWalkable = this.countWalkableTiles(grid);
-
-        const queue: Array<{ row: number; col: number }> = [start];
-        const visited = new Set<string>([`${start.row},${start.col}`]);
-
-        while (queue.length > 0) {
-            const current = queue.shift();
-            if (!current) break;
-
-            const neighbours = [
-                { row: current.row - 1, col: current.col },
-                { row: current.row + 1, col: current.col },
-                { row: current.row, col: current.col - 1 },
-                { row: current.row, col: current.col + 1 },
-            ];
-
-            for (const next of neighbours) {
-                const key = `${next.row},${next.col}`;
-                if (this.isTileValidForPath(grid, next.row, next.col, visited)) {
-                    visited.add(key);
-                    queue.push(next);
-                }
-            }
-        }
-
-        if (visited.size === totalWalkable) return [];
-        return ['Une ou plusieurs tuiles sont inaccessibles !'];
-    }
-
-    private findFirstWalkableTile(grid: TileTexture[][]): { row: number; col: number } | null {
-        for (let r = 0; r < grid.length; r++) {
-            for (let c = 0; c < grid[r].length; c++) {
-                if (grid[r][c] !== TileTexture.Wall) return { row: r, col: c };
-            }
-        }
-        return null;
-    }
-
-    private isTileValidForPath(grid: TileTexture[][], row: number, col: number, visited: Set<string>): boolean {
-        const isWithinBounds = row >= 0 && row < grid.length && col >= 0 && col < (grid[0]?.length ?? 0);
-        if (!isWithinBounds) return false;
-
-        const isNotWall = grid[row][col] !== TileTexture.Wall;
-        const isNotVisited = !visited.has(`${row},${col}`);
-        return isNotWall && isNotVisited;
-    }
-
-    private countWalkableTiles(grid: TileTexture[][]): number {
-        const walkable = new Set<TileTexture>([TileTexture.Floor, TileTexture.Water, TileTexture.Ice, TileTexture.DoorOpened, TileTexture.DoorClosed]);
-        let count = 0;
-        for (const row of grid) {
-            for (const tileType of row) {
-                if (walkable.has(tileType)) count++;
-            }
-        }
-        return count;
-    }
-
-    private validateDoorsPlacement(grid: TileTexture[][]): string[] {
+    private validateGridSize(size: { rows: number; cols: number }, grid: TileTexture[][]): string[] {
         const errors: string[] = [];
-        const rows = grid.length;
-        const cols = grid[0]?.length ?? 0;
-        if (rows === 0 || cols === 0) return errors;
 
-        const doors: Array<{ row: number; col: number }> = [];
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const type = grid[r][c];
-                if (type === TileTexture.DoorOpened || type === TileTexture.DoorClosed) {
-                    doors.push({ row: r, col: c });
-                }
-            }
+        const validSizes = [MAP_SMALL_SIZE, MAP_MEDIUM_SIZE, MAP_LARGE_SIZE];
+        if (!validSizes.includes(size.rows) || size.rows !== size.cols) {
+            errors.push(`Grid size must be square and one of: ${validSizes.join('x')}, ${validSizes.join('x')}, ${validSizes.join('x')}`);
         }
 
-        const obstacles = new Set<TileTexture>([TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed]);
+        if (size.rows <= 0 || size.cols <= 0) {
+            errors.push('Grid dimensions must be positive!');
+            return errors;
+        }
 
-        for (const { row, col } of doors) {
-            // Porte ne peut etre sur le bord de la map
-            const isInside = row > 0 && row < rows - 1 && col > 0 && col < cols - 1;
-            if (!isInside) {
-                errors.push(`Door at (${row}, ${col}) cannot be on the edge of the map!`);
-                continue;
-            }
+        if (!grid || grid.length === 0) {
+            errors.push('Grid is empty!');
+            return errors;
+        }
 
-            const up = grid[row - 1][col];
-            const down = grid[row + 1][col];
-            const left = grid[row][col - 1];
-            const right = grid[row][col + 1];
+        if (grid.length !== size.rows) {
+            errors.push('Grid rows do not match the specified size!');
+        }
 
-            const verticalSandwich = up === TileTexture.Wall && down === TileTexture.Wall && !obstacles.has(left) && !obstacles.has(right);
-            const horizontalSandwich = left === TileTexture.Wall && right === TileTexture.Wall && !obstacles.has(up) && !obstacles.has(down);
+        const colsValid = grid.every((row) => Array.isArray(row) && row.length === size.cols);
+        if (!colsValid) {
+            errors.push('Grid columns do not match the specified size!');
+        }
 
-            if (!verticalSandwich && !horizontalSandwich) {
-                errors.push(`Invalid door placement at the position (${row}, ${col})!`);
+        return errors;
+    }
+
+    private validateTileTypes(grid: TileTexture[][]): string[] {
+        const errors: string[] = [];
+        const validTileTypes = Object.values(TileTexture);
+
+        for (let row = 0; row < grid.length; row++) {
+            for (let col = 0; col < grid[row].length; col++) {
+                const tileType = grid[row][col];
+                if (!validTileTypes.includes(tileType)) {
+                    errors.push(`Invalid tile type at position (${row}, ${col}): ${tileType}`);
+                }
             }
         }
 
         return errors;
     }
 
-    private getMaxPlayers(size: { rows: number; cols: number }): number {
-        const maxDim = Math.max(size.rows, size.cols);
-        if (maxDim <= 10) return 2;
-        if (maxDim <= 15) return 4;
-        return 6;
+    private validatePlacedObjects(draft: GameDraftForValidation): string[] {
+        const errors: string[] = [];
+
+        if (!draft.placedObjects || !Array.isArray(draft.placedObjects)) {
+            return errors;
+        }
+
+        errors.push(...this.validatePlacedObjectTypes(draft.placedObjects));
+        errors.push(...this.validatePlacedObjectPositions(draft.placedObjects, draft.size));
+        errors.push(...this.validateRequiredObjectCounts(draft));
+
+        return errors;
+    }
+
+    private validatePlacedObjectTypes(placedObjects: PlacedObject[]): string[] {
+        const errors: string[] = [];
+        const validItemTypes = Object.values(TileItem);
+
+        for (const obj of placedObjects) {
+            if (!validItemTypes.includes(obj.type)) {
+                errors.push(`Invalid placed object type: ${obj.type}`);
+            }
+
+            if (!obj.position || typeof obj.position.x !== 'number' || typeof obj.position.y !== 'number') {
+                errors.push('Placed object has invalid position!');
+            }
+        }
+
+        return errors;
+    }
+
+    private validatePlacedObjectPositions(placedObjects: PlacedObject[], size: { rows: number; cols: number }): string[] {
+        const errors: string[] = [];
+
+        for (const obj of placedObjects) {
+            if (obj.position.x < 0 || obj.position.x >= size.cols || obj.position.y < 0 || obj.position.y >= size.rows) {
+                errors.push(`Placed object at position (${obj.position.y}, ${obj.position.x}) is out of bounds!`);
+            }
+        }
+
+        const positionSet = new Set<string>();
+        for (const obj of placedObjects) {
+            const key = `${obj.position.x},${obj.position.y}`;
+            if (positionSet.has(key)) {
+                errors.push(`Multiple objects placed at the same position (${obj.position.y}, ${obj.position.x})!`);
+            }
+            positionSet.add(key);
+        }
+
+        return errors;
+    }
+
+    private validateRequiredObjectCounts(draft: GameDraftForValidation): string[] {
+        const errors: string[] = [];
+
+        const requiredCounts = this.getRequiredObjectCounts(draft.size.rows, draft.mode);
+        const actualCounts = this.countPlacedObjects(draft.placedObjects);
+
+        for (const [type, required] of Object.entries(requiredCounts)) {
+            const actual = actualCounts[type as TileItem] || 0;
+            if (actual !== required) {
+                const itemName = this.getItemName(type as TileItem);
+                errors.push(`Expected ${required} ${itemName}(s) but found ${actual}!`);
+            }
+        }
+
+        return errors;
+    }
+
+    private getRequiredObjectCounts(mapSize: number, mode: string): Record<TileItem, number> {
+        const spawnCount = mapSize === MAP_SMALL_SIZE ? 2 : mapSize === MAP_MEDIUM_SIZE ? 4 : 6;
+        const sanctuaryCount = mapSize === MAP_SMALL_SIZE ? 1 : mapSize === MAP_MEDIUM_SIZE ? 2 : 4;
+        const flagCount = mode === GameMode.Ctf ? 1 : 0;
+
+        return {
+            [TileItem.Spawn]: spawnCount,
+            [TileItem.HealingSanctuary]: sanctuaryCount,
+            [TileItem.CombatSanctuary]: sanctuaryCount,
+            [TileItem.Flag]: flagCount,
+        };
+    }
+
+    private countPlacedObjects(placedObjects: PlacedObject[]): Record<TileItem, number> {
+        const counts: Record<TileItem, number> = {
+            [TileItem.Spawn]: 0,
+            [TileItem.Flag]: 0,
+            [TileItem.HealingSanctuary]: 0,
+            [TileItem.CombatSanctuary]: 0,
+        };
+
+        for (const obj of placedObjects) {
+            if (obj.type in counts) {
+                counts[obj.type]++;
+            }
+        }
+
+        return counts;
+    }
+
+    private getItemName(type: TileItem): string {
+        switch (type) {
+            case TileItem.Spawn:
+                return 'spawn point';
+            case TileItem.Flag:
+                return 'flag';
+            case TileItem.HealingSanctuary:
+                return 'healing sanctuary';
+            case TileItem.CombatSanctuary:
+                return 'combat sanctuary';
+            default:
+                return 'item';
+        }
     }
 }
 
