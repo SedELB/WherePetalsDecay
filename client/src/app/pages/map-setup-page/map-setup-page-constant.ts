@@ -29,13 +29,13 @@ export const OBJECT_PLACEMENT_TOOL: Record<TileItem, ObjectPlacementTool> = {
         type: TileItem.Spawn,
         label: 'Point de départ',
         description: 'Emplacement où un joueur apparaît au début de la partie.',
-        image: '/assets/icons/spawn.svg',
+        image: '/assets/icons/spawnPoint.svg',
     },
     [TileItem.Flag]: {
         type: TileItem.Flag,
         label: 'Drapeau',
         description: 'Emplacement où un joueur peut placer un drapeau.',
-        image: '/assets/icons/flag.svg',
+        image: '/assets/icons/blackflag.svg',
     },
     [TileItem.HealingSanctuary]: {
         type: TileItem.HealingSanctuary,
@@ -47,7 +47,7 @@ export const OBJECT_PLACEMENT_TOOL: Record<TileItem, ObjectPlacementTool> = {
         type: TileItem.CombatSanctuary,
         label: 'Relique de combat',
         description: 'Emplacement où un joueur peut placer une relic de combat.',
-        image: '/assets/icons/combatShrine.svg',
+        image: '/assets/icons/combatSanctuary.svg',
     },
 };
 

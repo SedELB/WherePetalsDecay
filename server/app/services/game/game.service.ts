@@ -24,67 +24,6 @@ export class GameService {
         }
     }
 
-    // GENERATED
-    generateValidGrid(rows: number, cols: number): TileDto[][] {
-        const grid: TileDto[][] = Array.from({ length: rows }, () =>
-            Array.from({ length: cols }, (): TileDto => ({ type: TileTexture.Floor, item: null })),
-        );
-
-        // Places random walls at 30% rate
-        // for (let i = 0; i < rows; i++) {
-        //     for (let j = 0; j < cols; j++) {
-        //         if (Math.random() < 0.3) grid[i][j].type = TileTexture.Wall;
-        //     }
-        // }
-
-        let spawnCount = 0;
-        while (spawnCount < MAX_PLAYERS) {
-            const r = Math.floor(Math.random() * rows);
-            const c = Math.floor(Math.random() * cols);
-            if (grid[r][c].type !== TileTexture.Wall && !grid[r][c].item) {
-                grid[r][c].item = TileItem.Spawn;
-                spawnCount++;
-            }
-        }
-
-        return grid;
-    }
-
-
-    generateInvalidGrid(rows: number, cols: number): TileDto[][] {
-        return Array.from({ length: rows }, () =>
-            Array.from({ length: cols }, (): TileDto => ({ type: TileTexture.Wall, item: null })),  // Tout en murs = invalide
-        );
-    }
-
-    // GENERATED
-    printGrid(game: Game): void {
-        const symbols = {
-            [TileTexture.Floor]: '.',
-            [TileTexture.Wall]: '#',
-            [TileTexture.DoorOpened]: 'O',
-            [TileTexture.DoorClosed]: 'X',
-            // Ajoutez d'autres types si nécessaire
-        };
-
-        const itemSymbols = {
-            [TileItem.Spawn]: 'S',  // Symbole pour spawn
-            // Ajoutez d'autres items si nécessaire
-        };
-
-        this.logger.log(`Grille pour le jeu "${game.name}":`);
-        game.grid.forEach(row => {
-            const rowString = row.map(tile => {
-                const symbol = symbols[tile.type] || '?';  // Symbole pour le type
-                const itemSymbol = tile.item ? itemSymbols[tile.item] || `(${tile.item})` : '';  // Symbole pour l'item, ou (item) si inconnu
-                return itemSymbol || symbol;  // Priorité à l'item si présent
-            }).join(' ');
-            this.logger.log(rowString);
-        });
-        this.logger.log('');
-    }
-
-
     async populateDB(): Promise<void> {
         const validGame1: CreateGameDto = {
             name: 'Valid Game 1',
@@ -93,7 +32,7 @@ export class GameService {
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MAX_PLAYERS,
-            grid: this.generateValidGrid(TEN, TEN),
+            grid: this.gameValidatorService.generateValidGrid(TEN, TEN),
             isVisible: true,
         };
 
@@ -104,7 +43,7 @@ export class GameService {
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MIN_PLAYERS,
-            grid: this.generateValidGrid(TEN, TEN),
+            grid: this.gameValidatorService.generateValidGrid(TEN, TEN),
             isVisible: false,
         };
 
@@ -115,22 +54,26 @@ export class GameService {
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MIN_PLAYERS,
-            grid: this.generateInvalidGrid(TEN, TEN),
+            grid: this.gameValidatorService.generateInvalidGrid(TEN, TEN),
             isVisible: true,
         };
-
-        this.printGrid(validGame1 as Game);
-        this.printGrid(validGame2 as Game);
-        this.printGrid(invalidGame3 as Game);
 
         const defaultGames: CreateGameDto[] = [validGame1, validGame2, invalidGame3];
         this.logger.log('THIS ADDS DATA TO THE DATABASE, DO NOT USE OTHERWISE');
         await this.gameModel.insertMany(defaultGames);
     }
 
+    async isGameNameUnique(gameName: string, gameId?: string): Promise<boolean> {
+        const nameExists = await this.gameModel.findOne({ name: gameName }).exec();
+        // if name is unique && if name exists but we're updating a game
+        if (!nameExists || (gameId && nameExists._id.toString() === gameId)) return true;
+
+        throw new Error('The name of the game is not unique!');
+    }
+
     async getAllGames(): Promise<Game[]> {
         const allGames = await this.gameModel.find().exec();
-        if (!allGames) {
+        if (allGames.length === 0) {
             this.logger.log('No games found in the database');
             throw new Error('No games found in the database');
         }
@@ -147,8 +90,8 @@ export class GameService {
     }
 
     async getAllVisibleGames(): Promise<Game[]> {
-        const visibleGames = await this.gameModel.find({ isVisible: true }).exec();
-        if (!visibleGames) {
+        const visibleGames = await this.gameModel.find({isVisible: true}).exec();
+        if (visibleGames.length === 0) {
             this.logger.log('No visible games found in the database');
             throw new Error('No visible games found in the database');
         }
@@ -157,9 +100,10 @@ export class GameService {
 
     async addGame(game: CreateGameDto): Promise<Game> {
         try {
+            await this.isGameNameUnique(game.name);
             await this.gameValidatorService.isGameValid(game);
-            const createdGame = await this.gameModel.create(game);
-            return createdGame;
+            game.isVisible = false;         // Default value should be false when creating game
+            await this.gameModel.create(game);
         } catch (error) {
             this.logger.log(`Failed to create game: ${error.message}`);
             throw new Error(`Failed to create game: ${error.message}`);
@@ -168,15 +112,19 @@ export class GameService {
 
     async modifyGame(id: string, game: UpdateGameDto): Promise<Game> {
         try {
-            const existingGame = await this.gameModel.findById(id).lean(); // TODO: Has _id: can cause crash when calling isGameValid
+            const existingGame = await this.gameModel.findById(id).lean();
             if (!existingGame) {
                 throw new Error('No game found with this id');
             }
-            const fullGameData = { ...existingGame, ...game }; // new properies from game replace the olds
 
-            await this.gameValidatorService.isGameValid(fullGameData, id);
-            const updatedGame = await this.gameModel.findByIdAndUpdate(id, game, { new: true }).exec();
-            return updatedGame;
+            if (game.name) {
+                await this.isGameNameUnique(game.name, id);
+            }
+
+            const fullGameData = {...existingGame, ...game};    // new properies from game replace the olds
+            this.gameValidatorService.isGameValid(fullGameData);
+            fullGameData.isVisible = false;                     // Default value of a modified game
+            await this.gameModel.findByIdAndUpdate(id, fullGameData, {new: true }).exec();
         } catch (error) {
             this.logger.error(`Failed to update game: ${error.message}`);
             throw new Error(`Failed to update game: ${error.message}`);
@@ -199,8 +147,8 @@ export class GameService {
 
     async updateVisibility(id: string, newVisibility: boolean): Promise<void> {
         try {
-            const updatedGame = await this.gameModel.findByIdAndUpdate(id, {isVisible: newVisibility }, { new: true, timestamps: false }).exec();
-            if (!updatedGame) {
+            const result = await this.gameModel.findByIdAndUpdate(id, {isVisible: newVisibility }, { new: true, timestamps: false }).exec();
+            if (!result) {
                 throw new Error('No game found with this id');
             }
             this.logger.log(`Visibility updated to ${newVisibility} for game ${id}`);
