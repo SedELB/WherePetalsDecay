@@ -14,7 +14,7 @@ export class CreateGamePageComponent {
   private readonly router = inject(Router);
 
   gameModeEnum = GameMode;
-  gameMode: GameMode = GameMode.Classic;
+  gameMode: GameMode | null = null;
   mapSize: string | null = null;
 
   sizes: Record<string, { rows: number; cols: number }> = {
