@@ -130,7 +130,7 @@ describe('MapSetupFacadeService', () => {
         expect(router.navigate).toHaveBeenCalledWith(['/admin']);
     });
 
-    it('updates an existing game (no thumbnail capture)', async () => {
+    it('updates an existing game (new thumbnail capture)', async () => {
         const game = gameFactory(SIZE_SMALL, SIZE_SMALL, GameMode.Classic);
         const validationPayload = {
             name: game.name,
@@ -151,7 +151,7 @@ describe('MapSetupFacadeService', () => {
 
         await service.saveGame(game, 'edit');
 
-        expect(captureSpy).not.toHaveBeenCalled();
+        expect(captureSpy).toHaveBeenCalled();
         expect(communication.getAllGames).toHaveBeenCalled();
         expect(communication.modifyGame).toHaveBeenCalledWith(game);
         expect(alertSpy).toHaveBeenCalledWith('Game saved successfully!');
@@ -187,7 +187,7 @@ describe('MapSetupFacadeService', () => {
 
         await service.saveGame(game, 'edit');
 
-        expect(alertSpy).toHaveBeenCalledWith('Jeu invalide:\n- bad');
+        expect(alertSpy).toHaveBeenCalledWith('Save failed: unable to generate map thumbnail.');
         expect(communication.modifyGame).not.toHaveBeenCalled();
     });
 
@@ -211,7 +211,7 @@ describe('MapSetupFacadeService', () => {
 
         await service.saveGame(game, 'edit');
 
-        expect(alertSpy).toHaveBeenCalledWith('Error saving game: bad');
+        expect(alertSpy).toHaveBeenCalledWith('Save failed: unable to generate map thumbnail.');
     });
 
     it('captures a thumbnail when the DOM element exists', async () => {

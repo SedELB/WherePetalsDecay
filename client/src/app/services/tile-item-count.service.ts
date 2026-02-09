@@ -46,8 +46,6 @@ export class TileItemCountService {
   createRequiredCounts(game: Game): TileItemCounts {
     return {
       spawnCount: this.getRequiredSpawnCount(game),
-      healingSanctuaryCount: this.getRequiredHealingSanctuaryCount(game),
-      combatSanctuaryCount: this.getRequiredCombatSanctuaryCount(game),
       flagCount: this.getRequiredFlagCount(game),
     };
   }
@@ -66,8 +64,6 @@ export class TileItemCountService {
 
   adjustCountsForExistingItems(game: Game, counts: TileItemCounts): void {
     counts.spawnCount -= this.countTileItem(game, TileItem.Spawn);
-    counts.healingSanctuaryCount -= this.countTileItem(game, TileItem.HealingSanctuary);
-    counts.combatSanctuaryCount -= this.countTileItem(game, TileItem.CombatSanctuary);
     counts.flagCount -= this.countTileItem(game, TileItem.Flag);
   }
 
@@ -107,10 +103,10 @@ export class TileItemCountService {
     switch (item) {
       case TileItem.Spawn:
         return counts.spawnCount > 0;
-      case TileItem.HealingSanctuary:
-        return counts.healingSanctuaryCount > 0;
-      case TileItem.CombatSanctuary:
-        return counts.combatSanctuaryCount > 0;
+      // case TileItem.HealingSanctuary:
+      //   return counts.healingSanctuaryCount > 0;
+      // case TileItem.CombatSanctuary:
+      //   return counts.combatSanctuaryCount > 0;
       case TileItem.Flag:
         return counts.flagCount > 0;
       default:
@@ -123,12 +119,12 @@ export class TileItemCountService {
       case TileItem.Spawn:
         counts.spawnCount--;
         break;
-      case TileItem.HealingSanctuary:
-        counts.healingSanctuaryCount--;
-        break;
-      case TileItem.CombatSanctuary:
-        counts.combatSanctuaryCount--;
-        break;
+      // case TileItem.HealingSanctuary:
+      //   counts.healingSanctuaryCount--;
+      //   break;
+      // case TileItem.CombatSanctuary:
+      //   counts.combatSanctuaryCount--;
+      //   break;
       case TileItem.Flag:
         counts.flagCount--;
         break;
@@ -140,12 +136,12 @@ export class TileItemCountService {
       case TileItem.Spawn:
         counts.spawnCount++;
         break;
-      case TileItem.HealingSanctuary:
-        counts.healingSanctuaryCount++;
-        break;
-      case TileItem.CombatSanctuary:
-        counts.combatSanctuaryCount++;
-        break;
+      // case TileItem.HealingSanctuary:
+      //   counts.healingSanctuaryCount++;
+      //   break;
+      // case TileItem.CombatSanctuary:
+      //   counts.combatSanctuaryCount++;
+      //   break;
       case TileItem.Flag:
         counts.flagCount++;
         break;

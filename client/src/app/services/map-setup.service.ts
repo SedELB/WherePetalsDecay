@@ -224,7 +224,7 @@ export class MapSetupService {
         return { isPaintingTiles, isErasingTiles: false };
       }
 
-      // When right-dragging (erasing), handle deletion with shift key for items
+      // When right-dragging (erasing), handle deletion
       try {
         if (event.shiftKey) {
           // With shift, delete items if present
@@ -240,9 +240,15 @@ export class MapSetupService {
             });
           }
         } else {
-          // Without shift, always delete texture regardless of what is selected
-          gameTile = game.grid[rowIndex][colIndex];
-          gameTile.type = TileTexture.Floor;
+          // Without shift, delete texture by calling deleteTile
+          this.deleteTile({
+            game,
+            rowIndex,
+            colIndex,
+            tileAttribute: TileTexture.Floor,
+            event,
+            counts,
+          });
         }
       } catch {
         throw new Error(`Error while handeling cell mouse enter`);

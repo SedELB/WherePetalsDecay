@@ -41,8 +41,6 @@ export class MapSetupPageComponent implements OnInit {
 
   private itemCounts: TileItemCounts = {
     spawnCount: 0,
-    healingSanctuaryCount: 0,
-    combatSanctuaryCount: 0,
     flagCount: 0,
   };
 
@@ -76,7 +74,7 @@ export class MapSetupPageComponent implements OnInit {
   getPlacedFlagCount(): number {
     return this.tileItemCountService.getPlacedFlagCount(this.game);
   }
-  
+
   isObjectTypeComplete(type: TileItem): boolean {
     return this.tileItemCountService.isObjectTypeComplete(this.game, type);
   }

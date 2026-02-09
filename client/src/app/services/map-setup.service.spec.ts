@@ -217,7 +217,11 @@ describe('MapSetupService', () => {
 
   it('mouse enter keeps painting/erasing while dragging', () => {
     const game = gameFactory(1, 1);
-    const counts = { spawnCount: 1, healingSanctuaryCount: 1, combatSanctuaryCount: 1, flagCount: 1 };
+    const counts = { spawnCount: 1, flagCount: 1 };
+
+    // Set up grid with an item and texture for deletion tests
+    game.grid[0][0].item = TileItem.Spawn;
+    game.grid[0][0].type = TileTexture.Water;
 
     const deleteSpy = spyOn(service, 'deleteTile').and.callThrough();
     const removeSpy = spyOn(service, 'removeBlockingItemIfNeeded').and.callThrough();
