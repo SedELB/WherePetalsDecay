@@ -1,11 +1,56 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { ButtonComponent } from '@app/components/button/button.component';
+import { Game } from '@app/interfaces/game';
+import { GameMode } from '@common/enums';
 
 @Component({
   selector: 'app-create-game-page',
-  imports: [],
+  imports: [ButtonComponent],
   templateUrl: './create-game-page.component.html',
   styleUrl: './create-game-page.component.scss',
 })
 export class CreateGamePageComponent {
+  private readonly router = inject(Router);
+
+  gameModeEnum = GameMode;
+  gameMode: GameMode | null = null;
+  mapSize: string | null = null;
+
+  sizes: Record<string, { rows: number; cols: number }> = {
+    small: { rows: 10, cols: 10 },
+    medium: { rows: 15, cols: 15 },
+    large: { rows: 20, cols: 20 },
+  };
+
+  gameModeSelected(gameMode: GameMode) {
+    this.gameMode = gameMode;
+  }
+
+  mapSizeSelected(mapSize: string) {
+    this.mapSize = mapSize;
+  }
+
+  get canCreateGame() {
+    return !!this.gameMode && !!this.mapSize;
+  }
+
+  createAndNavigateToGameEditor(): void {
+    const game: Game = {
+      _id: '',
+      name: '',
+      description: '',
+      size: this.sizes[this.mapSize ?? ''] ?? { rows: 0, cols: 0 },
+      gameMode: this.gameMode ?? '',
+      thumbnail: '',
+      maxPlayers: 2,
+      grid: [],
+      isVisible: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    this.router.navigate(['/editor'], { state: { game, mode: 'create' } });
+  }
 
 }
