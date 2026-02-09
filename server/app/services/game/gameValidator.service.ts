@@ -141,8 +141,8 @@ export class GameValidatorService {
             col > 0 &&
             col < cols - 1;
         
-        if (isInside) return true;
-        return false;
+        if (isInside) return false;
+        return true;
     }
 
     // For type and item
