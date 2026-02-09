@@ -52,24 +52,28 @@
     <aside class="aside-panel">
       <div class="tools-panel" aria-label="Outils applicateurs de tuiles">
         <h3 class="panel-title">Tuiles</h3>
+        
         @for (tool of tileTools; track tool.type) {
-          <button
-            type="button"
-            class="tool"
-            [class.tool--active]="activeTileTexture === tool.type"
-            [title]="tool.description"
-            (click)="selectTileTexture(tool.type)"
-          >
-            <span class="tool__label">{{ tool.label }}</span>
-            <span class="tool__desc" role="tooltip">{{ tool.description }}</span>
-          </button>
+          @if (tool.type !== tileTextureEnum.DoorClosed){ // Has to be removed for the sprint 2
+            <button
+              type="button"
+              class="tool"
+              [class.tool--active]="activeTileTexture === tool.type"
+              [title]="tool.description"
+              (click)="selectTileTexture(tool.type)"
+            >
+              <span class="tool__label">{{ tool.label }}</span>
+              <span class="tool__desc" role="tooltip">{{ tool.description }}</span>
+            </button>
+          }
         }
       </div>
 
       <div class="object-tools-panel" aria-label="Outils de placement d'objets">
         <h3 class="panel-title">Objets</h3>
         @for (objTool of objectPlacementToolsArray; track objTool.type) {
-          <button
+          @if (![tileItemEnum.CombatSanctuary, tileItemEnum.HealingSanctuary, tileItemEnum.CombatSanctuary].includes(objTool.type)){ // Has to be removed for the sprint 2
+            <button
             type="button"
             class="object-tool"
             [class.object-tool--active]="activeTileItem === objTool.type"
@@ -95,6 +99,7 @@
               <span class="object-tool__count">{{ getPlacedCombatSanctuaryCount() }} / {{ getRequiredCombatSanctuaryCount() }}</span>
             }
           </button>
+          }
         }
       </div>
     </aside>
