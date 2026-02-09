@@ -24,3 +24,9 @@ export enum GridSizes {
     Medium = 15,
     Large = 20,
 };
+
+export enum MaxPlayers {
+    Small = 2,
+    Medium = 4,
+    Large = 6,
+};
