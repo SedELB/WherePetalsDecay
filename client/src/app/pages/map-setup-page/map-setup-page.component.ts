@@ -113,17 +113,6 @@ export class MapSetupPageComponent implements OnInit {
     this.activeTileItem = selection.activeTileItem;
   }
 
-  onCellClick(rowIndex: number, colIndex: number): void {
-    this.mapSetupService.applyActiveSelection({
-      game: this.game,
-      rowIndex,
-      colIndex,
-      activeTileTexture: this.activeTileTexture,
-      activeTileItem: this.activeTileItem,
-      counts: this.itemCounts,
-    });
-  }
-
   onCellMouseDown(rowIndex: number, colIndex: number, event: MouseEvent): void {
     const interactionState = this.mapSetupService.handleCellMouseDown({
       game: this.game,
