@@ -4,3 +4,8 @@ $green-button: #78BC75;
 $rose-button: #95698D;
 $frame-color: #242153;
 $transparent-background: rgba(0, 0, 0, 0.41);
+
+.list-container {
+    scrollbar-width: auto;
+    scrollbar-color: $frame-color $transparent-background;
+}
