@@ -27,8 +27,6 @@ const baseObjects = (mode: GameMode): PlacedObject[] => {
     const objects: PlacedObject[] = [
         { type: TileItem.Spawn, position: { x: 0, y: 0 } },
         { type: TileItem.Spawn, position: { x: 1, y: 0 } },
-        { type: TileItem.HealingSanctuary, position: { x: 0, y: 1 } },
-        { type: TileItem.CombatSanctuary, position: { x: 1, y: 1 } },
     ];
 
     if (mode === GameMode.Ctf) {
@@ -164,8 +162,6 @@ describe('GameValidatorService', () => {
         const errors = service.validate(ctfDraft).errors;
         expect(errors.some((e) => e.includes('Expected'))).toBeTrue();
         expect(errors.some((e) => e.includes('spawn point'))).toBeTrue();
-        expect(errors.some((e) => e.includes('healing sanctuary'))).toBeTrue();
-        expect(errors.some((e) => e.includes('combat sanctuary'))).toBeTrue();
         expect(errors.some((e) => e.includes('flag'))).toBeTrue();
 
         const small = internal.getRequiredObjectCounts(SIZE_SMALL, GameMode.Classic);

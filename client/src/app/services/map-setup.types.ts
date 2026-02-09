@@ -3,8 +3,6 @@ import { TileItem, TileTexture } from '@common/enums';
 
 export interface TileItemCounts {
   spawnCount: number;
-  healingSanctuaryCount: number;
-  combatSanctuaryCount: number;
   flagCount: number;
 }
 

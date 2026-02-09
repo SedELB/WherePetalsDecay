@@ -153,9 +153,6 @@ describe('MapSetupPageComponent', () => {
     });
 
     it('handles grid interactions', () => {
-        component.onCellClick(1, 1);
-        expect(service.applyActiveSelection).toHaveBeenCalled();
-
         component.onCellMouseDown(1, 1, {} as MouseEvent);
         expect(service.handleCellMouseDown).toHaveBeenCalled();
         expect((component as unknown as { isPaintingTiles: boolean }).isPaintingTiles).toBeTrue();

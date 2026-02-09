@@ -114,24 +114,16 @@ describe('TileItemCountService', () => {
     const counts = { spawnCount: 1, healingSanctuaryCount: 0, combatSanctuaryCount: 1, flagCount: 0 };
 
     expect(service.verifyEnoughTileItem(counts, TileItem.Spawn)).toBeTrue();
-    expect(service.verifyEnoughTileItem(counts, TileItem.HealingSanctuary)).toBeFalse();
-    expect(service.verifyEnoughTileItem(counts, TileItem.CombatSanctuary)).toBeTrue();
     expect(service.verifyEnoughTileItem(counts, TileItem.Flag)).toBeFalse();
     expect(service.verifyEnoughTileItem(counts, 'invalid' as TileItem)).toBeFalse();
 
     service.decreaseTileItemCount(counts, TileItem.Spawn);
-    service.decreaseTileItemCount(counts, TileItem.CombatSanctuary);
-    service.decreaseTileItemCount(counts, TileItem.HealingSanctuary);
     service.decreaseTileItemCount(counts, TileItem.Flag);
 
-    service.increaseTileItemCount(counts, TileItem.HealingSanctuary);
     service.increaseTileItemCount(counts, TileItem.Flag);
     service.increaseTileItemCount(counts, TileItem.Spawn);
-    service.increaseTileItemCount(counts, TileItem.CombatSanctuary);
 
     expect(counts.spawnCount).toBe(1);
-    expect(counts.combatSanctuaryCount).toBe(1);
-    expect(counts.healingSanctuaryCount).toBe(0);
     expect(counts.flagCount).toBe(0);
   });
 });
