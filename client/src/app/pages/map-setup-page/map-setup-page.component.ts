@@ -61,14 +61,6 @@ export class MapSetupPageComponent implements OnInit {
     return this.tileItemCountService.getRequiredFlagCount(this.game);
   }
 
-  // getRequiredHealingSanctuaryCount(): number {
-  //   return this.tileItemCountService.getRequiredHealingSanctuaryCount(this.game);
-  // }
-
-  // getRequiredCombatSanctuaryCount(): number {
-  //   return this.tileItemCountService.getRequiredCombatSanctuaryCount(this.game);
-  // }
-
   countTileTexture(tileTexture: TileTexture): number {
     return this.tileItemCountService.countTileTexture(this.game, tileTexture);
   }
@@ -84,15 +76,7 @@ export class MapSetupPageComponent implements OnInit {
   getPlacedFlagCount(): number {
     return this.tileItemCountService.getPlacedFlagCount(this.game);
   }
-
-  // getPlacedHealingSanctuaryCount(): number {
-  //   return this.tileItemCountService.getPlacedHealingSanctuaryCount(this.game);
-  // }
-
-  // getPlacedCombatSanctuaryCount(): number {
-  //   return this.tileItemCountService.getPlacedCombatSanctuaryCount(this.game);
-  // }
-
+  
   isObjectTypeComplete(type: TileItem): boolean {
     return this.tileItemCountService.isObjectTypeComplete(this.game, type);
   }
