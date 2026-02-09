@@ -29,7 +29,7 @@ export class GameController {
             const allGames = await this.gameService.getAllGames();
             response.status(HttpStatus.OK).json(allGames);
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).send(error.message);
+            response.status(HttpStatus.NOT_FOUND).json(error.message);
         }
     }
 
@@ -47,7 +47,7 @@ export class GameController {
             const allVisibleGames = await this.gameService.getAllVisibleGames();
             response.status(HttpStatus.OK).json(allVisibleGames);
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).send(error.message);
+            response.status(HttpStatus.NOT_FOUND).json(error.message);
         }
     }
 
@@ -62,9 +62,9 @@ export class GameController {
         try {
             const createdGame = await this.gameService.addGame(gameDto);
             this.gameGateway.notifyGameCreated(createdGame);
-            response.status(HttpStatus.CREATED).send();
+            response.status(HttpStatus.CREATED).json();
         } catch (error) {
-            response.status(HttpStatus.BAD_REQUEST).send(error.message);
+            response.status(HttpStatus.BAD_REQUEST).json(error.message);
         }
     }
 
@@ -80,10 +80,10 @@ export class GameController {
         try {
             const updatedGame = await this.gameService.modifyGame(id, gameDto);
             this.gameGateway.notifyGameUpdated(updatedGame);
-            response.status(HttpStatus.OK).send('Game updated successfully!');
+            response.status(HttpStatus.OK).json('Game updated successfully!');
         } catch (error) {
             const status = error.message.includes('No game found with this id') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            response.status(status).send(error.message);
+            response.status(status).json(error.message);
         }
     }
 
@@ -98,9 +98,9 @@ export class GameController {
         try {
             await this.gameService.updateVisibility(id, isVisible);
             this.gameGateway.notifyGameVisibilityChanged(id, isVisible);
-            response.status(HttpStatus.OK).send('Game updated successfully!');
+            response.status(HttpStatus.OK).json('Game updated successfully!');
         } catch (error) {
-            response.status(HttpStatus.BAD_REQUEST).send(error.message);
+            response.status(HttpStatus.BAD_REQUEST).json(error.message);
         }
     }
 
@@ -116,9 +116,9 @@ export class GameController {
         try {
             await this.gameService.deleteGame(id);
             this.gameGateway.notifyGameDeleted(id);
-            response.status(HttpStatus.NO_CONTENT).send();
+            response.status(HttpStatus.NO_CONTENT).json();
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).send(error.message);
+            response.status(HttpStatus.NOT_FOUND).json(error.message);
         }
     }
 }

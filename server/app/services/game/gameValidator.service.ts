@@ -1,20 +1,17 @@
-import { TEXT_MIN_LENGTH, NAME_MAX_LENGTH, DESC_MAX_LENGTH } from '@app/utils/game.constants';
-import { TileTexture } from '@app/utils/game.enum';
+import { TEXT_MIN_LENGTH, NAME_MAX_LENGTH, DESC_MAX_LENGTH, MAX_PLAYERS } from '@app/utils/game.constants';
+import { TileTexture, TileItem } from '@app/utils/game.enum';
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
-import { Game, GameDocument, Tile } from '@app/model/schema/game.schema';
+import { Tile } from '@app/model/schema/game.schema';
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
 
 @Injectable()
 export class GameValidatorService {
-    constructor(@InjectModel(Game.name) private gameModel: Model<GameDocument>) {}
 
     /*
     @param property: string representing the property to count (e.g., 'type' or 'item')
     ex. returns ex. {ice: 3, floor: 40, water: 21} ** only the types/items present in the grid + {item: null} is ignored**
     */
-    private countByProperty(game: CreateGameDto, property: string): Record<string, number> {
+    countByProperty(game: CreateGameDto, property: string): Record<string, number> {
         return game.grid.flat().reduce((acc, tile) => {
             const value = tile[property]; // ex. value = tile['type'] or tile['item'] = 'ice', 'floor', etc.
             if (value) {
@@ -24,12 +21,35 @@ export class GameValidatorService {
         }, {});
     }
 
-    async isGameNameUnique(gameName: string, gameId?: string): Promise<boolean> {
-        const nameExists = await this.gameModel.findOne({ name: gameName }).exec();
-        // if name is unique && if name exists but we're updating a game
-        if (!nameExists || (gameId && nameExists._id.toString() === gameId)) return true;
+    generateInvalidGrid(rows: number, cols: number): Tile[][] {
+        return Array.from({ length: rows }, () =>
+            Array.from({ length: cols }, (): Tile => ({ type: TileTexture.Wall, item: null })),  // Tout en murs = invalide
+        );
+    }
 
-        throw new Error('The name of the game is not unique!');
+    generateValidGrid(rows: number, cols: number): Tile[][] {
+        const grid: Tile[][] = Array.from({ length: rows }, () =>
+            Array.from({ length: cols }, (): Tile => ({ type: TileTexture.Floor, item: null })),
+        );
+
+        // Places random walls at 30% rate
+        // for (let i = 0; i < rows; i++) {
+        //     for (let j = 0; j < cols; j++) {
+        //         if (Math.random() < 0.3) grid[i][j].type = TileTexture.Wall;
+        //     }
+        // }
+
+        let spawnCount = 0;
+        while (spawnCount < MAX_PLAYERS) {
+            const r = Math.floor(Math.random() * rows);
+            const c = Math.floor(Math.random() * cols);
+            if (grid[r][c].type !== TileTexture.Wall && !grid[r][c].item) {
+                grid[r][c].item = TileItem.Spawn;
+                spawnCount++;
+            }
+        }
+
+        return grid;
     }
 
     isTextLengthValid(game: CreateGameDto): boolean {
@@ -47,7 +67,7 @@ export class GameValidatorService {
             errors.push('The description field exceeds the maximum length!');
         }
         if (errors.length > 0) {
-            throw errors;  // TODO: has to be validate
+            throw new Error(JSON.stringify(errors));  // TODO: has to be validate
         }
         return true;
     }
@@ -72,7 +92,7 @@ export class GameValidatorService {
     }   
 
     // For areThereUnreachableTiles()
-    private findFirstWalkableTile(grid: Tile[][]): { row: number; col: number } | null {
+    findFirstWalkableTile(grid: Tile[][]): { row: number; col: number } | null {
         for (let r = 0; r < grid.length; r++) {
             for (let c = 0; c < grid[r].length; c++) {
                 if (grid[r][c].type !== TileTexture.Wall) return { row: r, col: c };
@@ -82,7 +102,7 @@ export class GameValidatorService {
     }   
     
     // For areThereUnreachableTiles()
-    private isTileValidForPath(game: CreateGameDto, row: number, col: number, visited: Set<string>): boolean {
+    isTileValidForPath(game: CreateGameDto, row: number, col: number, visited: Set<string>): boolean {
         const isWithinBounds = row >= 0 && row < game.grid.length && col >= 0 && col < game.grid[0].length;
         if (!isWithinBounds) return false;
 
@@ -127,12 +147,12 @@ export class GameValidatorService {
         if (visited.size === totalWalkable) {
             return true;
         } else {
-            throw new Error('Une ou plusieurs tuiles sont inaccessibles !');
+            throw new Error('One or more tiles are unreachable!');
         }
     }
 
     // For isDoorsPlacementValid()
-    private isDoorOnGridBorder(grid: Tile[][], row: number, col: number): boolean {
+    isDoorOnGridBorder(grid: Tile[][], row: number, col: number): boolean {
         const rows = grid.length;
         const cols = grid[0].length;
         const isInside =
@@ -146,7 +166,7 @@ export class GameValidatorService {
     }
 
     // For type and item
-    private getObjectsPositions(game: CreateGameDto, wantedObject: string): { row: number; col: number }[] {
+    getObjectsPositions(game: CreateGameDto, wantedObject: string): { row: number; col: number }[] {
         if (game.grid.length === 0) return [];
 
         const objectPositions: { row: number; col: number }[] = [];
@@ -171,7 +191,7 @@ export class GameValidatorService {
 
         for (const { row, col } of allDoorsPos) {
             // Grid border is excluded
-            if (this.isDoorOnGridBorder(game.grid, row, col)) {
+            if (!this.isDoorOnGridBorder(game.grid, row, col)) {
                 errors.push(`Door at (${row}, ${col}) cannot be on the edge of the map!`);
                 continue;
             }
@@ -188,10 +208,10 @@ export class GameValidatorService {
                                     (!obstacles.includes(up) && !obstacles.includes(down));
 
             if (!verticalSandwich && !horizontalSandwich) {
-                errors.push(`Invalid door placement at the position (${row}, ${col})!`);
+                errors.push(`Invalid door placement at the position (${row}, ${col})! (missing walls)`);
             }
         }
-        if (errors.length > 0) throw errors;
+        if (errors.length > 0) throw new Error(JSON.stringify(errors));
         return true;
     }
 
@@ -203,24 +223,24 @@ export class GameValidatorService {
             }
             return true; // has been placed
         }
-        return true; // Case : gameMode = classic
+        return false; // Case : gameMode = classic
     }
 
-    async isGameValid(game: CreateGameDto, id?: string): Promise<boolean> {
+    isGameValid(game: CreateGameDto): boolean {
         let errors: string[] = [];
 
         const validations = [
-            async () => await this.isGameNameUnique(game.name, id),
             () => this.isTextLengthValid(game),
             () => this.areThereUnreachableTiles(game),
             () => this.isGameSurfaceValid(game),
             () => this.areAllSpawnPointsPlaced(game),
+            () => this.isDoorsPlacementValid(game),
             () => this.isFlagPlaced(game),
         ];
         
         for (const validation of validations) {
             try {
-                await validation();
+                validation();
             } catch (error) {
                 if (error instanceof Error) {
                     errors.push(error.message);
