@@ -55,7 +55,9 @@ export class CommunicationService {
             grid: game.grid,
             isVisible: game.isVisible,
         };
-        return this.http.patch<void>(`${this.baseUrl}/game/modifyGame/${game._id}`, dto);
+        return this.http.patch<void>(`${this.baseUrl}/game/modifyGame/${game._id}`, dto, {
+            responseType: 'text' as 'json',
+        });
     }
 
 }

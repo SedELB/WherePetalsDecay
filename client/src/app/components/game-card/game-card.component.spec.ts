@@ -37,7 +37,7 @@ describe('GameCardComponent', () => {
     expect(listItems[0].textContent).toContain(mockGame.name);
     expect(listItems[1].textContent).toContain(mockGame.size.rows);
     expect(listItems[2].textContent).toContain(mockGame.gameMode);
-    expect(listItems[3].textContent).toContain(mockGame.updatedAt);
+    expect(listItems[3].textContent).toContain(component.displayTime());
   });
 
   it('should display image correctly', () => {

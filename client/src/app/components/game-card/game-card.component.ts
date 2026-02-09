@@ -23,4 +23,18 @@ export class GameCardComponent {
 
   @Output() removeParent = new EventEmitter<void>();
   show = false;
+
+  public displayTime(): string {
+    const rawDate = this.game.updatedAt;
+    const date = rawDate instanceof Date ? rawDate : new Date(rawDate);
+
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    return date.toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  }
 }
