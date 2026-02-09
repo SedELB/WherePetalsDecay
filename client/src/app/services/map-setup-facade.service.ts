@@ -43,7 +43,9 @@ export class MapSetupFacadeService {
     this.router.navigate(['/admin']);
   }
 
-  async saveGame(game: Game, mode: 'create' | 'edit'): Promise<void> {
+  async saveGame(game: Game, initialMode: 'create' | 'edit'): Promise<void> {
+    let mode = initialMode;
+
     if (mode === 'create') {
       try {
         const thumbnail = await this.captureThumbnail(game.name);
@@ -61,21 +63,42 @@ export class MapSetupFacadeService {
       return;
     }
 
-    const saveOperation = mode === 'create'
-      ? this.communicationService.createGame(game)
-      : this.communicationService.modifyGame(game);
+    if (mode === 'edit') {
+      this.communicationService.getAllGames().subscribe((allGames) => {
+        const originalGame = allGames.find((cuurGame) => cuurGame._id === game._id);
+        if (!originalGame) {
+          mode = 'create';
+        }
 
-    saveOperation.subscribe({
-      next: () => {
-        alert(`Game ${mode === 'create' ? 'created' : 'saved'} successfully!`);
-        this.router.navigate(['/admin']);
-      },
-      error: (error) => {
-        console.error('Error saving game:', error);
-        const errorMessage = error.error || error.message || 'Unknown error';
-        alert(`Error saving game: ${errorMessage}`);
-      }
-    });
+        const saveOperation = mode === 'create'
+          ? this.communicationService.createGame(game)
+          : this.communicationService.modifyGame(game);
+
+        saveOperation.subscribe({
+          next: () => {
+            alert(`Game ${mode === 'create' ? 'created' : 'saved'} successfully!`);
+            this.router.navigate(['/admin']);
+          },
+          error: (error) => {
+            const errorMessage = error.error || error.message || 'Unknown error';
+            alert(`Error saving game: ${errorMessage}`);
+          },
+        });
+      });
+    } else {
+      const saveOperation = this.communicationService.createGame(game);
+
+      saveOperation.subscribe({
+        next: () => {
+          alert(`Game created successfully!`);
+          this.router.navigate(['/admin']);
+        },
+        error: (error) => {
+          const errorMessage = error.error || error.message || 'Unknown error';
+          alert(`Error saving game: ${errorMessage}`);
+        },
+      });
+    }
   }
 
   private async captureThumbnail(name: string): Promise<string> {
