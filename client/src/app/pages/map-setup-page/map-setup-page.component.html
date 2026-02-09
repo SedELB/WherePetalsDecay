@@ -53,6 +53,7 @@
         <h3 class="panel-title">Tuiles</h3>
         
         @for (tool of tileTools; track tool.type) {
+          @if (tool.type !== tileTextureEnum.DoorClosed){
             <button
               type="button"
               class="tool"
@@ -64,12 +65,13 @@
               <span class="tool__desc" role="tooltip">{{ tool.description }}</span>
             </button>
           }
+        }
       </div>
 
       <div class="object-tools-panel" aria-label="Outils de placement d'objets">
         <h3 class="panel-title">Objets</h3>
         @for (objTool of objectPlacementToolsArray; track objTool.type) {
-          
+          @if (![tileItemEnum.CombatSanctuary, tileItemEnum.HealingSanctuary, tileItemEnum.CombatSanctuary].includes(objTool.type)){ <!-- Has to be removed for the sprint 2 -->
             <button
             type="button"
             class="object-tool"
@@ -78,25 +80,25 @@
             [title]="objTool.description"
             (click)="selectTileItem(objTool.type)"
           >
-            <span class="object-tool__slot">
-              <img class="object-tool__img" [src]="objTool.image" [alt]="objTool.label" />
-            </span>
-            <span class="object-tool__label">{{ objTool.label }}</span>
-            @if (objTool.type === tileItemEnum.Spawn) {
-              <span class="object-tool__count">{{ getPlacedSpawnCount() }} / {{ getRequiredSpawnCount() }}</span>
-            }
-            <span class="object-tool__desc" role="tooltip">{{ objTool.description }}</span>
-            @if (objTool.type === tileItemEnum.Flag) {
-              <span class="object-tool__count">{{ getPlacedFlagCount() }} / {{ getRequiredFlagCount() }}</span>
-            }
-            @if (objTool.type === tileItemEnum.HealingSanctuary) {
-              <span class="object-tool__count">{{ getPlacedHealingSanctuaryCount() }} / {{ getRequiredHealingSanctuaryCount() }}</span>
-            }
-            @if (objTool.type === tileItemEnum.CombatSanctuary) {
-              <span class="object-tool__count">{{ getPlacedCombatSanctuaryCount() }} / {{ getRequiredCombatSanctuaryCount() }}</span>
-            }
-          </button>
-          
+              <span class="object-tool__slot">
+                <img class="object-tool__img" [src]="objTool.image" [alt]="objTool.label" />
+              </span>
+              <span class="object-tool__label">{{ objTool.label }}</span>
+              @if (objTool.type === tileItemEnum.Spawn) {
+                <span class="object-tool__count">{{ getPlacedSpawnCount() }} / {{ getRequiredSpawnCount() }}</span>
+              }
+              <span class="object-tool__desc" role="tooltip">{{ objTool.description }}</span>
+              @if (objTool.type === tileItemEnum.Flag) {
+                <span class="object-tool__count">{{ getPlacedFlagCount() }} / {{ getRequiredFlagCount() }}</span>
+              }
+              <!-- @if (objTool.type === tileItemEnum.HealingSanctuary) {
+                <span class="object-tool__count">{{ getPlacedHealingSanctuaryCount() }} / {{ getRequiredHealingSanctuaryCount() }}</span>
+              }
+              @if (objTool.type === tileItemEnum.CombatSanctuary) {
+                <span class="object-tool__count">{{ getPlacedCombatSanctuaryCount() }} / {{ getRequiredCombatSanctuaryCount() }}</span>
+              } -->
+            </button>
+          }
         }
       </div>
     </aside>
