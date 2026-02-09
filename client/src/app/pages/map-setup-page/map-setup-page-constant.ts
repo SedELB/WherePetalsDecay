@@ -17,7 +17,7 @@ interface TileTool {
     description: string;
 }
 
-export enum MOUSE_EVENT {
+export enum MouseEventType {
     LeftClick = 0,
     RightClick = 2,
     LeftDrag = 1,
@@ -55,31 +55,31 @@ export const TILE_TOOLS: Record<TileTexture, TileTool> = {
     [TileTexture.Floor]: {
         type: TileTexture.Floor,
         label: 'Sol',
-        description: 'Surface de base, permet le passage libre des joueurs.'
+        description: 'Surface de base, permet le passage libre des joueurs.',
     },
     [TileTexture.Wall]: {
         type: TileTexture.Wall,
         label: 'Mur',
-        description: 'Bloque le passage des joueurs.'
+        description: 'Bloque le passage des joueurs.',
     },
     [TileTexture.Water]: {
         type: TileTexture.Water,
         label: 'Eau',
-        description: 'Zone liquide, ralentit ou bloque selon les règles.'
+        description: 'Zone liquide, ralentit ou bloque selon les règles.',
     },
     [TileTexture.Ice]: {
         type: TileTexture.Ice,
         label: 'Glace',
-        description: 'Surface glissante qui modifie les déplacements.'
+        description: 'Surface glissante qui modifie les déplacements.',
     },
     [TileTexture.DoorOpened]: {
         type: TileTexture.DoorOpened,
         label: 'Porte ouverte',
-        description: 'Porte ouverte qui permet le passage des joueurs.'
+        description: 'Porte ouverte qui permet le passage des joueurs.',
     },
     [TileTexture.DoorClosed]: {
         type: TileTexture.DoorClosed,
-        label: 'Porte fermée',
-        description: 'Porte fermée qui bloque le passage des joueurs.'
+        label: 'Porte',
+        description: 'Porte fermée qui bloque le passage des joueurs.',
     },
 };

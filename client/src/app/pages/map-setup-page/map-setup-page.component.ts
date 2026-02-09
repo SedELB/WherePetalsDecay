@@ -5,9 +5,10 @@ import { Game } from '@app/interfaces/game';
 import { Tile } from '@app/interfaces/tile';
 import { OBJECT_PLACEMENT_TOOL, TILE_TOOLS } from '@app/pages/map-setup-page/map-setup-page-constant';
 import { MapSetupFacadeService } from '@app/services/map-setup-facade.service';
-import { MapSetupService, TileItemCounts } from '@app/services/map-setup.service';
+import { MapSetupService } from '@app/services/map-setup.service';
+import { TileItemCounts } from '@app/services/map-setup.types';
+import { TileItemCountService } from '@app/services/tile-item-count.service';
 import { TileItem, TileTexture } from '@common/enums';
-
 
 @Component({
   selector: 'app-map-setup-page',
@@ -18,6 +19,7 @@ import { TileItem, TileTexture } from '@common/enums';
 export class MapSetupPageComponent implements OnInit {
   private readonly mapSetupFacade = inject(MapSetupFacadeService);
   private readonly mapSetupService = inject(MapSetupService);
+  private readonly tileItemCountService = inject(TileItemCountService);
 
   game: Game;
   mode: 'create' | 'edit' = 'edit';
@@ -28,11 +30,11 @@ export class MapSetupPageComponent implements OnInit {
   readonly objectPlacementTools = OBJECT_PLACEMENT_TOOL;
   readonly objectPlacementToolsArray = Object.values(OBJECT_PLACEMENT_TOOL);
   readonly tileTools = Object.values(TILE_TOOLS).filter(
-    (tool) => ![TileTexture.Floor, TileTexture.DoorOpened].includes(tool.type)
+    (tool) => ![TileTexture.Floor, TileTexture.DoorOpened].includes(tool.type),
   );
 
-  readonly TileItem = TileItem;
-  readonly TileTexture = TileTexture;
+  readonly tileItemEnum = TileItem;
+  readonly tileTextureEnum = TileTexture;
 
   private isPaintingTiles = false;
   private isErasingTiles = false;
@@ -44,8 +46,6 @@ export class MapSetupPageComponent implements OnInit {
     flagCount: 0,
   };
 
-  constructor() {}
-
   ngOnInit(): void {
     const init = this.mapSetupFacade.initializeFromNavigation();
     this.game = init.game;
@@ -54,47 +54,47 @@ export class MapSetupPageComponent implements OnInit {
   }
 
   getRequiredSpawnCount(): number {
-    return this.mapSetupService.getRequiredSpawnCount(this.game);
+    return this.tileItemCountService.getRequiredSpawnCount(this.game);
   }
 
   getRequiredFlagCount(): number {
-    return this.mapSetupService.getRequiredFlagCount(this.game);
+    return this.tileItemCountService.getRequiredFlagCount(this.game);
   }
 
   getRequiredHealingSanctuaryCount(): number {
-    return this.mapSetupService.getRequiredHealingSanctuaryCount(this.game);
+    return this.tileItemCountService.getRequiredHealingSanctuaryCount(this.game);
   }
 
   getRequiredCombatSanctuaryCount(): number {
-    return this.mapSetupService.getRequiredCombatSanctuaryCount(this.game);
+    return this.tileItemCountService.getRequiredCombatSanctuaryCount(this.game);
   }
 
   countTileTexture(tileTexture: TileTexture): number {
-    return this.mapSetupService.countTileTexture(this.game, tileTexture);
+    return this.tileItemCountService.countTileTexture(this.game, tileTexture);
   }
 
   countTileItem(tileItem: TileItem): number {
-    return this.mapSetupService.countTileItem(this.game, tileItem);
+    return this.tileItemCountService.countTileItem(this.game, tileItem);
   }
 
   getPlacedSpawnCount(): number {
-    return this.mapSetupService.getPlacedSpawnCount(this.game);
+    return this.tileItemCountService.getPlacedSpawnCount(this.game);
   }
 
   getPlacedFlagCount(): number {
-    return this.mapSetupService.getPlacedFlagCount(this.game);
+    return this.tileItemCountService.getPlacedFlagCount(this.game);
   }
 
   getPlacedHealingSanctuaryCount(): number {
-    return this.mapSetupService.getPlacedHealingSanctuaryCount(this.game);
+    return this.tileItemCountService.getPlacedHealingSanctuaryCount(this.game);
   }
 
   getPlacedCombatSanctuaryCount(): number {
-    return this.mapSetupService.getPlacedCombatSanctuaryCount(this.game);
+    return this.tileItemCountService.getPlacedCombatSanctuaryCount(this.game);
   }
 
   isObjectTypeComplete(type: TileItem): boolean {
-    return this.mapSetupService.isObjectTypeComplete(this.game, type);
+    return this.tileItemCountService.isObjectTypeComplete(this.game, type);
   }
 
   getObjectAt(x: number, y: number): Tile | undefined {
@@ -114,14 +114,14 @@ export class MapSetupPageComponent implements OnInit {
   }
 
   onCellClick(rowIndex: number, colIndex: number): void {
-    this.mapSetupService.applyActiveSelection(
-      this.game,
+    this.mapSetupService.applyActiveSelection({
+      game: this.game,
       rowIndex,
       colIndex,
-      this.activeTileTexture,
-      this.activeTileItem,
-      this.itemCounts
-    );
+      activeTileTexture: this.activeTileTexture,
+      activeTileItem: this.activeTileItem,
+      counts: this.itemCounts,
+    });
   }
 
   onCellMouseDown(rowIndex: number, colIndex: number, event: MouseEvent): void {

@@ -24,7 +24,7 @@ export class GameCardComponent {
   @Output() removeParent = new EventEmitter<void>();
   show = false;
 
-  public displayTime(): string {
+  displayTime(): string {
     const rawDate = this.game.updatedAt;
     const date = rawDate instanceof Date ? rawDate : new Date(rawDate);
 

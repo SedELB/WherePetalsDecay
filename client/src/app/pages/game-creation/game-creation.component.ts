@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
@@ -24,7 +24,7 @@ import { Subscription } from 'rxjs';
     styleUrls: ['./game-creation.component.scss'],
 })
 
-export class GameCreationComponent implements OnInit {
+export class GameCreationComponent implements OnInit, OnDestroy {
     currentPhase: 'game-selection' | 'character-creation' = 'game-selection';
     selectedGame: Game | null = null;
     characterName: string = '';

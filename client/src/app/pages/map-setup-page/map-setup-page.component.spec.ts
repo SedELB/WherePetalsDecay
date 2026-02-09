@@ -4,23 +4,27 @@ import { Game } from '@app/interfaces/game';
 import { Tile } from '@app/interfaces/tile';
 import { MapSetupFacadeService } from '@app/services/map-setup-facade.service';
 import { MapSetupService } from '@app/services/map-setup.service';
+import { TileItemCountService } from '@app/services/tile-item-count.service';
 import { GameMode, TileItem, TileTexture } from '@common/enums';
 import { MapSetupPageComponent } from './map-setup-page.component';
 
 const makeGrid = (rows: number, cols: number): Tile[][] =>
     Array.from({ length: rows }, () =>
-        Array.from({ length: cols }, (): Tile => ({ type: TileTexture.Floor, item: null }))
+        Array.from({ length: cols }, (): Tile => ({ type: TileTexture.Floor, item: null })),
     );
+
+const SIZE_SMALL = 10;
+const WALL_COUNT = 3;
 
 const makeGame = (): Game => ({
     _id: 'game-id',
     name: 'test',
     description: 'desc',
-    size: { rows: 10, cols: 10 },
+    size: { rows: SIZE_SMALL, cols: SIZE_SMALL },
     gameMode: GameMode.Classic,
     thumbnail: 'thumb',
     maxPlayers: 4,
-    grid: makeGrid(10, 10),
+    grid: makeGrid(SIZE_SMALL, SIZE_SMALL),
     isVisible: true,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -38,12 +42,23 @@ describe('MapSetupPageComponent', () => {
     let fixture: ComponentFixture<MapSetupPageComponent>;
     let facade: jasmine.SpyObj<MapSetupFacadeService>;
     let service: jasmine.SpyObj<MapSetupService>;
+    let tileItemCountService: jasmine.SpyObj<TileItemCountService>;
     let game: Game;
 
     beforeEach(async () => {
         game = makeGame();
         facade = jasmine.createSpyObj('MapSetupFacadeService', ['initializeFromNavigation', 'navigateToAdmin', 'saveGame']);
         service = jasmine.createSpyObj('MapSetupService', [
+            'getObjectAt',
+            'selectTileTexture',
+            'selectTileItem',
+            'applyActiveSelection',
+            'handleCellMouseDown',
+            'handleCellMouseEnter',
+            'resetInteractionState',
+            'resetMap',
+        ]);
+        tileItemCountService = jasmine.createSpyObj('TileItemCountService', [
             'getRequiredSpawnCount',
             'getRequiredFlagCount',
             'getRequiredHealingSanctuaryCount',
@@ -55,31 +70,12 @@ describe('MapSetupPageComponent', () => {
             'getPlacedHealingSanctuaryCount',
             'getPlacedCombatSanctuaryCount',
             'isObjectTypeComplete',
-            'getObjectAt',
-            'selectTileTexture',
-            'selectTileItem',
-            'applyActiveSelection',
-            'handleCellMouseDown',
-            'handleCellMouseEnter',
-            'resetInteractionState',
-            'resetMap',
         ]);
 
         const counts = makeCounts();
         facade.initializeFromNavigation.and.returnValue({ game, mode: 'edit', itemCounts: counts });
 
-        const defaults: Record<string, unknown> = {
-            getRequiredSpawnCount: 2,
-            getRequiredFlagCount: 0,
-            getRequiredHealingSanctuaryCount: 1,
-            getRequiredCombatSanctuaryCount: 1,
-            countTileTexture: 3,
-            countTileItem: 1,
-            getPlacedSpawnCount: 1,
-            getPlacedFlagCount: 0,
-            getPlacedHealingSanctuaryCount: 1,
-            getPlacedCombatSanctuaryCount: 1,
-            isObjectTypeComplete: true,
+        const mapSetupDefaults: Record<string, unknown> = {
             getObjectAt: game.grid[0][0],
             selectTileTexture: { activeTileTexture: TileTexture.Wall, activeTileItem: null },
             selectTileItem: { activeTileTexture: null, activeTileItem: TileItem.Spawn },
@@ -89,8 +85,27 @@ describe('MapSetupPageComponent', () => {
             resetMap: { itemCounts: counts, selection: { activeTileTexture: null, activeTileItem: null } },
         };
 
-        Object.entries(defaults).forEach(([method, value]) => {
-            (service as any)[method].and.returnValue(value);
+        const countDefaults: Record<string, unknown> = {
+            getRequiredSpawnCount: 2,
+            getRequiredFlagCount: 0,
+            getRequiredHealingSanctuaryCount: 1,
+            getRequiredCombatSanctuaryCount: 1,
+            countTileTexture: WALL_COUNT,
+            countTileItem: 1,
+            getPlacedSpawnCount: 1,
+            getPlacedFlagCount: 0,
+            getPlacedHealingSanctuaryCount: 1,
+            getPlacedCombatSanctuaryCount: 1,
+            isObjectTypeComplete: true,
+        };
+
+        Object.entries(mapSetupDefaults).forEach(([method, value]) => {
+            (service[method as keyof typeof service] as jasmine.Spy).and.returnValue(value);
+        });
+        Object.entries(countDefaults).forEach(([method, value]) => {
+            (tileItemCountService[method as keyof typeof tileItemCountService] as jasmine.Spy).and.returnValue(
+                value,
+            );
         });
 
         await TestBed.configureTestingModule({
@@ -100,6 +115,7 @@ describe('MapSetupPageComponent', () => {
                 { provide: ActivatedRoute, useValue: { snapshot: { params: {}, queryParams: {}, data: {} } } },
                 { provide: MapSetupFacadeService, useValue: facade },
                 { provide: MapSetupService, useValue: service },
+                { provide: TileItemCountService, useValue: tileItemCountService },
             ],
         }).compileComponents();
 
@@ -128,7 +144,7 @@ describe('MapSetupPageComponent', () => {
     });
 
     it('delegates queries and selection', () => {
-        expect(component.countTileTexture(TileTexture.Wall)).toBe(3);
+        expect(component.countTileTexture(TileTexture.Wall)).toBe(WALL_COUNT);
         expect(component.countTileItem(TileItem.Spawn)).toBe(1);
         expect(component.getObjectAt(0, 0)).toBe(game.grid[0][0]);
 
@@ -147,21 +163,21 @@ describe('MapSetupPageComponent', () => {
 
         component.onCellMouseDown(1, 1, {} as MouseEvent);
         expect(service.handleCellMouseDown).toHaveBeenCalled();
-        expect((component as any).isPaintingTiles).toBeTrue();
+        expect((component as unknown as { isPaintingTiles: boolean }).isPaintingTiles).toBeTrue();
 
         component.onCellMouseEnter(1, 1, {} as MouseEvent);
         expect(service.handleCellMouseEnter).toHaveBeenCalled();
-        expect((component as any).isErasingTiles).toBeTrue();
+        expect((component as unknown as { isErasingTiles: boolean }).isErasingTiles).toBeTrue();
     });
 
     it('resets flags, navigates and saves', async () => {
         component.onGridMouseLeave();
-        expect((component as any).isPaintingTiles).toBeFalse();
-        expect((component as any).isErasingTiles).toBeFalse();
+        expect((component as unknown as { isPaintingTiles: boolean }).isPaintingTiles).toBeFalse();
+        expect((component as unknown as { isErasingTiles: boolean }).isErasingTiles).toBeFalse();
 
         component.onDocumentMouseUp();
-        expect((component as any).isPaintingTiles).toBeFalse();
-        expect((component as any).isErasingTiles).toBeFalse();
+        expect((component as unknown as { isPaintingTiles: boolean }).isPaintingTiles).toBeFalse();
+        expect((component as unknown as { isErasingTiles: boolean }).isErasingTiles).toBeFalse();
 
         component.onBack();
         expect(facade.navigateToAdmin).toHaveBeenCalled();

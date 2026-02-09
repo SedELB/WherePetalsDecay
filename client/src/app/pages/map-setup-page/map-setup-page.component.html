@@ -81,17 +81,17 @@
               <img class="object-tool__img" [src]="objTool.image" [alt]="objTool.label" />
             </span>
             <span class="object-tool__label">{{ objTool.label }}</span>
-            @if (objTool.type === TileItem.Spawn) {
+            @if (objTool.type === tileItemEnum.Spawn) {
               <span class="object-tool__count">{{ getPlacedSpawnCount() }} / {{ getRequiredSpawnCount() }}</span>
             }
             <span class="object-tool__desc" role="tooltip">{{ objTool.description }}</span>
-            @if (objTool.type === TileItem.Flag) {
+            @if (objTool.type === tileItemEnum.Flag) {
               <span class="object-tool__count">{{ getPlacedFlagCount() }} / {{ getRequiredFlagCount() }}</span>
             }
-            @if (objTool.type === TileItem.HealingSanctuary) {
+            @if (objTool.type === tileItemEnum.HealingSanctuary) {
               <span class="object-tool__count">{{ getPlacedHealingSanctuaryCount() }} / {{ getRequiredHealingSanctuaryCount() }}</span>
             }
-            @if (objTool.type === TileItem.CombatSanctuary) {
+            @if (objTool.type === tileItemEnum.CombatSanctuary) {
               <span class="object-tool__count">{{ getPlacedCombatSanctuaryCount() }} / {{ getRequiredCombatSanctuaryCount() }}</span>
             }
           </button>

@@ -1,21 +1,24 @@
 import type { Game } from '@app/interfaces/game';
 import type { Tile } from '@app/interfaces/tile';
-import { MOUSE_EVENT } from '@app/pages/map-setup-page/map-setup-page-constant';
+import { MouseEventType } from '@app/pages/map-setup-page/map-setup-page-constant';
 import { MapSetupService } from '@app/services/map-setup.service';
+import { TileItemCountService } from '@app/services/tile-item-count.service';
 import { GameMode, TileItem, TileTexture } from '@common/enums';
 
 const grid = (
   rows: number,
   cols: number,
   type: TileTexture = TileTexture.Floor,
-  item: TileItem | null = null
+  item: TileItem | null = null,
 ): Tile[][] =>
   Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => ({
       type,
       item,
-    }))
+    })),
   );
+
+const SIZE_SMALL = 10;
 
 const gameFactory = (rows = 2, cols = 2, mode: GameMode = GameMode.Classic): Game => ({
   _id: 'game-id',
@@ -33,9 +36,11 @@ const gameFactory = (rows = 2, cols = 2, mode: GameMode = GameMode.Classic): Gam
 
 describe('MapSetupService', () => {
   let service: MapSetupService;
+  let tileItemCountService: TileItemCountService;
 
   beforeEach(() => {
-    service = new MapSetupService();
+    tileItemCountService = new TileItemCountService();
+    service = new MapSetupService(tileItemCountService);
   });
 
   it('fills the grid when it is missing or the wrong size', () => {
@@ -55,76 +60,6 @@ describe('MapSetupService', () => {
     expect(alreadyOk.grid).toBe(ref);
   });
 
-  it('returns required counts based on map size and mode', () => {
-    expect(service.getRequiredSpawnCount(gameFactory(10, 10))).toBe(2);
-    expect(service.getRequiredSpawnCount(gameFactory(15, 15))).toBe(4);
-    expect(service.getRequiredSpawnCount(gameFactory(20, 20))).toBe(6);
-    expect(() => service.getRequiredSpawnCount(gameFactory(11, 11))).toThrow();
-
-    expect(service.getRequiredFlagCount(gameFactory(10, 10, GameMode.Classic))).toBe(0);
-    expect(service.getRequiredFlagCount(gameFactory(10, 10, GameMode.Ctf))).toBe(1);
-    expect(() => service.getRequiredFlagCount(gameFactory(10, 10, 'invalid' as unknown as GameMode))).toThrow();
-
-    expect(service.getRequiredHealingSanctuaryCount(gameFactory(10, 10))).toBe(1);
-    expect(service.getRequiredHealingSanctuaryCount(gameFactory(15, 15))).toBe(2);
-    expect(service.getRequiredHealingSanctuaryCount(gameFactory(20, 20))).toBe(4);
-    expect(() => service.getRequiredHealingSanctuaryCount(gameFactory(12, 12))).toThrow();
-
-    expect(service.getRequiredCombatSanctuaryCount(gameFactory(10, 10))).toBe(1);
-    expect(service.getRequiredCombatSanctuaryCount(gameFactory(15, 15))).toBe(2);
-    expect(service.getRequiredCombatSanctuaryCount(gameFactory(20, 20))).toBe(4);
-    expect(() => service.getRequiredCombatSanctuaryCount(gameFactory(12, 12))).toThrow();
-  });
-
-  it('counts textures and placed items correctly', () => {
-    const game = gameFactory(10, 10, GameMode.Ctf);
-
-    game.grid[0][0].type = TileTexture.Wall;
-    game.grid[0][1].item = TileItem.Spawn;
-    game.grid[0][2] = { type: TileTexture.Floor, item: TileItem.Spawn } as Tile;
-    game.grid[1][0] = { type: TileTexture.Floor, item: TileItem.HealingSanctuary } as Tile;
-    game.grid[1][1] = { type: TileTexture.Floor, item: TileItem.CombatSanctuary } as Tile;
-    game.grid[2][0] = { type: TileTexture.Floor, item: TileItem.Flag } as Tile;
-
-    expect(service.countTileTexture(game, TileTexture.Wall)).toBe(1);
-    expect(service.countTileItem(game, TileItem.Spawn)).toBe(2);
-
-    expect(service.getPlacedSpawnCount(game)).toBe(2);
-    expect(service.getPlacedFlagCount(game)).toBe(1);
-    expect(service.getPlacedHealingSanctuaryCount(game)).toBe(1);
-    expect(service.getPlacedCombatSanctuaryCount(game)).toBe(1);
-
-    expect(service.isObjectTypeComplete(game, TileItem.Spawn)).toBeTrue();
-    expect(service.isObjectTypeComplete(game, TileItem.Flag)).toBeTrue();
-    expect(service.isObjectTypeComplete(game, TileItem.HealingSanctuary)).toBeTrue();
-    expect(service.isObjectTypeComplete(game, TileItem.CombatSanctuary)).toBeTrue();
-    expect(service.isObjectTypeComplete(game, 'unknown' as TileItem)).toBeFalse();
-  });
-
-  it('updates remaining item counts when placing/removing items', () => {
-    const counts = { spawnCount: 1, healingSanctuaryCount: 0, combatSanctuaryCount: 1, flagCount: 0 };
-
-    expect(service.verifyEnoughTileItem(counts, TileItem.Spawn)).toBeTrue();
-    expect(service.verifyEnoughTileItem(counts, TileItem.HealingSanctuary)).toBeFalse();
-    expect(service.verifyEnoughTileItem(counts, TileItem.CombatSanctuary)).toBeTrue();
-    expect(service.verifyEnoughTileItem(counts, TileItem.Flag)).toBeFalse();
-    expect(service.verifyEnoughTileItem(counts, 'invalid' as TileItem)).toBeFalse();
-
-    service.decreaseTileItemCount(counts, TileItem.Spawn);
-    service.decreaseTileItemCount(counts, TileItem.CombatSanctuary);
-    service.decreaseTileItemCount(counts, TileItem.HealingSanctuary);
-    service.decreaseTileItemCount(counts, TileItem.Flag);
-
-    service.increaseTileItemCount(counts, TileItem.HealingSanctuary);
-    service.increaseTileItemCount(counts, TileItem.Flag);
-    service.increaseTileItemCount(counts, TileItem.Spawn);
-    service.increaseTileItemCount(counts, TileItem.CombatSanctuary);
-
-    expect(counts.spawnCount).toBe(1);
-    expect(counts.combatSanctuaryCount).toBe(1);
-    expect(counts.healingSanctuaryCount).toBe(0);
-    expect(counts.flagCount).toBe(0);
-  });
 
   it('places and removes both textures and items', () => {
     const game = gameFactory(2, 2);
@@ -148,11 +83,25 @@ describe('MapSetupService', () => {
     expect(game.grid[0][1].type).toBe(TileTexture.Water);
 
     game.grid[0][0].item = TileItem.Spawn;
-    service.deleteTile(game, 0, 0, TileItem.Spawn, { shiftKey: true } as MouseEvent, counts);
+    service.deleteTile({
+      game,
+      rowIndex: 0,
+      colIndex: 0,
+      tileAttribute: TileItem.Spawn,
+      event: { shiftKey: true } as MouseEvent,
+      counts,
+    });
     expect(game.grid[0][0].item).toBeNull();
 
     game.grid[0][0].type = TileTexture.Wall;
-    service.deleteTile(game, 0, 0, TileTexture.Water, { shiftKey: false } as MouseEvent, counts);
+    service.deleteTile({
+      game,
+      rowIndex: 0,
+      colIndex: 0,
+      tileAttribute: TileTexture.Water,
+      event: { shiftKey: false } as MouseEvent,
+      counts,
+    });
     expect(game.grid[0][0].type).toBe(TileTexture.Floor);
   });
 
@@ -181,7 +130,7 @@ describe('MapSetupService', () => {
     const applySpy = spyOn(service, 'applyTile').and.callThrough();
     const deleteSpy = spyOn(service, 'deleteTile').and.callThrough();
 
-    const leftEvent = { button: MOUSE_EVENT.LeftClick } as MouseEvent;
+    const leftEvent = { button: MouseEventType.LeftClick } as MouseEvent;
 
     const leftTextureState = service.handleCellMouseDown({
       game,
@@ -210,7 +159,7 @@ describe('MapSetupService', () => {
     expect(leftItemState.isPaintingTiles).toBeTrue();
 
     const rightEvent = {
-      button: MOUSE_EVENT.RightClick,
+      button: MouseEventType.RightClick,
       preventDefault: jasmine.createSpy('preventDefault'),
     } as unknown as MouseEvent;
 
@@ -229,7 +178,7 @@ describe('MapSetupService', () => {
     expect(rightTextureState.isErasingTiles).toBeTrue();
 
     const rightItemEvent = {
-      button: MOUSE_EVENT.RightClick,
+      button: MouseEventType.RightClick,
       preventDefault: jasmine.createSpy('preventDefault'),
     } as unknown as MouseEvent;
 
@@ -291,7 +240,7 @@ describe('MapSetupService', () => {
       game,
       rowIndex: 0,
       colIndex: 0,
-      event: { buttons: MOUSE_EVENT.RightDrag, shiftKey: true } as MouseEvent,
+      event: { buttons: MouseEventType.RightDrag, shiftKey: true } as MouseEvent,
       activeTileTexture: null,
       activeTileItem: TileItem.Spawn,
       counts,
@@ -303,7 +252,7 @@ describe('MapSetupService', () => {
       game,
       rowIndex: 0,
       colIndex: 0,
-      event: { buttons: MOUSE_EVENT.RightDrag, shiftKey: false } as MouseEvent,
+      event: { buttons: MouseEventType.RightDrag, shiftKey: false } as MouseEvent,
       activeTileTexture: TileTexture.Water,
       activeTileItem: null,
       counts,
@@ -316,7 +265,7 @@ describe('MapSetupService', () => {
       game,
       rowIndex: 0,
       colIndex: 0,
-      event: { buttons: MOUSE_EVENT.LeftDrag } as MouseEvent,
+      event: { buttons: MouseEventType.LeftDrag } as MouseEvent,
       activeTileTexture: TileTexture.Water,
       activeTileItem: null,
       counts,
@@ -342,7 +291,7 @@ describe('MapSetupService', () => {
       game,
       rowIndex: 0,
       colIndex: 0,
-      event: { buttons: MOUSE_EVENT.LeftDrag } as MouseEvent,
+      event: { buttons: MouseEventType.LeftDrag } as MouseEvent,
       activeTileTexture: TileTexture.Wall,
       activeTileItem: null,
       counts,
@@ -356,7 +305,7 @@ describe('MapSetupService', () => {
   });
 
   it('resets state and builds the validation payload', () => {
-    const game = gameFactory(10, 10, GameMode.Ctf);
+    const game = gameFactory(SIZE_SMALL, SIZE_SMALL, GameMode.Ctf);
     game.grid[0][0] = { type: TileTexture.Wall, item: TileItem.Spawn } as Tile;
 
     expect(service.resetInteractionState()).toEqual({ isPaintingTiles: false, isErasingTiles: false });
@@ -373,7 +322,7 @@ describe('MapSetupService', () => {
     const placedObjects = service.extractPlacedObjects(game);
     const payload = service.buildValidationPayload(game);
 
-    expect(gridTypes.length).toBe(10);
+    expect(gridTypes.length).toBe(SIZE_SMALL);
     expect(placedObjects.length).toBe(0);
     expect(payload.mode).toBe(game.gameMode);
     expect(payload.size).toEqual(game.size);

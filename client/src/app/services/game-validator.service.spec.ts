@@ -1,7 +1,24 @@
 import type { PlacedObject } from '@app/interfaces/game';
-import type { GameDraftForValidation } from '@app/services/game-validator.service';
-import { GameValidatorService } from '@app/services/game-validator.service';
+import { GameValidatorService, type GameDraftForValidation } from '@app/services/game-validator.service';
 import { GameMode, TileItem, TileTexture } from '@common/enums';
+
+type GameValidatorServiceInternal = {
+    validateRequiredFields: (draft: GameDraftForValidation) => string[];
+    getRequiredObjectCounts: (size: number, mode: GameMode) => Record<TileItem, number>;
+    getItemName: (item: TileItem | string) => string;
+};
+
+const SIZE_SMALL = 10;
+const SIZE_MEDIUM = 15;
+const SIZE_LARGE = 20;
+const SIZE_INVALID = 11;
+const SIZE_INVALID_OTHER = 12;
+const GRID_MISMATCH = 9;
+const NAME_TOO_LONG = 21;
+const DESCRIPTION_TOO_LONG = 501;
+const SPAWN_SMALL = 2;
+const SPAWN_MEDIUM = 4;
+const SPAWN_LARGE = 6;
 
 const buildGrid = (rows: number, cols: number, tile: TileTexture = TileTexture.Floor): TileTexture[][] =>
     Array.from({ length: rows }, () => Array.from({ length: cols }, () => tile));
@@ -23,7 +40,7 @@ const baseObjects = (mode: GameMode): PlacedObject[] => {
 
 const draft = (overrides: Partial<GameDraftForValidation> = {}): GameDraftForValidation => {
     const mode = overrides.mode ?? GameMode.Classic;
-    const size = overrides.size ?? { rows: 10, cols: 10 };
+    const size = overrides.size ?? { rows: SIZE_SMALL, cols: SIZE_SMALL };
 
     return {
         name: 'Test game',
@@ -38,9 +55,11 @@ const draft = (overrides: Partial<GameDraftForValidation> = {}): GameDraftForVal
 
 describe('GameValidatorService', () => {
     let service: GameValidatorService;
+    let internal: GameValidatorServiceInternal;
 
     beforeEach(() => {
         service = new GameValidatorService();
+        internal = service as unknown as GameValidatorServiceInternal;
     });
 
     it('returns valid for a correct draft', () => {
@@ -67,17 +86,17 @@ describe('GameValidatorService', () => {
         expect(errors).toContain('Placed objects are required!');
 
         const tooLong = draft({
-            name: 'a'.repeat(21),
-            description: 'b'.repeat(501),
+            name: 'a'.repeat(NAME_TOO_LONG),
+            description: 'b'.repeat(DESCRIPTION_TOO_LONG),
         });
 
         const lengthErrors = service.validate(tooLong).errors;
         expect(lengthErrors).toContain('The name field exceeds the maximum length!');
         expect(lengthErrors).toContain('The description field exceeds the maximum length!');
 
-        const requiredErrors = (service as any).validateRequiredFields({
+        const requiredErrors = internal.validateRequiredFields({
             ...draft(),
-            grid: null,
+            grid: null as unknown as TileTexture[][],
         });
 
         expect(requiredErrors).toContain('Game grid is required!');
@@ -93,11 +112,11 @@ describe('GameValidatorService', () => {
         expect(sizeErrors).toContain('Grid size must be square and one of: 10x15x20, 10x15x20, 10x15x20');
         expect(sizeErrors).toContain('Grid dimensions must be positive!');
 
-        const rowMismatch = draft({ grid: buildGrid(9, 10) });
+        const rowMismatch = draft({ grid: buildGrid(GRID_MISMATCH, SIZE_SMALL) });
         expect(service.validate(rowMismatch).errors).toContain('Grid rows do not match the specified size!');
 
-        const colMismatchGrid = buildGrid(10, 10);
-        colMismatchGrid[0] = Array.from({ length: 9 }, () => TileTexture.Floor);
+        const colMismatchGrid = buildGrid(SIZE_SMALL, SIZE_SMALL);
+        colMismatchGrid[0] = Array.from({ length: GRID_MISMATCH }, () => TileTexture.Floor);
         const colMismatch = draft({ grid: colMismatchGrid });
         expect(service.validate(colMismatch).errors).toContain('Grid columns do not match the specified size!');
 
@@ -106,7 +125,7 @@ describe('GameValidatorService', () => {
     });
 
     it('rejects unknown tile textures', () => {
-        const grid = buildGrid(10, 10);
+        const grid = buildGrid(SIZE_SMALL, SIZE_SMALL);
         grid[0][0] = 'lava' as TileTexture;
 
         const result = service.validate(draft({ grid }));
@@ -137,8 +156,8 @@ describe('GameValidatorService', () => {
     it('checks required object counts and the fallback naming', () => {
         const ctfDraft = draft({
             mode: GameMode.Ctf,
-            size: { rows: 11, cols: 11 },
-            grid: buildGrid(11, 11),
+            size: { rows: SIZE_INVALID, cols: SIZE_INVALID },
+            grid: buildGrid(SIZE_INVALID, SIZE_INVALID),
             placedObjects: [],
         });
 
@@ -149,15 +168,15 @@ describe('GameValidatorService', () => {
         expect(errors.some((e) => e.includes('combat sanctuary'))).toBeTrue();
         expect(errors.some((e) => e.includes('flag'))).toBeTrue();
 
-        const small = (service as any).getRequiredObjectCounts(10, GameMode.Classic);
-        const medium = (service as any).getRequiredObjectCounts(15, GameMode.Classic);
-        const large = (service as any).getRequiredObjectCounts(20, GameMode.Classic);
-        const other = (service as any).getRequiredObjectCounts(12, GameMode.Ctf);
+        const small = internal.getRequiredObjectCounts(SIZE_SMALL, GameMode.Classic);
+        const medium = internal.getRequiredObjectCounts(SIZE_MEDIUM, GameMode.Classic);
+        const large = internal.getRequiredObjectCounts(SIZE_LARGE, GameMode.Classic);
+        const other = internal.getRequiredObjectCounts(SIZE_INVALID_OTHER, GameMode.Ctf);
 
-        expect(small[TileItem.Spawn]).toBe(2);
-        expect(medium[TileItem.Spawn]).toBe(4);
-        expect(large[TileItem.Spawn]).toBe(6);
+        expect(small[TileItem.Spawn]).toBe(SPAWN_SMALL);
+        expect(medium[TileItem.Spawn]).toBe(SPAWN_MEDIUM);
+        expect(large[TileItem.Spawn]).toBe(SPAWN_LARGE);
         expect(other[TileItem.Flag]).toBe(1);
-        expect((service as any).getItemName('invalid')).toBe('item');
+        expect(internal.getItemName('invalid')).toBe('item');
     });
 });
