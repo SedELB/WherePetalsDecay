@@ -191,7 +191,7 @@ export class GameValidatorService {
 
         for (const { row, col } of allDoorsPos) {
             // Grid border is excluded
-            if (!this.isDoorOnGridBorder(game.grid, row, col)) {
+            if (this.isDoorOnGridBorder(game.grid, row, col)) {
                 errors.push(`Door at (${row}, ${col}) cannot be on the edge of the map!`);
                 continue;
             }
