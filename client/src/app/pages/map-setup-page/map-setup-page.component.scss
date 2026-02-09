@@ -1,32 +1,27 @@
-:host {
-  display: block;
-  height: 100vh;
-  overflow: hidden;
-}
 
 .editor-bg {
   box-sizing: border-box;
   height: 100%;
-  max-height: 100vh;
-  position: relative;
-  overflow: hidden;
   padding: 24px;
   background: url('/assets/background.png') center / cover no-repeat;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .editor-stage {
   display: flex;
   flex-direction: row;
+  flex: 1;
   justify-content: space-around;
   align-items: center;
-  position: relative;
-  overflow: hidden;
 }
 
 .pos-back {
-  position: relative;
-  z-index: 2;
+  position: absolute;
   display: inline-block;
+  top: 12%;
+  left: 5%;
 }
 
 .info-card {
@@ -142,16 +137,15 @@
 
 .pos-reset {
   position: absolute;
-  width: 400px;
-  left: 70px;
-  bottom: 26px;
-  display: block;
+  left: 75px;
+  bottom: 200px;
+  display: inline-block;
 }
 
 .pos-save {
   position: absolute;
-  right: 24px;
-  bottom: 26px;
+  left: 325px;
+  bottom: 200px;
   display: inline-block;
 }
 
