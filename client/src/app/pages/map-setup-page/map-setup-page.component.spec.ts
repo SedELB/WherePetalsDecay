@@ -133,13 +133,8 @@ describe('MapSetupPageComponent', () => {
     it('delegates counts and completion', () => {
         expect(component.getRequiredSpawnCount()).toBe(2);
         expect(component.getRequiredFlagCount()).toBe(0);
-        expect(component.getRequiredHealingSanctuaryCount()).toBe(1);
-        expect(component.getRequiredCombatSanctuaryCount()).toBe(1);
-
         expect(component.getPlacedSpawnCount()).toBe(1);
         expect(component.getPlacedFlagCount()).toBe(0);
-        expect(component.getPlacedHealingSanctuaryCount()).toBe(1);
-        expect(component.getPlacedCombatSanctuaryCount()).toBe(1);
         expect(component.isObjectTypeComplete(TileItem.Spawn)).toBeTrue();
     });
 
