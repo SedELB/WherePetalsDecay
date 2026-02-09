@@ -35,14 +35,14 @@
         <div class="gamemode-choice">
             <h1>Choisir un mode de jeu :</h1>
             <div class="gamemode-button">
-                <app-button [selected]="gameMode === GameMode.Classic"
-                            (clicked)="gameModeSelected(GameMode.Classic)"
+                <app-button [selected]="gameMode === gameModeEnum.Classic"
+                            (clicked)="gameModeSelected(gameModeEnum.Classic)"
                             [width]="250">
                             Classique
                 </app-button>
 
-                <app-button [selected]="gameMode === GameMode.Ctf"
-                            (clicked)="gameModeSelected(GameMode.Ctf)"
+                <app-button [selected]="gameMode === gameModeEnum.Ctf"
+                            (clicked)="gameModeSelected(gameModeEnum.Ctf)"
                             [width]="250">
                             CTF
                 </app-button>

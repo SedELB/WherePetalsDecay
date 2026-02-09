@@ -8,6 +8,14 @@ const TEXT_MIN_LENGTH = 1;
 const MAP_SMALL_SIZE = 10;
 const MAP_MEDIUM_SIZE = 15;
 const MAP_LARGE_SIZE = 20;
+const SPAWN_SMALL = 2;
+const SPAWN_MEDIUM = 4;
+const SPAWN_LARGE = 6;
+const SANCTUARY_SMALL = 1;
+const SANCTUARY_MEDIUM = 2;
+const SANCTUARY_LARGE = 4;
+const FLAG_REQUIRED = 1;
+const FLAG_NONE = 0;
 
 export interface GameValidationResult {
     isValid: boolean;
@@ -214,9 +222,15 @@ export class GameValidatorService {
     }
 
     private getRequiredObjectCounts(mapSize: number, mode: string): Record<TileItem, number> {
-        const spawnCount = mapSize === MAP_SMALL_SIZE ? 2 : mapSize === MAP_MEDIUM_SIZE ? 4 : 6;
-        const sanctuaryCount = mapSize === MAP_SMALL_SIZE ? 1 : mapSize === MAP_MEDIUM_SIZE ? 2 : 4;
-        const flagCount = mode === GameMode.Ctf ? 1 : 0;
+        const spawnCount =
+            mapSize === MAP_SMALL_SIZE ? SPAWN_SMALL : mapSize === MAP_MEDIUM_SIZE ? SPAWN_MEDIUM : SPAWN_LARGE;
+        const sanctuaryCount =
+            mapSize === MAP_SMALL_SIZE
+                ? SANCTUARY_SMALL
+                : mapSize === MAP_MEDIUM_SIZE
+                  ? SANCTUARY_MEDIUM
+                  : SANCTUARY_LARGE;
+        const flagCount = mode === GameMode.Ctf ? FLAG_REQUIRED : FLAG_NONE;
 
         return {
             [TileItem.Spawn]: spawnCount,
@@ -258,4 +272,3 @@ export class GameValidatorService {
         }
     }
 }
-

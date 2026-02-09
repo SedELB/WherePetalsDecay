@@ -13,7 +13,7 @@ import { GameMode } from '@common/enums';
 export class CreateGamePageComponent {
   private readonly router = inject(Router);
 
-  GameMode = GameMode;
+  gameModeEnum = GameMode;
   gameMode: GameMode = GameMode.Classic;
   mapSize: string | null = null;
 

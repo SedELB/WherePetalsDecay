@@ -3,7 +3,9 @@ import { Router } from '@angular/router';
 import { Game } from '@app/interfaces/game';
 import { CommunicationService } from '@app/services/communication.service';
 import { GameValidatorService } from '@app/services/game-validator.service';
-import { MapSetupService, TileItemCounts } from '@app/services/map-setup.service';
+import { MapSetupService } from '@app/services/map-setup.service';
+import { TileItemCounts } from '@app/services/map-setup.types';
+import { TileItemCountService } from '@app/services/tile-item-count.service';
 import html2canvas from 'html2canvas';
 
 export interface MapSetupInitResult {
@@ -18,7 +20,8 @@ export class MapSetupFacadeService {
     private readonly router: Router,
     private readonly communicationService: CommunicationService,
     private readonly gameValidator: GameValidatorService,
-    private readonly mapSetupService: MapSetupService
+    private readonly mapSetupService: MapSetupService,
+    private readonly tileItemCountService: TileItemCountService,
   ) {}
 
   initializeFromNavigation(): MapSetupInitResult {
@@ -33,8 +36,8 @@ export class MapSetupFacadeService {
     const mode = state.mode ?? 'edit';
 
     this.mapSetupService.initializeGridIfEmpty(game);
-    const itemCounts = this.mapSetupService.createRequiredCounts(game);
-    this.mapSetupService.adjustCountsForExistingItems(game, itemCounts);
+    const itemCounts = this.tileItemCountService.createRequiredCounts(game);
+    this.tileItemCountService.adjustCountsForExistingItems(game, itemCounts);
 
     return { game, mode, itemCounts };
   }
