@@ -8,40 +8,51 @@
     box-sizing: border-box;
 }
 
+.list-container {
+    background-color: $transparent-background;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    gap: 10px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: 600px;
+    width: 800px;
+    align-items: center;
+}
+
 .container > app-button {
     position: absolute;
     top: 75px;
     left: 60px;
 }
 
-h1 {
+h2 {
     color: $text-color;
     text-align: center;
-    margin-bottom: 0.5rem;
 }
 
 p {
     color: $text-color;
     text-align: center;
-    margin-bottom: 2rem;
 }
 
 .game-selection {
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
     align-items: center;
-    padding-top: 100px;
 }
 
 .character-creation {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-top: 100px;
 }
 
 .form-container {
-    background-color: $transparent-background;
+    background-color: rgba(0, 0, 0, 0);
     border-radius: 20px;
     padding: 2rem;
     width: 100%;
@@ -80,17 +91,6 @@ p {
         padding: 0.5rem;
         background-color: $frame-color;
         transition: all 0.2s ease;
-        border: none;
-        background: none;
-
-        &:hover {
-            border-color: $rose-button;
-        }
-
-        &:focus {
-            outline: 2px solid $rose-button;
-            outline-offset: 2px;
-        }
 
         &.selected {
             border: 3px solid $green-button;
@@ -103,6 +103,12 @@ p {
         }
     }
 }
+
+.avatar-item:hover:not(.selected) {
+    border-color: $rose-button;
+}
+
+
 
 .attributes-container {
     display: grid;
@@ -167,4 +173,14 @@ p {
     gap: 1rem;
     margin-top: 2rem;
     justify-content: center;
+}
+
+.no-games {
+    color: white;
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.2rem;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-radius: 10px;
+    margin: 1rem 0;
 }

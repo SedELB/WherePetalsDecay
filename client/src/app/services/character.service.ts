@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { AVATARS, BASE_STATS, Character, RANDOM_NAMES, RANDOM_PROBABILITY } from '@app/interfaces/character';
+import { AVATARS_PATH, BASE_STATS, Character, RANDOM_NAMES, RANDOM_PROBABILITY } from '@app/interfaces/character';
 
 @Injectable({
     providedIn: 'root',
@@ -11,7 +11,7 @@ export class CharacterService {
 
         return {
             name: name.trim(),
-            avatar: AVATARS[avatarIndex],
+            avatar: AVATARS_PATH[avatarIndex],
             life,
             speed,
             attack: BASE_STATS.attack,
@@ -22,11 +22,11 @@ export class CharacterService {
         };
     }
 
-    generateRandomCharacter() {
-        const randomNameIndex = Math.floor(Math.random() * RANDOM_NAMES.length);
-        const avatarIndex = Math.floor(Math.random() * AVATARS.length);
-        const lifeBonus = Math.random() < RANDOM_PROBABILITY;
-        const attackDiceD6 = Math.random() < RANDOM_PROBABILITY;
+    generateRandomCharacter(): { name: string; avatarIndex: number; lifeBonus: boolean; attackDiceD6: boolean } {
+        const randomNameIndex: number = Math.floor(Math.random() * RANDOM_NAMES.length);
+        const avatarIndex: number = Math.floor(Math.random() * AVATARS_PATH.length);
+        const lifeBonus: boolean = Math.random() < RANDOM_PROBABILITY;
+        const attackDiceD6: boolean = Math.random() < RANDOM_PROBABILITY;
 
         return {
             name: RANDOM_NAMES[randomNameIndex],
@@ -41,6 +41,6 @@ export class CharacterService {
     }
 
     isValidAvatar(index: number | null): boolean {
-        return index !== null && index >= 0 && index < AVATARS.length;
+        return index !== null && index >= 0 && index < AVATARS_PATH.length;
     }
 }

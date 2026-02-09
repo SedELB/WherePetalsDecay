@@ -161,8 +161,8 @@ export class GameValidatorService {
             col > 0 &&
             col < cols - 1;
         
-        if (isInside) return true;
-        return false;
+        if (isInside) return false;
+        return true;
     }
 
     // For type and item
@@ -208,7 +208,7 @@ export class GameValidatorService {
                                     (!obstacles.includes(up) && !obstacles.includes(down));
 
             if (!verticalSandwich && !horizontalSandwich) {
-                errors.push(`Invalid door placement at the position (${row}, ${col})!`);
+                errors.push(`Invalid door placement at the position (${row}, ${col})! (missing walls)`);
             }
         }
         if (errors.length > 0) throw new Error(JSON.stringify(errors));
@@ -231,10 +231,10 @@ export class GameValidatorService {
 
         const validations = [
             () => this.isTextLengthValid(game),
-            () => this.isDoorsPlacementValid(game),
             () => this.areThereUnreachableTiles(game),
             () => this.isGameSurfaceValid(game),
             () => this.areAllSpawnPointsPlaced(game),
+            () => this.isDoorsPlacementValid(game),
             () => this.isFlagPlaced(game),
         ];
         

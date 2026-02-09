@@ -1,12 +1,12 @@
-import { CreateGameDto} from '@app/model/dto/game/create-game.dto';
-import { GameMode} from '@app/utils/game.enum';
+import { CreateGameDto, TileDto } from '@app/model/dto/game/create-game.dto';
+import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
 import { Game, GameDocument } from '@app/model/schema/game.schema';
+import { MAX_PLAYERS, MIN_PLAYERS, TEN } from '@app/utils/game.constants';
+import { GameMode, TileItem, TileTexture } from '@app/utils/game.enum';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { GameValidatorService } from './gameValidator.service';
-import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
-import { MAX_PLAYERS, MIN_PLAYERS, TEN } from '@app/utils/game.constants';
 
 @Injectable()
 export class GameService {
@@ -28,7 +28,7 @@ export class GameService {
         const validGame1: CreateGameDto = {
             name: 'Valid Game 1',
             description: 'Desc. 1',
-            size: {rows: TEN, cols: TEN},
+            size: { rows: TEN, cols: TEN },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MAX_PLAYERS,
@@ -39,7 +39,7 @@ export class GameService {
         const validGame2: CreateGameDto = {
             name: 'Valid Game 2',
             description: 'Desc. 2',
-            size: {rows: TEN, cols: TEN},
+            size: { rows: TEN, cols: TEN },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MIN_PLAYERS,
@@ -50,7 +50,7 @@ export class GameService {
         const invalidGame3: CreateGameDto = {
             name: 'Invalid Game 3',
             description: 'Desc. 3',
-            size: {rows: TEN, cols: TEN},
+            size: { rows: TEN, cols: TEN },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MIN_PLAYERS,
@@ -98,7 +98,7 @@ export class GameService {
         return visibleGames;
     }
 
-    async addGame(game: CreateGameDto): Promise<void> {
+    async addGame(game: CreateGameDto): Promise<Game> {
         try {
             await this.isGameNameUnique(game.name);
             await this.gameValidatorService.isGameValid(game);
@@ -110,7 +110,7 @@ export class GameService {
         }
     }
 
-    async modifyGame(id: string, game: UpdateGameDto): Promise<void> {
+    async modifyGame(id: string, game: UpdateGameDto): Promise<Game> {
         try {
             const existingGame = await this.gameModel.findById(id).lean();
             if (!existingGame) {
@@ -144,7 +144,7 @@ export class GameService {
             throw new Error(`Error during game deletion: ${error.message}`);
         }
     }
-    
+
     async updateVisibility(id: string, newVisibility: boolean): Promise<void> {
         try {
             const result = await this.gameModel.findByIdAndUpdate(id, {isVisible: newVisibility }, { new: true, timestamps: false }).exec();

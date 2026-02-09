@@ -10,13 +10,12 @@
     <app-button [width]="100" [route]="'/home'">Retour</app-button>
 
     <div class="list-container">
-        @for(game of games; track game.id){
-            <app-game-card
-            [game]="game"
-            (removeParent)="removeGame(game.id)">
-            <app-button [height]="50" (clicked)="editGame(game)">Modifier</app-button>
-            <app-button [height]="50" (clicked)="changeVisibility(game.id)">{{ game.visible ? 'Afficher' : 'Cacher' }}</app-button>
-            <app-button [height]="50" (clicked)="removeGame(game.id)">Supprimer</app-button>
+        @for(game of gameCards; track game.name){
+            <app-game-card [game]="game"
+            (removeParent)="removeGame(game.name)">
+                <app-button [height]="50" (clicked)="navigateToGameEditor(game.name)">Modifier</app-button>
+                <app-button [height]="50" (clicked)="changeVisibility(game.name)">{{ game.isVisible ? 'Cacher' : 'Afficher' }}</app-button>
+                <app-button [height]="50" (clicked)="removeGame(game.name)">Supprimer</app-button>
             </app-game-card>
         }
 
@@ -32,7 +31,6 @@
                 </g>
             </svg>
         </app-button>
-
     </div>
 </body>
 </html>
