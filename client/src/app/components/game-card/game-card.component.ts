@@ -1,6 +1,7 @@
 import { NgClass } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { GameCard } from '@app/interfaces/gameCard';
+import { GameMode } from '@common/enums';
 
 @Component({
   selector: 'app-game-card',
@@ -15,7 +16,7 @@ export class GameCardComponent {
     name: '',
     description: '',
     size: { rows: 0, cols: 0 },
-    gameMode: '',
+    gameMode: GameMode.Classic,
     thumbnail: '',
     updatedAt: new Date(),
     isVisible: true,
@@ -23,6 +24,7 @@ export class GameCardComponent {
 
   @Output() removeParent = new EventEmitter<void>();
   show = false;
+  GameMode = GameMode;
 
   displayTime(): string {
     const rawDate = this.game.updatedAt;

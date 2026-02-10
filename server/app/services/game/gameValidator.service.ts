@@ -1,5 +1,5 @@
 import { TEXT_MIN_LENGTH, NAME_MAX_LENGTH, DESC_MAX_LENGTH, MAX_PLAYERS } from '@app/utils/game.constants';
-import { TileTexture, TileItem } from '@app/utils/game.enum';
+import { GameMode, TileTexture, TileItem } from '@app/utils/game.enum';
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { Tile } from '@app/model/schema/game.schema';
 import { Injectable } from '@nestjs/common';
@@ -216,7 +216,7 @@ export class GameValidatorService {
     }
 
     isFlagPlaced(game: CreateGameDto): boolean {
-        if (game.gameMode === 'ctf') {
+        if (game.gameMode === GameMode.Ctf) {
             const nbFlag = this.countByProperty(game, 'item').flag || 0;
             if (nbFlag === 0) {
                 throw new Error("The Flag isn't placed!");

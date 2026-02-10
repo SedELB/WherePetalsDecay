@@ -1,4 +1,4 @@
-import { TileItem } from '@common/enums';
+import { GameMode, TileItem } from '@common/enums';
 import { Tile } from './tile';
 import { Vec2 } from './vec2';
 
@@ -12,7 +12,7 @@ export interface Game {
     name: string;
     description: string;
     size: { rows: number, cols: number };
-    gameMode: string;
+    gameMode: GameMode;
     thumbnail: string;
     maxPlayers: number;
     grid: Tile[][];

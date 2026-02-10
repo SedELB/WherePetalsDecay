@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { GameCard } from '@app/interfaces/gameCard';
+import { GameMode } from '@common/enums';
 import { GameCardComponent } from './game-card.component';
 
 describe('GameCardComponent', () => {
@@ -10,7 +11,7 @@ describe('GameCardComponent', () => {
     name: 'Game 1',
     description: 'test description',
     size: { rows: 10, cols: 10 },
-    gameMode: 'CTF',
+    gameMode: GameMode.Ctf,
     thumbnail: '/assets/filler.png',
     updatedAt: new Date('2026-01-01'),
     isVisible: true,

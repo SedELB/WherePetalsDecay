@@ -50,7 +50,7 @@ export class CreateGamePageComponent {
       name: '',
       description: '',
       size: this.sizes[this.mapSize ?? ''] ?? { rows: 0, cols: 0 },
-      gameMode: this.gameMode ?? '',
+      gameMode: this.gameMode ?? GameMode.Classic,
       thumbnail: '',
       maxPlayers: this.getMaxPlayers, // Always 6 players: server expects this for spawn validation
       grid: [],

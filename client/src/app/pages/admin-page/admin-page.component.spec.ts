@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { Game } from '@app/interfaces/game';
 import { CommunicationService } from '@app/services/communication/communication.service';
+import { GameMode } from '@common/enums';
 import { of } from 'rxjs';
 import { AdminPageComponent } from './admin-page.component';
 
@@ -18,7 +19,7 @@ describe('AdminPageComponent', () => {
       name: 'Morpion',
       description: 'Le grand classique du 3x3.',
       size: { rows: 20, cols: 20 },
-      gameMode: 'Solo',
+      gameMode: GameMode.Classic,
       thumbnail: 'assets/morpion.png',
       maxPlayers: 1,
       grid: [],
@@ -31,7 +32,7 @@ describe('AdminPageComponent', () => {
       name: 'Bataille Navale',
       description: 'Coulez tous les navires adverses.',
       size: { rows: 10, cols: 10 },
-      gameMode: 'Multijoueur',
+      gameMode: GameMode.Ctf,
       thumbnail: 'assets/naval.png',
       maxPlayers: 2,
       grid: [],
@@ -44,7 +45,7 @@ describe('AdminPageComponent', () => {
       name: 'Échecs',
       description: 'Testez votre stratégie.',
       size: { rows: 15, cols: 15 },
-      gameMode: 'Classique',
+      gameMode: GameMode.Classic,
       thumbnail: 'assets/chess.png',
       maxPlayers: 2,
       grid: [],
