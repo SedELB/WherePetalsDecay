@@ -23,28 +23,11 @@ export class GameController {
     @ApiNotFoundResponse({
         description: 'Return NOT_FOUND http status when request fails.',
     })
-    @Get('/allGames')
+    @Get('/games')
     async allGames(@Res() response: Response) {
         try {
             const allGames = await this.gameService.getAllGames();
             response.status(HttpStatus.OK).json(allGames);
-        } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).json(error.message);
-        }
-    }
-
-    @ApiOkResponse({
-        description: 'Returns a single game',
-        type: Game,
-    })
-    @ApiNotFoundResponse({
-        description: 'Return NOT_FOUND http status when request fails.',
-    })
-    @Get('/singleGame/:id')
-    async getGame(@Param('id') id: string, @Res() response: Response) {
-        try {
-            const game = await this.gameService.getGameById(id);
-            response.status(HttpStatus.OK).json(game);
         } catch (error) {
             response.status(HttpStatus.NOT_FOUND).json(error.message);
         }
@@ -79,7 +62,7 @@ export class GameController {
         try {
             const createdGame = await this.gameService.addGame(gameDto);
             this.gameGateway.notifyGameCreated(createdGame);
-            response.status(HttpStatus.CREATED).json('Le jeu a été créé avec succès !');
+            response.status(HttpStatus.CREATED).send(); // json();
         } catch (error) {
             response.status(HttpStatus.BAD_REQUEST).json(error.message);
         }
@@ -97,9 +80,9 @@ export class GameController {
         try {
             const updatedGame = await this.gameService.modifyGame(id, gameDto);
             this.gameGateway.notifyGameUpdated(updatedGame);
-            response.status(HttpStatus.OK).json('Le jeu a été modifié avec succès !');
+            response.status(HttpStatus.OK).send('Game updated successfully!'); // .json
         } catch (error) {
-            const status = error.message.includes('Aucun jeu trouvé avec cet identifiant.') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            const status = error.message.includes('No game found with this id') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
             response.status(status).json(error.message);
         }
     }
@@ -115,7 +98,7 @@ export class GameController {
         try {
             await this.gameService.updateVisibility(id, isVisible);
             this.gameGateway.notifyGameVisibilityChanged(id, isVisible);
-            response.status(HttpStatus.OK).json('Le jeu a été modifié avec succès !');
+            response.status(HttpStatus.OK).send('Game updated successfully!'); // json
         } catch (error) {
             response.status(HttpStatus.BAD_REQUEST).json(error.message);
         }
@@ -133,9 +116,9 @@ export class GameController {
         try {
             await this.gameService.deleteGame(id);
             this.gameGateway.notifyGameDeleted(id);
-            response.status(HttpStatus.NO_CONTENT).json('Le jeu a été supprimé avec succès !');
+            response.status(HttpStatus.NO_CONTENT).send(); // .json
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).json(error.message);
+            response.status(HttpStatus.NOT_FOUND).send(error.message);
         }
     }
 }
