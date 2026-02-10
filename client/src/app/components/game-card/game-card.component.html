@@ -18,10 +18,10 @@
 
   <div class="card-info">
     <ul>
-      <li>{{ game.name }}</li>
-      <li>{{ game.size.rows }}X{{ game.size.cols }}</li>
-      <li>{{ game.gameMode }}</li>
-      <li>{{ displayTime() }}</li>
+      <li>Nom du jeu : <span>{{ game.name }}</span></li>
+      <li>Taille du jeu : <span>{{ game.size.rows }}X{{ game.size.cols }}</span></li>
+      <li>Mode de jeu : <span>{{ game.gameMode }}</span></li>
+      <li>Dernière modification : <span>{{ displayTime() }}</span></li>
     </ul>
 
     <div class="card-buttons">
