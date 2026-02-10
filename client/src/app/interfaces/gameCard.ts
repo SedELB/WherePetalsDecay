@@ -1,8 +1,10 @@
+import { GameMode } from '@common/enums';
+
 export interface GameCard {
     name: string;
     description: string;
     size: { rows: number, cols: number };
-    gameMode: string;
+    gameMode: GameMode;
     thumbnail: string;
     updatedAt: Date;
     isVisible: boolean;
