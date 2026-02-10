@@ -90,7 +90,7 @@ export class GameService {
     }
 
     async getAllVisibleGames(): Promise<Game[]> {
-        const visibleGames = await this.gameModel.find({isVisible: true}).exec();
+        const visibleGames = await this.gameModel.find({ isVisible: true }).exec();
         if (visibleGames.length === 0) {
             this.logger.log('No visible games found in the database');
             throw new Error('No visible games found in the database');
@@ -121,10 +121,10 @@ export class GameService {
                 await this.isGameNameUnique(game.name, id);
             }
 
-            const fullGameData = {...existingGame, ...game};    // new properies from game replace the olds
+            const fullGameData = { ...existingGame, ...game };    // new properies from game replace the olds
             this.gameValidatorService.isGameValid(fullGameData);
             fullGameData.isVisible = false;                     // Default value of a modified game
-            await this.gameModel.findByIdAndUpdate(id, fullGameData, {new: true }).exec();
+            await this.gameModel.findByIdAndUpdate(id, fullGameData, { new: true }).exec();
         } catch (error) {
             this.logger.error(`Failed to update game: ${error.message}`);
             throw new Error(`Failed to update game: ${error.message}`);
@@ -147,7 +147,7 @@ export class GameService {
 
     async updateVisibility(id: string, newVisibility: boolean): Promise<void> {
         try {
-            const result = await this.gameModel.findByIdAndUpdate(id, {isVisible: newVisibility }, { new: true, timestamps: false }).exec();
+            const result = await this.gameModel.findByIdAndUpdate(id, { isVisible: newVisibility }, { new: true, timestamps: false }).exec();
             if (!result) {
                 throw new Error('No game found with this id');
             }

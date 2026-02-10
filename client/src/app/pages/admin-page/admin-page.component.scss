@@ -8,7 +8,7 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 2rem;
+    padding-bottom: 2rem;
     box-sizing: border-box;
 }
 
@@ -16,6 +16,16 @@ body > app-button {
     position: absolute;
     top: 75px;
     left: 60px;
+}
+
+h2 {
+    color: $text-color;
+    text-align: center;
+}
+
+p {
+    color: $text-color;
+    text-align: center;
 }
 
 .add-button {

@@ -80,6 +80,7 @@ export class GameController {
         try {
             const updatedGame = await this.gameService.modifyGame(id, gameDto);
             this.gameGateway.notifyGameUpdated(updatedGame);
+            this.gameGateway.notifyGameVisibilityChanged(id, false);
             response.status(HttpStatus.OK).json('Game updated successfully!');
         } catch (error) {
             const status = error.message.includes('No game found with this id') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
