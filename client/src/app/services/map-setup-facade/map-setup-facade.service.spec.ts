@@ -206,7 +206,7 @@ describe('MapSetupFacadeService', () => {
 
     it('captures a thumbnail when the DOM element exists', async () => {
         const el = document.createElement('div');
-        el.id = 'tubmnail';
+        el.id = 'thumbnail';
         el.style.width = `${THUMBNAIL_SIZE_PX}px`;
         el.style.height = `${THUMBNAIL_SIZE_PX}px`;
         document.body.appendChild(el);
@@ -220,7 +220,7 @@ describe('MapSetupFacadeService', () => {
     });
 
     it('throws if the thumbnail element is missing', async () => {
-        const existing = document.getElementById('tubmnail');
+        const existing = document.getElementById('thumbnail');
         existing?.remove();
 
         await expectAsync(
