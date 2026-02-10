@@ -15,6 +15,7 @@ interface TileTool {
     type: TileTexture;
     label: string;
     description: string;
+    image: string;
 }
 
 export enum MouseEventType {
@@ -56,30 +57,36 @@ export const TILE_TOOLS: Record<TileTexture, TileTool> = {
         type: TileTexture.Floor,
         label: 'Sol',
         description: 'Surface de base, permet le passage libre des joueurs.',
+        image: '/assets/tiles/default.png',
     },
     [TileTexture.Wall]: {
         type: TileTexture.Wall,
         label: 'Mur',
         description: 'Bloque le passage des joueurs.',
+        image: '/assets/tiles/wall.png',
     },
     [TileTexture.Water]: {
         type: TileTexture.Water,
         label: 'Eau',
         description: 'Zone liquide, ralentit ou bloque selon les règles.',
+        image: '/assets/tiles/water.png',
     },
     [TileTexture.Ice]: {
         type: TileTexture.Ice,
         label: 'Glace',
         description: 'Surface glissante qui modifie les déplacements.',
+        image: '/assets/tiles/ice.png',
     },
     [TileTexture.DoorOpened]: {
         type: TileTexture.DoorOpened,
         label: 'Porte ouverte',
         description: 'Porte ouverte qui permet le passage des joueurs.',
+        image: '/assets/tiles/opened_door.png',
     },
     [TileTexture.DoorClosed]: {
         type: TileTexture.DoorClosed,
         label: 'Porte',
         description: 'Porte fermée qui bloque le passage des joueurs.',
+        image: '/assets/tiles/closed_door.png',
     },
 };

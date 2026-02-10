@@ -160,6 +160,7 @@
   display: grid;
   grid-template-rows: 34px 1fr;
   gap: 12px;
+  transform: scale(1.3);
 }
 
 .map-title {
@@ -275,9 +276,9 @@
   }
 }
 
-.tool__label {
-  font-weight: 700;
-  font-size: 12px;
+.tool__img {
+  width: 40%;
+  height: auto;
 }
 
 .tool__desc {
