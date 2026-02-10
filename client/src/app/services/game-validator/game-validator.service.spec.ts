@@ -1,5 +1,5 @@
 import type { PlacedObject } from '@app/interfaces/game';
-import { GameValidatorService, type GameDraftForValidation } from '@app/services/game-validator.service';
+import { GameValidatorService, type GameDraftForValidation } from '@app/services/game-validator/game-validator.service';
 import { GameMode, TileItem, TileTexture } from '@common/enums';
 
 type GameValidatorServiceInternal = {

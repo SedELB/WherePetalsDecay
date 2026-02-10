@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
-import { WebSocketService } from './web-socket.service';
+import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Game } from '@app/interfaces/game';
 
 export enum GameEvents {

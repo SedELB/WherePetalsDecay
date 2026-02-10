@@ -5,8 +5,8 @@ import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { Game } from '@app/interfaces/game';
 import { GameCard } from '@app/interfaces/gameCard';
-import { CommunicationService } from '@app/services/communication.service';
-import { GameService } from '@app/services/game.service';
+import { CommunicationService } from '@app/services/communication/communication.service';
+import { GameService } from '@app/services/game/game.service';
 import { Subscription } from 'rxjs';
 
 @Component({

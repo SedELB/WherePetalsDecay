@@ -1,5 +1,3 @@
-import type { Game } from '@app/interfaces/game';
-import type { Tile } from '@app/interfaces/tile';
 import {
   MAP_LARGE_SIZE,
   MAP_MEDIUM_SIZE,
@@ -11,7 +9,9 @@ import {
   SPAWN_COUNT_MEDIUM,
   SPAWN_COUNT_SMALL,
 } from '@app/constants/game.constants';
-import { TileItemCountService } from '@app/services/tile-item-count.service';
+import type { Game } from '@app/interfaces/game';
+import type { Tile } from '@app/interfaces/tile';
+import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { GameMode, TileItem, TileTexture } from '@common/enums';
 
 const grid = (rows: number, cols: number): Tile[][] =>

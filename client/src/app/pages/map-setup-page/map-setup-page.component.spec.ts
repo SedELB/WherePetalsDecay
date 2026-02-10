@@ -2,9 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { Game } from '@app/interfaces/game';
 import { Tile } from '@app/interfaces/tile';
-import { MapSetupFacadeService } from '@app/services/map-setup-facade.service';
-import { MapSetupService } from '@app/services/map-setup.service';
-import { TileItemCountService } from '@app/services/tile-item-count.service';
+import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-facade.service';
+import { MapSetupService } from '@app/services/map-setup/map-setup.service';
+import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { GameMode, TileItem, TileTexture } from '@common/enums';
 import { MapSetupPageComponent } from './map-setup-page.component';
 
