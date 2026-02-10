@@ -1,16 +1,10 @@
 import { Injectable } from '@angular/core';
 import { PlacedObject } from '@app/interfaces/game';
-import { GameMode, TileItem, TileTexture } from '@common/enums';
+import { GameMode, GridSizes, MaxPlayers, TileItem, TileTexture } from '@common/enums';
 
 const NAME_MAX_LENGTH = 20;
 const DESC_MAX_LENGTH = 500;
 const TEXT_MIN_LENGTH = 1;
-const MAP_SMALL_SIZE = 10;
-const MAP_MEDIUM_SIZE = 15;
-const MAP_LARGE_SIZE = 20;
-const SPAWN_SMALL = 2;
-const SPAWN_MEDIUM = 4;
-const SPAWN_LARGE = 6;
 const FLAG_REQUIRED = 1;
 const FLAG_NONE = 0;
 
@@ -106,7 +100,7 @@ export class GameValidatorService {
     private validateGridSize(size: { rows: number; cols: number }, grid: TileTexture[][]): string[] {
         const errors: string[] = [];
 
-        const validSizes = [MAP_SMALL_SIZE, MAP_MEDIUM_SIZE, MAP_LARGE_SIZE];
+        const validSizes = [GridSizes.Small, GridSizes.Medium, GridSizes.Large];
         if (!validSizes.includes(size.rows) || size.rows !== size.cols) {
             errors.push(`Grid size must be square and one of: ${validSizes.join('x')}, ${validSizes.join('x')}, ${validSizes.join('x')}`);
         }
@@ -220,7 +214,7 @@ export class GameValidatorService {
 
     private getRequiredObjectCounts(mapSize: number, mode: string): Record<TileItem, number> {
         const spawnCount =
-            mapSize === MAP_SMALL_SIZE ? SPAWN_SMALL : mapSize === MAP_MEDIUM_SIZE ? SPAWN_MEDIUM : SPAWN_LARGE;
+            mapSize === GridSizes.Small ? MaxPlayers.Small : mapSize === GridSizes.Medium ? MaxPlayers.Medium : MaxPlayers.Large;
         const flagCount = mode === GameMode.Ctf ? FLAG_REQUIRED : FLAG_NONE;
 
         return {

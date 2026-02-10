@@ -1,9 +1,5 @@
 import { TileItem, TileTexture } from '@common/enums';
 
-export const MAP_SMALL_SIZE = 10;
-export const MAP_MEDIUM_SIZE = 15;
-export const MAP_LARGE_SIZE = 20;
-
 interface ObjectPlacementTool {
     type: TileItem;
     label: string;

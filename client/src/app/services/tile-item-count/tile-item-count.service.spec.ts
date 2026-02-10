@@ -1,18 +1,7 @@
-import {
-  MAP_LARGE_SIZE,
-  MAP_MEDIUM_SIZE,
-  MAP_SMALL_SIZE,
-  SANCTUARY_COUNT_LARGE,
-  SANCTUARY_COUNT_MEDIUM,
-  SANCTUARY_COUNT_SMALL,
-  SPAWN_COUNT_LARGE,
-  SPAWN_COUNT_MEDIUM,
-  SPAWN_COUNT_SMALL,
-} from '@app/constants/game.constants';
 import type { Game } from '@app/interfaces/game';
 import type { Tile } from '@app/interfaces/tile';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
-import { GameMode, TileItem, TileTexture } from '@common/enums';
+import { GameMode, GridSizes, MaxPlayers, SanctuaryCount, TileItem, TileTexture } from '@common/enums';
 
 const grid = (rows: number, cols: number): Tile[][] =>
   Array.from({ length: rows }, () =>
@@ -47,38 +36,38 @@ describe('TileItemCountService', () => {
   });
 
   it('returns required counts based on map size and mode', () => {
-    expect(service.getRequiredSpawnCount(gameFactory(MAP_SMALL_SIZE, MAP_SMALL_SIZE))).toBe(SPAWN_COUNT_SMALL);
-    expect(service.getRequiredSpawnCount(gameFactory(MAP_MEDIUM_SIZE, MAP_MEDIUM_SIZE))).toBe(SPAWN_COUNT_MEDIUM);
-    expect(service.getRequiredSpawnCount(gameFactory(MAP_LARGE_SIZE, MAP_LARGE_SIZE))).toBe(SPAWN_COUNT_LARGE);
+    expect(service.getRequiredSpawnCount(gameFactory(GridSizes.Small, GridSizes.Small))).toBe(MaxPlayers.Small);
+    expect(service.getRequiredSpawnCount(gameFactory(GridSizes.Medium, GridSizes.Medium))).toBe(MaxPlayers.Medium);
+    expect(service.getRequiredSpawnCount(gameFactory(GridSizes.Large, GridSizes.Large))).toBe(MaxPlayers.Large);
     expect(() => service.getRequiredSpawnCount(gameFactory(SIZE_INVALID_ELEVEN, SIZE_INVALID_ELEVEN))).toThrow();
 
-    expect(service.getRequiredFlagCount(gameFactory(MAP_SMALL_SIZE, MAP_SMALL_SIZE, GameMode.Classic))).toBe(0);
-    expect(service.getRequiredFlagCount(gameFactory(MAP_SMALL_SIZE, MAP_SMALL_SIZE, GameMode.Ctf))).toBe(1);
+    expect(service.getRequiredFlagCount(gameFactory(GridSizes.Small, GridSizes.Small, GameMode.Classic))).toBe(0);
+    expect(service.getRequiredFlagCount(gameFactory(GridSizes.Small, GridSizes.Small, GameMode.Ctf))).toBe(1);
     expect(() =>
-      service.getRequiredFlagCount(gameFactory(MAP_SMALL_SIZE, MAP_SMALL_SIZE, 'invalid' as unknown as GameMode)),
+      service.getRequiredFlagCount(gameFactory(GridSizes.Small, GridSizes.Small, 'invalid' as unknown as GameMode)),
     ).toThrow();
 
-    expect(service.getRequiredHealingSanctuaryCount(gameFactory(MAP_SMALL_SIZE, MAP_SMALL_SIZE))).toBe(
-      SANCTUARY_COUNT_SMALL,
+    expect(service.getRequiredHealingSanctuaryCount(gameFactory(GridSizes.Small, GridSizes.Small))).toBe(
+      SanctuaryCount.Small,
     );
-    expect(service.getRequiredHealingSanctuaryCount(gameFactory(MAP_MEDIUM_SIZE, MAP_MEDIUM_SIZE))).toBe(
-      SANCTUARY_COUNT_MEDIUM,
+    expect(service.getRequiredHealingSanctuaryCount(gameFactory(GridSizes.Medium, GridSizes.Medium))).toBe(
+      SanctuaryCount.Medium,
     );
-    expect(service.getRequiredHealingSanctuaryCount(gameFactory(MAP_LARGE_SIZE, MAP_LARGE_SIZE))).toBe(
-      SANCTUARY_COUNT_LARGE,
+    expect(service.getRequiredHealingSanctuaryCount(gameFactory(GridSizes.Large, GridSizes.Large))).toBe(
+      SanctuaryCount.Large,
     );
     expect(() =>
       service.getRequiredHealingSanctuaryCount(gameFactory(SIZE_INVALID_TWELVE, SIZE_INVALID_TWELVE)),
     ).toThrow();
 
-    expect(service.getRequiredCombatSanctuaryCount(gameFactory(MAP_SMALL_SIZE, MAP_SMALL_SIZE))).toBe(
-      SANCTUARY_COUNT_SMALL,
+    expect(service.getRequiredCombatSanctuaryCount(gameFactory(GridSizes.Small, GridSizes.Small))).toBe(
+      SanctuaryCount.Small,
     );
-    expect(service.getRequiredCombatSanctuaryCount(gameFactory(MAP_MEDIUM_SIZE, MAP_MEDIUM_SIZE))).toBe(
-      SANCTUARY_COUNT_MEDIUM,
+    expect(service.getRequiredCombatSanctuaryCount(gameFactory(GridSizes.Medium, GridSizes.Medium))).toBe(
+      SanctuaryCount.Medium,
     );
-    expect(service.getRequiredCombatSanctuaryCount(gameFactory(MAP_LARGE_SIZE, MAP_LARGE_SIZE))).toBe(
-      SANCTUARY_COUNT_LARGE,
+    expect(service.getRequiredCombatSanctuaryCount(gameFactory(GridSizes.Large, GridSizes.Large))).toBe(
+      SanctuaryCount.Large,
     );
     expect(() =>
       service.getRequiredCombatSanctuaryCount(gameFactory(SIZE_INVALID_TWELVE, SIZE_INVALID_TWELVE)),
@@ -86,7 +75,7 @@ describe('TileItemCountService', () => {
   });
 
   it('counts textures and placed items correctly', () => {
-    const game = gameFactory(MAP_SMALL_SIZE, MAP_SMALL_SIZE, GameMode.Ctf);
+    const game = gameFactory(GridSizes.Small, GridSizes.Small, GameMode.Ctf);
 
     game.grid[0][0].type = TileTexture.Wall;
     game.grid[0][1].item = TileItem.Spawn;
