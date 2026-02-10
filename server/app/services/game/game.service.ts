@@ -1,12 +1,12 @@
-import { CreateGameDto} from '@app/model/dto/game/create-game.dto';
-import { GameMode} from '@app/utils/game.enum';
+import { CreateGameDto, TileDto } from '@app/model/dto/game/create-game.dto';
+import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
 import { Game, GameDocument } from '@app/model/schema/game.schema';
+import { MAX_PLAYERS, MIN_PLAYERS, TEN } from '@app/utils/game.constants';
+import { GameMode, TileItem, TileTexture } from '@app/utils/game.enum';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { GameValidatorService } from './gameValidator.service';
-import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
-import { MAX_PLAYERS, MIN_PLAYERS, TEN } from '@app/utils/game.constants';
 
 @Injectable()
 export class GameService {
@@ -24,11 +24,72 @@ export class GameService {
         }
     }
 
+    // GENERATED
+    generateValidGrid(rows: number, cols: number): TileDto[][] {
+        const grid: TileDto[][] = Array.from({ length: rows }, () =>
+            Array.from({ length: cols }, (): TileDto => ({ type: TileTexture.Floor, item: null })),
+        );
+
+        // Places random walls at 30% rate
+        // for (let i = 0; i < rows; i++) {
+        //     for (let j = 0; j < cols; j++) {
+        //         if (Math.random() < 0.3) grid[i][j].type = TileTexture.Wall;
+        //     }
+        // }
+
+        let spawnCount = 0;
+        while (spawnCount < MAX_PLAYERS) {
+            const r = Math.floor(Math.random() * rows);
+            const c = Math.floor(Math.random() * cols);
+            if (grid[r][c].type !== TileTexture.Wall && !grid[r][c].item) {
+                grid[r][c].item = TileItem.Spawn;
+                spawnCount++;
+            }
+        }
+
+        return grid;
+    }
+
+
+    generateInvalidGrid(rows: number, cols: number): TileDto[][] {
+        return Array.from({ length: rows }, () =>
+            Array.from({ length: cols }, (): TileDto => ({ type: TileTexture.Wall, item: null })),  // Tout en murs = invalide
+        );
+    }
+
+    // GENERATED
+    printGrid(game: Game): void {
+        const symbols = {
+            [TileTexture.Floor]: '.',
+            [TileTexture.Wall]: '#',
+            [TileTexture.DoorOpened]: 'O',
+            [TileTexture.DoorClosed]: 'X',
+            // Ajoutez d'autres types si nécessaire
+        };
+
+        const itemSymbols = {
+            [TileItem.Spawn]: 'S',  // Symbole pour spawn
+            // Ajoutez d'autres items si nécessaire
+        };
+
+        this.logger.log(`Grille pour le jeu "${game.name}":`);
+        game.grid.forEach(row => {
+            const rowString = row.map(tile => {
+                const symbol = symbols[tile.type] || '?';  // Symbole pour le type
+                const itemSymbol = tile.item ? itemSymbols[tile.item] || `(${tile.item})` : '';  // Symbole pour l'item, ou (item) si inconnu
+                return itemSymbol || symbol;  // Priorité à l'item si présent
+            }).join(' ');
+            this.logger.log(rowString);
+        });
+        this.logger.log('');
+    }
+
+
     async populateDB(): Promise<void> {
         const validGame1: CreateGameDto = {
             name: 'Valid Game 1',
             description: 'Desc. 1',
-            size: {rows: TEN, cols: TEN},
+            size: { rows: TEN, cols: TEN },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MAX_PLAYERS,
@@ -39,7 +100,7 @@ export class GameService {
         const validGame2: CreateGameDto = {
             name: 'Valid Game 2',
             description: 'Desc. 2',
-            size: {rows: TEN, cols: TEN},
+            size: { rows: TEN, cols: TEN },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MIN_PLAYERS,
@@ -50,7 +111,7 @@ export class GameService {
         const invalidGame3: CreateGameDto = {
             name: 'Invalid Game 3',
             description: 'Desc. 3',
-            size: {rows: TEN, cols: TEN},
+            size: { rows: TEN, cols: TEN },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MIN_PLAYERS,
@@ -63,6 +124,7 @@ export class GameService {
         await this.gameModel.insertMany(defaultGames);
     }
 
+    // validator that uses mongoose (async)
     async isGameNameUnique(gameName: string, gameId?: string): Promise<boolean> {
         const nameExists = await this.gameModel.findOne({ name: gameName }).exec();
         // if name is unique && if name exists but we're updating a game
@@ -90,8 +152,8 @@ export class GameService {
     }
 
     async getAllVisibleGames(): Promise<Game[]> {
-        const visibleGames = await this.gameModel.find({isVisible: true}).exec();
-        if (visibleGames.length === 0) {
+        const visibleGames = await this.gameModel.find({ isVisible: true }).exec();
+        if (!visibleGames) {
             this.logger.log('No visible games found in the database');
             throw new Error('No visible games found in the database');
         }
@@ -144,11 +206,11 @@ export class GameService {
             throw new Error(`Error during game deletion: ${error.message}`);
         }
     }
-    
+
     async updateVisibility(id: string, newVisibility: boolean): Promise<void> {
         try {
-            const result = await this.gameModel.findByIdAndUpdate(id, {isVisible: newVisibility }, { new: true, timestamps: false }).exec();
-            if (!result) {
+            const updatedGame = await this.gameModel.findByIdAndUpdate(id, {isVisible: newVisibility }, { new: true, timestamps: false }).exec();
+            if (!updatedGame) {
                 throw new Error('No game found with this id');
             }
             this.logger.log(`Visibility updated to ${newVisibility} for game ${id}`);
