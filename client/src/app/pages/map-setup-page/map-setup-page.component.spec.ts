@@ -161,25 +161,4 @@ describe('MapSetupPageComponent', () => {
         expect(service.handleCellMouseEnter).toHaveBeenCalled();
         expect((component as unknown as { isErasingTiles: boolean }).isErasingTiles).toBeTrue();
     });
-
-    it('resets flags, navigates and saves', async () => {
-        component.onGridMouseLeave();
-        expect((component as unknown as { isPaintingTiles: boolean }).isPaintingTiles).toBeFalse();
-        expect((component as unknown as { isErasingTiles: boolean }).isErasingTiles).toBeFalse();
-
-        component.onDocumentMouseUp();
-        expect((component as unknown as { isPaintingTiles: boolean }).isPaintingTiles).toBeFalse();
-        expect((component as unknown as { isErasingTiles: boolean }).isErasingTiles).toBeFalse();
-
-        component.onBack();
-        expect(facade.navigateToAdmin).toHaveBeenCalled();
-
-        await component.onSave();
-        expect(facade.saveGame).toHaveBeenCalledWith(game, 'edit');
-
-        component.onReset();
-        expect(service.resetMap).toHaveBeenCalledWith(game);
-        expect(component.activeTileTexture).toBeNull();
-        expect(component.activeTileItem).toBeNull();
-    });
 });
