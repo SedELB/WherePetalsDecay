@@ -6,4 +6,5 @@ export const ROUTES = {
     admin: '/admin',
     material: '/material',
     editor: '/editor',
+    waitingRoom: '/'
 } as const;

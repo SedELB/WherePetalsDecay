@@ -15,7 +15,7 @@ export class CommunicationService {
     constructor(private readonly http: HttpClient) {}
 
     getAllGames(): Observable<Game[]> {
-        return this.http.get<Game[]>(`${this.baseUrl}/game/games`);
+        return this.http.get<Game[]>(`${this.baseUrl}/game/allGames`);
     }
 
     getVisibleGames(): Observable<Game[]> {
@@ -24,6 +24,10 @@ export class CommunicationService {
 
     deleteGame(id: string): Observable<void> {
         return this.http.delete<void>(`${this.baseUrl}/game/${id}`);
+    }
+
+    getGameById(id: string) {
+        return this.http.get<Game>(`${this.baseUrl}/game/singleGame/${id}`);
     }
 
     updateVisiblity(game: Game): Observable<void> {
