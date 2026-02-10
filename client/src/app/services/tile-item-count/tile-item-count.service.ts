@@ -1,25 +1,14 @@
 import { Injectable } from '@angular/core';
-import {
-  MAP_LARGE_SIZE,
-  MAP_MEDIUM_SIZE,
-  MAP_SMALL_SIZE,
-  SANCTUARY_COUNT_LARGE,
-  SANCTUARY_COUNT_MEDIUM,
-  SANCTUARY_COUNT_SMALL,
-  SPAWN_COUNT_LARGE,
-  SPAWN_COUNT_MEDIUM,
-  SPAWN_COUNT_SMALL,
-} from '@app/constants/game.constants';
 import { Game } from '@app/interfaces/game';
 import { TileItemCounts } from '@app/services/map-setup.types';
-import { GameMode, TileItem, TileTexture } from '@common/enums';
+import { GameMode, GridSizes, MaxPlayers, SanctuaryCount, TileItem, TileTexture } from '@common/enums';
 
 @Injectable({ providedIn: 'root' })
 export class TileItemCountService {
   getRequiredSpawnCount(game: Game): number {
-    if (game.size.rows === MAP_SMALL_SIZE) return SPAWN_COUNT_SMALL;
-    if (game.size.rows === MAP_MEDIUM_SIZE) return SPAWN_COUNT_MEDIUM;
-    if (game.size.rows === MAP_LARGE_SIZE) return SPAWN_COUNT_LARGE;
+    if (game.size.rows === GridSizes.Small) return MaxPlayers.Small;
+    if (game.size.rows === GridSizes.Medium) return MaxPlayers.Medium;
+    if (game.size.rows === GridSizes.Large) return MaxPlayers.Large;
     throw new Error('The size selected is not currently supported (SpawnCount)');
   }
 
@@ -30,16 +19,16 @@ export class TileItemCountService {
   }
 
   getRequiredHealingSanctuaryCount(game: Game): number {
-    if (game.size.rows === MAP_SMALL_SIZE) return SANCTUARY_COUNT_SMALL;
-    if (game.size.rows === MAP_MEDIUM_SIZE) return SANCTUARY_COUNT_MEDIUM;
-    if (game.size.rows === MAP_LARGE_SIZE) return SANCTUARY_COUNT_LARGE;
+    if (game.size.rows === GridSizes.Small) return SanctuaryCount.Small;
+    if (game.size.rows === GridSizes.Medium) return SanctuaryCount.Medium;
+    if (game.size.rows === GridSizes.Large) return SanctuaryCount.Large;
     throw new Error('The size selected is not currently supported (HealingSanctuary)');
   }
 
   getRequiredCombatSanctuaryCount(game: Game): number {
-    if (game.size.rows === MAP_SMALL_SIZE) return SANCTUARY_COUNT_SMALL;
-    if (game.size.rows === MAP_MEDIUM_SIZE) return SANCTUARY_COUNT_MEDIUM;
-    if (game.size.rows === MAP_LARGE_SIZE) return SANCTUARY_COUNT_LARGE;
+    if (game.size.rows === GridSizes.Small) return SanctuaryCount.Small;
+    if (game.size.rows === GridSizes.Medium) return SanctuaryCount.Medium;
+    if (game.size.rows === GridSizes.Large) return SanctuaryCount.Large;
     throw new Error('The size selected is not currently supported (CombatSanctuary)');
   }
 
