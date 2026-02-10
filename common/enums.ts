@@ -29,4 +29,10 @@ export enum MaxPlayers {
     Small = 2,
     Medium = 4,
     Large = 6,
-};
+}
+
+export enum SanctuaryCount {
+    Small = 1,
+    Medium = 2,
+    Large = 4,
+}

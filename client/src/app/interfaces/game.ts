@@ -1,23 +1,10 @@
-import { TileItem, TileTexture } from '@common/enums';
+import { TileItem } from '@common/enums';
 import { Tile } from './tile';
 import { Vec2 } from './vec2';
 
 export interface PlacedObject {
     type: TileItem;
     position: Vec2;
-}
-
-export interface TileTool {
-    type: TileTexture;
-    label: string;
-    description: string;
-}
-
-export interface ObjectPlacementTool {
-    type: TileItem;
-    label: string;
-    description: string;
-    image: string;
 }
 
 export interface Game {
