@@ -92,10 +92,6 @@ export class TileItemCountService {
     switch (item) {
       case TileItem.Spawn:
         return counts.spawnCount > 0;
-      // case TileItem.HealingSanctuary:
-      //   return counts.healingSanctuaryCount > 0;
-      // case TileItem.CombatSanctuary:
-      //   return counts.combatSanctuaryCount > 0;
       case TileItem.Flag:
         return counts.flagCount > 0;
       default:
@@ -108,12 +104,6 @@ export class TileItemCountService {
       case TileItem.Spawn:
         counts.spawnCount--;
         break;
-      // case TileItem.HealingSanctuary:
-      //   counts.healingSanctuaryCount--;
-      //   break;
-      // case TileItem.CombatSanctuary:
-      //   counts.combatSanctuaryCount--;
-      //   break;
       case TileItem.Flag:
         counts.flagCount--;
         break;
@@ -125,12 +115,6 @@ export class TileItemCountService {
       case TileItem.Spawn:
         counts.spawnCount++;
         break;
-      // case TileItem.HealingSanctuary:
-      //   counts.healingSanctuaryCount++;
-      //   break;
-      // case TileItem.CombatSanctuary:
-      //   counts.combatSanctuaryCount++;
-      //   break;
       case TileItem.Flag:
         counts.flagCount++;
         break;
