@@ -15,6 +15,7 @@ export enum GameEvents {
 @Injectable({
     providedIn: 'root',
 })
+
 export class GameService implements OnDestroy {
     private readonly gamesSubject = new BehaviorSubject<Game[]>([]);
 
@@ -46,11 +47,19 @@ export class GameService implements OnDestroy {
         });
 
         this.webSocketService.on<{ gameId: string; isVisible: boolean }>(GameEvents.GameVisibilityChanged, (data) => {
-            const games = this.gamesSubject.value.map((game) =>
-                game._id === data.gameId ? { ...game, isVisible: data.isVisible } : game,
-            );
-            this.gamesSubject.next(games);
+            this.applyVisibilityChange(data.gameId, data.isVisible);
         });
+    }
+
+    applyVisibilityChange(gameId: string, isVisible: boolean): void {
+        const games = this.gamesSubject.value.map((game) =>
+            game._id === gameId ? { ...game, isVisible } : game,
+        );
+        this.gamesSubject.next(games);
+    }
+
+    setGames(games: Game[]): void {
+        this.gamesSubject.next(games);
     }
 
     disconnect(): void {
