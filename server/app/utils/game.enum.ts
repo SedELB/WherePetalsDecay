@@ -1,3 +1,5 @@
+// TODO: If the class becomes complex, we should split the constants and the enums, bakas.
+
 export enum GameMode {
     Classic = 'classic',
     Ctf = 'ctf'
@@ -24,18 +26,3 @@ export enum GridSizes {
     Medium = 15,
     Large = 20,
 };
-
-export enum NbPlayersSmall {
-    MinPlayers = 2,
-    MaxPLayers = 2,
-}
-
-export enum NbPlayersMedium {
-    MinPlayers = 2,
-    MaxPLayers = 4,
-}
-
-export enum NbPlayersLarge {
-    MinPlayers = 2,
-    MaxPLayers = 6,
-}

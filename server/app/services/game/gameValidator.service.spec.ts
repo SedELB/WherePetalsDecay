@@ -1,14 +1,15 @@
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { GameValidatorService } from '@app/services/game/gameValidator.service';
-import { BASE_10, BASE_15, CUSTOM_GRID_CLASSIC_SMALL, CUSTOM_GRID_CLASSIC_SMALL_INVALID, DESC_MAX_LENGTH } from '@app/utils/game.constants';
-import { GameMode, NbPlayersMedium, NbPlayersSmall, TileItem, TileTexture } from '@app/utils/game.enum';
-import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-const BASE_5 = 5;
+import { Logger } from '@nestjs/common';
+import { TEN, MIN_PLAYERS, DESC_MAX_LENGTH, MAX_PLAYERS } from '@app/utils/game.constants';
+import { GameMode, TileTexture, TileItem } from '@app/utils/game.enum';
+const FIVE = 5;
+const EIGHT = 8;
 
 describe('GameValidator', () => {
     let gameValidatorService: GameValidatorService;
-    let invalidGame: CreateGameDto;
+    let invalidGame3: CreateGameDto;
 
     beforeAll(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -17,14 +18,14 @@ describe('GameValidator', () => {
 
         gameValidatorService = module.get<GameValidatorService>(GameValidatorService);
 
-        invalidGame = {
+        invalidGame3 = {
             name: 'Invalid Game 3',
             description: 'Desc. 3',
-            size: { rows: BASE_10, cols: BASE_10 },
+            size: {rows: TEN, cols: TEN},
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
-            maxPlayers: NbPlayersSmall.MaxPLayers,
-            grid: CUSTOM_GRID_CLASSIC_SMALL_INVALID,
+            maxPlayers: MIN_PLAYERS,
+            grid: gameValidatorService.generateInvalidGrid(TEN, TEN),
             isVisible: true,
         };
     });
@@ -34,92 +35,116 @@ describe('GameValidator', () => {
     });
 
     it('countByProperty() should return the correct property count for types', () => {
-        const result = gameValidatorService.countByProperty(getValidGame(), 'type');
-        expect(result).toMatchObject({ ice: 3, floor: 81, wall: 12, doorClosed: 3, doorOpened: 1 });
+        const result = gameValidatorService.countByProperty(getFakeGame(), 'type');
+        expect(result).toMatchObject({ ice: 3, floor: 84, wall: 9, doorClosed: 3, doorOpened: 1 });
     });
 
     it('countByProperty() should return the correct property count for items', () => {
-        const result = gameValidatorService.countByProperty(getValidGame(), 'item');
-        expect(result).toMatchObject({ spawn: 2 });
+        const result = gameValidatorService.countByProperty(getFakeGame(), 'item');
+        expect(result).toMatchObject({ spawn: 2, combatSanctuary: 4 });
+    });
+
+    it('generateValidGrid() should create grid with correct dimensions', () => {
+        const grid = gameValidatorService.generateValidGrid(FIVE, EIGHT);
+        expect(grid.length).toEqual(FIVE);
+        expect(grid[0].length).toEqual(EIGHT);
+    });
+
+    it('generateValidGrid() should place correct number of spawns', () => {
+        const grid = gameValidatorService.generateValidGrid(TEN, TEN);
+        const spawns = grid.flat().filter(tile => tile.item === TileItem.Spawn);
+        expect(spawns.length).toEqual(MAX_PLAYERS);
+    });
+
+    it('generateInvalidGrid() should create grid with correct dimensions', () => {
+        const grid = gameValidatorService.generateInvalidGrid(FIVE, FIVE);
+        expect(grid.length).toEqual(FIVE);
+        expect(grid[0].length).toEqual(FIVE);
+    });
+
+    it('generateInvalidGrid() should create grid with only walls', () => {
+        const grid = gameValidatorService.generateInvalidGrid(FIVE, FIVE);
+        const allWalls = grid.flat().every(tile => tile.type === TileTexture.Wall);
+        expect(allWalls).toEqual(true);
     });
 
     it('isTextLengthValid() should return true if the game name and desc are valid', () => {
-        expect(gameValidatorService.isTextLengthValid(getValidGame())).toEqual(true);
+        expect(gameValidatorService.isTextLengthValid(getFakeGame())).toEqual(true);
     });
 
     it('isTextLengthValid() should fail if the game name is empty', () => {
-        const emptyNameGame = { ...getValidGame(), name: '' };
-        expect(() => gameValidatorService.isTextLengthValid(emptyNameGame)).toThrow('["Le champ nom est vide !"]');
+        const emptyNameGame = {...getFakeGame(), name: ''};
+        expect(() => gameValidatorService.isTextLengthValid(emptyNameGame)).toThrow('["The name field is empty!"]');
     });
 
     it('isTextLengthValid() should fail if the game name exceeds max length', () => {
-        const longNameGame = { ...getValidGame(), name: 'QWERTYUIOPASDFGHJKLZXCVBNM' };
-        expect(() => gameValidatorService.isTextLengthValid(longNameGame)).toThrow('["Le champ nom dépasse la longueur maximale !"]');
+        const longNameGame = {...getFakeGame(), name: 'QWERTYUIOPASDFGHJKLZXCVBNM'};
+        expect(() => gameValidatorService.isTextLengthValid(longNameGame)).toThrow('["The name field exceeds the maximum length!"]');
     });
 
     it('isTextLengthValid() should fail if the game desc is empty', () => {
-        const emptyDescGame = { ...getValidGame(), description: '' };
-        expect(() => gameValidatorService.isTextLengthValid(emptyDescGame)).toThrow('["Le champ description est vide !"]');
+        const emptyDescGame = {...getFakeGame(), description: ''};
+        expect(() => gameValidatorService.isTextLengthValid(emptyDescGame)).toThrow('["The description field is empty!"]');
     });
 
     it('isTextLengthValid() should fail if the game desc is exceeds max length', () => {
-        const longDescGame = { ...getValidGame(), description: 'a'.repeat(DESC_MAX_LENGTH + 1) };
-        expect(() => gameValidatorService.isTextLengthValid(longDescGame)).toThrow('["Le champ description dépasse la longueur maximale !"]');
+        const longDescGame = {...getFakeGame(), description: 'a'.repeat(DESC_MAX_LENGTH + 1)};
+        expect(() => gameValidatorService.isTextLengthValid(longDescGame)).toThrow('["The description field exceeds the maximum length!"]');
     });
 
     it('isTextLengthValid() should fail with multiple errors', () => {
-        const badGame = { ...getValidGame(), name: '', description: '' };
+        const badGame = {...getFakeGame(), name: '', description: ''};
         expect(() => gameValidatorService.isTextLengthValid(badGame)).toThrow();
     });
 
     it('isGameSurfaceValid() should return true if there is more than 50% walkable tiles', () => {
         const spyCountByProperty = jest.spyOn(gameValidatorService, 'countByProperty');
-        expect(gameValidatorService.isGameSurfaceValid(getValidGame())).toEqual(true);
-        expect(spyCountByProperty).toHaveBeenCalledWith(getValidGame(), 'type');
+        expect(gameValidatorService.isGameSurfaceValid(getFakeGame())).toEqual(true);
+        expect(spyCountByProperty).toHaveBeenCalledWith(getFakeGame(), 'type');
     });
 
     it('isGameSurfaceValid() should fail if less than 50% walkable', () => {
         const game = getCleanGame();
-        for (let i = 0; i < BASE_10; i++) {
-            for (let j = 0; j < BASE_15; j++) {
+        for (let i = 0; i < EIGHT; i++) {
+            for (let j = 0; j < TEN; j++) {
                 game.grid[i][j].type = TileTexture.Wall;
             }
         }
-        expect(() => gameValidatorService.isGameSurfaceValid(game)).toThrow('Moins de 50% des tuiles sont des tuiles de terrain !');
+        expect(() => gameValidatorService.isGameSurfaceValid(game)).toThrow('Less than 50% of tiles are walkable!');
     });
 
     it('areAllSpawnPointsPlaced() should return true if all spawn points are placed', () => {
         const spyCountByProperty = jest.spyOn(gameValidatorService, 'countByProperty');
-        expect(gameValidatorService.areAllSpawnPointsPlaced(getValidGame())).toEqual(true);
-        expect(spyCountByProperty).toHaveBeenCalledWith(getValidGame(), 'item');
+        expect(gameValidatorService.areAllSpawnPointsPlaced(getFakeGame())).toEqual(true);
+        expect(spyCountByProperty).toHaveBeenCalledWith(getFakeGame(), 'item');
     });
 
     it('areAllSpawnPointsPlaced() should fail if not all spawns are placed', () => {
-        expect(() => gameValidatorService.areAllSpawnPointsPlaced(invalidGame)).toThrow('Tous les points de spawn ne sont pas placés !');
+        expect(() => gameValidatorService.areAllSpawnPointsPlaced(invalidGame3)).toThrow('Not all spawn points are placed!');
     });
 
     it('findFirstWalkableTile() should return the first walkable tile', () => {
-        expect(gameValidatorService.findFirstWalkableTile(getValidGame().grid)).toMatchObject({ row: 0, col: 2 });
+        expect(gameValidatorService.findFirstWalkableTile(getFakeGame().grid)).toMatchObject({row:0, col:0});
     });
 
     it('findFirstWalkableTile() should return null if there is no walkable tile', () => {
-        expect(gameValidatorService.findFirstWalkableTile(invalidGame.grid)).toEqual(null);
+        expect(gameValidatorService.findFirstWalkableTile(invalidGame3.grid)).toEqual(null);
     });
 
     it('getObjectsPositions() should return all door positions', () => {
-        const positions = gameValidatorService.getObjectsPositions(getValidGame(), 'door');
+        const positions = gameValidatorService.getObjectsPositions(getFakeGame(), 'door');
         expect(positions.length).toBeGreaterThan(0);
         expect(positions[0]).toHaveProperty('row');
         expect(positions[0]).toHaveProperty('col');
     });
 
     it('getObjectsPositions() should return spawn positions', () => {
-        const positions = gameValidatorService.getObjectsPositions(getValidGame(), TileItem.Spawn);
+        const positions = gameValidatorService.getObjectsPositions(getFakeGame(), TileItem.Spawn);
         expect(positions.length).toEqual(2);
     });
 
     it('getObjectsPositions() should return empty array for empty grid', () => {
-        const emptyGame = { ...getCleanGame(), grid: [] };
+        const emptyGame = {...getCleanGame(), grid: []};
         expect(gameValidatorService.getObjectsPositions(emptyGame, 'door')).toEqual([]);
     });
 
@@ -130,82 +155,82 @@ describe('GameValidator', () => {
 
     it('isTileValidForPath() should return true if tile isnt surrounded by walls', () => {
         const visited = new Set<string>();
-        expect(gameValidatorService.isTileValidForPath(getValidGame(), 0, 2, visited)).toEqual(true);
+        expect(gameValidatorService.isTileValidForPath(getFakeGame(), 0, 0, visited)).toEqual(true);
     });
 
     it('isTileValidForPath() should return false if tile is surrounded by walls', () => {
-        const game = getValidGame();
+        const game = getFakeGame();
         game.grid[0][0].type = TileTexture.Wall;
         const visited = new Set<string>();
         expect(gameValidatorService.isTileValidForPath(game, 0, 0, visited)).toEqual(false);
     });
 
     it('isTileValidForPath() should return false for a tile out of bounds', () => {
-        const game = getValidGame();
+        const game = getFakeGame();
         const visited = new Set<string>();
         expect(gameValidatorService.isTileValidForPath(game, -1, 0, visited)).toEqual(false);
-        expect(gameValidatorService.isTileValidForPath(game, BASE_10, 0, visited)).toEqual(false);
-        expect(gameValidatorService.isTileValidForPath(game, 0, BASE_10, visited)).toEqual(false);
+        expect(gameValidatorService.isTileValidForPath(game, TEN, 0, visited)).toEqual(false);
+        expect(gameValidatorService.isTileValidForPath(game, 0, TEN, visited)).toEqual(false);
     });
 
     it('areThereUnreachableTiles() should return true if all tiles are reachable', () => {
         const spyFindFirstWalkableTile = jest.spyOn(gameValidatorService, 'findFirstWalkableTile');
         const spyCountByProperty = jest.spyOn(gameValidatorService, 'countByProperty');
-        expect(gameValidatorService.areThereUnreachableTiles(getValidGame())).toEqual(true);
-        expect(spyFindFirstWalkableTile).toHaveBeenCalledWith(getValidGame().grid);
-        expect(spyCountByProperty).toHaveBeenCalledWith(getValidGame(), 'type');
+        expect(gameValidatorService.areThereUnreachableTiles(getFakeGame())).toEqual(true);
+        expect(spyFindFirstWalkableTile).toHaveBeenCalledWith(getFakeGame().grid);
+        expect(spyCountByProperty).toHaveBeenCalledWith(getFakeGame(), 'type');
     });
 
     it('areThereUnreachableTiles() should fail if there are no walkable tiles', () => {
-        expect(() => gameValidatorService.areThereUnreachableTiles(invalidGame)).toThrow("Il n'y a pas de tuiles de terrain !");
+        expect(() => gameValidatorService.areThereUnreachableTiles(invalidGame3)).toThrow('There are no walkable tiles!');
     });
 
     it('areThereUnreachableTiles() should fail if there are unreachable tiles', () => {
-        const game = getValidGame();
-        game.grid[BASE_5][4].type = TileTexture.Wall; // Placing walls around the FIVE,FIVE tile.
-        game.grid[4][BASE_5].type = TileTexture.Wall;
-        game.grid[BASE_5][6].type = TileTexture.Wall;
-        game.grid[6][BASE_5].type = TileTexture.Wall;
-        expect(() => gameValidatorService.areThereUnreachableTiles(game)).toThrow('Une ou plusieurs tuiles sont inaccessibles !');
+        const game = getFakeGame();
+        game.grid[FIVE][4].type = TileTexture.Wall; // Placing walls around the FIVE,FIVE tile.
+        game.grid[4][FIVE].type = TileTexture.Wall;
+        game.grid[FIVE][6].type = TileTexture.Wall;
+        game.grid[6][FIVE].type = TileTexture.Wall;
+        expect(() => gameValidatorService.areThereUnreachableTiles(game)).toThrow('One or more tiles are unreachable!');
     });
 
 
     it('isDoorsPlacementValid() should return true for valid vertical door', () => {
         const game = getCleanGame();
-        game.grid[BASE_5][BASE_5].type = TileTexture.DoorOpened;
-        game.grid[4][BASE_5].type = TileTexture.Wall;
-        game.grid[6][BASE_5].type = TileTexture.Wall;
-        game.grid[BASE_5][4].type = TileTexture.Floor;
-        game.grid[BASE_5][6].type = TileTexture.Floor;
+        game.grid[FIVE][FIVE].type = TileTexture.DoorOpened;
+        game.grid[4][FIVE].type = TileTexture.Wall;
+        game.grid[6][FIVE].type = TileTexture.Wall;  
+        game.grid[FIVE][4].type = TileTexture.Floor;
+        game.grid[FIVE][6].type = TileTexture.Floor; 
         expect(gameValidatorService.isDoorsPlacementValid(game)).toEqual(true);
     });
 
     it('isDoorsPlacementValid() should return true for valid horizontal door', () => {
         const game = getCleanGame();
-        game.grid[BASE_5][BASE_5].type = TileTexture.DoorClosed;
-        game.grid[BASE_5][4].type = TileTexture.Wall;
-        game.grid[BASE_5][6].type = TileTexture.Wall;
-        game.grid[4][BASE_5].type = TileTexture.Floor;
-        game.grid[6][BASE_5].type = TileTexture.Floor;
+        game.grid[FIVE][FIVE].type = TileTexture.DoorClosed;
+        game.grid[FIVE][4].type = TileTexture.Wall;
+        game.grid[FIVE][6].type = TileTexture.Wall; 
+        game.grid[4][FIVE].type = TileTexture.Floor;
+        game.grid[6][FIVE].type = TileTexture.Floor; 
         expect(gameValidatorService.isDoorsPlacementValid(game)).toEqual(true);
     });
 
     it('isDoorsPlacementValid() should throw for door on border', () => {
         const game = getCleanGame();
-        game.grid[0][BASE_5].type = TileTexture.DoorOpened;
+        game.grid[0][FIVE].type = TileTexture.DoorOpened;
         expect(() => gameValidatorService.isDoorsPlacementValid(game)).toThrow();
     });
 
     it('isDoorsPlacementValid() should throw for invalid door placement', () => {
         const game = getCleanGame();
-        game.grid[BASE_5][BASE_5].type = TileTexture.DoorOpened;
+        game.grid[FIVE][FIVE].type = TileTexture.DoorOpened;
         expect(() => gameValidatorService.isDoorsPlacementValid(game)).toThrow();
     });
 
     it('isDoorsPlacementValid() should throw for door with walls on wrong sides', () => {
         const game = getCleanGame();
-        game.grid[BASE_5][BASE_5].type = TileTexture.DoorOpened;
-        game.grid[4][BASE_5].type = TileTexture.Wall;
+        game.grid[FIVE][FIVE].type = TileTexture.DoorOpened;
+        game.grid[4][FIVE].type = TileTexture.Wall; 
         expect(() => gameValidatorService.isDoorsPlacementValid(game)).toThrow();
     });
 
@@ -217,23 +242,23 @@ describe('GameValidator', () => {
     });
 
     it('isDoorOnGridBorder() should return true for door inside grid', () => {
-        expect(gameValidatorService.isDoorOnGridBorder(getValidGame().grid, BASE_5, BASE_5)).toEqual(true);
+        expect(gameValidatorService.isDoorOnGridBorder(getFakeGame().grid, FIVE, FIVE)).toEqual(true);
     });
 
     it('isDoorOnGridBorder() should return false for door on top border', () => {
-        expect(gameValidatorService.isDoorOnGridBorder(getValidGame().grid, 0, BASE_5)).toEqual(false);
+        expect(gameValidatorService.isDoorOnGridBorder(getFakeGame().grid, 0, FIVE)).toEqual(false);
     });
 
     it('isDoorOnGridBorder() should return false for door on bottom border', () => {
-        expect(gameValidatorService.isDoorOnGridBorder(getValidGame().grid, BASE_10 - 1, BASE_5)).toEqual(false);
+        expect(gameValidatorService.isDoorOnGridBorder(getFakeGame().grid, TEN - 1, FIVE)).toEqual(false);
     });
 
     it('isDoorOnGridBorder() should return false for door on left border', () => {
-        expect(gameValidatorService.isDoorOnGridBorder(getValidGame().grid, BASE_5, 0)).toEqual(false);
+        expect(gameValidatorService.isDoorOnGridBorder(getFakeGame().grid, FIVE, 0)).toEqual(false);
     });
 
     it('isDoorOnGridBorder() should return false for door on right border', () => {
-        expect(gameValidatorService.isDoorOnGridBorder(getValidGame().grid, BASE_5, BASE_10 - 1)).toEqual(false);
+        expect(gameValidatorService.isDoorOnGridBorder(getFakeGame().grid, FIVE, TEN - 1)).toEqual(false);
     });
 
     it('isFlagPlaced() should return true if flag is placed on CTF gamemode', () => {
@@ -252,7 +277,7 @@ describe('GameValidator', () => {
         const game = getCleanGame();
         game.gameMode = GameMode.Ctf;
         const spyCountByProperty = jest.spyOn(gameValidatorService, 'countByProperty');
-        expect(() => gameValidatorService.isFlagPlaced(game)).toThrow("Le drapeau n'est pas placé !");
+        expect(() => gameValidatorService.isFlagPlaced(game)).toThrow("The Flag isn't placed!");
         expect(spyCountByProperty).toHaveBeenCalledWith(game, 'item');
     });
 
@@ -269,7 +294,7 @@ describe('GameValidator', () => {
         const spyIsGameSurfaceValid = jest.spyOn(gameValidatorService, 'isGameSurfaceValid');
         const spyAreAllSpawnPointsPlaced = jest.spyOn(gameValidatorService, 'areAllSpawnPointsPlaced');
         const spyIsFlagPlaced = jest.spyOn(gameValidatorService, 'isFlagPlaced');
-
+        
         expect(gameValidatorService.isGameValid(validGame)).toEqual(true);
         expect(spyIsTextLengthValid).toHaveBeenCalled();
         expect(spyIsDoorsPlacementValid).toHaveBeenCalled();
@@ -281,11 +306,11 @@ describe('GameValidator', () => {
 
     it('isGameValid() should throw with multiple validation errors', () => {
         const invalidGameMultiple = {
-            ...invalidGame,
+            ...invalidGame3,
             name: '',
             description: '',
         };
-        expect(() => gameValidatorService.isGameValid(invalidGameMultiple)).toThrow('Erreurs de validation :');
+        expect(() => gameValidatorService.isGameValid(invalidGameMultiple)).toThrow('Validation errors:');
     });
 
     it('isGameValid() should handle single validation error', () => {
@@ -295,45 +320,89 @@ describe('GameValidator', () => {
         game.grid[1][0].item = TileItem.Spawn;
         game.grid[1][1].item = TileItem.Spawn;
         game.name = '';
-        expect(() => gameValidatorService.isGameValid(game)).toThrow('Erreurs de validation :');
+        expect(() => gameValidatorService.isGameValid(game)).toThrow('Validation errors:');
     });
 
     it('isGameValid() should catch all validation errors in one call', () => {
         const spyIsTextLengthValid = jest.spyOn(gameValidatorService, 'isTextLengthValid');
         const spyIsGameSurfaceValid = jest.spyOn(gameValidatorService, 'isGameSurfaceValid');
-
+        
         try {
-            gameValidatorService.isGameValid(invalidGame);
+            gameValidatorService.isGameValid(invalidGame3);
         } catch (error) {
-            expect(error.message).toContain('Erreurs de validation :');
+            expect(error.message).toContain('Validation errors:');
         }
-
+        
         expect(spyIsTextLengthValid).toHaveBeenCalled();
         expect(spyIsGameSurfaceValid).toHaveBeenCalled();
     });
 });
 
-const getValidGame = (): CreateGameDto => ({
+
+const getFakeGame = (): CreateGameDto => ({
     name: 'GameName 1',
     description: 'Game Description 1',
-    size: { rows: BASE_10, cols: BASE_10 },
+    size : { rows: TEN, cols: TEN },
     gameMode: GameMode.Classic,
     thumbnail: 'N/A',
-    maxPlayers: NbPlayersSmall.MaxPLayers,
-    grid: CUSTOM_GRID_CLASSIC_SMALL,
+    maxPlayers: MIN_PLAYERS,
+    grid: customGrid,
     isVisible: true,
 });
 
-// cleanGame = grid with only floors for in-test customization.
+ // cleanGame = grid with only floors for in-test customization.
 const getCleanGame = (): CreateGameDto => ({
     name: 'Clean Game',
     description: 'Test game',
-    size: { rows: BASE_15, cols: BASE_15 },
+    size: { rows: TEN, cols: TEN },
     gameMode: GameMode.Classic,
     thumbnail: 'N/A',
-    maxPlayers: NbPlayersMedium.MaxPLayers,
+    maxPlayers: 4,
     isVisible: true,
-    grid: Array(BASE_15).fill(null).map(() =>
-        Array(BASE_15).fill(null).map(() => ({ type: TileTexture.Floor, item: null })),
+    grid: Array(TEN).fill(null).map(() => 
+        Array(TEN).fill(null).map(() => ({ type: TileTexture.Floor, item: null })),
     ),
 });
+
+const BASE_4 = 4;
+
+// Custom Grid made in a Excel file to be able to count properties.
+const customGrid = [
+    [
+        { type: TileTexture.Floor, item: TileItem.CombatSanctuary }, { type: TileTexture.Floor, item: TileItem.CombatSanctuary }, 
+        { type: TileTexture.Floor, item: TileItem.Spawn }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null }, 
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, 
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
+    ],
+    [
+        { type: TileTexture.Floor, item: TileItem.CombatSanctuary }, { type: TileTexture.Floor, item: TileItem.CombatSanctuary }, 
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.DoorOpened, item: null },
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, 
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
+    ],
+    [
+        { type: TileTexture.Ice, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null}, 
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null },{ type: TileTexture.Floor, item: null }, 
+        { type: TileTexture.Wall, item: null }, { type: TileTexture.DoorClosed, item: null }, { type: TileTexture.Wall, item: null }, 
+        { type: TileTexture.Floor, item: null },
+    ],
+    ...Array(BASE_4).fill(Array(TEN).fill({ type: TileTexture.Floor, item: null })),
+    [
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, 
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Ice, item: null }, { type: TileTexture.Wall, item: null }, 
+        { type: TileTexture.DoorClosed, item: null }, { type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null }, 
+        { type: TileTexture.Floor, item: null },
+    ],
+    [
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null }, 
+        { type: TileTexture.DoorClosed, item: null }, { type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null }, 
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, 
+        { type: TileTexture.Floor, item: null },
+    ],
+    [
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, 
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Ice, item: null }, 
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: TileItem.Spawn }, 
+        { type: TileTexture.Floor, item: null },
+    ],
+];
