@@ -1,10 +1,13 @@
-import { Component, inject, OnInit } from '@angular/core';
+
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { Game } from '@app/interfaces/game';
 import { GameCard } from '@app/interfaces/gameCard';
 import { CommunicationService } from '@app/services/communication.service';
+import { GameService } from '@app/services/game.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-admin-page',
@@ -13,52 +16,46 @@ import { CommunicationService } from '@app/services/communication.service';
   styleUrl: './admin-page.component.scss',
 })
 
-export class AdminPageComponent implements OnInit {
-  private readonly router = inject(Router);
+export class AdminPageComponent implements OnInit, OnDestroy {
 
   games: Game[] = [];
   gameCards: GameCard[] = [];
 
-  constructor(private communicationService: CommunicationService) {}
+  private sub?: Subscription;
+
+  constructor(
+    private readonly communicationService: CommunicationService,
+    private readonly gameService: GameService,
+    private readonly router: Router,
+  ) {}
 
   ngOnInit(): void {
-    this.getGames();
-  }
+    this.gameService.connect();
 
-  getGames(): void {
     this.communicationService.getAllGames().subscribe({
-      next: (games) => {
-        this.games = games;
-        // keep only the keys you need
-        this.gameCards = this.games.map(game => {
-          return {
-            name: game.name,
-            description: game.description,
-            size: game.size,
-            gameMode: game.gameMode,
-            thumbnail: game.thumbnail,
-            updatedAt: game.updatedAt,
-            isVisible: game.isVisible,
-          };
-        });
+      next: (games) => this.gameService.setGames(games),
+      error: () => {
+        throw new Error(`There was an error while fetching all games for database`);
       },
-      error: (err) => {
-        throw new Error('games were not loaded correctly : ', err);
-      },
+    });
+
+    this.sub = this.gameService.games$.subscribe((games) => {
+      this.games = games;
+      this.gameCards = games.map(game => ({
+        name: game.name,
+        description: game.description,
+        size: game.size,
+        gameMode: game.gameMode,
+        thumbnail: game.thumbnail,
+        updatedAt: game.updatedAt,
+        isVisible: game.isVisible,
+      }));
     });
   }
 
-  removeGame(name: string) {
-    const game = this.games.find(g => g.name === name);
-
-    if (!game) return;
-
-    this.communicationService.deleteGame(game._id).subscribe({
-      next: () => this.getGames(),
-      error: (err) => {
-        throw new Error(`Error while deleting this game : ${game.name}, error : ${err}`);
-      },
-    });
+  ngOnDestroy(): void {
+    this.sub?.unsubscribe();
+    this.gameService.disconnect();
   }
 
   navigateToGameEditor(name: string): void {
@@ -68,16 +65,14 @@ export class AdminPageComponent implements OnInit {
 
   changeVisibility(name: string) {
     const game = this.games.find(g => g.name === name);
+    if (!game) return;
+    this.communicationService.updateVisiblity(game).subscribe();
+  }
 
+  removeGame(name: string) {
+    const game = this.games.find(g => g.name === name);
     if (!game) return;
 
-    this.communicationService.updateVisiblity(game).subscribe({
-      next: () => {
-        this.getGames();
-      },
-      error: (err) => {
-        throw new Error(`Error when modifying ${game.name}'s visibility : ${err}`);
-      },
-    });
+    this.communicationService.deleteGame(game._id).subscribe();
   }
 }
