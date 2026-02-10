@@ -56,7 +56,6 @@
             type="button"
             class="tool"
             [class.tool--active]="activeTileTexture === tool.type"
-            [title]="tool.description"
             (click)="selectTileTexture(tool.type)"
           >
             <span class="tool__label">{{tool.label}}</span>
@@ -75,7 +74,6 @@
             class="object-tool"
             [class.object-tool--active]="activeTileItem === objTool.type"
             [class.object-tool--complete]="isObjectTypeComplete(objTool.type)"
-            [title]="objTool.description"
             (click)="selectTileItem(objTool.type)"
           >
               <span class="object-tool__slot">
