@@ -1,7 +1,12 @@
-import { Component } from '@angular/core';
+
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
-import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCard } from '@app/interfaces/gameCard';
+import { CommunicationService } from '@app/services/communication.service';
+import { ButtonComponent } from '@app/components/button/button.component';
+import { GameService } from '@app/services/game.service';
+import { Subscription } from 'rxjs';
+import { Game } from '@app/interfaces/game';
 
 @Component({
   selector: 'app-admin-page',
@@ -10,25 +15,57 @@ import { GameCard } from '@app/interfaces/gameCard';
   styleUrl: './admin-page.component.scss',
 })
 
+export class AdminPageComponent implements OnInit, OnDestroy {
 
-export class AdminPageComponent {
+  games: Game[] = [];
+  gameCards: GameCard[] = [];
 
-  games: GameCard[] = [
-    {id: 1, image: '/assets/filler.png', name: 'Game 1', size: '10X10',
-      mode: 'Solo', date: '2026-01-01', visible: true,
-      imgDescription: 'blablabladsssssssssmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm'},
-    {id: 2, image: '/assets/filler.png', name: 'Game 2', size: '20X20', mode: 'Solo', date: '2026-01-05', visible: true, imgDescription: 'blablabla'},
-    {id: 3, image: '/assets/filler.png', name: 'Game 3', size: '5X5', mode: 'Co-op', date: '2026-01-10', visible: true, imgDescription: 'blablabla'},
-  ];
+  private sub?: Subscription;
 
-  removeGame(id: number) {
-    this.games = this.games.filter(game => game.id !== id);
+  constructor(
+    private readonly communicationService: CommunicationService,
+    private readonly gameService: GameService,
+  ) {}
+
+  ngOnInit(): void {
+    this.gameService.connect();
+
+    this.communicationService.getAllGames().subscribe({
+      next: (games) => this.gameService.setGames(games),
+      error: () => {
+        throw new Error(`There was an error while fetching all games for database`);
+      },
+    });
+
+    this.sub = this.gameService.games$.subscribe((games) => {
+      this.games = games;
+      this.gameCards = games.map(game => ({
+        name: game.name,
+        description: game.description,
+        size: game.size,
+        gameMode: game.gameMode,
+        thumbnail: game.thumbnail,
+        updatedAt: game.updatedAt,
+        isVisible: game.isVisible,
+      }));
+    });
   }
 
-  changeVisibility(id: number) {
-    const game = this.games.find(g => g.id === id);
-    if (game) {
-      game.visible = !game.visible;
-    }
+  ngOnDestroy(): void {
+    this.sub?.unsubscribe();
+    this.gameService.disconnect();
+  }
+
+  changeVisibility(name: string) {
+    const game = this.games.find(g => g.name === name);
+    if (!game) return;
+    this.communicationService.updateVisiblity(game).subscribe();
+  }
+
+  removeGame(name: string) {
+    const game = this.games.find(g => g.name === name);
+    if (!game) return;
+
+    this.communicationService.deleteGame(game._id).subscribe();
   }
 }
