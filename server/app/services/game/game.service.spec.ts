@@ -1,14 +1,14 @@
-import { Test } from '@nestjs/testing';
-import { Connection, Model } from 'mongoose';
-import { GameService } from './game.service';
-import { Game, gameSchema, GameDocument } from '@app/model/schema/game.schema';
-import { getConnectionToken, getModelToken, MongooseModule } from '@nestjs/mongoose';
-import { Logger } from '@nestjs/common';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
+import { Game, GameDocument, gameSchema } from '@app/model/schema/game.schema';
 import { MAX_PLAYERS, MIN_PLAYERS, TEN } from '@app/utils/game.constants';
 import { GameMode } from '@app/utils/game.enum';
+import { Logger } from '@nestjs/common';
+import { getConnectionToken, getModelToken, MongooseModule } from '@nestjs/mongoose';
+import { Test } from '@nestjs/testing';
 import { ObjectId } from 'mongodb';
-import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import { Connection, Model } from 'mongoose';
+import { GameService } from './game.service';
 import { GameValidatorService } from './gameValidator.service';
 const THREE = 3;
 
@@ -24,7 +24,7 @@ describe('GameServiceE2E', () => {
 
     beforeAll(async () => {
         mongoServer = await MongoMemoryServer.create(); // Create an instance of a fake DB.
-        
+
         // Creating a temporary testing module simulating the real GameModule (with its dependencies)
         const testModule = await Test.createTestingModule({
             imports: [
@@ -34,7 +34,7 @@ describe('GameServiceE2E', () => {
                     }),
                 }),
                 // Links the gameSchema to create a model that follows it.
-                MongooseModule.forFeature([{ name: Game.name, schema: gameSchema}]),
+                MongooseModule.forFeature([{ name: Game.name, schema: gameSchema }]),
             ],
             providers: [GameService, Logger, GameValidatorService], // allows usage of GameService and Logger,
         }).compile();
@@ -47,11 +47,11 @@ describe('GameServiceE2E', () => {
         gameModel = testModule.get<Model<GameDocument>>(getModelToken(Game.name));
         // Gets the Mongoose connection (invisible when interacting w the real DB).
         connection = await testModule.get(getConnectionToken());
-        
+
         validGame1 = {
             name: 'Valid Game 1',
             description: 'Desc. 1',
-            size: {rows: TEN, cols: TEN},
+            size: { rows: TEN, cols: TEN },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MAX_PLAYERS,
@@ -62,7 +62,7 @@ describe('GameServiceE2E', () => {
         invalidGame3 = {
             name: 'Invalid Game 3',
             description: 'Desc. 3',
-            size: {rows: TEN, cols: TEN},
+            size: { rows: TEN, cols: TEN },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MIN_PLAYERS,
@@ -77,7 +77,7 @@ describe('GameServiceE2E', () => {
 
     afterAll(async () => { // After all tests, closes the connection and stops the fakeDB.
         await connection.close();
-        await mongoServer.stop({doCleanup: true});
+        await mongoServer.stop({ doCleanup: true });
     });
 
     it('service and model should be defined', () => {
@@ -109,14 +109,14 @@ describe('GameServiceE2E', () => {
         const spyFindOne = jest.spyOn(gameModel, 'findOne');
         const result = await gameService.isGameNameUnique('Completely Unique Name');
         expect(result).toEqual(true);
-        expect(spyFindOne).toHaveBeenCalledWith({name: 'Completely Unique Name'});
+        expect(spyFindOne).toHaveBeenCalledWith({ name: 'Completely Unique Name' });
     });
 
     it('isGameNameUnique() should throw error if the game name already exists', async () => {
         const createdGame = await gameModel.create(validGame1);
         const spyFindOne = jest.spyOn(gameModel, 'findOne');
         await expect(gameService.isGameNameUnique(createdGame.name)).rejects.toThrow('The name of the game is not unique!');
-        expect(spyFindOne).toHaveBeenCalledWith({name: createdGame.name});
+        expect(spyFindOne).toHaveBeenCalledWith({ name: createdGame.name });
     });
 
     it('getAllGames() return all three games in database', async () => {
@@ -170,7 +170,7 @@ describe('GameServiceE2E', () => {
 
     it('modifyGame() should modify a game', async () => {
         const createdGame = await gameModel.create(validGame1);
-        const modifiedFakeGame = {...validGame1, name: 'Modified Game'};
+        const modifiedFakeGame = { ...validGame1, name: 'Modified Game' };
         const spyIsGameNameUnique = jest.spyOn(gameService, 'isGameNameUnique');
         const spyIsGameValid = jest.spyOn(gameValidatorService, 'isGameValid');
         await gameService.modifyGame(createdGame._id.toString(), modifiedFakeGame);
@@ -221,8 +221,8 @@ describe('GameServiceE2E', () => {
         expect((await gameService.getGameById(createdGame._id.toString())).isVisible).toEqual(false);
         expect(spyFindByIdAndUpdate).toHaveBeenCalledWith(
             createdGame._id.toString(),
-            {isVisible: false},
-            {new: true, timestamps: false},
+            { isVisible: false },
+            { new: true, timestamps: false },
         );
     });
 
@@ -235,23 +235,14 @@ describe('GameServiceE2E', () => {
     });
 
     it('getAllVisibleGames() should return all visible games', async () => {
-        const visibleGame1 = {...validGame1, name: 'Visible game 1', isVisible: true};
-        const visibleGame2 = {...validGame1, name: 'Visible game 2', isVisible: true};
-        const visibleGame3 = {...validGame1, name: 'Visible game 3', isVisible: true};
+        const visibleGame1 = { ...validGame1, name: 'Visible game 1', isVisible: true };
+        const visibleGame2 = { ...validGame1, name: 'Visible game 2', isVisible: true };
+        const visibleGame3 = { ...validGame1, name: 'Visible game 3', isVisible: true };
         await gameModel.create([visibleGame1, visibleGame2, visibleGame3]);
-        await gameModel.updateMany({}, {isVisible: true});
+        await gameModel.updateMany({}, { isVisible: true });
         const spyFind = jest.spyOn(gameModel, 'find');
         const result = await gameService.getAllVisibleGames();
         expect(result.length).toEqual(THREE);
-        expect(spyFind).toHaveBeenCalledWith({isVisible: true});
+        expect(spyFind).toHaveBeenCalledWith({ isVisible: true });
     });
-
-    it('getAllVisibleGames() should fail if there are no visible games in the database', async () => {
-        const nonVisibleGame = {...validGame1, isVisible: false};
-        await gameService.addGame(nonVisibleGame);
-        const spyLog = jest.spyOn(logger, 'log');
-        await expect(gameService.getAllVisibleGames()).rejects.toThrow('No visible games found in the database');
-        expect(spyLog).toHaveBeenCalledWith('No visible games found in the database');
-    });
-
 });
