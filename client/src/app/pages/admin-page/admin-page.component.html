@@ -9,6 +9,8 @@
 
     <app-button [width]="100" [route]="'/home'">Retour</app-button>
 
+    <h2>Administrer les jeux</h2>
+    <p>Créez, modifiez ou supprimez un jeu</p>
     <div class="list-container">
         @for(game of gameCards; track game.name){
             <app-game-card [game]="game"

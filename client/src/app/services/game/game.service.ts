@@ -1,9 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, OnDestroy } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { environment } from 'src/environments/environment';
-import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Game } from '@app/interfaces/game';
+import { WebSocketService } from '@app/services/web-socket/web-socket.service';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { environment } from 'src/environments/environment';
 
 export enum GameEvents {
     GameCreated = 'gameCreated',
@@ -73,13 +74,11 @@ export class GameService implements OnDestroy {
     }
 
     getVisibleGames(): Observable<Game[]> {
-        return new Observable((observer) => {
-            this.games$.subscribe((games) => {
-                observer.next(games.filter((game) => game.isVisible));
-            });
-        });
+        return this.games$.pipe(
+            map(games => games.filter((game) => game.isVisible)),
+        );
     }
-    
+
     ngOnDestroy(): void {
         this.disconnect();
     }
