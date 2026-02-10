@@ -19,10 +19,10 @@
 
 .pos-back {
   position: absolute;
-  display: inline-block;
-  top: 12%;
-  left: 5%;
+  top: 75px;
+  left: 60px;
 }
+
 
 .info-card {
   border-radius: 14px;
@@ -279,6 +279,11 @@
 .tool__img {
   width: 40%;
   height: auto;
+}
+
+.tool__label {
+  font-weight: 700;
+  font-size: 12px;
 }
 
 .tool__desc {

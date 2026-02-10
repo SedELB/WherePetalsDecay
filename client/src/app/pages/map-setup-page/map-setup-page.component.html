@@ -1,5 +1,5 @@
 <main class="editor-bg" aria-label="Vue d'édition (Sprint 1)">
-  <app-button class="pos-back"  [variant]="'back'" (clicked)="onBack()">Retour</app-button>
+  <app-button class="pos-back"  [width]="100" (clicked)="onBack()">Retour</app-button>
 
   <section class="editor-stage">
 
@@ -59,6 +59,7 @@
             [title]="tool.description"
             (click)="selectTileTexture(tool.type)"
           >
+            <span class="tool__label">{{tool.label}}</span>
             <img class="tool__img" [src]='tool.image'/>
             <span class="tool__desc" role="tooltip">{{ tool.description }}</span>
           </button>
