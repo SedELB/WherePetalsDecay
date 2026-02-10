@@ -23,6 +23,7 @@ export class MapSetupPageComponent implements OnInit {
 
   game: Game;
   mode: 'create' | 'edit' = 'edit';
+  private initialGameState: Game | null = null;
 
   activeTileTexture: TileTexture | null = null;
   activeTileItem: TileItem | null = null;
@@ -49,6 +50,7 @@ export class MapSetupPageComponent implements OnInit {
     this.game = init.game;
     this.mode = init.mode;
     this.itemCounts = init.itemCounts;
+    this.initialGameState = JSON.parse(JSON.stringify(this.game));
   }
 
   getRequiredSpawnCount(): number {
@@ -148,9 +150,11 @@ export class MapSetupPageComponent implements OnInit {
   }
 
   onReset(): void {
-    const resetResult = this.mapSetupService.resetMap(this.game);
-    this.itemCounts = resetResult.itemCounts;
-    this.activeTileTexture = resetResult.selection.activeTileTexture;
-    this.activeTileItem = resetResult.selection.activeTileItem;
+    if (!this.initialGameState) return;
+    this.game = JSON.parse(JSON.stringify(this.initialGameState));
+    this.itemCounts = this.tileItemCountService.createRequiredCounts(this.game);
+    this.tileItemCountService.adjustCountsForExistingItems(this.game, this.itemCounts);
+    this.activeTileTexture = null;
+    this.activeTileItem = null;
   }
 }

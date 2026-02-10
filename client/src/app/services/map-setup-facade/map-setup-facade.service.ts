@@ -68,8 +68,9 @@ export class MapSetupFacadeService {
     }
 
     if (mode === 'edit') {
-      this.communicationService.getGameById(game._id).subscribe((currentGame) => {
-        if (!currentGame) {
+      this.communicationService.getAllGames().subscribe((allGames) => {
+        const originalGame = allGames.find((currentGame) => currentGame._id === game._id);
+        if (!originalGame) {
           mode = 'create';
         }
 
