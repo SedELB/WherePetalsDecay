@@ -4,10 +4,10 @@ import { ButtonComponent } from '@app/components/button/button.component';
 import { Game } from '@app/interfaces/game';
 import { Tile } from '@app/interfaces/tile';
 import { OBJECT_PLACEMENT_TOOL, TILE_TOOLS } from '@app/pages/map-setup-page/map-setup-page-constant';
-import { MapSetupFacadeService } from '@app/services/map-setup-facade.service';
-import { MapSetupService } from '@app/services/map-setup.service';
+import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-facade.service';
 import { TileItemCounts } from '@app/services/map-setup.types';
-import { TileItemCountService } from '@app/services/tile-item-count.service';
+import { MapSetupService } from '@app/services/map-setup/map-setup.service';
+import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { TileItem, TileTexture } from '@common/enums';
 
 @Component({

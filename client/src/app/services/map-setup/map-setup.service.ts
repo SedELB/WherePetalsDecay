@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { type PlacedObject, Game } from '@app/interfaces/game';
 import { Tile } from '@app/interfaces/tile';
 import { MouseEventType } from '@app/pages/map-setup-page/map-setup-page-constant';
-import type { GameDraftForValidation } from '@app/services/game-validator.service';
+import type { GameDraftForValidation } from '@app/services/game-validator/game-validator.service';
 import {
   ApplyActiveSelectionParams,
   DeleteTileParams,
@@ -11,7 +11,7 @@ import {
   MapSetupSelection,
   TileItemCounts,
 } from '@app/services/map-setup.types';
-import { TileItemCountService } from '@app/services/tile-item-count.service';
+import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { TileItem, TileTexture } from '@common/enums';
 
 @Injectable({ providedIn: 'root' })

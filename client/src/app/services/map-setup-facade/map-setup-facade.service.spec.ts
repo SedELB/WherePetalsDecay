@@ -1,11 +1,11 @@
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 
-import { CommunicationService } from '@app/services/communication.service';
-import { GameValidatorService } from '@app/services/game-validator.service';
-import { MapSetupFacadeService } from '@app/services/map-setup-facade.service';
-import { MapSetupService } from '@app/services/map-setup.service';
-import { TileItemCountService } from '@app/services/tile-item-count.service';
+import { CommunicationService } from '@app/services/communication/communication.service';
+import { GameValidatorService } from '@app/services/game-validator/game-validator.service';
+import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-facade.service';
+import { MapSetupService } from '@app/services/map-setup/map-setup.service';
+import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 
 import type { Game } from '@app/interfaces/game';
 import type { Tile } from '@app/interfaces/tile';

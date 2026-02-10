@@ -1,11 +1,11 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { Game } from '@app/interfaces/game';
-import { CommunicationService } from '@app/services/communication.service';
-import { GameValidatorService } from '@app/services/game-validator.service';
-import { MapSetupService } from '@app/services/map-setup.service';
+import { CommunicationService } from '@app/services/communication/communication.service';
+import { GameValidatorService } from '@app/services/game-validator/game-validator.service';
 import { TileItemCounts } from '@app/services/map-setup.types';
-import { TileItemCountService } from '@app/services/tile-item-count.service';
+import { MapSetupService } from '@app/services/map-setup/map-setup.service';
+import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import html2canvas from 'html2canvas';
 
 const THUMBNAIL_QUALITY = 0.85;
@@ -51,7 +51,7 @@ export class MapSetupFacadeService {
   async saveGame(game: Game, initialMode: 'create' | 'edit'): Promise<void> {
     let mode = initialMode;
 
-    
+
     try {
       const thumbnail = await this.captureThumbnail();
       game.thumbnail = thumbnail;
