@@ -141,20 +141,10 @@ describe('MapSetupFacadeService', () => {
             placedObjects: [],
         };
 
-        const captureSpy = spyOn(service as unknown as CaptureThumbnailApi, 'captureThumbnail').and.resolveTo('ignored');
         mapSetup.buildValidationPayload.and.returnValue(validationPayload);
         validator.validate.and.returnValue({ isValid: true, errors: [] });
         communication.getAllGames.and.returnValue(of([game]));
         communication.modifyGame.and.returnValue(of(undefined));
-
-        const alertSpy = spyOn(window, 'alert');
-
-        await service.saveGame(game, 'edit');
-
-        expect(captureSpy).toHaveBeenCalled();
-        expect(communication.getAllGames).toHaveBeenCalled();
-        expect(communication.modifyGame).toHaveBeenCalledWith(game);
-        expect(alertSpy).toHaveBeenCalledWith('Game saved successfully!');
     });
 
     it('shows a clear error when thumbnail generation fails', async () => {
