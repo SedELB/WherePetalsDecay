@@ -4,12 +4,11 @@ import { Tile } from '@app/interfaces/tile';
 import { MouseEventType } from '@app/pages/map-setup-page/map-setup-page-constant';
 import type { GameDraftForValidation } from '@app/services/game-validator/game-validator.service';
 import {
-  ApplyActiveSelectionParams,
-  DeleteTileParams,
   MapSetupInteractionState,
   MapSetupResetResult,
   MapSetupSelection,
   TileItemCounts,
+  TileParams,
 } from '@app/services/map-setup.types';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { TileItem, TileTexture } from '@common/enums';
@@ -35,13 +34,8 @@ export class MapSetupService {
     }
   }
 
-  applyTile(
-    game: Game,
-    rowIndex: number,
-    colIndex: number,
-    tileAttribute: TileItem | TileTexture,
-    counts: TileItemCounts,
-  ): void {
+  applyTile(params: TileParams): void {
+    const { game, rowIndex, colIndex, tileAttribute, event, counts } = params;
     const currentTile = game.grid[rowIndex]?.[colIndex];
 
     if (Object.values(TileItem).includes(tileAttribute as TileItem)) {
@@ -58,7 +52,7 @@ export class MapSetupService {
     } else {
       // Prevent placing non-walkable textures on cells with items
       if ([TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed].includes(tileAttribute as TileTexture) && currentTile.item) {
-        throw new Error('Cannot place blocking texture on a cell with an item');
+        this.deleteTile({ game, rowIndex, colIndex, tileAttribute, event, counts });
       }
       if (currentTile.type !== tileAttribute) {
         currentTile.type = tileAttribute as TileTexture;
@@ -66,15 +60,18 @@ export class MapSetupService {
     }
   }
 
-  deleteTile(params: DeleteTileParams): void {
+  deleteTile(params: TileParams): void {
     const { game, rowIndex, colIndex, tileAttribute, event, counts } = params;
     const currentTile = game.grid[rowIndex]?.[colIndex];
     const currItem = currentTile.item;
+    console.log(tileAttribute);
 
     // If shift key is pressed delete the item
     if (currItem && event.shiftKey) {
       currentTile.item = null;
       this.tileItemCountService.increaseTileItemCount(counts, currItem);
+    } else if (Object.values(TileTexture).includes(tileAttribute as TileTexture)) {
+      currentTile.item = null;
     } else if (Object.values(TileItem).includes(tileAttribute as TileItem)) {
       return;
     } else {
@@ -117,13 +114,11 @@ export class MapSetupService {
     return { activeTileTexture: nextActiveTileTexture, activeTileItem: nextActiveTileItem };
   }
 
-  applyActiveSelection(params: ApplyActiveSelectionParams): void {
-    const { game, rowIndex, colIndex, activeTileTexture, activeTileItem, counts } = params;
+  applyActiveSelection(params: TileParams): void {
+    const { game, rowIndex, colIndex, tileAttribute, event, counts } = params;
 
-    if (activeTileTexture) {
-      this.applyTile(game, rowIndex, colIndex, activeTileTexture, counts);
-    } else if (activeTileItem) {
-      this.applyTile(game, rowIndex, colIndex, activeTileItem, counts);
+    if (tileAttribute) {
+      this.applyTile({ game, rowIndex, colIndex, tileAttribute, event, counts });
     } else {
       return;
     }
@@ -155,14 +150,16 @@ export class MapSetupService {
     if (event.button === MouseEventType.LeftClick) {
       // Only set isPaintingTiles to true if we have something selected to paint
       if (activeTileTexture) {
+        const tileAttribute = activeTileTexture;
         try {
-          this.applyTile(game, rowIndex, colIndex, activeTileTexture, counts);
+          this.applyTile({ game, rowIndex, colIndex, tileAttribute, event, counts });
           return { isPaintingTiles: true, isErasingTiles };
         } catch {
           return { isPaintingTiles: false, isErasingTiles };
         }
       } else if (activeTileItem) {
-        this.applyTile(game, rowIndex, colIndex, activeTileItem, counts);
+        const tileAttribute = activeTileItem;
+        this.applyTile({ game, rowIndex, colIndex, tileAttribute, event, counts });
         return { isPaintingTiles: true, isErasingTiles };
       }
       return { isPaintingTiles: false, isErasingTiles };
@@ -298,14 +295,16 @@ export class MapSetupService {
     if (activeTileTexture) {
       // Remove items before applying a texture that blocks walking
       this.removeBlockingItemIfNeeded(gameTile, activeTileTexture, counts);
+      const tileAttribute = activeTileTexture;
       try {
-        this.applyTile(game, rowIndex, colIndex, activeTileTexture, counts);
+        this.applyTile({ game, rowIndex, colIndex, tileAttribute, event, counts });
       } catch {
         throw new Error(`Error while handeling cell mouse enter`);
       }
     } else if (activeTileItem) {
+      const tileAttribute = activeTileItem;
       try {
-        this.applyTile(game, rowIndex, colIndex, activeTileItem, counts);
+        this.applyTile({ game, rowIndex, colIndex, tileAttribute, event, counts });
       } catch {
         throw new Error(`Error while handeling cell mouse enter`);
       }

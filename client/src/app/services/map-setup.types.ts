@@ -21,16 +21,7 @@ export interface MapSetupResetResult {
   selection: MapSetupSelection;
 }
 
-export interface ApplyActiveSelectionParams {
-  game: Game;
-  rowIndex: number;
-  colIndex: number;
-  activeTileTexture: TileTexture | null;
-  activeTileItem: TileItem | null;
-  counts: TileItemCounts;
-}
-
-export interface DeleteTileParams {
+export interface TileParams {
   game: Game;
   rowIndex: number;
   colIndex: number;
