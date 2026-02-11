@@ -65,21 +65,21 @@ describe('MapSetupService', () => {
     const game = gameFactory(2, 2);
     const counts = { spawnCount: 1, healingSanctuaryCount: 1, combatSanctuaryCount: 1, flagCount: 1 };
 
-    service.applyTile(game, 0, 0, TileItem.Spawn, counts);
+    service.applyTile({ game, rowIndex: 0, colIndex: 0, tileAttribute: TileItem.Spawn, event: {} as MouseEvent, counts });
     expect(game.grid[0][0].item).toBe(TileItem.Spawn);
     expect(counts.spawnCount).toBe(0);
 
-    service.applyTile(game, 0, 1, TileTexture.Water, counts);
+    service.applyTile({ game, rowIndex: 0, colIndex: 1, tileAttribute: TileTexture.Water, event: {} as MouseEvent, counts });
     expect(game.grid[0][1].type).toBe(TileTexture.Water);
 
     game.grid[1][0].type = TileTexture.Wall;
-    expect(() => service.applyTile(game, 1, 0, TileItem.Flag, counts)).toThrow();
+    expect(() => service.applyTile({ game, rowIndex: 1, colIndex: 0, tileAttribute: TileItem.Flag, event: {} as MouseEvent, counts })).toThrow();
 
-    service.applyTile(game, 1, 1, TileItem.Flag, { ...counts, flagCount: 0 });
+    service.applyTile({ game, rowIndex: 1, colIndex: 1, tileAttribute: TileItem.Flag, event: {} as MouseEvent, counts: { ...counts, flagCount: 0 } });
     expect(game.grid[1][1].item).toBeNull();
 
     game.grid[0][1].type = TileTexture.Water;
-    service.applyTile(game, 0, 1, TileTexture.Water, counts);
+    service.applyTile({ game, rowIndex: 0, colIndex: 1, tileAttribute: TileTexture.Water, event: {} as MouseEvent, counts });
     expect(game.grid[0][1].type).toBe(TileTexture.Water);
 
     game.grid[0][0].item = TileItem.Spawn;
@@ -130,7 +130,10 @@ describe('MapSetupService', () => {
     const applySpy = spyOn(service, 'applyTile').and.callThrough();
     const deleteSpy = spyOn(service, 'deleteTile').and.callThrough();
 
-    const leftEvent = { button: MouseEventType.LeftClick } as MouseEvent;
+    const leftEvent = {
+      button: MouseEventType.LeftClick,
+      preventDefault: jasmine.createSpy('preventDefault'),
+    } as unknown as MouseEvent;
 
     const leftTextureState = service.handleCellMouseDown({
       game,
