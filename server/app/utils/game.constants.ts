@@ -93,24 +93,27 @@ export const CUSTOM_GRID_CTF_SMALL = [
 
 export const CUSTOM_GRID_CLASSIC_MEDIUM = [
     [
-        { type: TileTexture.Wall, item: null }, { type: TileTexture.Wall, item: null },
-        { type: TileTexture.Floor, item: TileItem.Spawn }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null },
-        { type: TileTexture.Floor, item: TileItem.Spawn }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
-        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
+        { type: TileTexture.Wall, item: null }, { type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: TileItem.Spawn },
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: TileItem.Spawn },
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Water, item: null }, { type: TileTexture.Water, item: null },
+        { type: TileTexture.Water, item: null }, { type: TileTexture.Water, item: null }, { type: TileTexture.Water, item: null },
     ],
     [
-        { type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null },
+        { type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Water, item: null },
         { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.DoorOpened, item: null },
         { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
-        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Water, item: null },
+        { type: TileTexture.Water, item: null }, { type: TileTexture.Ice, item: null }, { type: TileTexture.Water, item: null },
     ],
     [
         { type: TileTexture.Ice, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null },
         { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null },
         { type: TileTexture.Wall, item: null }, { type: TileTexture.DoorClosed, item: null }, { type: TileTexture.Wall, item: null },
-        { type: TileTexture.Floor, item: null },
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Ice, item: null }, { type: TileTexture.Water, item: null },
+        { type: TileTexture.Ice, item: null }, { type: TileTexture.Water, item: null }, { type: TileTexture.Ice, item: null },
     ],
-    ...Array(BASE_9).fill(Array(BASE_10).fill({ type: TileTexture.Floor, item: null })),
+    ...Array(BASE_9).fill(Array(BASE_15).fill({ type: TileTexture.Floor, item: null })),
     [
         { type: TileTexture.Floor, item: TileItem.Spawn }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
         { type: TileTexture.Floor, item: null }, { type: TileTexture.Ice, item: null }, { type: TileTexture.Wall, item: null },

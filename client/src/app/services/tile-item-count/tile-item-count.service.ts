@@ -9,27 +9,27 @@ export class TileItemCountService {
     if (game.size.rows === GridSizes.Small) return MaxPlayers.Small;
     if (game.size.rows === GridSizes.Medium) return MaxPlayers.Medium;
     if (game.size.rows === GridSizes.Large) return MaxPlayers.Large;
-    throw new Error('The size selected is not currently supported (SpawnCount)');
+    throw new Error('La taille sélectionnée n’est pas actuellement supportée (SpawnCount)');
   }
 
   getRequiredFlagCount(game: Game): number {
     if (game.gameMode === GameMode.Classic) return 0;
     if (game.gameMode === GameMode.Ctf) return 1;
-    throw new Error('The game mode is not currently supported (GameMode)');
+    throw new Error('Le mode de jeu n’est pas actuellement supporté (GameMode)');
   }
 
   getRequiredHealingSanctuaryCount(game: Game): number {
     if (game.size.rows === GridSizes.Small) return SanctuaryCount.Small;
     if (game.size.rows === GridSizes.Medium) return SanctuaryCount.Medium;
     if (game.size.rows === GridSizes.Large) return SanctuaryCount.Large;
-    throw new Error('The size selected is not currently supported (HealingSanctuary)');
+    throw new Error('La taille sélectionnée n’est pas actuellement supportée (HealingSanctuary)');
   }
 
   getRequiredCombatSanctuaryCount(game: Game): number {
     if (game.size.rows === GridSizes.Small) return SanctuaryCount.Small;
     if (game.size.rows === GridSizes.Medium) return SanctuaryCount.Medium;
     if (game.size.rows === GridSizes.Large) return SanctuaryCount.Large;
-    throw new Error('The size selected is not currently supported (CombatSanctuary)');
+    throw new Error('La taille sélectionnée n’est pas actuellement supportée (CombatSanctuary)');
   }
 
   createRequiredCounts(game: Game): TileItemCounts {

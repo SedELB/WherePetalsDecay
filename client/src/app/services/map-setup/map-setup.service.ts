@@ -70,7 +70,7 @@ export class MapSetupService {
 
     if (Object.values(TileItem).includes(tileAttribute as TileItem)) {
       if ([TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed].includes(currentTile.type)) {
-        throw new Error('This Item cannot be place on a terrain tile');
+        throw new Error('On ne peut pas placer cet object sur une tuile de terrain');
       }
       if (!currentTile.item && this.tileItemCountService.verifyEnoughTileItem(counts, tileAttribute as TileItem)) {
         currentTile.item = tileAttribute as TileItem;
@@ -214,7 +214,7 @@ export class MapSetupService {
           this.deleteTile({ game, rowIndex: cell.row, colIndex: cell.col, tileAttribute: TileTexture.Floor, event, counts });
         }
       } catch {
-        throw new Error(`Erreur avec mouse enter`);
+        throw new Error(`Erreur avec l'évènement (mouseenter) quand on supprime en appuyant`);
       }
     }
   }
@@ -237,13 +237,13 @@ export class MapSetupService {
         try {
           this.applyTile({ game, rowIndex: cell.row, colIndex: cell.col, tileAttribute: activeTileTexture, event, counts });
         } catch {
-          throw new Error(`Erreur avecc mouse enter`);
+          throw new Error(`Erreur avec l'évènement (mouseenter) quand les tuiles sont activées`);
         }
       } else if (activeTileItem) {
         try {
           this.applyTile({ game, rowIndex: cell.row, colIndex: cell.col, tileAttribute: activeTileItem, event, counts });
         } catch {
-          throw new Error(`Erreur avecc mouse enter`);
+          throw new Error(`Erreur avec l'évènement (mouseenter) quand les objects sont activés`);
         }
       }
     }

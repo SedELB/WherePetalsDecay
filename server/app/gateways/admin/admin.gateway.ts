@@ -12,7 +12,7 @@ export class AdminGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     constructor(private readonly logger: Logger) {}
 
     afterInit() {
-        this.logger.log('AdminGateway initialized on /admin namespace');
+        this.logger.log('AdminGateway initialized on admin namespace');
     }
 
     handleConnection(socket: Socket) {
