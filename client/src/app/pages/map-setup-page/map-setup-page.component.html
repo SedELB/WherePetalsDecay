@@ -33,7 +33,6 @@
               [attr.data-tile]="cell.type"
               [class.cell--clickable]="activeTileTexture !== null || activeTileItem !== null"
               [attr.title]="game.grid[rowIndex][colIndex].item ? objectPlacementTools[game.grid[rowIndex][colIndex].item!].description : null"
-              (click)="onCellClick(rowIndex, colIndex, $event)"
               (mousedown)="onCellMouseDown(rowIndex, colIndex, $event)"
               (mouseenter)="onCellMouseEnter(rowIndex, colIndex, $event)"
               (contextmenu)="$event.preventDefault()"
