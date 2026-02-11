@@ -34,7 +34,8 @@ export class AdminPageComponent implements OnInit, OnDestroy {
 
     this.communicationService.getAllGames().subscribe({
       next: (games) => this.gameService.setGames(games),
-      error: () => {
+      error: (err) => {
+        console.error(err);
         throw new Error(`There was an error while fetching all games for database`);
       },
     });
