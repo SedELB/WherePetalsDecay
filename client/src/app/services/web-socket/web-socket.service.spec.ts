@@ -28,93 +28,111 @@ describe('WebSocketService', () => {
         expect(service).toBeTruthy();
     });
 
-    describe('connect', () => {
-        it('should create a socket when not connected', () => {
-            expect(service['socket']).toBeNull();
-            service.connect();
-            expect(service['socket']).not.toBeNull();
+    describe('connectNamespace', () => {
+        it('should create a socket for a new namespace', () => {
+            const namespace = '/test-namespace';
+            service.connectNamespace(namespace);
+            expect(service.isConnectedNamespace(namespace) || service['sockets'].has(namespace)).toBeTruthy();
         });
 
-        it('should not reconnect if already connected', () => {
-            service['socket'] = mockSocket as never;
-            mockSocket.connected = true;
-            service.connect();
-            expect(service['socket']).toBe(mockSocket as never);
+        it('should not reconnect if namespace already exists', () => {
+            const namespace = '/test-namespace';
+            service['sockets'].set(namespace, mockSocket as never);
+            const sizeBefore = service['sockets'].size;
+            service.connectNamespace(namespace);
+            expect(service['sockets'].size).toBe(sizeBefore);
         });
     });
 
-    describe('disconnect', () => {
-        it('should disconnect and nullify socket', () => {
-            service['socket'] = mockSocket as never;
-            service.disconnect();
+    describe('disconnectNamespace', () => {
+        it('should disconnect and remove socket from map', () => {
+            const namespace = '/test-namespace';
+            service['sockets'].set(namespace, mockSocket as never);
+            service.disconnectNamespace(namespace);
             expect(mockSocket.disconnect).toHaveBeenCalled();
-            expect(service['socket']).toBeNull();
+            expect(service['sockets'].has(namespace)).toBe(false);
         });
 
-        it('should do nothing if no socket exists', () => {
-            service.disconnect();
+        it('should do nothing if namespace does not exist', () => {
+            const namespace = '/nonexistent';
+            service.disconnectNamespace(namespace);
             expect(mockSocket.disconnect).not.toHaveBeenCalled();
         });
     });
 
-    describe('on', () => {
-        it('should register an event listener on the socket', () => {
-            service['socket'] = mockSocket as never;
+    describe('onNamespace', () => {
+        it('should register an event listener on the namespace socket', () => {
+            const namespace = '/test-namespace';
+            service['sockets'].set(namespace, mockSocket as never);
             const callback = jasmine.createSpy('callback');
-            service.on('testEvent', callback);
+            service.onNamespace(namespace, 'testEvent', callback);
             expect(mockSocket.on).toHaveBeenCalledWith('testEvent', jasmine.any(Function));
         });
 
-        it('should do nothing if socket is null', () => {
+        it('should do nothing if namespace socket does not exist', () => {
             const callback = jasmine.createSpy('callback');
-            service.on('testEvent', callback);
+            service.onNamespace('/nonexistent', 'testEvent', callback);
             expect(mockSocket.on).not.toHaveBeenCalled();
         });
     });
 
-    describe('emit', () => {
-        it('should emit an event with data', () => {
-            service['socket'] = mockSocket as never;
-            service.emit('testEvent', { key: 'value' });
+    describe('emitNamespace', () => {
+        it('should emit an event with data on namespace socket', () => {
+            const namespace = '/test-namespace';
+            service['sockets'].set(namespace, mockSocket as never);
+            service.emitNamespace(namespace, 'testEvent', { key: 'value' });
             expect(mockSocket.emit).toHaveBeenCalledWith('testEvent', { key: 'value' });
         });
 
         it('should emit an event without data', () => {
-            service['socket'] = mockSocket as never;
-            service.emit('testEvent');
+            const namespace = '/test-namespace';
+            service['sockets'].set(namespace, mockSocket as never);
+            service.emitNamespace(namespace, 'testEvent');
             expect(mockSocket.emit).toHaveBeenCalledWith('testEvent', undefined);
         });
 
-        it('should do nothing if socket is null', () => {
-            service.emit('testEvent', { key: 'value' });
+        it('should do nothing if namespace socket does not exist', () => {
+            service.emitNamespace('/nonexistent', 'testEvent', { key: 'value' });
             expect(mockSocket.emit).not.toHaveBeenCalled();
         });
     });
 
-    describe('isConnected', () => {
-        it('should return false when no socket exists', () => {
-            expect(service.isConnected).toBe(false);
+    describe('isConnectedNamespace', () => {
+        it('should return false when namespace does not exist', () => {
+            expect(service.isConnectedNamespace('/nonexistent')).toBe(false);
         });
 
         it('should return false when socket is not connected', () => {
-            service['socket'] = mockSocket as never;
+            const namespace = '/test-namespace';
+            service['sockets'].set(namespace, mockSocket as never);
             mockSocket.connected = false;
-            expect(service.isConnected).toBe(false);
+            expect(service.isConnectedNamespace(namespace)).toBe(false);
         });
 
         it('should return true when socket is connected', () => {
-            service['socket'] = mockSocket as never;
+            const namespace = '/test-namespace';
+            service['sockets'].set(namespace, mockSocket as never);
             mockSocket.connected = true;
-            expect(service.isConnected).toBe(true);
+            expect(service.isConnectedNamespace(namespace)).toBe(true);
         });
     });
 
     describe('ngOnDestroy', () => {
-        it('should disconnect on destroy', () => {
-            service['socket'] = mockSocket as never;
+        it('should disconnect all sockets on destroy', () => {
+            const namespace1 = '/test1';
+            const namespace2 = '/test2';
+            const mockSocket2 = {
+                connected: false,
+                disconnect: jasmine.createSpy('disconnect'),
+                on: jasmine.createSpy('on'),
+                emit: jasmine.createSpy('emit'),
+            };
+            service['sockets'].set(namespace1, mockSocket as never);
+            service['sockets'].set(namespace2, mockSocket2 as never);
             service.ngOnDestroy();
             expect(mockSocket.disconnect).toHaveBeenCalled();
-            expect(service['socket']).toBeNull();
+            expect(mockSocket2.disconnect).toHaveBeenCalled();
+            expect(service['sockets'].size).toBe(0);
         });
     });
 });

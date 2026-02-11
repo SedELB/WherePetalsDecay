@@ -1,4 +1,5 @@
-import { GameGateway } from '@app/gateways/game/game.gateway';
+import { AdminGateway } from '@app/gateways/admin/admin.gateway';
+import { GamesGateway } from '@app/gateways/games/games.gateway';
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
 import { Game } from '@app/model/schema/game.schema';
@@ -12,7 +13,8 @@ import { Response } from 'express';
 export class GameController {
     constructor(
         private readonly gameService: GameService,
-        private readonly gameGateway: GameGateway,
+        private readonly adminGateway: AdminGateway,
+        private readonly gamesGateway: GamesGateway,
     ) {}
 
     @ApiOkResponse({
@@ -23,11 +25,28 @@ export class GameController {
     @ApiNotFoundResponse({
         description: 'Return NOT_FOUND http status when request fails.',
     })
-    @Get('/games')
+    @Get('/allGames')
     async allGames(@Res() response: Response) {
         try {
             const allGames = await this.gameService.getAllGames();
             response.status(HttpStatus.OK).json(allGames);
+        } catch (error) {
+            response.status(HttpStatus.NOT_FOUND).json(error.message);
+        }
+    }
+
+    @ApiOkResponse({
+        description: 'Returns a single game',
+        type: Game,
+    })
+    @ApiNotFoundResponse({
+        description: 'Return NOT_FOUND http status when request fails.',
+    })
+    @Get('/singleGame/:id')
+    async getGame(@Param('id') id: string, @Res() response: Response) {
+        try {
+            const game = await this.gameService.getGameById(id);
+            response.status(HttpStatus.OK).json(game);
         } catch (error) {
             response.status(HttpStatus.NOT_FOUND).json(error.message);
         }
@@ -61,8 +80,11 @@ export class GameController {
     async addGame(@Body() gameDto: CreateGameDto, @Res() response: Response) {
         try {
             const createdGame = await this.gameService.addGame(gameDto);
-            this.gameGateway.notifyGameCreated(createdGame);
-            response.status(HttpStatus.CREATED).json();
+            this.adminGateway.notifyGameCreated(createdGame);
+            if (createdGame.isVisible) {
+                this.gamesGateway.notifyGameCreated(createdGame);
+            }
+            response.status(HttpStatus.CREATED).json('Le jeu a été créé avec succès !');
         } catch (error) {
             response.status(HttpStatus.BAD_REQUEST).json(error.message);
         }
@@ -79,11 +101,16 @@ export class GameController {
     async modifyGame(@Param('id') id: string, @Body() gameDto: UpdateGameDto, @Res() response: Response) {
         try {
             const updatedGame = await this.gameService.modifyGame(id, gameDto);
-            this.gameGateway.notifyGameUpdated(updatedGame);
-            this.gameGateway.notifyGameVisibilityChanged(id, false);
-            response.status(HttpStatus.OK).json('Game updated successfully!');
+            this.adminGateway.notifyGameUpdated(updatedGame);
+
+            // Notify others to hide the game
+            if (!updatedGame.isVisible) {
+                this.gamesGateway.notifyGameDeleted(id);
+            }
+
+            response.status(HttpStatus.OK).json('Le jeu a été modifié avec succès !');
         } catch (error) {
-            const status = error.message.includes('No game found with this id') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            const status = error.message.includes('Aucun jeu trouvé avec cet identifiant.') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
             response.status(status).json(error.message);
         }
     }
@@ -98,8 +125,16 @@ export class GameController {
     async modifyVisibility(@Param('id') id: string, @Body('isVisible') isVisible: boolean, @Res() response: Response): Promise<void> {
         try {
             await this.gameService.updateVisibility(id, isVisible);
-            this.gameGateway.notifyGameVisibilityChanged(id, isVisible);
-            response.status(HttpStatus.OK).json('Game updated successfully!');
+            const updatedGame = await this.gameService.getGameById(id);
+            this.adminGateway.notifyGameVisibilityChanged(id, isVisible);
+
+            if (isVisible) {
+                this.gamesGateway.notifyGameCreated(updatedGame);
+            } else {
+                this.gamesGateway.notifyGameDeleted(id);
+            }
+
+            response.status(HttpStatus.OK).json('Le jeu a été modifié avec succès !');
         } catch (error) {
             response.status(HttpStatus.BAD_REQUEST).json(error.message);
         }
@@ -116,8 +151,9 @@ export class GameController {
     async deleteGame(@Param('id') id: string, @Res() response: Response) {
         try {
             await this.gameService.deleteGame(id);
-            this.gameGateway.notifyGameDeleted(id);
-            response.status(HttpStatus.NO_CONTENT).json();
+            this.adminGateway.notifyGameDeleted(id);
+            this.gamesGateway.notifyGameDeleted(id);
+            response.status(HttpStatus.NO_CONTENT).json('Le jeu a été supprimé avec succès !');
         } catch (error) {
             response.status(HttpStatus.NOT_FOUND).json(error.message);
         }

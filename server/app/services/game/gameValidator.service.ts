@@ -1,7 +1,21 @@
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { Tile } from '@app/model/schema/game.schema';
-import { DESC_MAX_LENGTH, MAX_PLAYERS, NAME_MAX_LENGTH, TEXT_MIN_LENGTH } from '@app/utils/game.constants';
-import { GameMode, TileItem, TileTexture } from '@app/utils/game.enum';
+import { DESC_MAX_LENGTH, NAME_MAX_LENGTH, TEXT_MIN_LENGTH } from '@app/utils/game.constants';
+import { TileTexture } from '@app/utils/game.enum';
+import {
+    DESCRIPTION_FIELD_EMPTY,
+    DESCRIPTION_FIELD_TOO_LONG,
+    DOOR_ON_GRID_BORDER,
+    FLAG_NOT_PLACED,
+    INSUFFICIENT_TERRAIN_TILES,
+    INVALID_DOOR_PLACEMENT,
+    NAME_FIELD_EMPTY,
+    NAME_FIELD_TOO_LONG,
+    NO_TERRAIN_TILES,
+    SPAWN_POINTS_NOT_PLACED,
+    UNREACHABLE_TILES,
+    VALIDATION_ERRORS_PREFIX,
+} from '@common/error-messages';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
@@ -21,53 +35,22 @@ export class GameValidatorService {
         }, {});
     }
 
-    generateInvalidGrid(rows: number, cols: number): Tile[][] {
-        return Array.from({ length: rows }, () =>
-            Array.from({ length: cols }, (): Tile => ({ type: TileTexture.Wall, item: null })),  // Tout en murs = invalide
-        );
-    }
-
-    generateValidGrid(rows: number, cols: number): Tile[][] {
-        const grid: Tile[][] = Array.from({ length: rows }, () =>
-            Array.from({ length: cols }, (): Tile => ({ type: TileTexture.Floor, item: null })),
-        );
-
-        // Places random walls at 30% rate
-        // for (let i = 0; i < rows; i++) {
-        //     for (let j = 0; j < cols; j++) {
-        //         if (Math.random() < 0.3) grid[i][j].type = TileTexture.Wall;
-        //     }
-        // }
-
-        let spawnCount = 0;
-        while (spawnCount < MAX_PLAYERS) {
-            const r = Math.floor(Math.random() * rows);
-            const c = Math.floor(Math.random() * cols);
-            if (grid[r][c].type !== TileTexture.Wall && !grid[r][c].item) {
-                grid[r][c].item = TileItem.Spawn;
-                spawnCount++;
-            }
-        }
-
-        return grid;
-    }
-
     isTextLengthValid(game: CreateGameDto): boolean {
         const errors: string[] = [];
 
         if (game.name.length < TEXT_MIN_LENGTH) {
-            errors.push('The name field is empty!');
+            errors.push(NAME_FIELD_EMPTY);
         } else if (game.name.length > NAME_MAX_LENGTH) {
-            errors.push('The name field exceeds the maximum length!');
+            errors.push(NAME_FIELD_TOO_LONG);
         }
 
         if (game.description.length < TEXT_MIN_LENGTH) {
-            errors.push('The description field is empty!');
+            errors.push(DESCRIPTION_FIELD_EMPTY);
         } else if (game.description.length > DESC_MAX_LENGTH) {
-            errors.push('The description field exceeds the maximum length!');
+            errors.push(DESCRIPTION_FIELD_TOO_LONG);
         }
         if (errors.length > 0) {
-            throw new Error(JSON.stringify(errors));  // TODO: has to be validate
+            throw new Error(JSON.stringify(errors));
         }
         return true;
     }
@@ -78,7 +61,7 @@ export class GameValidatorService {
         if (terrainTilesNumber > ((game.size.cols * game.size.rows) / 2)) {
             return true;
         } else {
-            throw new Error('Less than 50% of tiles are walkable!');
+            throw new Error(INSUFFICIENT_TERRAIN_TILES);
         }
     }
 
@@ -87,7 +70,7 @@ export class GameValidatorService {
         if ((items.spawn || 0) === game.maxPlayers) {
             return true;
         } else {
-            throw new Error('Not all spawn points are placed!');
+            throw new Error(SPAWN_POINTS_NOT_PLACED);
         }
     }
 
@@ -115,7 +98,7 @@ export class GameValidatorService {
     areThereUnreachableTiles(game: CreateGameDto): boolean {
         const startPos = this.findFirstWalkableTile(game.grid);
         if (!startPos) {
-            throw new Error('There are no walkable tiles!');
+            throw new Error(NO_TERRAIN_TILES);
         }
 
         const types = this.countByProperty(game, 'type');
@@ -147,7 +130,7 @@ export class GameValidatorService {
         if (visited.size === totalWalkable) {
             return true;
         } else {
-            throw new Error('One or more tiles are unreachable!');
+            throw new Error(UNREACHABLE_TILES);
         }
     }
 
@@ -161,8 +144,8 @@ export class GameValidatorService {
             col > 0 &&
             col < cols - 1;
 
-        if (isInside) return false;
-        return true;
+        if (isInside) return true;
+        return false;
     }
 
     // For type and item
@@ -191,8 +174,8 @@ export class GameValidatorService {
 
         for (const { row, col } of allDoorsPos) {
             // Grid border is excluded
-            if (this.isDoorOnGridBorder(game.grid, row, col)) {
-                errors.push(`Door at (${row}, ${col}) cannot be on the edge of the map!`);
+            if (!this.isDoorOnGridBorder(game.grid, row, col)) {
+                errors.push(`La porte à la position (${row}, ${col}) ${DOOR_ON_GRID_BORDER}`);
                 continue;
             }
 
@@ -208,7 +191,7 @@ export class GameValidatorService {
                 (!obstacles.includes(up) && !obstacles.includes(down));
 
             if (!verticalSandwich && !horizontalSandwich) {
-                errors.push(`Invalid door placement at the position (${row}, ${col})! (missing walls)`);
+                errors.push(`${INVALID_DOOR_PLACEMENT} (${row}, ${col}) !`);
             }
         }
         if (errors.length > 0) throw new Error(JSON.stringify(errors));
@@ -216,10 +199,10 @@ export class GameValidatorService {
     }
 
     isFlagPlaced(game: CreateGameDto): boolean {
-        if (game.gameMode === GameMode.Ctf) {
+        if (game.gameMode === 'ctf') {
             const nbFlag = this.countByProperty(game, 'item').flag || 0;
             if (nbFlag === 0) {
-                throw new Error("The Flag isn't placed!");
+                throw new Error(FLAG_NOT_PLACED);
             }
             return true; // has been placed
         }
@@ -231,10 +214,10 @@ export class GameValidatorService {
 
         const validations = [
             () => this.isTextLengthValid(game),
+            () => this.isDoorsPlacementValid(game),
             () => this.areThereUnreachableTiles(game),
             () => this.isGameSurfaceValid(game),
             () => this.areAllSpawnPointsPlaced(game),
-            () => this.isDoorsPlacementValid(game),
             () => this.isFlagPlaced(game),
         ];
 
@@ -250,7 +233,7 @@ export class GameValidatorService {
             }
         }
         if (errors.length > 0) {
-            throw new Error(`Validation errors: ${errors.join('; ')}`);
+            throw new Error(`${VALIDATION_ERRORS_PREFIX} : ${errors.join('; ')}`);
         }
         return true;
     }

@@ -1,7 +1,5 @@
-export enum GameEvents {
+export enum PlayerGameEvents {
     GameCreated = 'gameCreated',
-    GameUpdated = 'gameUpdated',
     GameDeleted = 'gameDeleted',
     GameVisibilityChanged = 'gameVisibilityChanged',
-    GamesUpdated = 'gamesUpdated',
 }

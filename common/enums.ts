@@ -36,3 +36,8 @@ export enum SanctuaryCount {
     Medium = 2,
     Large = 4,
 }
+
+export enum SocketNamespace {
+    Admin = '/admin',
+    Games = '/game',
+}
