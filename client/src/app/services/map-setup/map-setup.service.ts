@@ -15,6 +15,7 @@ import { TileItem, TileTexture } from '@common/enums';
 
 @Injectable({ providedIn: 'root' })
 export class MapSetupService {
+  private lastDragPosition: { row: number; col: number } | null = null;
 
   constructor(private readonly tileItemCountService: TileItemCountService) {}
 
@@ -33,6 +34,42 @@ export class MapSetupService {
         })),
       );
     }
+  }
+
+  // Bresenham Algorithm
+  private drawStraightLine(
+    startRow: number,
+    startCol: number,
+    endRow: number,
+    endCol: number
+  ): { row: number; col: number }[] {
+    const path: { row: number; col: number }[] = [];
+
+    const dx = Math.abs(endCol - startCol);
+    const dy = Math.abs(endRow - startRow);
+
+    const rowDirection = startRow < endRow ? 1 : -1;
+    const colDirection = startCol < endCol ? 1 : -1;
+
+    let row = startRow;
+    let col = startCol;
+    let error = dx - dy;
+
+    while (row !== endRow || col !== endCol) {
+      path.push({ row, col });
+
+      let secondError = error * 2;
+
+      if (secondError > -dy) {
+        error -= dy;
+        col += colDirection;
+      }
+      if (secondError < dx) {
+        error += dx;
+        row += rowDirection;
+      }
+    }
+    return path;
   }
 
   applyTile(params: TileParams): void {
@@ -147,6 +184,8 @@ export class MapSetupService {
       isErasingTiles,
     } = params;
 
+    this.lastDragPosition = { row: rowIndex, col: colIndex };
+
     if (event.button === MouseEventType.LeftClick) {
       event.preventDefault();
       // Only set isPaintingTiles to true if we have something selected to paint
@@ -247,41 +286,48 @@ export class MapSetupService {
       isPaintingTiles,
       isErasingTiles,
     } = params;
-    let gameTile = game.grid[rowIndex][colIndex];
+
+    let path;
+    if (this.lastDragPosition) {
+      path = this.drawStraightLine(this.lastDragPosition?.row, this.lastDragPosition?.col, rowIndex, colIndex);
+    } else {
+      path = [{ row: rowIndex, col: colIndex }];
+    }
+
+    this.lastDragPosition = { row: rowIndex, col: colIndex };
 
     if (isErasingTiles) {
       if (event.buttons !== MouseEventType.RightDrag) {
         return { isPaintingTiles, isErasingTiles: false };
       }
 
-      // When right-dragging (erasing), handle deletion
-      try {
-        if (event.shiftKey) {
-          // With shift, delete items if present
-          const tile = game.grid[rowIndex][colIndex];
-          if (tile.item) {
+      for (const cell of path) {
+        try {
+          if (event.shiftKey) {
+            const tile = game.grid[cell.row]?.[cell.col];
+            if (tile?.item) {
+              this.deleteTile({
+                game,
+                rowIndex: cell.row,
+                colIndex: cell.col,
+                tileAttribute: tile.item,
+                event,
+                counts,
+              });
+            }
+          } else {
             this.deleteTile({
               game,
-              rowIndex,
-              colIndex,
-              tileAttribute: tile.item,
+              rowIndex: cell.row,
+              colIndex: cell.col,
+              tileAttribute: TileTexture.Floor,
               event,
               counts,
             });
           }
-        } else {
-          // Without shift, delete texture by calling deleteTile
-          this.deleteTile({
-            game,
-            rowIndex,
-            colIndex,
-            tileAttribute: TileTexture.Floor,
-            event,
-            counts,
-          });
+        } catch {
+          throw new Error(`Erreur avec mouse enter`);
         }
-      } catch {
-        throw new Error(`Error while handeling cell mouse enter`);
       }
       return { isPaintingTiles, isErasingTiles };
     }
@@ -292,22 +338,23 @@ export class MapSetupService {
       return { isPaintingTiles: false, isErasingTiles };
     }
 
-    gameTile = game.grid[rowIndex][colIndex];
-    if (activeTileTexture) {
-      // Remove items before applying a texture that blocks walking
-      this.removeBlockingItemIfNeeded(gameTile, activeTileTexture, counts);
-      const tileAttribute = activeTileTexture;
-      try {
-        this.applyTile({ game, rowIndex, colIndex, tileAttribute, event, counts });
-      } catch {
-        throw new Error(`Error while handeling cell mouse enter`);
-      }
-    } else if (activeTileItem) {
-      const tileAttribute = activeTileItem;
-      try {
-        this.applyTile({ game, rowIndex, colIndex, tileAttribute, event, counts });
-      } catch {
-        throw new Error(`Error while handeling cell mouse enter`);
+    for (const cell of path) {
+      const gameTile = game.grid[cell.row]?.[cell.col];
+      if (!gameTile) continue;
+
+      if (activeTileTexture) {
+        this.removeBlockingItemIfNeeded(gameTile, activeTileTexture, counts);
+        try {
+          this.applyTile({ game, rowIndex: cell.row, colIndex: cell.col, tileAttribute: activeTileTexture, event, counts });
+        } catch {
+          throw new Error(`Erreur avecc mouse enter`);
+        }
+      } else if (activeTileItem) {
+        try {
+          this.applyTile({ game, rowIndex: cell.row, colIndex: cell.col, tileAttribute: activeTileItem, event, counts });
+        } catch {
+          throw new Error(`Erreur avecc mouse enter`);
+        }
       }
     }
 
@@ -315,6 +362,7 @@ export class MapSetupService {
   }
 
   resetInteractionState(): MapSetupInteractionState {
+    this.lastDragPosition = null;
     return { isPaintingTiles: false, isErasingTiles: false };
   }
 
