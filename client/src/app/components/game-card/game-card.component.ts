@@ -18,6 +18,7 @@ export class GameCardComponent {
     size: { rows: 0, cols: 0 },
     gameMode: GameMode.Classic,
     thumbnail: '',
+    createdAt: new Date(),
     updatedAt: new Date(),
     isVisible: true,
   };
@@ -27,7 +28,7 @@ export class GameCardComponent {
   gameMode = GameMode;
 
   displayTime(): string {
-    const rawDate = this.game.updatedAt;
+    const rawDate = this.game.createdAt;
     const date = rawDate instanceof Date ? rawDate : new Date(rawDate);
 
     if (Number.isNaN(date.getTime())) {
