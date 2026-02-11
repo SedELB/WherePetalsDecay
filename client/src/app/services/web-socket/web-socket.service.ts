@@ -1,4 +1,5 @@
 import { Injectable, OnDestroy } from '@angular/core';
+import { SocketNamespace } from '@common/enums';
 import { io, Socket } from 'socket.io-client';
 import { environment } from 'src/environments/environment';
 
@@ -6,37 +7,47 @@ import { environment } from 'src/environments/environment';
     providedIn: 'root',
 })
 export class WebSocketService implements OnDestroy {
-    private socket: Socket | null = null;
+    private sockets: Map<string, Socket> = new Map();
     private readonly serverUrl = environment.serverUrl.replace('/api', '');
 
-    connect(): void {
-        if (this.socket?.connected) {
+    constructor() {
+        this.connectNamespace(SocketNamespace.Admin);
+        this.connectNamespace(SocketNamespace.Games);
+    }
+
+    connectNamespace(namespace: string): void {
+        if (this.sockets.has(namespace)) {
             return;
         }
 
-        this.socket = io(this.serverUrl, { transports: ['websocket'] });
+        const socket = io(`${this.serverUrl}${namespace}`, { transports: ['websocket'] });
+        this.sockets.set(namespace, socket);
     }
 
-    disconnect(): void {
-        if (this.socket) {
-            this.socket.disconnect();
-            this.socket = null;
+    disconnectNamespace(namespace: string): void {
+        const socket = this.sockets.get(namespace);
+        if (socket) {
+            socket.disconnect();
+            this.sockets.delete(namespace);
         }
     }
 
-    on<T>(event: string, callback: (data: T) => void): void {
-        this.socket?.on(event, callback as (...args: unknown[]) => void);
+    onNamespace<T>(namespace: string, event: string, callback: (data: T) => void): void {
+        const socket = this.sockets.get(namespace);
+        socket?.on(event, callback as (...args: unknown[]) => void);
     }
 
-    emit<T>(event: string, data?: T): void {
-        this.socket?.emit(event, data);
+    emitNamespace<T>(namespace: string, event: string, data?: T): void {
+        const socket = this.sockets.get(namespace);
+        socket?.emit(event, data);
     }
 
-    get isConnected(): boolean {
-        return this.socket?.connected ?? false;
+    isConnectedNamespace(namespace: string): boolean {
+        return this.sockets.get(namespace)?.connected ?? false;
     }
 
     ngOnDestroy(): void {
-        this.disconnect();
+        this.sockets.forEach((socket) => socket.disconnect());
+        this.sockets.clear();
     }
 }
