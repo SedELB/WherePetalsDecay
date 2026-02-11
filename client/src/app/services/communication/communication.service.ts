@@ -15,7 +15,7 @@ export class CommunicationService {
     constructor(private readonly http: HttpClient) {}
 
     getAllGames(): Observable<Game[]> {
-        return this.http.get<Game[]>(`${this.baseUrl}/game/games`);
+        return this.http.get<Game[]>(`${this.baseUrl}/game/allGames`);
     }
 
     getVisibleGames(): Observable<Game[]> {

@@ -9,7 +9,7 @@ import { AVATARS_PATH, BASE_STATS } from '@app/interfaces/character';
 import { Game } from '@app/interfaces/game';
 import { CharacterService } from '@app/services/character/character.service';
 import { NAME_MAX_LENGTH } from "@app/services/game-validator/game-validator.service";
-import { GameService } from '@app/services/game/game.service';
+import { PlayerGameService } from '@app/services/player-game/player-game.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -44,14 +44,18 @@ export class GameCreationComponent implements OnInit, OnDestroy {
     constructor(
         private readonly router: Router,
         private readonly characterService: CharacterService,
-        private readonly gameService: GameService,
+        private readonly playerGameService: PlayerGameService,
     ) {}
 
     ngOnInit(): void {
-        this.gameService.connect();
-        this.gameService.fetchVisibleGames();
+        this.playerGameService.fetchVisibleGames().subscribe({
+            next: (games) => this.playerGameService.setGames(games),
+            error: (err) => {
+                console.error(err);
+            },
+        });
 
-        this.gamesSubscription = this.gameService.getVisibleGames().subscribe((games) => {
+        this.gamesSubscription = this.playerGameService.visibleGames$.subscribe((games) => {
             this.games = games;
 
             if (this.selectedGame && !games.find((g) => g._id === this.selectedGame?._id)) {
@@ -62,7 +66,6 @@ export class GameCreationComponent implements OnInit, OnDestroy {
 
     ngOnDestroy(): void {
         this.gamesSubscription?.unsubscribe();
-        this.gameService.disconnect();
     }
 
     handleGameNoLongerAvailable(): void {

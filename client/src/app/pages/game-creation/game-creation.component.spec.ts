@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AVATARS_PATH, BASE_STATS, RANDOM_NAMES } from '@app/interfaces/character';
 import { CharacterService } from '@app/services/character/character.service';
-import { GameService } from '@app/services/game/game.service';
+import { PlayerGameService } from '@app/services/player-game/player-game.service';
 import { GameCreationComponent } from './game-creation.component';
 
 const LIFE_WITH_BONUS = BASE_STATS.life + BASE_STATS.bonus;
@@ -20,7 +20,7 @@ describe('GameCreationComponent', () => {
             imports: [GameCreationComponent, HttpClientTestingModule],
             providers: [
                 provideRouter([]),
-                GameService,
+                PlayerGameService,
                 CharacterService,
             ],
         }).compileComponents();

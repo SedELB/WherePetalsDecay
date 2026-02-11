@@ -1,15 +1,17 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { Game } from '@app/interfaces/game';
 import { Tile } from '@app/interfaces/tile';
 import { OBJECT_PLACEMENT_TOOL, TILE_TOOLS } from '@app/pages/map-setup-page/map-setup-page-constant';
+import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { DESC_MAX_LENGTH, NAME_MAX_LENGTH } from "@app/services/game-validator/game-validator.service";
 import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-facade.service';
 import { TileItemCounts } from '@app/services/map-setup.types';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { TileItem, TileTexture } from '@common/enums';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-map-setup-page',
@@ -17,10 +19,14 @@ import { TileItem, TileTexture } from '@common/enums';
   templateUrl: './map-setup-page.component.html',
   styleUrl: './map-setup-page.component.scss',
 })
-export class MapSetupPageComponent implements OnInit {
+export class MapSetupPageComponent implements OnInit, OnDestroy {
   private readonly mapSetupFacade = inject(MapSetupFacadeService);
   private readonly mapSetupService = inject(MapSetupService);
   private readonly tileItemCountService = inject(TileItemCountService);
+  private readonly adminGameService = inject(AdminGameService);
+
+  private gameSubscription?: Subscription;
+  private isSaving = false;
 
   NAME_MAX_LENGTH = NAME_MAX_LENGTH;
   DESC_MAX_LENGTH = DESC_MAX_LENGTH;
@@ -55,6 +61,35 @@ export class MapSetupPageComponent implements OnInit {
     this.mode = init.mode;
     this.itemCounts = init.itemCounts;
     this.initialGameState = JSON.parse(JSON.stringify(this.game));
+
+    if (this.mode === 'edit') {
+      this.gameSubscription = this.adminGameService.games$.subscribe((games) => {
+        const currentGame = games.find(g => g._id === this.game._id);
+
+        if (!currentGame) {
+          this.mode = 'create';
+          alert('Ce jeu a été supprimé par un autre administrateur. Vous pouvez continuer à travailler et il sera créé comme un nouveau jeu lors de la sauvegarde.');
+        } else if (currentGame.updatedAt !== this.game.updatedAt) {
+          if (this.isSaving) {
+            this.game = JSON.parse(JSON.stringify(currentGame));
+            this.itemCounts = this.tileItemCountService.createRequiredCounts(this.game);
+            this.tileItemCountService.adjustCountsForExistingItems(this.game, this.itemCounts);
+            this.isSaving = false;
+          } else {
+            const userWantsUpdate = confirm('Ce jeu a été modifié par un autre administrateur. Voulez-vous charger les changements? (Vos modifications locales seront perdues)');
+            if (userWantsUpdate) {
+              this.game = JSON.parse(JSON.stringify(currentGame));
+              this.itemCounts = this.tileItemCountService.createRequiredCounts(this.game);
+              this.tileItemCountService.adjustCountsForExistingItems(this.game, this.itemCounts);
+            }
+          }
+        }
+      });
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.gameSubscription?.unsubscribe();
   }
 
   getRequiredSpawnCount(): number {
@@ -150,6 +185,7 @@ export class MapSetupPageComponent implements OnInit {
   }
 
   async onSave(): Promise<void> {
+    this.isSaving = true;
     await this.mapSetupFacade.saveGame(this.game, this.mode);
   }
 

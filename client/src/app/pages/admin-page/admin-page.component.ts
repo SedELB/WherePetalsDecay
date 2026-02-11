@@ -5,8 +5,8 @@ import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { Game } from '@app/interfaces/game';
 import { GameCard } from '@app/interfaces/gameCard';
+import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { CommunicationService } from '@app/services/communication/communication.service';
-import { GameService } from '@app/services/game/game.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -21,26 +21,24 @@ export class AdminPageComponent implements OnInit, OnDestroy {
   games: Game[] = [];
   gameCards: GameCard[] = [];
 
-  private sub?: Subscription;
+  private subscription?: Subscription;
 
   constructor(
     private readonly communicationService: CommunicationService,
-    private readonly gameService: GameService,
+    private readonly adminGameService: AdminGameService,
     private readonly router: Router,
   ) {}
 
   ngOnInit(): void {
-    this.gameService.connect();
-
-    this.communicationService.getAllGames().subscribe({
-      next: (games) => this.gameService.setGames(games),
+    this.adminGameService.fetchAllGames().subscribe({
+      next: (games) => this.adminGameService.setGames(games),
       error: (err) => {
         console.error(err);
         throw new Error(`There was an error while fetching all games for database`);
       },
     });
 
-    this.sub = this.gameService.games$.subscribe((games) => {
+    this.subscription = this.adminGameService.games$.subscribe((games) => {
       this.games = games;
       this.gameCards = games.map(game => ({
         name: game.name,
@@ -55,8 +53,7 @@ export class AdminPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.sub?.unsubscribe();
-    this.gameService.disconnect();
+    this.subscription?.unsubscribe();
   }
 
   navigateToGameEditor(name: string): void {
