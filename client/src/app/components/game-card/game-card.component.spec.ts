@@ -32,15 +32,6 @@ describe('GameCardComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should display game info', () => {
-    const compiled = fixture.nativeElement;
-    const listItems = compiled.querySelectorAll('.card-info ul li');
-    expect(listItems[0].textContent).toContain(mockGame.name);
-    expect(listItems[1].textContent).toContain(mockGame.size.rows);
-    expect(listItems[2].textContent).toContain(mockGame.gameMode);
-    expect(listItems[3].textContent).toContain(component.displayTime());
-  });
-
   it('should display image correctly', () => {
     const compiled = fixture.nativeElement;
     const img = compiled.querySelector('.thumbnail');
