@@ -36,7 +36,7 @@ export class CreateGamePageComponent {
     return !!this.gameMode && !!this.mapSize;
   }
 
-  private get getMaxPlayers(){
+  private get getMaxPlayers() {
     if (this.mapSize === 'large') return MaxPlayers.Large;
     else if (this.mapSize === 'medium') return MaxPlayers.Medium;
     else if (this.mapSize === 'small') return MaxPlayers.Small;
