@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { Game } from '@app/interfaces/game';
+import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { CommunicationService } from '@app/services/communication/communication.service';
 import { GameMode } from '@common/enums';
 import { of } from 'rxjs';
@@ -10,7 +11,6 @@ import { AdminPageComponent } from './admin-page.component';
 describe('AdminPageComponent', () => {
   let component: AdminPageComponent;
   let fixture: ComponentFixture<AdminPageComponent>;
-  let communicationServiceSpy: jasmine.SpyObj<CommunicationService>;
   const NUMBER_OF_GAMECARD_BUTTONS = 3;
 
   const MOCK_GAME_CARDS: Game[] = [
@@ -57,17 +57,17 @@ describe('AdminPageComponent', () => {
 
   beforeEach(async () => {
 
-    const spy = jasmine.createSpyObj('CommunicationService', ['getAllGames', 'deleteGame', 'updateVisiblity']);
+    const communicationSpy = jasmine.createSpyObj('CommunicationService', ['getAllGames', 'deleteGame', 'updateVisiblity']);
+    const adminGameSpy = jasmine.createSpyObj('AdminGameService', ['fetchAllGames', 'setGames'], { games$: of(MOCK_GAME_CARDS) });
+    adminGameSpy.fetchAllGames.and.returnValue(of(MOCK_GAME_CARDS));
 
     await TestBed.configureTestingModule({
       imports: [AdminPageComponent, RouterTestingModule],
       providers: [
-        { provide: CommunicationService, useValue: spy },
+        { provide: CommunicationService, useValue: communicationSpy },
+        { provide: AdminGameService, useValue: adminGameSpy },
       ],
     }).compileComponents();
-
-    communicationServiceSpy = TestBed.inject(CommunicationService) as jasmine.SpyObj<CommunicationService>;
-    communicationServiceSpy.getAllGames.and.returnValue(of(MOCK_GAME_CARDS));
 
     fixture = TestBed.createComponent(AdminPageComponent);
     component = fixture.componentInstance;

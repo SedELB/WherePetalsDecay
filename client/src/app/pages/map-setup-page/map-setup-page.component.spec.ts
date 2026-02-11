@@ -2,10 +2,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { Game } from '@app/interfaces/game';
 import { Tile } from '@app/interfaces/tile';
+import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-facade.service';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { GameMode, TileItem, TileTexture } from '@common/enums';
+import { of } from 'rxjs';
 import { MapSetupPageComponent } from './map-setup-page.component';
 
 const makeGrid = (rows: number, cols: number): Tile[][] =>
@@ -43,6 +45,7 @@ describe('MapSetupPageComponent', () => {
     let facade: jasmine.SpyObj<MapSetupFacadeService>;
     let service: jasmine.SpyObj<MapSetupService>;
     let tileItemCountService: jasmine.SpyObj<TileItemCountService>;
+    let adminGameService: jasmine.SpyObj<AdminGameService>;
     let game: Game;
 
     beforeEach(async () => {
@@ -108,6 +111,10 @@ describe('MapSetupPageComponent', () => {
             );
         });
 
+        adminGameService = jasmine.createSpyObj('AdminGameService', ['fetchAllGames', 'setGames'], {
+            games$: of([game]),
+        });
+
         await TestBed.configureTestingModule({
             imports: [MapSetupPageComponent],
             providers: [
@@ -116,6 +123,7 @@ describe('MapSetupPageComponent', () => {
                 { provide: MapSetupFacadeService, useValue: facade },
                 { provide: MapSetupService, useValue: service },
                 { provide: TileItemCountService, useValue: tileItemCountService },
+                { provide: AdminGameService, useValue: adminGameService },
             ],
         }).compileComponents();
 

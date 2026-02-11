@@ -8,7 +8,7 @@ import { ROUTES } from '@app/constants/routes.constants';
 import { AVATARS_PATH, BASE_STATS } from '@app/interfaces/character';
 import { Game } from '@app/interfaces/game';
 import { CharacterService } from '@app/services/character/character.service';
-import { NAME_MAX_LENGTH } from "@app/services/game-validator/game-validator.service";
+import { NAME_MAX_LENGTH } from '@app/services/game-validator/game-validator.service';
 import { PlayerGameService } from '@app/services/player-game/player-game.service';
 import { Subscription } from 'rxjs';
 
@@ -33,7 +33,7 @@ export class GameCreationComponent implements OnInit, OnDestroy {
     lifeBonusSelected: boolean = true;
     attackDiceD6: boolean = true;
 
-    NAME_MAX_LENGTH = NAME_MAX_LENGTH;
+    nameMaxLength = NAME_MAX_LENGTH;
     games: Game[] = [];
     private gamesSubscription: Subscription | null = null;
 
@@ -50,8 +50,8 @@ export class GameCreationComponent implements OnInit, OnDestroy {
     ngOnInit(): void {
         this.playerGameService.fetchVisibleGames().subscribe({
             next: (games) => this.playerGameService.setGames(games),
-            error: (err) => {
-                console.error(err);
+            error: () => {
+                throw new Error('Failed to fetch visible games');
             },
         });
 

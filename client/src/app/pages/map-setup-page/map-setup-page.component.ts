@@ -5,7 +5,7 @@ import { Game } from '@app/interfaces/game';
 import { Tile } from '@app/interfaces/tile';
 import { OBJECT_PLACEMENT_TOOL, TILE_TOOLS } from '@app/pages/map-setup-page/map-setup-page-constant';
 import { AdminGameService } from '@app/services/admin-game/admin-game.service';
-import { DESC_MAX_LENGTH, NAME_MAX_LENGTH } from "@app/services/game-validator/game-validator.service";
+import { DESC_MAX_LENGTH, NAME_MAX_LENGTH } from '@app/services/game-validator/game-validator.service';
 import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-facade.service';
 import { TileItemCounts } from '@app/services/map-setup.types';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
@@ -28,8 +28,8 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
   private gameSubscription?: Subscription;
   private isSaving = false;
 
-  NAME_MAX_LENGTH = NAME_MAX_LENGTH;
-  DESC_MAX_LENGTH = DESC_MAX_LENGTH;
+  nameMaxLength = NAME_MAX_LENGTH;
+  descMaxLength = DESC_MAX_LENGTH;
 
   game: Game;
   mode: 'create' | 'edit' = 'edit';
@@ -68,7 +68,10 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
 
         if (!currentGame) {
           this.mode = 'create';
-          alert('Ce jeu a été supprimé par un autre administrateur. Vous pouvez continuer à travailler et il sera créé comme un nouveau jeu lors de la sauvegarde.');
+          alert(
+            'Ce jeu a été supprimé par un autre administrateur. ' +
+            'Vous pouvez continuer à travailler et il sera créé comme un nouveau jeu lors de la sauvegarde.',
+          );
         } else if (currentGame.updatedAt !== this.game.updatedAt) {
           if (this.isSaving) {
             this.game = JSON.parse(JSON.stringify(currentGame));
@@ -76,7 +79,10 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
             this.tileItemCountService.adjustCountsForExistingItems(this.game, this.itemCounts);
             this.isSaving = false;
           } else {
-            const userWantsUpdate = confirm('Ce jeu a été modifié par un autre administrateur. Voulez-vous charger les changements? (Vos modifications locales seront perdues)');
+            const userWantsUpdate = confirm(
+              'Ce jeu a été modifié par un autre administrateur. ' +
+              'Voulez-vous charger les changements? (Vos modifications locales seront perdues)',
+            );
             if (userWantsUpdate) {
               this.game = JSON.parse(JSON.stringify(currentGame));
               this.itemCounts = this.tileItemCountService.createRequiredCounts(this.game);
