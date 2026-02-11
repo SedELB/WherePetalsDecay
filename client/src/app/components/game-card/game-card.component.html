@@ -20,7 +20,7 @@
     <ul>
       <li>Nom du jeu : <span>{{ game.name }}</span></li>
       <li>Taille du jeu : <span>{{ game.size.rows }}X{{ game.size.cols }}</span></li>
-      <li>Mode de jeu : <span>{{ game.gameMode == GameMode.Classic ? 'Classique' : 'CTF'}}</span></li>
+      <li>Mode de jeu : <span>{{ game.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</span></li>
       <li>Dernière modification : <span>{{ displayTime() }}</span></li>
     </ul>
 
