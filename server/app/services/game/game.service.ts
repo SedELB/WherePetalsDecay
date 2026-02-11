@@ -2,6 +2,9 @@ import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
 import { Game, GameDocument } from '@app/model/schema/game.schema';
 import { BASE_10, BASE_15, CUSTOM_GRID_CLASSIC_MEDIUM, CUSTOM_GRID_CLASSIC_SMALL, CUSTOM_GRID_CTF_SMALL } from '@app/utils/game.constants';
+import { THUMBNAIL1_INIT } from '@app/utils/thumbnail.constants/thumbnail1.constant'
+import { THUMBNAIL2_INIT } from '@app/utils/thumbnail.constants/thumbnail2.constant'
+
 import { GameMode, NbPlayersMedium, NbPlayersSmall } from '@app/utils/game.enum';
 import {
     GAME_CREATION_FAILED,
@@ -40,7 +43,7 @@ export class GameService {
             description: 'Desc. 1 - CLASSIC',
             size: { rows: BASE_10, cols: BASE_10 },
             gameMode: GameMode.Classic,
-            thumbnail: 'N/A',
+            thumbnail: THUMBNAIL1_INIT,
             maxPlayers: NbPlayersSmall.MaxPLayers,
             grid: CUSTOM_GRID_CLASSIC_SMALL,
             isVisible: true,
@@ -51,7 +54,7 @@ export class GameService {
             description: 'Desc. 2 - CTF',
             size: { rows: BASE_10, cols: BASE_10 },
             gameMode: GameMode.Ctf,
-            thumbnail: 'N/A',
+            thumbnail: THUMBNAIL2_INIT,
             maxPlayers: NbPlayersSmall.MaxPLayers,
             grid: CUSTOM_GRID_CTF_SMALL,
             isVisible: false,

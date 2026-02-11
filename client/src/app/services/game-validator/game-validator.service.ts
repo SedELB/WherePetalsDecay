@@ -44,46 +44,46 @@ export class GameValidatorService {
     private validateRequiredFields(draft: GameDraftForValidation): string[] {
         const errors: string[] = [];
 
-        if (!draft.name || typeof draft.name !== 'string') {
-            errors.push('Game name is required!');
-        }
+    if (!draft.name || typeof draft.name !== 'string') {
+        errors.push('Le nom du jeu est requis !');
+    }
 
-        if (!draft.description || typeof draft.description !== 'string') {
-            errors.push('Game description is required!');
-        }
+    if (!draft.description || typeof draft.description !== 'string') {
+        errors.push('La description du jeu est requise !');
+    }
 
-        if (!draft.mode || typeof draft.mode !== 'string') {
-            errors.push('Game mode is required!');
-        }
+    if (!draft.mode || typeof draft.mode !== 'string') {
+        errors.push('Le mode de jeu est requis !');
+    }
 
-        if (!draft.grid || !Array.isArray(draft.grid)) {
-            errors.push('Game grid is required!');
-        }
+    if (!draft.grid || !Array.isArray(draft.grid)) {
+        errors.push('La grille du jeu est requise !');
+    }
 
-        if (!draft.size || typeof draft.size.rows !== 'number' || typeof draft.size.cols !== 'number') {
-            errors.push('Game size is invalid!');
-        }
+    if (!draft.size || typeof draft.size.rows !== 'number' || typeof draft.size.cols !== 'number') {
+        errors.push('La taille du jeu est invalide !');
+    }
 
-        if (!draft.placedObjects || !Array.isArray(draft.placedObjects)) {
-            errors.push('Placed objects are required!');
-        }
+    if (!draft.placedObjects || !Array.isArray(draft.placedObjects)) {
+        errors.push('Les objets placés sont requis !');
+    }
 
-        return errors;
+    return errors;
     }
 
     private validateTextLength(name: string, description: string): string[] {
         const errors: string[] = [];
 
         if ((name ?? '').trim().length < TEXT_MIN_LENGTH) {
-            errors.push('The name field is empty!');
+            errors.push('Le champ nom est vide !');
         } else if (name.length > NAME_MAX_LENGTH) {
-            errors.push('The name field exceeds the maximum length!');
+            errors.push('Le champ nom dépasse la longueur maximale !');
         }
 
         if ((description ?? '').trim().length < TEXT_MIN_LENGTH) {
-            errors.push('The description field is empty!');
+            errors.push('Le champ description est vide !');
         } else if (description.length > DESC_MAX_LENGTH) {
-            errors.push('The description field exceeds the maximum length!');
+            errors.push('Le champ description dépasse la longueur maximale !');
         }
 
         return errors;
@@ -92,7 +92,7 @@ export class GameValidatorService {
     private validateGameMode(mode: string): string[] {
         const validModes = Object.values(GameMode);
         if (!validModes.includes(mode as GameMode)) {
-            return [`Game mode must be one of: ${validModes.join(', ')}`];
+            return [`Le mode de jeu doit être l’un de : ${validModes.join(', ')}`];
         }
         return [];
     }
@@ -102,26 +102,26 @@ export class GameValidatorService {
 
         const validSizes = [GridSizes.Small, GridSizes.Medium, GridSizes.Large];
         if (!validSizes.includes(size.rows) || size.rows !== size.cols) {
-            errors.push(`Grid size must be square and one of: ${validSizes.join('x')}, ${validSizes.join('x')}, ${validSizes.join('x')}`);
+            errors.push(`La grille doit être carrée et de taille : ${validSizes.join('x')}, ${validSizes.join('x')}, ${validSizes.join('x')}`);
         }
 
         if (size.rows <= 0 || size.cols <= 0) {
-            errors.push('Grid dimensions must be positive!');
+            errors.push('Les dimensions de la grille doivent être positives !');
             return errors;
         }
 
         if (!grid || grid.length === 0) {
-            errors.push('Grid is empty!');
+            errors.push('La grille est vide !');
             return errors;
         }
 
         if (grid.length !== size.rows) {
-            errors.push('Grid rows do not match the specified size!');
+            errors.push('Le nombre de lignes de la grille ne correspond pas à la taille spécifiée !');
         }
 
         const colsValid = grid.every((row) => Array.isArray(row) && row.length === size.cols);
         if (!colsValid) {
-            errors.push('Grid columns do not match the specified size!');
+            errors.push('Le nombre de colonnes de la grille ne correspond pas à la taille spécifiée !');
         }
 
         return errors;
@@ -135,7 +135,7 @@ export class GameValidatorService {
             for (let col = 0; col < grid[row].length; col++) {
                 const tileType = grid[row][col];
                 if (!validTileTypes.includes(tileType)) {
-                    errors.push(`Invalid tile type at position (${row}, ${col}): ${tileType}`);
+                    errors.push(`Type de case invalide à la position (${row}, ${col}) : ${tileType}`);
                 }
             }
         }
@@ -163,11 +163,11 @@ export class GameValidatorService {
 
         for (const obj of placedObjects) {
             if (!validItemTypes.includes(obj.type)) {
-                errors.push(`Invalid placed object type: ${obj.type}`);
+                errors.push(`Type d’objet placé invalide : ${obj.type}`);
             }
 
             if (!obj.position || typeof obj.position.x !== 'number' || typeof obj.position.y !== 'number') {
-                errors.push('Placed object has invalid position!');
+                errors.push('L’objet placé a une position invalide !');
             }
         }
 
@@ -179,7 +179,7 @@ export class GameValidatorService {
 
         for (const obj of placedObjects) {
             if (obj.position.x < 0 || obj.position.x >= size.cols || obj.position.y < 0 || obj.position.y >= size.rows) {
-                errors.push(`Placed object at position (${obj.position.y}, ${obj.position.x}) is out of bounds!`);
+                errors.push(`L’objet placé à la position (${obj.position.y}, ${obj.position.x}) est hors limites !`);
             }
         }
 
@@ -187,7 +187,7 @@ export class GameValidatorService {
         for (const obj of placedObjects) {
             const key = `${obj.position.x},${obj.position.y}`;
             if (positionSet.has(key)) {
-                errors.push(`Multiple objects placed at the same position (${obj.position.y}, ${obj.position.x})!`);
+                errors.push(`Plusieurs objets placés à la même position (${obj.position.y}, ${obj.position.x}) !`);
             }
             positionSet.add(key);
         }
@@ -205,7 +205,7 @@ export class GameValidatorService {
             const actual = actualCounts[type as TileItem] || 0;
             if (actual !== required) {
                 const itemName = this.getItemName(type as TileItem);
-                errors.push(`Expected ${required} ${itemName}(s) but found ${actual}!`);
+                errors.push(`On attend ${required} de ${itemName}(s) mais on trouve ${actual}!`);
             }
         }
 
