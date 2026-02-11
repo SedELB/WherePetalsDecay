@@ -6,6 +6,7 @@ export interface GameCard {
     size: { rows: number, cols: number };
     gameMode: GameMode;
     thumbnail: string;
+    createdAt: Date;
     updatedAt: Date;
     isVisible: boolean;
 }
