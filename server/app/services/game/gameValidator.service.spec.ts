@@ -1,9 +1,9 @@
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { GameValidatorService } from '@app/services/game/gameValidator.service';
-import { Test, TestingModule } from '@nestjs/testing';
+import { DESC_MAX_LENGTH, MAX_PLAYERS, MIN_PLAYERS, TEN } from '@app/utils/game.constants';
+import { GameMode, TileItem, TileTexture } from '@app/utils/game.enum';
 import { Logger } from '@nestjs/common';
-import { TEN, MIN_PLAYERS, DESC_MAX_LENGTH, MAX_PLAYERS } from '@app/utils/game.constants';
-import { GameMode, TileTexture, TileItem } from '@app/utils/game.enum';
+import { Test, TestingModule } from '@nestjs/testing';
 const FIVE = 5;
 const EIGHT = 8;
 
@@ -21,7 +21,7 @@ describe('GameValidator', () => {
         invalidGame3 = {
             name: 'Invalid Game 3',
             description: 'Desc. 3',
-            size: {rows: TEN, cols: TEN},
+            size: { rows: TEN, cols: TEN },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MIN_PLAYERS,
@@ -73,27 +73,27 @@ describe('GameValidator', () => {
     });
 
     it('isTextLengthValid() should fail if the game name is empty', () => {
-        const emptyNameGame = {...getFakeGame(), name: ''};
+        const emptyNameGame = { ...getFakeGame(), name: '' };
         expect(() => gameValidatorService.isTextLengthValid(emptyNameGame)).toThrow('["The name field is empty!"]');
     });
 
     it('isTextLengthValid() should fail if the game name exceeds max length', () => {
-        const longNameGame = {...getFakeGame(), name: 'QWERTYUIOPASDFGHJKLZXCVBNM'};
+        const longNameGame = { ...getFakeGame(), name: 'QWERTYUIOPASDFGHJKLZXCVBNM' };
         expect(() => gameValidatorService.isTextLengthValid(longNameGame)).toThrow('["The name field exceeds the maximum length!"]');
     });
 
     it('isTextLengthValid() should fail if the game desc is empty', () => {
-        const emptyDescGame = {...getFakeGame(), description: ''};
+        const emptyDescGame = { ...getFakeGame(), description: '' };
         expect(() => gameValidatorService.isTextLengthValid(emptyDescGame)).toThrow('["The description field is empty!"]');
     });
 
     it('isTextLengthValid() should fail if the game desc is exceeds max length', () => {
-        const longDescGame = {...getFakeGame(), description: 'a'.repeat(DESC_MAX_LENGTH + 1)};
+        const longDescGame = { ...getFakeGame(), description: 'a'.repeat(DESC_MAX_LENGTH + 1) };
         expect(() => gameValidatorService.isTextLengthValid(longDescGame)).toThrow('["The description field exceeds the maximum length!"]');
     });
 
     it('isTextLengthValid() should fail with multiple errors', () => {
-        const badGame = {...getFakeGame(), name: '', description: ''};
+        const badGame = { ...getFakeGame(), name: '', description: '' };
         expect(() => gameValidatorService.isTextLengthValid(badGame)).toThrow();
     });
 
@@ -124,7 +124,7 @@ describe('GameValidator', () => {
     });
 
     it('findFirstWalkableTile() should return the first walkable tile', () => {
-        expect(gameValidatorService.findFirstWalkableTile(getFakeGame().grid)).toMatchObject({row:0, col:0});
+        expect(gameValidatorService.findFirstWalkableTile(getFakeGame().grid)).toMatchObject({ row: 0, col: 0 });
     });
 
     it('findFirstWalkableTile() should return null if there is no walkable tile', () => {
@@ -144,7 +144,7 @@ describe('GameValidator', () => {
     });
 
     it('getObjectsPositions() should return empty array for empty grid', () => {
-        const emptyGame = {...getCleanGame(), grid: []};
+        const emptyGame = { ...getCleanGame(), grid: [] };
         expect(gameValidatorService.getObjectsPositions(emptyGame, 'door')).toEqual([]);
     });
 
@@ -199,9 +199,9 @@ describe('GameValidator', () => {
         const game = getCleanGame();
         game.grid[FIVE][FIVE].type = TileTexture.DoorOpened;
         game.grid[4][FIVE].type = TileTexture.Wall;
-        game.grid[6][FIVE].type = TileTexture.Wall;  
+        game.grid[6][FIVE].type = TileTexture.Wall;
         game.grid[FIVE][4].type = TileTexture.Floor;
-        game.grid[FIVE][6].type = TileTexture.Floor; 
+        game.grid[FIVE][6].type = TileTexture.Floor;
         expect(gameValidatorService.isDoorsPlacementValid(game)).toEqual(true);
     });
 
@@ -209,9 +209,9 @@ describe('GameValidator', () => {
         const game = getCleanGame();
         game.grid[FIVE][FIVE].type = TileTexture.DoorClosed;
         game.grid[FIVE][4].type = TileTexture.Wall;
-        game.grid[FIVE][6].type = TileTexture.Wall; 
+        game.grid[FIVE][6].type = TileTexture.Wall;
         game.grid[4][FIVE].type = TileTexture.Floor;
-        game.grid[6][FIVE].type = TileTexture.Floor; 
+        game.grid[6][FIVE].type = TileTexture.Floor;
         expect(gameValidatorService.isDoorsPlacementValid(game)).toEqual(true);
     });
 
@@ -230,7 +230,7 @@ describe('GameValidator', () => {
     it('isDoorsPlacementValid() should throw for door with walls on wrong sides', () => {
         const game = getCleanGame();
         game.grid[FIVE][FIVE].type = TileTexture.DoorOpened;
-        game.grid[4][FIVE].type = TileTexture.Wall; 
+        game.grid[4][FIVE].type = TileTexture.Wall;
         expect(() => gameValidatorService.isDoorsPlacementValid(game)).toThrow();
     });
 
@@ -294,7 +294,7 @@ describe('GameValidator', () => {
         const spyIsGameSurfaceValid = jest.spyOn(gameValidatorService, 'isGameSurfaceValid');
         const spyAreAllSpawnPointsPlaced = jest.spyOn(gameValidatorService, 'areAllSpawnPointsPlaced');
         const spyIsFlagPlaced = jest.spyOn(gameValidatorService, 'isFlagPlaced');
-        
+
         expect(gameValidatorService.isGameValid(validGame)).toEqual(true);
         expect(spyIsTextLengthValid).toHaveBeenCalled();
         expect(spyIsDoorsPlacementValid).toHaveBeenCalled();
@@ -326,13 +326,13 @@ describe('GameValidator', () => {
     it('isGameValid() should catch all validation errors in one call', () => {
         const spyIsTextLengthValid = jest.spyOn(gameValidatorService, 'isTextLengthValid');
         const spyIsGameSurfaceValid = jest.spyOn(gameValidatorService, 'isGameSurfaceValid');
-        
+
         try {
             gameValidatorService.isGameValid(invalidGame3);
         } catch (error) {
             expect(error.message).toContain('Validation errors:');
         }
-        
+
         expect(spyIsTextLengthValid).toHaveBeenCalled();
         expect(spyIsGameSurfaceValid).toHaveBeenCalled();
     });
@@ -342,7 +342,7 @@ describe('GameValidator', () => {
 const getFakeGame = (): CreateGameDto => ({
     name: 'GameName 1',
     description: 'Game Description 1',
-    size : { rows: TEN, cols: TEN },
+    size: { rows: TEN, cols: TEN },
     gameMode: GameMode.Classic,
     thumbnail: 'N/A',
     maxPlayers: MIN_PLAYERS,
@@ -350,7 +350,7 @@ const getFakeGame = (): CreateGameDto => ({
     isVisible: true,
 });
 
- // cleanGame = grid with only floors for in-test customization.
+// cleanGame = grid with only floors for in-test customization.
 const getCleanGame = (): CreateGameDto => ({
     name: 'Clean Game',
     description: 'Test game',
@@ -359,7 +359,7 @@ const getCleanGame = (): CreateGameDto => ({
     thumbnail: 'N/A',
     maxPlayers: 4,
     isVisible: true,
-    grid: Array(TEN).fill(null).map(() => 
+    grid: Array(TEN).fill(null).map(() =>
         Array(TEN).fill(null).map(() => ({ type: TileTexture.Floor, item: null })),
     ),
 });
@@ -369,40 +369,40 @@ const BASE_4 = 4;
 // Custom Grid made in a Excel file to be able to count properties.
 const customGrid = [
     [
-        { type: TileTexture.Floor, item: TileItem.CombatSanctuary }, { type: TileTexture.Floor, item: TileItem.CombatSanctuary }, 
-        { type: TileTexture.Floor, item: TileItem.Spawn }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null }, 
-        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, 
+        { type: TileTexture.Floor, item: TileItem.CombatSanctuary }, { type: TileTexture.Floor, item: TileItem.CombatSanctuary },
+        { type: TileTexture.Floor, item: TileItem.Spawn }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null },
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
         { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
     ],
     [
-        { type: TileTexture.Floor, item: TileItem.CombatSanctuary }, { type: TileTexture.Floor, item: TileItem.CombatSanctuary }, 
+        { type: TileTexture.Floor, item: TileItem.CombatSanctuary }, { type: TileTexture.Floor, item: TileItem.CombatSanctuary },
         { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.DoorOpened, item: null },
-        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, 
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
         { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
     ],
     [
-        { type: TileTexture.Ice, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null}, 
-        { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null },{ type: TileTexture.Floor, item: null }, 
-        { type: TileTexture.Wall, item: null }, { type: TileTexture.DoorClosed, item: null }, { type: TileTexture.Wall, item: null }, 
+        { type: TileTexture.Ice, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null },
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null },
+        { type: TileTexture.Wall, item: null }, { type: TileTexture.DoorClosed, item: null }, { type: TileTexture.Wall, item: null },
         { type: TileTexture.Floor, item: null },
     ],
     ...Array(BASE_4).fill(Array(TEN).fill({ type: TileTexture.Floor, item: null })),
     [
-        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, 
-        { type: TileTexture.Floor, item: null }, { type: TileTexture.Ice, item: null }, { type: TileTexture.Wall, item: null }, 
-        { type: TileTexture.DoorClosed, item: null }, { type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null }, 
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Ice, item: null }, { type: TileTexture.Wall, item: null },
+        { type: TileTexture.DoorClosed, item: null }, { type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null },
         { type: TileTexture.Floor, item: null },
     ],
     [
-        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null }, 
-        { type: TileTexture.DoorClosed, item: null }, { type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null }, 
-        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, 
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null },
+        { type: TileTexture.DoorClosed, item: null }, { type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null },
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
         { type: TileTexture.Floor, item: null },
     ],
     [
-        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, 
-        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Ice, item: null }, 
-        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: TileItem.Spawn }, 
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Ice, item: null },
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: TileItem.Spawn },
         { type: TileTexture.Floor, item: null },
     ],
 ];

@@ -1,8 +1,10 @@
-import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsEnum, IsNumber, IsObject, IsOptional, IsString, 
-        Max, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
-import { NAME_MAX_LENGTH, DESC_MAX_LENGTH, MAX_PLAYERS, TEXT_MIN_LENGTH, MIN_PLAYERS } from '@app/utils/game.constants';
+import { DESC_MAX_LENGTH, MAX_PLAYERS, MIN_PLAYERS, NAME_MAX_LENGTH, TEXT_MIN_LENGTH } from '@app/utils/game.constants';
 import { GameMode, TileItem, TileTexture } from '@app/utils/game.enum';
+import { Type } from 'class-transformer';
+import {
+    IsArray, IsBoolean, IsEnum, IsNumber, IsObject, IsOptional, IsString,
+    Max, MaxLength, Min, MinLength, ValidateNested,
+} from 'class-validator';
 
 export class TileDto {
     @IsEnum(TileTexture)
