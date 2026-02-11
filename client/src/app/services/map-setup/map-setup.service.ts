@@ -69,6 +69,7 @@ export class MapSetupService {
         row += rowDirection;
       }
     }
+    path.push({ row: endRow, col: endCol });
     return path;
   }
 
