@@ -64,13 +64,13 @@ export class MapSetupService {
     const { game, rowIndex, colIndex, tileAttribute, event, counts } = params;
     const currentTile = game.grid[rowIndex]?.[colIndex];
     const currItem = currentTile.item;
-    console.log(tileAttribute);
 
     // If shift key is pressed delete the item
     if (currItem && event.shiftKey) {
       currentTile.item = null;
       this.tileItemCountService.increaseTileItemCount(counts, currItem);
     } else if (Object.values(TileTexture).includes(tileAttribute as TileTexture)) {
+      this.tileItemCountService.increaseTileItemCount(counts, currentTile.item as TileItem);
       currentTile.item = null;
     } else if (Object.values(TileItem).includes(tileAttribute as TileItem)) {
       return;
