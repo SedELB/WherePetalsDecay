@@ -2,8 +2,8 @@ import { Injectable } from '@angular/core';
 import { PlacedObject } from '@app/interfaces/game';
 import { GameMode, GridSizes, MaxPlayers, TileItem, TileTexture } from '@common/enums';
 
-const NAME_MAX_LENGTH = 20;
-const DESC_MAX_LENGTH = 500;
+export const NAME_MAX_LENGTH = 20;
+export const DESC_MAX_LENGTH = 500;
 const TEXT_MIN_LENGTH = 1;
 const FLAG_REQUIRED = 1;
 const FLAG_NONE = 0;

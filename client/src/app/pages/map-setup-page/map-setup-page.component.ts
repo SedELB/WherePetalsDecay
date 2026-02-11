@@ -4,6 +4,7 @@ import { ButtonComponent } from '@app/components/button/button.component';
 import { Game } from '@app/interfaces/game';
 import { Tile } from '@app/interfaces/tile';
 import { OBJECT_PLACEMENT_TOOL, TILE_TOOLS } from '@app/pages/map-setup-page/map-setup-page-constant';
+import { DESC_MAX_LENGTH, NAME_MAX_LENGTH } from "@app/services/game-validator/game-validator.service";
 import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-facade.service';
 import { TileItemCounts } from '@app/services/map-setup.types';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
@@ -20,6 +21,9 @@ export class MapSetupPageComponent implements OnInit {
   private readonly mapSetupFacade = inject(MapSetupFacadeService);
   private readonly mapSetupService = inject(MapSetupService);
   private readonly tileItemCountService = inject(TileItemCountService);
+
+  NAME_MAX_LENGTH = NAME_MAX_LENGTH;
+  DESC_MAX_LENGTH = DESC_MAX_LENGTH;
 
   game: Game;
   mode: 'create' | 'edit' = 'edit';
