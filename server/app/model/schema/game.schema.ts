@@ -1,17 +1,17 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { DESC_MAX_LENGTH, MAX_PLAYERS, MIN_PLAYERS, NAME_MAX_LENGTH, TEXT_MIN_LENGTH } from '@app/utils/game.constants';
 import { GameMode, TileItem, TileTexture } from '@app/utils/game.enum';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import { TEXT_MIN_LENGTH, NAME_MAX_LENGTH, DESC_MAX_LENGTH, MIN_PLAYERS, MAX_PLAYERS } from '@app/utils/game.constants';
 
 export type GameDocument = Game & Document;
 // TILE — sous-schéma (case)
 
 @Schema({ _id: false }) // pas d'_id pour chaque case, une tuile nexiste pas seule
 export class Tile {
-    @Prop({ type: String, enum: Object.values(TileTexture), required: true})
+    @Prop({ type: String, enum: Object.values(TileTexture), required: true })
     type: TileTexture;
 
-    @Prop({ type: String, enum: Object.values(TileItem), default: null})
+    @Prop({ type: String, enum: Object.values(TileItem), default: null })
     item?: TileItem;
 
 }
@@ -28,9 +28,9 @@ export class Game {
     @Prop({ required: true, trim: true, min: TEXT_MIN_LENGTH, max: DESC_MAX_LENGTH })
     description: string;
 
-    @Prop({ type: {rows: Number, cols: Number}, required: true, _id: false})
+    @Prop({ type: { rows: Number, cols: Number }, required: true, _id: false })
     size: {
-        rows: number, 
+        rows: number,
         cols: number
     };
 
@@ -39,10 +39,10 @@ export class Game {
 
     @Prop({ required: true })
     thumbnail: string;
-    
-    @Prop({ required: true, min: MIN_PLAYERS, max: MAX_PLAYERS})
+
+    @Prop({ required: true, min: MIN_PLAYERS, max: MAX_PLAYERS })
     maxPlayers: number;
-    
+
     @Prop({ type: [[tileSchema]], required: true })
     grid: Tile[][];
 

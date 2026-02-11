@@ -1,7 +1,7 @@
-import { TEXT_MIN_LENGTH, NAME_MAX_LENGTH, DESC_MAX_LENGTH, MAX_PLAYERS } from '@app/utils/game.constants';
-import { GameMode, TileTexture, TileItem } from '@app/utils/game.enum';
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { Tile } from '@app/model/schema/game.schema';
+import { DESC_MAX_LENGTH, MAX_PLAYERS, NAME_MAX_LENGTH, TEXT_MIN_LENGTH } from '@app/utils/game.constants';
+import { GameMode, TileItem, TileTexture } from '@app/utils/game.enum';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
@@ -71,7 +71,7 @@ export class GameValidatorService {
         }
         return true;
     }
-    
+
     isGameSurfaceValid(game: CreateGameDto): boolean {
         const types = this.countByProperty(game, 'type');
         const terrainTilesNumber = (types.floor || 0) + (types.ice || 0) + (types.water || 0);
@@ -89,7 +89,7 @@ export class GameValidatorService {
         } else {
             throw new Error('Not all spawn points are placed!');
         }
-    }   
+    }
 
     // For areThereUnreachableTiles()
     findFirstWalkableTile(grid: Tile[][]): { row: number; col: number } | null {
@@ -99,8 +99,8 @@ export class GameValidatorService {
             }
         }
         return null;
-    }   
-    
+    }
+
     // For areThereUnreachableTiles()
     isTileValidForPath(game: CreateGameDto, row: number, col: number, visited: Set<string>): boolean {
         const isWithinBounds = row >= 0 && row < game.grid.length && col >= 0 && col < game.grid[0].length;
@@ -108,7 +108,7 @@ export class GameValidatorService {
 
         const isNotWall = game.grid[row][col].type !== TileTexture.Wall;
         const isNotVisited = !visited.has(`${row}, ${col}`);
-        
+
         return isNotWall && isNotVisited;
     }
 
@@ -119,8 +119,8 @@ export class GameValidatorService {
         }
 
         const types = this.countByProperty(game, 'type');
-        const totalWalkable = (types.floor || 0) + (types.water || 0) + (types.ice || 0) + 
-                            (types.doorOpened || 0) + (types.doorClosed || 0); // Door and terrain
+        const totalWalkable = (types.floor || 0) + (types.water || 0) + (types.ice || 0) +
+            (types.doorOpened || 0) + (types.doorClosed || 0); // Door and terrain
 
         const queue = [startPos];
         const visited = new Set<string>();
@@ -160,7 +160,7 @@ export class GameValidatorService {
             row < rows - 1 &&
             col > 0 &&
             col < cols - 1;
-        
+
         if (isInside) return false;
         return true;
     }
@@ -201,11 +201,11 @@ export class GameValidatorService {
             const left = game.grid[row][col - 1].type;
             const right = game.grid[row][col + 1].type;
 
-            const verticalSandwich = (up === wall && down === wall) && 
-                                    (!obstacles.includes(left) && !obstacles.includes(right));
+            const verticalSandwich = (up === wall && down === wall) &&
+                (!obstacles.includes(left) && !obstacles.includes(right));
 
-            const horizontalSandwich = (left === wall && right === wall) && 
-                                    (!obstacles.includes(up) && !obstacles.includes(down));
+            const horizontalSandwich = (left === wall && right === wall) &&
+                (!obstacles.includes(up) && !obstacles.includes(down));
 
             if (!verticalSandwich && !horizontalSandwich) {
                 errors.push(`Invalid door placement at the position (${row}, ${col})! (missing walls)`);
@@ -237,7 +237,7 @@ export class GameValidatorService {
             () => this.isDoorsPlacementValid(game),
             () => this.isFlagPlaced(game),
         ];
-        
+
         for (const validation of validations) {
             try {
                 validation();
