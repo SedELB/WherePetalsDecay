@@ -6,12 +6,12 @@
     <aside class="info-card">
       <div class="info-row">
         <span class="info-label">Nom:</span>
-        <input class="info-input" [(ngModel)]="game.name" />
+        <input class="info-input" [(ngModel)]="game.name" [maxlength]="NAME_MAX_LENGTH"/>
       </div>
 
       <div class="info-row info-row--top">
         <span class="info-label">Description:</span>
-        <textarea class="info-textarea" rows="5" [(ngModel)]="game.description"></textarea>
+        <textarea class="info-textarea" rows="5" [(ngModel)]="game.description" [maxlength]="DESC_MAX_LENGTH"></textarea>
       </div>
     </aside>
 
