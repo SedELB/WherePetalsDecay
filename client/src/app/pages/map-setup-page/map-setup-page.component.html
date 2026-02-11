@@ -22,7 +22,6 @@
         class="grid"
         [style.gridTemplateColumns]="'repeat(' + (game.grid[0]?.length ?? 0) + ', 1fr)'"
         [style.gridTemplateRows]="'repeat(' + game.grid.length + ', 1fr)'"
-        (mouseleave)="onGridMouseLeave()"
         (document:mouseup)="onDocumentMouseUp()"
       >
         @for (row of game.grid; track $index; let rowIndex = $index) {

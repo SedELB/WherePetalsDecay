@@ -15,6 +15,7 @@ import { TileItem, TileTexture } from '@common/enums';
 
 @Injectable({ providedIn: 'root' })
 export class MapSetupService {
+
   constructor(private readonly tileItemCountService: TileItemCountService) {}
 
   initializeGridIfEmpty(game: Game): void {
@@ -69,13 +70,12 @@ export class MapSetupService {
     if (currItem && event.shiftKey) {
       currentTile.item = null;
       this.tileItemCountService.increaseTileItemCount(counts, currItem);
-    } else if (Object.values(TileTexture).includes(tileAttribute as TileTexture)) {
-      this.tileItemCountService.increaseTileItemCount(counts, currentTile.item as TileItem);
-      currentTile.item = null;
-    } else if (Object.values(TileItem).includes(tileAttribute as TileItem)) {
-      return;
-    } else {
+    } else if (!event.shiftKey && currentTile.type !== TileTexture.Floor) {
       currentTile.type = TileTexture.Floor;
+    } if ([TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed].includes(tileAttribute as TileTexture)
+      && currItem) {
+      currentTile.item = null;
+      this.tileItemCountService.increaseTileItemCount(counts, currItem);
     }
   }
 
@@ -148,6 +148,7 @@ export class MapSetupService {
     } = params;
 
     if (event.button === MouseEventType.LeftClick) {
+      event.preventDefault();
       // Only set isPaintingTiles to true if we have something selected to paint
       if (activeTileTexture) {
         const tileAttribute = activeTileTexture;
