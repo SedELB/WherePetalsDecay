@@ -1,4 +1,4 @@
-import { DESC_MAX_LENGTH, MAX_PLAYERS, MIN_PLAYERS, NAME_MAX_LENGTH, TEXT_MIN_LENGTH } from '@app/utils/game.constants';
+import { DESC_MAX_LENGTH, MAX_PLAYERS_DTO, MIN_PLAYERS_DTO, NAME_MAX_LENGTH, TEXT_MIN_LENGTH } from '@app/utils/game.constants';
 import { GameMode, TileItem, TileTexture } from '@app/utils/game.enum';
 import { Type } from 'class-transformer';
 import {
@@ -12,7 +12,7 @@ export class TileDto {
 
     @IsOptional()
     @IsEnum(TileItem)
-    item?: TileItem;
+    item: TileItem | null;
 }
 
 class GameSizeDto {
@@ -46,8 +46,8 @@ export class CreateGameDto {
     thumbnail: string;
 
     @IsNumber()
-    @Min(MIN_PLAYERS)
-    @Max(MAX_PLAYERS)
+    @Min(MIN_PLAYERS_DTO)
+    @Max(MAX_PLAYERS_DTO)
     maxPlayers: number;
 
     // The grid validation will be in the Controller method.

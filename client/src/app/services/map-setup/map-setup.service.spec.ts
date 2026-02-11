@@ -203,7 +203,10 @@ describe('MapSetupService', () => {
       game,
       rowIndex: 0,
       colIndex: 0,
-      event: { button: 1 } as MouseEvent,
+      event: {
+        button: 1,
+        preventDefault: jasmine.createSpy('preventDefault'),
+      } as unknown as MouseEvent,
       activeTileTexture: null,
       activeTileItem: null,
       counts,
