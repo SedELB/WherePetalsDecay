@@ -32,8 +32,7 @@ export class AdminPageComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.adminGameService.fetchAllGames().subscribe({
       next: (games) => this.adminGameService.setGames(games),
-      error: (err) => {
-        console.error(err);
+      error: () => {
         throw new Error(`There was an error while fetching all games for database`);
       },
     });
