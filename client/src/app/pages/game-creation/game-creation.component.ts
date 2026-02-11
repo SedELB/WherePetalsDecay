@@ -52,7 +52,11 @@ export class GameCreationComponent implements OnInit, OnDestroy {
         this.gameService.fetchVisibleGames();
 
         this.gamesSubscription = this.gameService.getVisibleGames().subscribe((games) => {
-            this.games = games;
+            this.games = games.sort((a, b) => {
+                const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+                const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+                return dateA.getTime() - dateB.getTime();
+            });
 
             if (this.selectedGame && !games.find((g) => g._id === this.selectedGame?._id)) {
                 this.handleGameNoLongerAvailable();

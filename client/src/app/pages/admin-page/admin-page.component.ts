@@ -41,15 +41,22 @@ export class AdminPageComponent implements OnInit, OnDestroy {
 
     this.sub = this.gameService.games$.subscribe((games) => {
       this.games = games;
-      this.gameCards = games.map(game => ({
-        name: game.name,
-        description: game.description,
-        size: game.size,
-        gameMode: game.gameMode,
-        thumbnail: game.thumbnail,
-        updatedAt: game.updatedAt,
-        isVisible: game.isVisible,
-      }));
+      this.gameCards = games
+        .map(game => ({
+          name: game.name,
+          description: game.description,
+          size: game.size,
+          gameMode: game.gameMode,
+          thumbnail: game.thumbnail,
+          createdAt: game.createdAt,
+          updatedAt: game.updatedAt,
+          isVisible: game.isVisible,
+        }))
+        .sort((a, b) => {
+          const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+          const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+          return dateA.getTime() - dateB.getTime();
+        });
     });
   }
 

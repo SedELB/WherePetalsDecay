@@ -13,6 +13,7 @@ describe('GameCardComponent', () => {
     size: { rows: 10, cols: 10 },
     gameMode: GameMode.Ctf,
     thumbnail: '/assets/filler.png',
+    createdAt: new Date('2026-01-01'),
     updatedAt: new Date('2026-01-01'),
     isVisible: true,
   };
