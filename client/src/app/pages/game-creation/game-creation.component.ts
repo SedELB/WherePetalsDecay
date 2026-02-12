@@ -63,10 +63,6 @@ export class GameCreationComponent implements OnInit, OnDestroy {
                 const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
                 return dateA.getTime() - dateB.getTime();
             });
-
-            if (this.selectedGame && !games.find((g) => g._id === this.selectedGame?._id)) {
-                this.handleGameNoLongerAvailable();
-            }
         });
     }
 
