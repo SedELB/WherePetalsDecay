@@ -15,6 +15,7 @@ import {
     SPAWN_POINTS_NOT_PLACED,
     UNREACHABLE_TILES,
     VALIDATION_ERRORS_PREFIX,
+    DESC_INVALID_DOOR_PLACEMENT,
 } from '@common/error-messages';
 import { Injectable } from '@nestjs/common';
 
@@ -50,7 +51,7 @@ export class GameValidatorService {
             errors.push(DESCRIPTION_FIELD_TOO_LONG);
         }
         if (errors.length > 0) {
-            throw new Error(JSON.stringify(errors));
+            throw errors;
         }
         return true;
     }
@@ -191,10 +192,10 @@ export class GameValidatorService {
                 (!obstacles.includes(up) && !obstacles.includes(down));
 
             if (!verticalSandwich && !horizontalSandwich) {
-                errors.push(`${INVALID_DOOR_PLACEMENT} (${row}, ${col}) !`);
+                errors.push(`${INVALID_DOOR_PLACEMENT} (${row}, ${col}) : ${DESC_INVALID_DOOR_PLACEMENT}`);
             }
         }
-        if (errors.length > 0) throw new Error(JSON.stringify(errors));
+        if (errors.length > 0) throw errors;
         return true;
     }
 
