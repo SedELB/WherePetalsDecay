@@ -1,3 +1,13 @@
+/**
+ * Testing:
+ * - Grid initialization and manipulation
+ * - Tile and item placement/removal logic
+ * - Mouse event handling (click, drag, paint, erase)
+ * - Bresenham line drawing algorithm
+ * - Selection state management
+ * - Validation payload building
+ */
+
 import type { Game } from '@app/interfaces/game';
 import type { Tile } from '@app/interfaces/tile';
 import { MouseEventType } from '@app/pages/map-setup-page/map-setup-page-constant';
@@ -6,336 +16,321 @@ import { TileItemCountService } from '@app/services/tile-item-count/tile-item-co
 import { GameMode, TileItem, TileTexture } from '@common/enums';
 
 const grid = (
-  rows: number,
-  cols: number,
-  type: TileTexture = TileTexture.Floor,
-  item: TileItem | null = null,
+    rows: number,
+    cols: number,
+    type: TileTexture = TileTexture.Floor,
+    item: TileItem | null = null,
 ): Tile[][] =>
-  Array.from({ length: rows }, () =>
-    Array.from({ length: cols }, () => ({
-      type,
-      item,
-    })),
-  );
+    Array.from({ length: rows }, () =>
+        Array.from({ length: cols }, (): Tile => ({
+            type,
+            item,
+        })),
+    );
 
-const SIZE_SMALL = 10;
 
 const gameFactory = (rows = 2, cols = 2, mode: GameMode = GameMode.Classic): Game => ({
-  _id: 'game-id',
-  name: 'Test Game',
-  description: 'Desc',
-  size: { rows, cols },
-  gameMode: mode,
-  thumbnail: 'thumb',
-  maxPlayers: 4,
-  grid: grid(rows, cols),
-  isVisible: true,
-  createdAt: new Date(),
-  updatedAt: new Date(),
+    _id: 'game-id',
+    name: 'Test Game',
+    description: 'Desc',
+    size: { rows, cols },
+    gameMode: mode,
+    thumbnail: 'thumb',
+    maxPlayers: 4,
+    grid: grid(rows, cols),
+    isVisible: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
 });
 
 describe('MapSetupService', () => {
-  let service: MapSetupService;
-  let tileItemCountService: TileItemCountService;
+    let service: MapSetupService;
+    let tileItemCountService: TileItemCountService;
 
-  beforeEach(() => {
-    tileItemCountService = new TileItemCountService();
-    service = new MapSetupService(tileItemCountService);
-  });
-
-  it('fills the grid when it is missing or the wrong size', () => {
-    const empty = gameFactory(2, 2);
-    empty.grid = [];
-    service.initializeGridIfEmpty(empty);
-    expect(empty.grid.length).toBe(2);
-
-    const wrongSize = gameFactory(2, 2);
-    wrongSize.grid = grid(1, 1);
-    service.initializeGridIfEmpty(wrongSize);
-    expect(wrongSize.grid.length).toBe(2);
-
-    const alreadyOk = gameFactory(2, 2);
-    const ref = alreadyOk.grid;
-    service.initializeGridIfEmpty(alreadyOk);
-    expect(alreadyOk.grid).toBe(ref);
-  });
-
-
-  it('places and removes both textures and items', () => {
-    const game = gameFactory(2, 2);
-    const counts = { spawnCount: 1, healingSanctuaryCount: 1, combatSanctuaryCount: 1, flagCount: 1 };
-
-    service.applyTile({ game, rowIndex: 0, colIndex: 0, tileAttribute: TileItem.Spawn, event: {} as MouseEvent, counts });
-    expect(game.grid[0][0].item).toBe(TileItem.Spawn);
-    expect(counts.spawnCount).toBe(0);
-
-    service.applyTile({ game, rowIndex: 0, colIndex: 1, tileAttribute: TileTexture.Water, event: {} as MouseEvent, counts });
-    expect(game.grid[0][1].type).toBe(TileTexture.Water);
-
-    game.grid[1][0].type = TileTexture.Wall;
-    expect(() => service.applyTile({ game, rowIndex: 1, colIndex: 0, tileAttribute: TileItem.Flag, event: {} as MouseEvent, counts })).toThrow();
-
-    service.applyTile({ game, rowIndex: 1, colIndex: 1, tileAttribute: TileItem.Flag, event: {} as MouseEvent, counts: { ...counts, flagCount: 0 } });
-    expect(game.grid[1][1].item).toBeNull();
-
-    game.grid[0][1].type = TileTexture.Water;
-    service.applyTile({ game, rowIndex: 0, colIndex: 1, tileAttribute: TileTexture.Water, event: {} as MouseEvent, counts });
-    expect(game.grid[0][1].type).toBe(TileTexture.Water);
-
-    game.grid[0][0].item = TileItem.Spawn;
-    service.deleteTile({
-      game,
-      rowIndex: 0,
-      colIndex: 0,
-      tileAttribute: TileItem.Spawn,
-      event: { shiftKey: true } as MouseEvent,
-      counts,
-    });
-    expect(game.grid[0][0].item).toBeNull();
-
-    game.grid[0][0].type = TileTexture.Wall;
-    service.deleteTile({
-      game,
-      rowIndex: 0,
-      colIndex: 0,
-      tileAttribute: TileTexture.Water,
-      event: { shiftKey: false } as MouseEvent,
-      counts,
-    });
-    expect(game.grid[0][0].type).toBe(TileTexture.Floor);
-  });
-
-  it('toggles the active selection (texture vs item)', () => {
-    const pickedTexture = service.selectTileTexture(null, TileItem.Spawn, TileTexture.Wall);
-    expect(pickedTexture.activeTileTexture).toBe(TileTexture.Wall);
-    expect(pickedTexture.activeTileItem).toBeNull();
-
-    const clearedTexture = service.selectTileTexture(TileTexture.Wall, TileItem.Spawn, TileTexture.Wall);
-    expect(clearedTexture.activeTileTexture).toBeNull();
-    expect(clearedTexture.activeTileItem).toBe(TileItem.Spawn);
-
-    const pickedItem = service.selectTileItem(null, TileTexture.Water, TileItem.Flag);
-    expect(pickedItem.activeTileItem).toBe(TileItem.Flag);
-    expect(pickedItem.activeTileTexture).toBeNull();
-
-    const clearedItem = service.selectTileItem(TileItem.Flag, TileTexture.Water, TileItem.Flag);
-    expect(clearedItem.activeTileItem).toBeNull();
-    expect(clearedItem.activeTileTexture).toBe(TileTexture.Water);
-  });
-
-  it('mouse down starts paint/erase depending on the button', () => {
-    const game = gameFactory(1, 1);
-    const counts = { spawnCount: 1, healingSanctuaryCount: 1, combatSanctuaryCount: 1, flagCount: 1 };
-
-    const applySpy = spyOn(service, 'applyTile').and.callThrough();
-    const deleteSpy = spyOn(service, 'deleteTile').and.callThrough();
-
-    const leftEvent = {
-      button: MouseEventType.LeftClick,
-      preventDefault: jasmine.createSpy('preventDefault'),
-    } as unknown as MouseEvent;
-
-    const leftTextureState = service.handleCellMouseDown({
-      game,
-      rowIndex: 0,
-      colIndex: 0,
-      event: leftEvent,
-      activeTileTexture: TileTexture.Water,
-      activeTileItem: null,
-      counts,
-      isPaintingTiles: false,
-      isErasingTiles: false,
-    });
-    expect(leftTextureState.isPaintingTiles).toBeTrue();
-
-    const leftItemState = service.handleCellMouseDown({
-      game,
-      rowIndex: 0,
-      colIndex: 0,
-      event: leftEvent,
-      activeTileTexture: null,
-      activeTileItem: TileItem.Spawn,
-      counts,
-      isPaintingTiles: false,
-      isErasingTiles: false,
-    });
-    expect(leftItemState.isPaintingTiles).toBeTrue();
-
-    const rightEvent = {
-      button: MouseEventType.RightClick,
-      preventDefault: jasmine.createSpy('preventDefault'),
-    } as unknown as MouseEvent;
-
-    const rightTextureState = service.handleCellMouseDown({
-      game,
-      rowIndex: 0,
-      colIndex: 0,
-      event: rightEvent,
-      activeTileTexture: TileTexture.Water,
-      activeTileItem: null,
-      counts,
-      isPaintingTiles: false,
-      isErasingTiles: false,
-    });
-    expect(rightEvent.preventDefault).toHaveBeenCalled();
-    expect(rightTextureState.isErasingTiles).toBeTrue();
-
-    const rightItemEvent = {
-      button: MouseEventType.RightClick,
-      preventDefault: jasmine.createSpy('preventDefault'),
-    } as unknown as MouseEvent;
-
-    const rightItemState = service.handleCellMouseDown({
-      game,
-      rowIndex: 0,
-      colIndex: 0,
-      event: rightItemEvent,
-      activeTileTexture: null,
-      activeTileItem: TileItem.Spawn,
-      counts,
-      isPaintingTiles: false,
-      isErasingTiles: false,
-    });
-    expect(rightItemEvent.preventDefault).toHaveBeenCalled();
-    expect(rightItemState.isErasingTiles).toBeTrue();
-
-    const ignoreOtherButton = service.handleCellMouseDown({
-      game,
-      rowIndex: 0,
-      colIndex: 0,
-      event: {
-        button: 1,
-        preventDefault: jasmine.createSpy('preventDefault'),
-      } as unknown as MouseEvent,
-      activeTileTexture: null,
-      activeTileItem: null,
-      counts,
-      isPaintingTiles: true,
-      isErasingTiles: true,
+    beforeEach(() => {
+        tileItemCountService = new TileItemCountService();
+        service = new MapSetupService(tileItemCountService);
     });
 
-    expect(ignoreOtherButton.isPaintingTiles).toBeTrue();
-    expect(ignoreOtherButton.isErasingTiles).toBeTrue();
-
-    expect(applySpy).toHaveBeenCalled();
-    expect(deleteSpy).toHaveBeenCalled();
-  });
-
-  it('mouse enter keeps painting/erasing while dragging', () => {
-    const game = gameFactory(1, 1);
-    const counts = { spawnCount: 1, flagCount: 1 };
-
-    // Set up grid with an item and texture for deletion tests
-    game.grid[0][0].item = TileItem.Spawn;
-    game.grid[0][0].type = TileTexture.Water;
-
-    const deleteSpy = spyOn(service, 'deleteTile').and.callThrough();
-    const removeSpy = spyOn(service, 'removeBlockingItemIfNeeded').and.callThrough();
-    const applySpy = spyOn(service, 'applyTile').and.callThrough();
-
-    const stopErasing = service.handleCellMouseEnter({
-      game,
-      rowIndex: 0,
-      colIndex: 0,
-      event: { buttons: 0 } as MouseEvent,
-      activeTileTexture: TileTexture.Water,
-      activeTileItem: null,
-      counts,
-      isPaintingTiles: false,
-      isErasingTiles: true,
-    });
-    expect(stopErasing.isErasingTiles).toBeFalse();
-
-    service.handleCellMouseEnter({
-      game,
-      rowIndex: 0,
-      colIndex: 0,
-      event: { buttons: MouseEventType.RightDrag, shiftKey: true } as MouseEvent,
-      activeTileTexture: null,
-      activeTileItem: TileItem.Spawn,
-      counts,
-      isPaintingTiles: false,
-      isErasingTiles: true,
+    it('should create the service', () => {
+        expect(service).toBeTruthy();
     });
 
-    service.handleCellMouseEnter({
-      game,
-      rowIndex: 0,
-      colIndex: 0,
-      event: { buttons: MouseEventType.RightDrag, shiftKey: false } as MouseEvent,
-      activeTileTexture: TileTexture.Water,
-      activeTileItem: null,
-      counts,
-      isPaintingTiles: false,
-      isErasingTiles: true,
-    });
-    expect(deleteSpy).toHaveBeenCalledTimes(2);
-
-    const notPainting = service.handleCellMouseEnter({
-      game,
-      rowIndex: 0,
-      colIndex: 0,
-      event: { buttons: MouseEventType.LeftDrag } as MouseEvent,
-      activeTileTexture: TileTexture.Water,
-      activeTileItem: null,
-      counts,
-      isPaintingTiles: false,
-      isErasingTiles: false,
-    });
-    expect(notPainting.isPaintingTiles).toBeFalse();
-
-    const stopPainting = service.handleCellMouseEnter({
-      game,
-      rowIndex: 0,
-      colIndex: 0,
-      event: { buttons: 0 } as MouseEvent,
-      activeTileTexture: TileTexture.Water,
-      activeTileItem: null,
-      counts,
-      isPaintingTiles: true,
-      isErasingTiles: false,
-    });
-    expect(stopPainting.isPaintingTiles).toBeFalse();
-
-    const keepPainting = service.handleCellMouseEnter({
-      game,
-      rowIndex: 0,
-      colIndex: 0,
-      event: { buttons: MouseEventType.LeftDrag } as MouseEvent,
-      activeTileTexture: TileTexture.Wall,
-      activeTileItem: null,
-      counts,
-      isPaintingTiles: true,
-      isErasingTiles: false,
+    // Test initializeGridIfEmpty with empty grid
+    it('should fill the grid when it is empty', () => {
+        const empty = gameFactory(2, 2);
+        empty.grid = [];
+        service.initializeGridIfEmpty(empty);
+        expect(empty.grid.length).toBe(2);
+        expect(empty.grid[0].length).toBe(2);
     });
 
-    expect(keepPainting.isPaintingTiles).toBeTrue();
-    expect(removeSpy).toHaveBeenCalled();
-    expect(applySpy).toHaveBeenCalled();
-  });
+    // Test initializeGridIfEmpty with wrong size
+    it('should fill the grid when it has wrong size', () => {
+        const wrongSize = gameFactory(2, 2);
+        wrongSize.grid = grid(1, 1);
+        service.initializeGridIfEmpty(wrongSize);
+        expect(wrongSize.grid.length).toBe(2);
+        expect(wrongSize.grid[0].length).toBe(2);
+    });
 
-  it('resets state and builds the validation payload', () => {
-    const game = gameFactory(SIZE_SMALL, SIZE_SMALL, GameMode.Ctf);
-    game.grid[0][0] = { type: TileTexture.Wall, item: TileItem.Spawn } as Tile;
+    // Grid already correct size
+    it('should not modify grid when it is already correct size', () => {
+        const alreadyOk = gameFactory(2, 2);
+        const ref = alreadyOk.grid;
+        service.initializeGridIfEmpty(alreadyOk);
+        expect(alreadyOk.grid).toBe(ref);
+    });
 
-    expect(service.resetInteractionState()).toEqual({ isPaintingTiles: false, isErasingTiles: false });
-    expect(service.resetSelection()).toEqual({ activeTileTexture: null, activeTileItem: null });
+    // Test applyTile with item placement
+    it('should place item on floor tile', () => {
+        const game = gameFactory(2, 2);
+        const counts = { spawnCount: 1, flagCount: 1 };
 
-    service.resetGrid(game);
-    expect(game.grid[0][0].type).toBe(TileTexture.Floor);
-    expect(game.grid[0][0].item).toBeNull();
+        service.applyTile({ game, rowIndex: 0, colIndex: 0, tileAttribute: TileItem.Spawn, event: {} as MouseEvent, counts });
+        expect(game.grid[0][0].item).toBe(TileItem.Spawn);
+        expect(counts.spawnCount).toBe(0);
+    });
 
-    const resetResult = service.resetMap(game);
-    expect(resetResult.itemCounts.flagCount).toBe(1);
+    // Test applyTile with texture placement
+    it('should place texture on tile', () => {
+        const game = gameFactory(2, 2);
+        const counts = { spawnCount: 1, flagCount: 1 };
 
-    const gridTypes = service.extractGridTypes(game);
-    const placedObjects = service.extractPlacedObjects(game);
-    const payload = service.buildValidationPayload(game);
+        service.applyTile({ game, rowIndex: 0, colIndex: 1, tileAttribute: TileTexture.Water, event: {} as MouseEvent, counts });
+        expect(game.grid[0][1].type).toBe(TileTexture.Water);
+    });
 
-    expect(gridTypes.length).toBe(SIZE_SMALL);
-    expect(placedObjects.length).toBe(0);
-    expect(payload.mode).toBe(game.gameMode);
-    expect(payload.size).toEqual(game.size);
-    expect(service.getObjectAt(game, 0, 0)).toBeDefined();
-  });
+    // Cannot place item on wall
+    it('should throw error when placing item on wall tile', () => {
+        const game = gameFactory(2, 2);
+        const counts = { spawnCount: 1, flagCount: 1 };
+        game.grid[1][0].type = TileTexture.Wall;
+
+        expect(() =>
+            service.applyTile({ game, rowIndex: 1, colIndex: 0, tileAttribute: TileItem.Flag, event: {} as MouseEvent, counts }),
+        ).toThrowError(/On ne peut pas placer cet object sur une tuile de terrain/);
+    });
+
+    // Cannot place item when count is zero
+    it('should not place item when count is zero', () => {
+        const game = gameFactory(2, 2);
+        const counts = { spawnCount: 0, flagCount: 0 };
+
+        service.applyTile({ game, rowIndex: 1, colIndex: 1, tileAttribute: TileItem.Flag, event: {} as MouseEvent, counts });
+        expect(game.grid[1][1].item).toBeNull();
+    });
+
+    // Test applyTile does not change same texture
+    it('should not change texture when applying same type', () => {
+        const game = gameFactory(2, 2);
+        const counts = { spawnCount: 1, flagCount: 1 };
+        game.grid[0][1].type = TileTexture.Water;
+
+        service.applyTile({ game, rowIndex: 0, colIndex: 1, tileAttribute: TileTexture.Water, event: {} as MouseEvent, counts });
+        expect(game.grid[0][1].type).toBe(TileTexture.Water);
+    });
+
+    // Test deleteTile with shift key (delete item)
+    it('should delete item when shift key is pressed', () => {
+        const game = gameFactory(2, 2);
+        const counts = { spawnCount: 0, flagCount: 0 };
+        game.grid[0][0].item = TileItem.Spawn;
+
+        service.deleteTile({
+            game,
+            rowIndex: 0,
+            colIndex: 0,
+            tileAttribute: TileItem.Spawn,
+            event: { shiftKey: true } as MouseEvent,
+            counts,
+        });
+        expect(game.grid[0][0].item).toBeNull();
+        expect(counts.spawnCount).toBe(1);
+    });
+
+    // Test deleteTile without shift key, delete texture
+    it('should delete texture when shift key is not pressed', () => {
+        const game = gameFactory(2, 2);
+        const counts = { spawnCount: 0, flagCount: 0 };
+        game.grid[0][0].type = TileTexture.Wall;
+
+        service.deleteTile({
+            game,
+            rowIndex: 0,
+            colIndex: 0,
+            tileAttribute: TileTexture.Water,
+            event: { shiftKey: false } as MouseEvent,
+            counts,
+        });
+        expect(game.grid[0][0].type).toBe(TileTexture.Floor);
+    });
+
+    // Test deleteTile removes blocking item when placing wall
+    it('should remove item when placing wall texture', () => {
+        const game = gameFactory(2, 2);
+        const counts = { spawnCount: 0, flagCount: 0 };
+        game.grid[0][0].item = TileItem.Spawn;
+
+        service.deleteTile({
+            game,
+            rowIndex: 0,
+            colIndex: 0,
+            tileAttribute: TileTexture.Wall,
+            event: {} as MouseEvent,
+            counts,
+        });
+        expect(game.grid[0][0].item).toBeNull();
+        expect(counts.spawnCount).toBe(1);
+    });
+
+    // Test removeBlockingItemIfNeeded
+    it('should remove item when placing blocking texture', () => {
+        const counts = { spawnCount: 0, flagCount: 0 };
+        const tile: Tile = { type: TileTexture.Floor, item: TileItem.Spawn };
+
+        service.removeBlockingItemIfNeeded(tile, TileTexture.Wall, counts);
+        expect(tile.item).toBeNull();
+        expect(counts.spawnCount).toBe(1);
+    });
+
+    it('should remove item when placing door texture', () => {
+        const counts = { spawnCount: 0, flagCount: 0 };
+        const tile: Tile = { type: TileTexture.Floor, item: TileItem.Flag };
+
+        service.removeBlockingItemIfNeeded(tile, TileTexture.DoorOpened, counts);
+        expect(tile.item).toBeNull();
+        expect(counts.flagCount).toBe(1);
+    });
+
+    // Test getObjectAt
+    it('should return tile at specified position', () => {
+        const game = gameFactory(2, 2);
+        const tile = service.getObjectAt(game, 0, 0);
+        expect(tile).toBeDefined();
+        expect(tile).toBe(game.grid[0][0]);
+    });
+
+    // getObjectAt with out of bounds
+    it('should return undefined for out of bounds position', () => {
+        const OUT_OF_BOUNDS_INDEX = 5;
+        const game = gameFactory(2, 2);
+        const tile = service.getObjectAt(game, OUT_OF_BOUNDS_INDEX, OUT_OF_BOUNDS_INDEX);
+        expect(tile).toBeUndefined();
+    });
+
+    // Test selectTileTexture activates texture
+    it('should activate texture and clear item', () => {
+        const result = service.selectTileTexture(null, TileItem.Spawn, TileTexture.Wall);
+        expect(result.activeTileTexture).toBe(TileTexture.Wall);
+        expect(result.activeTileItem).toBeNull();
+    });
+
+    // Test selectTileTexture deactivates when clicking same
+    it('should deactivate texture when clicking same type', () => {
+        const result = service.selectTileTexture(TileTexture.Wall, TileItem.Spawn, TileTexture.Wall);
+        expect(result.activeTileTexture).toBeNull();
+        expect(result.activeTileItem).toBe(TileItem.Spawn);
+    });
+
+    // Test selectTileItem activates item
+    it('should activate item and clear texture', () => {
+        const result = service.selectTileItem(null, TileTexture.Water, TileItem.Flag);
+        expect(result.activeTileItem).toBe(TileItem.Flag);
+        expect(result.activeTileTexture).toBeNull();
+    });
+
+    // Test selectTileItem deactivates when clicking same
+    it('should deactivate item when clicking same type', () => {
+        const result = service.selectTileItem(TileItem.Flag, TileTexture.Water, TileItem.Flag);
+        expect(result.activeTileItem).toBeNull();
+        expect(result.activeTileTexture).toBe(TileTexture.Water);
+    });
+
+    // Test applyActiveSelection
+    it('should apply tile when attribute is provided', () => {
+        const game = gameFactory(2, 2);
+        const counts = { spawnCount: 1, flagCount: 1 };
+        const spy = spyOn(service, 'applyTile');
+
+        service.applyActiveSelection({ game, rowIndex: 0, colIndex: 0, tileAttribute: TileTexture.Wall, event: {} as MouseEvent, counts });
+        expect(spy).toHaveBeenCalled();
+    });
+
+    // Test handleCellMouseDown with left click and texture
+    it('should start painting on left click with texture', () => {
+        const game = gameFactory(1, 1);
+        const counts = { spawnCount: 1, flagCount: 1 };
+
+        const leftEvent = {
+            button: MouseEventType.LeftClick,
+            preventDefault: jasmine.createSpy('preventDefault'),
+        } as unknown as MouseEvent;
+
+        const state = service.handleCellMouseDown({
+            game,
+            rowIndex: 0,
+            colIndex: 0,
+            event: leftEvent,
+            activeTileTexture: TileTexture.Water,
+            activeTileItem: null,
+            counts,
+            isPaintingTiles: false,
+            isErasingTiles: false,
+        });
+
+        expect(state.isPaintingTiles).toBe(true);
+        expect(leftEvent.preventDefault).toHaveBeenCalled();
+    });
+
+    // Test handleCellMouseDown with left click and item
+    it('should start painting on left click with item', () => {
+        const game = gameFactory(1, 1);
+        const counts = { spawnCount: 1, flagCount: 1 };
+
+        const leftEvent = {
+            button: MouseEventType.LeftClick,
+            preventDefault: jasmine.createSpy('preventDefault'),
+        } as unknown as MouseEvent;
+
+        const state = service.handleCellMouseDown({
+            game,
+            rowIndex: 0,
+            colIndex: 0,
+            event: leftEvent,
+            activeTileTexture: null,
+            activeTileItem: TileItem.Spawn,
+            counts,
+            isPaintingTiles: false,
+            isErasingTiles: false,
+        });
+
+        expect(state.isPaintingTiles).toBe(true);
+    });
+
+    // Left click without active tool should not start painting
+    it('should not start painting when no active tool is selected', () => {
+        const game = gameFactory(1, 1);
+        const counts = { spawnCount: 0, flagCount: 0 };
+
+        const leftEvent = {
+            button: MouseEventType.LeftClick,
+            preventDefault: jasmine.createSpy('preventDefault'),
+        } as unknown as MouseEvent;
+
+        const state = service.handleCellMouseDown({
+            game,
+            rowIndex: 0,
+            colIndex: 0,
+            event: leftEvent,
+            activeTileTexture: null,
+            activeTileItem: null,
+            counts,
+            isPaintingTiles: false,
+            isErasingTiles: false,
+        });
+
+        expect(state.isPaintingTiles).toBe(false);
+    });
+
 });

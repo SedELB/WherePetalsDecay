@@ -1,192 +1,366 @@
+/**
+ * Testing:
+ * - Component lifecycle (ngOnInit, ngOnDestroy)
+ * - Data fetching, transformation and socket (fetchAllGames, mapping, sorting)
+ * - User interactions (navigation, visibility toggle, deletion)
+ * - Page rendering (buttons, game cards)
+ */
+
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { Game } from '@app/interfaces/game';
 import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { CommunicationService } from '@app/services/communication/communication.service';
 import { GameMode } from '@common/enums';
-import { of } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import { AdminPageComponent } from './admin-page.component';
-
 
 describe('AdminPageComponent', () => {
   let component: AdminPageComponent;
   let fixture: ComponentFixture<AdminPageComponent>;
-  const NUMBER_OF_GAMECARD_BUTTONS = 3;
+  let communicationService: jasmine.SpyObj<CommunicationService>;
+  let adminGameService: jasmine.SpyObj<AdminGameService>;
+  let router: Router;
+  let gamesSubject: BehaviorSubject<Game[]>;
 
+  // Mock three games for test purposes
   const MOCK_GAME_CARDS: Game[] = [
     {
       _id: '1',
-      name: 'Morpion',
-      description: 'Le grand classique du 3x3.',
+      name: 'Test1',
+      description: 'test1description',
       size: { rows: 20, cols: 20 },
       gameMode: GameMode.Classic,
-      thumbnail: 'assets/morpion.png',
-      maxPlayers: 1,
+      thumbnail: 'assets/filler.png',
+      maxPlayers: 4,
       grid: [],
       createdAt: new Date('2024-01-15'),
       updatedAt: new Date('2024-01-15'),
-      isVisible: true,
+      isVisible: true, // Make this one visible
     },
     {
       _id: '2',
-      name: 'Bataille Navale',
-      description: 'Coulez tous les navires adverses.',
+      name: 'Test2',
+      description: 'test2description',
       size: { rows: 10, cols: 10 },
       gameMode: GameMode.Ctf,
-      thumbnail: 'assets/naval.png',
+      thumbnail: 'assets/filler.png',
       maxPlayers: 2,
       grid: [],
       createdAt: new Date('2024-02-10'),
       updatedAt: new Date('2024-02-10'),
-      isVisible: true,
+      isVisible: true, // Make this one visible
     },
     {
       _id: '3',
-      name: 'Échecs',
-      description: 'Testez votre stratégie.',
+      name: 'Test3',
+      description: 'test3description',
       size: { rows: 15, cols: 15 },
       gameMode: GameMode.Classic,
-      thumbnail: 'assets/chess.png',
+      thumbnail: 'assets/test3.png',
       maxPlayers: 2,
       grid: [],
       createdAt: new Date('2024-03-01'),
       updatedAt: new Date('2024-03-01'),
-      isVisible: false,
+      isVisible: false, // Make this one not visible
     },
   ];
 
   beforeEach(async () => {
+    // Mock BehaviorSubject to simulate stream and emit event
+    gamesSubject = new BehaviorSubject<Game[]>(MOCK_GAME_CARDS);
 
-    const communicationSpy = jasmine.createSpyObj('CommunicationService', ['getAllGames', 'deleteGame', 'updateVisiblity']);
-    const adminGameSpy = jasmine.createSpyObj('AdminGameService', ['fetchAllGames', 'setGames'], { games$: of(MOCK_GAME_CARDS) });
-    adminGameSpy.fetchAllGames.and.returnValue(of(MOCK_GAME_CARDS));
+    // Mock communicationService, allow us to actually call methods
+    communicationService = jasmine.createSpyObj('CommunicationService', [
+      'deleteGame',
+      'updateVisiblity',
+    ]);
 
+    // AdminGameService owns the game list
+    adminGameService = jasmine.createSpyObj(
+      'AdminGameService',
+      ['fetchAllGames', 'setGames'],
+      { games$: gamesSubject.asObservable() },
+    );
+
+    // Make fetchAllGames return our mock data
+    adminGameService.fetchAllGames.and.returnValue(of(MOCK_GAME_CARDS));
+
+    // Configure the testing module
     await TestBed.configureTestingModule({
       imports: [AdminPageComponent, RouterTestingModule],
       providers: [
-        { provide: CommunicationService, useValue: communicationSpy },
-        { provide: AdminGameService, useValue: adminGameSpy },
+        { provide: CommunicationService, useValue: communicationService },
+        { provide: AdminGameService, useValue: adminGameService },
       ],
     }).compileComponents();
 
+    // Create the component instances
     fixture = TestBed.createComponent(AdminPageComponent);
     component = fixture.componentInstance;
-    fixture.detectChanges();
+    router = TestBed.inject(Router);
   });
 
   it('should create the component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should load games and populate gameCards array', () => {
-    // Verify that gameCards length is equal to the mock games
+  // Fetch games on component construction
+  it('should call fetchAllGames on ngOnInit', () => {
+    fixture.detectChanges();
+    expect(adminGameService.fetchAllGames).toHaveBeenCalled();
+  });
+
+  // Successful call of fetchAllGames
+  it('should call setGames with fetched games on successful fetch', () => {
+    fixture.detectChanges();
+    expect(adminGameService.setGames).toHaveBeenCalledWith(MOCK_GAME_CARDS);
+  });
+
+  // Testing the subscription to games$, websocket
+  it('should subscribe to games$ and fill gameCards array', () => {
+    fixture.detectChanges();
+    expect(component.games.length).toBe(MOCK_GAME_CARDS.length);
     expect(component.gameCards.length).toBe(MOCK_GAME_CARDS.length);
-    // Verify every name to be the same in the moch and the gameCards
-    expect(component.gameCards[0].name).toBe('Morpion');
-    expect(component.gameCards[1].name).toBe('Bataille Navale');
-    expect(component.gameCards[2].name).toBe('Échecs');
   });
 
-  it('should render all games in DOM as game-card components', () => {
-    // Get the DOM root element of the admin page component
-    const compiled = fixture.nativeElement;
-    const gameCardElements = compiled.querySelectorAll('app-game-card');
-    // Verify that there are exactly as much app-game-card as there are games in the mock
-    expect(gameCardElements.length).toBe(MOCK_GAME_CARDS.length);
+  // Making sure we can convert Game object to GameCard
+  it('should convert Game objects to GameCard objects', () => {
+    fixture.detectChanges();
+    const firstGameCard = component.gameCards[0];
+
+    expect(firstGameCard.name).toBe('Test1');
+    expect(firstGameCard.description).toBe('test1description');
+    expect(firstGameCard.size).toEqual({ rows: 20, cols: 20 });
+    expect(firstGameCard.gameMode).toBe(GameMode.Classic);
+    expect(firstGameCard.thumbnail).toBe('assets/filler.png');
+    expect(firstGameCard.createdAt).toEqual(new Date('2024-01-15'));
+    expect(firstGameCard.updatedAt).toEqual(new Date('2024-01-15'));
+    expect(firstGameCard.isVisible).toBe(true);
   });
 
-  it('should remove game from gameCards array when removeGame is called', () => {
-    const initialLength = component.gameCards.length;
-    const gameName = component.gameCards[0].name;
-
-    component.gameCards = component.gameCards.filter(game => game.name !== gameName);
-
-    expect(component.gameCards.length).toBe(initialLength - 1);
-    expect(component.gameCards.find(g => g.name === gameName)).toBeUndefined();
-  });
-
-  it('should toggle isVisible property when changeVisibility is called', () => {
-    const game = component.gameCards[0];
-    const wasVisible = game.isVisible;
-
-    component.gameCards[0].isVisible = !wasVisible;
-    expect(component.gameCards[0].isVisible).toBe(!wasVisible);
-
-    component.gameCards[0].isVisible = wasVisible;
-    expect(component.gameCards[0].isVisible).toBe(wasVisible);
-  });
-
-  it('should update DOM when game is removed', () => {
-    const gameName = component.gameCards[0].name;
-    const initialLength = component.gameCards.length;
-
-    component.gameCards = component.gameCards.filter(game => game.name !== gameName);
-    // fixture.detectChanges() forces Angular to update the DOM
+  // Make sure the ordering that appears is right
+  it('should sort gameCards by createdAt in ascending order', () => {
     fixture.detectChanges();
 
-    const gameCardElements = fixture.nativeElement.querySelectorAll('app-game-card');
-    expect(gameCardElements.length).toBe(initialLength - 1);
+    expect(component.gameCards[0].name).toBe('Test1');
+    expect(component.gameCards[1].name).toBe('Test2');
+    expect(component.gameCards[2].name).toBe('Test3');
   });
 
-  it('should have a return button with correct route', () => {
-    // Here i am adding a type to dodge the ESLint error when i pass the btn as type 'any'
+  // Handling possible backend type missmatch
+  it('should handle createdAt as string when sorting', () => {
+    const gamesWithStringDates: Game[] = [
+      { ...MOCK_GAME_CARDS[0], createdAt: '2024-01-01' as unknown as Date },
+      { ...MOCK_GAME_CARDS[1], createdAt: '2024-02-01' as unknown as Date },
+    ];
+
+    gamesSubject.next(gamesWithStringDates);
+    fixture.detectChanges();
+
+    expect(component.gameCards[0].name).toBe('Test1');
+    expect(component.gameCards[1].name).toBe('Test2');
+  });
+
+  // Stop the tracking game$ when the component is destroyed
+  it('should unsubscribe from games$ on ngOnDestroy', () => {
+    fixture.detectChanges();
+
+    const subscription = component['subscription'];
+    if (subscription) {
+      spyOn(subscription, 'unsubscribe');
+    }
+
+    component.ngOnDestroy();
+
+    if (subscription) {
+      expect(subscription.unsubscribe).toHaveBeenCalled();
+    }
+  });
+
+  // Testing for possible undefined games$ subscription
+  it('should not throw error in ngOnDestroy if subscription is not defined', () => {
+    component['subscription'] = undefined;
+    expect(() => component.ngOnDestroy()).not.toThrow();
+  });
+
+  // Navigate to editor page with a game object
+  it('should navigate to editor with a game and a mode', () => {
+    fixture.detectChanges();
+    spyOn(router, 'navigate');
+
+    component.navigateToGameEditor('Test1');
+
+    expect(router.navigate).toHaveBeenCalledWith(
+      ['/editor'],
+      { state: { game: MOCK_GAME_CARDS[0], mode: 'edit' } },
+    );
+  });
+
+  // Naviagte with a fake game
+  it('should navigate with undefined game when game name does not exist', () => {
+    fixture.detectChanges();
+    spyOn(router, 'navigate');
+
+    component.navigateToGameEditor('Random');
+
+    // Should still navigate but with undefined game
+    // The game will not exist when saving so it will be created
+    // The admin page is not responsible to handle possible errors we true or fake game
+    // we leave this for the editor page
+    expect(router.navigate).toHaveBeenCalledWith(
+      ['/editor'],
+      { state: { game: undefined, mode: 'edit' } },
+    );
+  });
+
+  // Testing isVisible
+  it('should call updateVisiblity with correct game', () => {
+    fixture.detectChanges();
+    communicationService.updateVisiblity.and.returnValue(of(void 0));
+
+    component.changeVisibility('Test1');
+
+    expect(communicationService.updateVisiblity).toHaveBeenCalledWith(MOCK_GAME_CARDS[0]);
+  });
+
+  // Impossible to updateVisibility on a non existing game with no errors
+  it('should not call updateVisiblity when game does not exist', () => {
+    fixture.detectChanges();
+    communicationService.updateVisiblity.and.returnValue(of(void 0));
+
+    component.changeVisibility('Random');
+
+    expect(communicationService.updateVisiblity).not.toHaveBeenCalled();
+  });
+
+  // Testing deleting a game
+  it('should call deleteGame with correct game id', () => {
+    fixture.detectChanges();
+    communicationService.deleteGame.and.returnValue(of(void 0));
+
+    component.removeGame('Test1');
+
+    expect(communicationService.deleteGame).toHaveBeenCalledWith('1');
+  });
+
+  // Can't delete non existing game with no errors
+  it('should not call deleteGame when game does not exist', () => {
+    fixture.detectChanges();
+    communicationService.deleteGame.and.returnValue(of(void 0));
+
+    component.removeGame('Random');
+
+    expect(communicationService.deleteGame).not.toHaveBeenCalled();
+  });
+
+  // Making sure the return button exist
+  it('should render return button on the page', () => {
+    fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const buttons = compiled.querySelectorAll<HTMLElement>('app-button');
-
-    expect(buttons.length).toBeGreaterThan(0);
-    const returnButton = Array.from(buttons).find((btn: HTMLElement) =>
-      btn.textContent.includes('Retour'),
+    const returnButton = Array.from(buttons).find((btn) =>
+      btn.textContent?.includes('Retour'),
     );
+
     expect(returnButton).toBeTruthy();
   });
 
-  it('should have an add button with correct CSS class', () => {
-    const compiled = fixture.nativeElement;
+  // Making sure the add game button exist
+  it('should render add button on the page', () => {
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
     const addButton = compiled.querySelector('.add-button');
+
     expect(addButton).toBeTruthy();
   });
 
-  it('should have action buttons for each game (Modifier, Cacher/Afficher, Supprimer)', () => {
+  // Verify all games appear
+  it('should render all games as app-game-card components', () => {
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const gameCardElements = compiled.querySelectorAll('app-game-card');
+
+    expect(gameCardElements.length).toBe(MOCK_GAME_CARDS.length);
+  });
+
+  // Each game-card should have three buttons (Edit, Hide/Show, Delete)
+  it('should render three action buttons for each game card', () => {
+    fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const gameCards = compiled.querySelectorAll<HTMLElement>('app-game-card');
 
+    const EXPECTED_BUTTON_COUNT = 3;
     gameCards.forEach((card) => {
       const buttonsInCard = card.querySelectorAll('app-button');
-      expect(buttonsInCard.length).toBe(NUMBER_OF_GAMECARD_BUTTONS);
+      expect(buttonsInCard.length).toBe(EXPECTED_BUTTON_COUNT);
     });
   });
 
-  it('should display correct button text based on isVisible', () => {
-    const game = component.gameCards[0];
-    expect(game.isVisible).toBe(true);
+  // Visible games show hide button
+  it('should display "Cacher" when game is visible', () => {
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const gameCards = compiled.querySelectorAll<HTMLElement>('app-game-card');
 
-    component.gameCards[0].isVisible = false;
-    expect(component.gameCards[0].isVisible).toBe(false);
+    const test1Card = gameCards[0]; // isVisible==True
+    const buttons = test1Card.querySelectorAll('app-button');
+    const visibilityButton = buttons[1];
 
-    component.gameCards[0].isVisible = true;
-    expect(component.gameCards[0].isVisible).toBe(true);
+    expect(visibilityButton.textContent).toContain('Cacher');
   });
 
-  it('should only remove the game specified by name, not others', () => {
-    const morpion = component.gameCards.find(g => g.name === 'Morpion');
-    const echecs = component.gameCards.find(g => g.name === 'Échecs');
+  // Hidden games should have a show button
+  it('should display "Afficher" when game is not visible', () => {
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const gameCards = compiled.querySelectorAll<HTMLElement>('app-game-card');
 
-    component.gameCards = component.gameCards.filter(g => g.name !== 'Bataille Navale');
+    const echecsCard = gameCards[2]; // isVisible==False
+    const buttons = echecsCard.querySelectorAll('app-button');
+    const visibilityButton = buttons[1];
 
-    expect(component.gameCards.find(g => g.name === 'Morpion')).toBe(morpion);
-    expect(component.gameCards.find(g => g.name === 'Échecs')).toBe(echecs);
-    expect(component.gameCards.find(g => g.name === 'Bataille Navale')).toBeUndefined();
+    expect(visibilityButton.textContent).toContain('Afficher');
   });
 
-  it('should call getGames on component initialization', () => {
+  // The visibale game cards should change when one game is shown or hidden
+  it('should update the page when gameCards array changes', () => {
+    fixture.detectChanges();
 
-    const newFixture = TestBed.createComponent(AdminPageComponent);
-    const newComponent = newFixture.componentInstance;
+    const reducedGames = [MOCK_GAME_CARDS[0]];
+    gamesSubject.next(reducedGames);
+    fixture.detectChanges();
 
-    expect(newComponent.gameCards.length).toBe(0);
-    // detectChanges() calls onInit()
-    newFixture.detectChanges();
-
-    expect(newComponent.gameCards.length).toBe(MOCK_GAME_CARDS.length);
+    const gameCardElements = fixture.nativeElement.querySelectorAll('app-game-card');
+    expect(gameCardElements.length).toBe(1);
   });
+
+  // Should work when no game is available
+  it('should handle empty games array', () => {
+    gamesSubject.next([]);
+    fixture.detectChanges();
+
+    expect(component.games.length).toBe(0);
+    expect(component.gameCards.length).toBe(0);
+
+    const gameCardElements = fixture.nativeElement.querySelectorAll('app-game-card');
+    expect(gameCardElements.length).toBe(0);
+  });
+
+  // React when new value comes from the socket
+  it('should update when games$ emits new values', () => {
+    const INITIAL_GAME_COUNT = 3;
+    const UPDATED_GAME_COUNT = 2;
+    fixture.detectChanges();
+
+    expect(component.games.length).toBe(INITIAL_GAME_COUNT);
+
+    const newGames = [MOCK_GAME_CARDS[0], MOCK_GAME_CARDS[1]];
+    gamesSubject.next(newGames);
+
+    expect(component.games.length).toBe(UPDATED_GAME_COUNT);
+    expect(component.gameCards.length).toBe(UPDATED_GAME_COUNT);
+  });
+
 });
