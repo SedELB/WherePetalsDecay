@@ -50,7 +50,7 @@ export class GameValidatorService {
             errors.push(DESCRIPTION_FIELD_TOO_LONG);
         }
         if (errors.length > 0) {
-            throw new Error(JSON.stringify(errors));
+            throw errors;
         }
         return true;
     }
@@ -194,7 +194,7 @@ export class GameValidatorService {
                 errors.push(`${INVALID_DOOR_PLACEMENT} (${row}, ${col}) !`);
             }
         }
-        if (errors.length > 0) throw new Error(JSON.stringify(errors));
+        if (errors.length > 0) throw errors;
         return true;
     }
 
