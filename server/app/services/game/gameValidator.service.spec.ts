@@ -2,6 +2,18 @@ import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { GameValidatorService } from '@app/services/game/gameValidator.service';
 import { BASE_10, BASE_15, CUSTOM_GRID_CLASSIC_SMALL, CUSTOM_GRID_CLASSIC_SMALL_INVALID, DESC_MAX_LENGTH } from '@app/utils/game.constants';
 import { GameMode, NbPlayersMedium, NbPlayersSmall, TileItem, TileTexture } from '@app/utils/game.enum';
+import {
+    DESCRIPTION_FIELD_EMPTY,
+    DESCRIPTION_FIELD_TOO_LONG,
+    FLAG_NOT_PLACED,
+    INSUFFICIENT_TERRAIN_TILES,
+    NAME_FIELD_EMPTY,
+    NAME_FIELD_TOO_LONG,
+    NO_TERRAIN_TILES,
+    SPAWN_POINTS_NOT_PLACED,
+    UNREACHABLE_TILES,
+    VALIDATION_ERRORS_PREFIX,
+} from '@common/error-messages';
 import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 const BASE_5 = 5;
@@ -49,22 +61,42 @@ describe('GameValidator', () => {
 
     it('isTextLengthValid() should fail if the game name is empty', () => {
         const emptyNameGame = { ...getValidGame(), name: '' };
-        expect(() => gameValidatorService.isTextLengthValid(emptyNameGame)).toThrow('["Le champ nom est vide !"]');
+        expect(() => gameValidatorService.isTextLengthValid(emptyNameGame)).toThrow();
+        try {
+            gameValidatorService.isTextLengthValid(emptyNameGame);
+        } catch (error) {
+            expect(error).toEqual([NAME_FIELD_EMPTY]);
+        }
     });
 
     it('isTextLengthValid() should fail if the game name exceeds max length', () => {
         const longNameGame = { ...getValidGame(), name: 'QWERTYUIOPASDFGHJKLZXCVBNM' };
-        expect(() => gameValidatorService.isTextLengthValid(longNameGame)).toThrow('["Le champ nom dépasse la longueur maximale !"]');
+        expect(() => gameValidatorService.isTextLengthValid(longNameGame)).toThrow();
+        try {
+            gameValidatorService.isTextLengthValid(longNameGame);
+        } catch (error) {
+            expect(error).toEqual([NAME_FIELD_TOO_LONG]);
+        }
     });
 
     it('isTextLengthValid() should fail if the game desc is empty', () => {
         const emptyDescGame = { ...getValidGame(), description: '' };
-        expect(() => gameValidatorService.isTextLengthValid(emptyDescGame)).toThrow('["Le champ description est vide !"]');
+        expect(() => gameValidatorService.isTextLengthValid(emptyDescGame)).toThrow();
+        try {
+            gameValidatorService.isTextLengthValid(emptyDescGame);
+        } catch (error) {
+            expect(error).toEqual([DESCRIPTION_FIELD_EMPTY]);
+        }
     });
 
     it('isTextLengthValid() should fail if the game desc is exceeds max length', () => {
         const longDescGame = { ...getValidGame(), description: 'a'.repeat(DESC_MAX_LENGTH + 1) };
-        expect(() => gameValidatorService.isTextLengthValid(longDescGame)).toThrow('["Le champ description dépasse la longueur maximale !"]');
+        expect(() => gameValidatorService.isTextLengthValid(longDescGame)).toThrow();
+        try {
+            gameValidatorService.isTextLengthValid(longDescGame);
+        } catch (error) {
+            expect(error).toEqual([DESCRIPTION_FIELD_TOO_LONG]);
+        }
     });
 
     it('isTextLengthValid() should fail with multiple errors', () => {
@@ -85,7 +117,7 @@ describe('GameValidator', () => {
                 game.grid[i][j].type = TileTexture.Wall;
             }
         }
-        expect(() => gameValidatorService.isGameSurfaceValid(game)).toThrow('Moins de 50% des tuiles sont des tuiles de terrain !');
+        expect(() => gameValidatorService.isGameSurfaceValid(game)).toThrow(INSUFFICIENT_TERRAIN_TILES);
     });
 
     it('areAllSpawnPointsPlaced() should return true if all spawn points are placed', () => {
@@ -95,7 +127,7 @@ describe('GameValidator', () => {
     });
 
     it('areAllSpawnPointsPlaced() should fail if not all spawns are placed', () => {
-        expect(() => gameValidatorService.areAllSpawnPointsPlaced(invalidGame)).toThrow('Tous les points de spawn ne sont pas placés !');
+        expect(() => gameValidatorService.areAllSpawnPointsPlaced(invalidGame)).toThrow(SPAWN_POINTS_NOT_PLACED);
     });
 
     it('findFirstWalkableTile() should return the first walkable tile', () => {
@@ -157,7 +189,7 @@ describe('GameValidator', () => {
     });
 
     it('areThereUnreachableTiles() should fail if there are no walkable tiles', () => {
-        expect(() => gameValidatorService.areThereUnreachableTiles(invalidGame)).toThrow("Il n'y a pas de tuiles de terrain !");
+        expect(() => gameValidatorService.areThereUnreachableTiles(invalidGame)).toThrow(NO_TERRAIN_TILES);
     });
 
     it('areThereUnreachableTiles() should fail if there are unreachable tiles', () => {
@@ -166,7 +198,7 @@ describe('GameValidator', () => {
         game.grid[4][BASE_5].type = TileTexture.Wall;
         game.grid[BASE_5][6].type = TileTexture.Wall;
         game.grid[6][BASE_5].type = TileTexture.Wall;
-        expect(() => gameValidatorService.areThereUnreachableTiles(game)).toThrow('Une ou plusieurs tuiles sont inaccessibles !');
+        expect(() => gameValidatorService.areThereUnreachableTiles(game)).toThrow(UNREACHABLE_TILES);
     });
 
 
@@ -252,7 +284,7 @@ describe('GameValidator', () => {
         const game = getCleanGame();
         game.gameMode = GameMode.Ctf;
         const spyCountByProperty = jest.spyOn(gameValidatorService, 'countByProperty');
-        expect(() => gameValidatorService.isFlagPlaced(game)).toThrow("Le drapeau n'est pas placé !");
+        expect(() => gameValidatorService.isFlagPlaced(game)).toThrow(FLAG_NOT_PLACED);
         expect(spyCountByProperty).toHaveBeenCalledWith(game, 'item');
     });
 
@@ -285,7 +317,7 @@ describe('GameValidator', () => {
             name: '',
             description: '',
         };
-        expect(() => gameValidatorService.isGameValid(invalidGameMultiple)).toThrow('Erreurs de validation :');
+        expect(() => gameValidatorService.isGameValid(invalidGameMultiple)).toThrow(VALIDATION_ERRORS_PREFIX);
     });
 
     it('isGameValid() should handle single validation error', () => {
@@ -295,7 +327,7 @@ describe('GameValidator', () => {
         game.grid[1][0].item = TileItem.Spawn;
         game.grid[1][1].item = TileItem.Spawn;
         game.name = '';
-        expect(() => gameValidatorService.isGameValid(game)).toThrow('Erreurs de validation :');
+        expect(() => gameValidatorService.isGameValid(game)).toThrow(VALIDATION_ERRORS_PREFIX);
     });
 
     it('isGameValid() should catch all validation errors in one call', () => {
@@ -305,7 +337,7 @@ describe('GameValidator', () => {
         try {
             gameValidatorService.isGameValid(invalidGame);
         } catch (error) {
-            expect(error.message).toContain('Erreurs de validation :');
+            expect(error.message).toContain(VALIDATION_ERRORS_PREFIX);
         }
 
         expect(spyIsTextLengthValid).toHaveBeenCalled();

@@ -49,6 +49,26 @@ export class MapSetupFacadeService {
     this.router.navigate(['/admin']);
   }
 
+  private formatErrorMessage(error: HttpErrorResponse, fallbackMessage: string): string {
+    if (!error.error) {
+      return fallbackMessage;
+    }
+
+    if (Array.isArray(error.error)) {
+      return error.error.join('\n');
+    }
+
+    if (typeof error.error === 'string') {
+      return error.error;
+    }
+
+    if (error.error.message) {
+      return error.error.message;
+    }
+
+    return fallbackMessage;
+  }
+
   async saveGame(game: Game, initialMode: 'create' | 'edit'): Promise<void> {
     let mode = initialMode;
 
@@ -85,8 +105,8 @@ export class MapSetupFacadeService {
             this.router.navigate(['/admin']);
           },
           error: (error: HttpErrorResponse) => {
-            const errorMessage = error.error || 'Une erreur s\'est produite en enregistrant un jeu édité !';
-            alert(`Erreur: ${errorMessage}`);
+            const errorMessage = this.formatErrorMessage(error, 'Une erreur s\'est produite en enregistrant un jeu édité !');
+            alert(`Erreur:\n${errorMessage}`);
           },
         });
       });
@@ -99,8 +119,8 @@ export class MapSetupFacadeService {
           this.router.navigate(['/admin']);
         },
         error: (error: HttpErrorResponse) => {
-          const errorMessage = error.error || 'Une erreur s\'est produite en enregistrant un nouveau jeu';
-          alert(`Erreur: ${errorMessage}`);
+          const errorMessage = this.formatErrorMessage(error, 'Une erreur s\'est produite en enregistrant un nouveau jeu');
+          alert(`Erreur:\n${errorMessage}`);
         },
       });
     }

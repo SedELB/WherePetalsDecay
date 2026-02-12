@@ -30,12 +30,32 @@ export class AdminPageComponent implements OnInit, OnDestroy {
     private readonly router: Router,
   ) {}
 
+  private formatErrorMessage(error: HttpErrorResponse, fallbackMessage: string): string {
+    if (!error.error) {
+      return fallbackMessage;
+    }
+
+    if (Array.isArray(error.error)) {
+      return error.error.join('\n');
+    }
+
+    if (typeof error.error === 'string') {
+      return error.error;
+    }
+
+    if (error.error.message) {
+      return error.error.message;
+    }
+
+    return fallbackMessage;
+  }
+
   ngOnInit(): void {
     this.adminGameService.fetchAllGames().subscribe({
       next: (games) => this.adminGameService.setGames(games),
       error: (error: HttpErrorResponse) => {
-        const errorMessage = error.error || 'Erreur lors de la récupération des jeux';
-        alert(`Erreur: ${errorMessage}`);
+        const errorMessage = this.formatErrorMessage(error, 'Erreur lors de la récupération des jeux');
+        alert(`Erreur:\n${errorMessage}`);
       },
     });
 
@@ -74,8 +94,8 @@ export class AdminPageComponent implements OnInit, OnDestroy {
     if (!game) return;
     this.communicationService.updateVisiblity(game).subscribe({
       error: (error: HttpErrorResponse) => {
-        const errorMessage = error.error || 'Erreur lors du changement de visibilité';
-        alert(`Erreur: ${errorMessage}`);
+        const errorMessage = this.formatErrorMessage(error, 'Erreur lors du changement de visibilité');
+        alert(`Erreur:\n${errorMessage}`);
       },
     });
   }
@@ -86,8 +106,8 @@ export class AdminPageComponent implements OnInit, OnDestroy {
 
     this.communicationService.deleteGame(game._id).subscribe({
       error: (error: HttpErrorResponse) => {
-        const errorMessage = error.error || 'Erreur lors de la suppression du jeu';
-        alert(`Erreur: ${errorMessage}`);
+        const errorMessage = this.formatErrorMessage(error, 'Erreur lors de la suppression du jeu');
+        alert(`Erreur:\n${errorMessage}`);
       },
     });
   }
