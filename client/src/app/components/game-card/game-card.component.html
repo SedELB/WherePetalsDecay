@@ -1,9 +1,9 @@
 <div class="gameCard" 
-  [ngClass]="{hidden: !game.visible}">
+  [ngClass]="{hidden: !game.isVisible}">
   <div class="image-frame">
     <img
       class="thumbnail"
-      [src]="game.image"
+      [src]="game.thumbnail"
       [alt]="game.name"
       (mouseenter)="show = true"
       (mouseleave)="show = false"
@@ -11,17 +11,17 @@
 
     @if (show) {
       <div class="tooltip">
-        {{ game.imgDescription }}
+        {{ game.description }}
       </div>
     }
   </div>
 
   <div class="card-info">
     <ul>
-      <li>{{ game.name }}</li>
-      <li>{{ game.size }}</li>
-      <li>{{ game.mode }}</li>
-      <li>{{ game.date }}</li>
+      <li>Nom du jeu : <span>{{ game.name }}</span></li>
+      <li>Taille du jeu : <span>{{ game.size.rows }}X{{ game.size.cols }}</span></li>
+      <li>Mode de jeu : <span>{{ game.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</span></li>
+      <li>Date de création : <span>{{ displayTime() }}</span></li>
     </ul>
 
     <div class="card-buttons">

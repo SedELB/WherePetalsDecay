@@ -1,10 +1,10 @@
-import { GameGateway } from '@app/gateways/game/game.gateway';
+import { AdminGateway } from '@app/gateways/admin/admin.gateway';
+import { GamesGateway } from '@app/gateways/games/games.gateway';
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
-import { Game } from '@app/model/schema/game.schema';
 import { GameService } from '@app/services/game/game.service';
 import { Body, Controller, Delete, Get, HttpStatus, Param, Patch, Post, Res } from '@nestjs/common';
-import { ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 
 @ApiTags('Games')
@@ -12,17 +12,10 @@ import { Response } from 'express';
 export class GameController {
     constructor(
         private readonly gameService: GameService,
-        private readonly gameGateway: GameGateway,
+        private readonly adminGateway: AdminGateway,
+        private readonly gamesGateway: GamesGateway,
     ) {}
 
-    @ApiOkResponse({
-        description: 'Returns all games',
-        type: Game,
-        isArray: true,
-    })
-    @ApiNotFoundResponse({
-        description: 'Return NOT_FOUND http status when request fails.',
-    })
     @Get('/allGames')
     async allGames(@Res() response: Response) {
         try {
@@ -33,13 +26,6 @@ export class GameController {
         }
     }
 
-    @ApiOkResponse({
-        description: 'Returns a single game',
-        type: Game,
-    })
-    @ApiNotFoundResponse({
-        description: 'Return NOT_FOUND http status when request fails.',
-    })
     @Get('/singleGame/:id')
     async getGame(@Param('id') id: string, @Res() response: Response) {
         try {
@@ -50,14 +36,6 @@ export class GameController {
         }
     }
 
-    @ApiOkResponse({
-        description: 'Returns all visible games',
-        type: Game,
-        isArray: true,
-    })
-    @ApiNotFoundResponse({
-        description: 'Return NOT_FOUND http status when request fails.',
-    })
     @Get('/visibleGames')
     async visibleGames(@Res() response: Response) {
         try {
@@ -68,35 +46,31 @@ export class GameController {
         }
     }
 
-    @ApiCreatedResponse({
-        description: 'Add new game',
-    })
-    @ApiNotFoundResponse({
-        description: 'Return NOT_FOUND http status when request fails',
-    })
     @Post('/addGame')
     async addGame(@Body() gameDto: CreateGameDto, @Res() response: Response) {
         try {
             const createdGame = await this.gameService.addGame(gameDto);
-            this.gameGateway.notifyGameCreated(createdGame);
+            this.adminGateway.notifyGameCreated(createdGame);
+            if (createdGame.isVisible) {
+                this.gamesGateway.notifyGameCreated(createdGame);
+            }
             response.status(HttpStatus.CREATED).json('Le jeu a été créé avec succès !');
         } catch (error) {
             response.status(HttpStatus.BAD_REQUEST).json(error.message);
         }
     }
 
-    @ApiOkResponse({
-        description: 'Modify a game',
-        type: Game,
-    })
-    @ApiNotFoundResponse({
-        description: 'Return NOT_FOUND http status when request fails',
-    })
     @Patch('/modifyGame/:id')
     async modifyGame(@Param('id') id: string, @Body() gameDto: UpdateGameDto, @Res() response: Response) {
         try {
             const updatedGame = await this.gameService.modifyGame(id, gameDto);
-            this.gameGateway.notifyGameUpdated(updatedGame);
+            this.adminGateway.notifyGameUpdated(updatedGame);
+
+            // Notify others to hide the game
+            if (!updatedGame.isVisible) {
+                this.gamesGateway.notifyGameDeleted(id);
+            }
+
             response.status(HttpStatus.OK).json('Le jeu a été modifié avec succès !');
         } catch (error) {
             const status = error.message.includes('Aucun jeu trouvé avec cet identifiant.') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
@@ -104,35 +78,30 @@ export class GameController {
         }
     }
 
-    @ApiOkResponse({
-        description: 'Modify a game visibility',
-    })
-    @ApiNotFoundResponse({
-        description: 'Return NOT_FOUND http status when request fails',
-    })
     @Patch('/modifyVisibility/:id')
     async modifyVisibility(@Param('id') id: string, @Body('isVisible') isVisible: boolean, @Res() response: Response): Promise<void> {
         try {
-            await this.gameService.updateVisibility(id, isVisible);
-            this.gameGateway.notifyGameVisibilityChanged(id, isVisible);
+            const updatedGame = await this.gameService.updateVisibility(id, isVisible);
+            this.adminGateway.notifyGameVisibilityChanged(id, isVisible);
+
+            if (isVisible) {
+                this.gamesGateway.notifyGameCreated(updatedGame);
+            } else {
+                this.gamesGateway.notifyGameDeleted(id);
+            }
+
             response.status(HttpStatus.OK).json('Le jeu a été modifié avec succès !');
         } catch (error) {
             response.status(HttpStatus.BAD_REQUEST).json(error.message);
         }
     }
 
-    @ApiOkResponse({
-        description: 'Delete a game',
-        type: Game,
-    })
-    @ApiNotFoundResponse({
-        description: 'Return NOT_FOUND http status when request fails',
-    })
     @Delete('/:id')
     async deleteGame(@Param('id') id: string, @Res() response: Response) {
         try {
             await this.gameService.deleteGame(id);
-            this.gameGateway.notifyGameDeleted(id);
+            this.adminGateway.notifyGameDeleted(id);
+            this.gamesGateway.notifyGameDeleted(id);
             response.status(HttpStatus.NO_CONTENT).json('Le jeu a été supprimé avec succès !');
         } catch (error) {
             response.status(HttpStatus.NOT_FOUND).json(error.message);

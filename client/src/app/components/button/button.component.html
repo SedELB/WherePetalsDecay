@@ -6,9 +6,13 @@
     [style.width.px]="width" 
     [style.height.px]="height"
     [disabled]="disabled"
-    [ngClass]="['btn', 'btn--' + variant, disabled ? 'disabled' : '']"
-    (click)="onClick()">
-
-    <ng-content></ng-content>
-
+    [ngClass]="[
+    'btn',
+    'btn--' + variant,
+    disabled ? 'disabled' : '',
+    selected ? 'selected' : ''
+    ]"
+    (click)="onClick()"
+    >
+        <ng-content></ng-content>
 </button>

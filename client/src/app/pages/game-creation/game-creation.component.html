@@ -6,19 +6,36 @@
             <h2>Créer une partie</h2>
             <p>Sélectionnez un jeu pour créer une nouvelle partie</p>
 
-            @for(game of availableGames; track game.id){
-                <app-game-card
-                    [game]="game"
-                >
-                    <app-button [height]="50" (click)="selectGame(game.name)">Sélectionner</app-button>
-                </app-game-card>
+            @if(games.length === 0){
+                <p class="no-games">Aucun jeu disponible</p>
             }
+            @else {
+                <div class="list-container">
+                    @for(game of games; track game._id){
+                        <app-game-card
+                            [game]="{
+                                name: game.name,
+                                description: game.description,
+                                size: getGameSizeLabel(game),
+                                gameMode: game.gameMode,
+                                createdAt: game.createdAt,
+                                updatedAt: game.updatedAt,
+                                thumbnail: game.thumbnail,
+                                isVisible: game.isVisible,
+                            }"
+                        >
+                            <app-button [height]="50" (click)="selectGame(game)">Sélectionner</app-button>
+                        </app-game-card>
+                    }
+                </div>
+            }
+            
         </section>
     }
     @if(currentPhase === 'character-creation'){
         <section class="character-creation">
-            <h1>Création de personnage</h1>
-            <p>Jeu sélectionné : {{ selectedGame }}</p>
+            <h2>Création de personnage</h2>
+            <p>Jeu sélectionné : {{ selectedGame?.name }}</p>
 
             <div class="list-container">
                 <div class="form-container">
@@ -29,87 +46,57 @@
                             id="characterName"
                             [(ngModel)]="characterName"
                             placeholder="Entrez un nom"
+                            [maxlength]="nameMaxLength"
                         />
                     </div>
 
-                <div class="form-group">
+                    <div class="form-group">
                     <label>Choisissez un avatar</label>
-                    <div class="avatar-grid">
-                        <button
-                            *ngFor="let avatar of avatars; let i = index"
-                            type="button"
-                            class="avatar-item"
-                            [class.selected]="selectedAvatarIndex === i"
-                            (click)="selectAvatar(i)"
-                        >
-                            <img [src]="avatar" [alt]="'Avatar ' + (i + 1)" />
-                        </button>
-                    </div>
-                </div>
 
-                <div class="form-group">
-                    <label>Attributs du personnage</label>
-                    <div class="attributes-container">
-                        <div class="attribute" [class.has-bonus]="lifeBonusSelected">
-                            <span class="attribute-name">Vie</span>
-                            <span class="attribute-value">{{ lifeValue }}</span>
-                            <span class="attribute-description">Points de vie du personnage</span>
-                        </div>
-                        <div class="attribute" [class.has-bonus]="!lifeBonusSelected">
-                            <span class="attribute-name">Rapidité</span>
-                            <span class="attribute-value">{{ speedValue }}</span>
-                            <span class="attribute-description">Vitesse de déplacement</span>
-                        </div>
-                        <div class="attribute">
-                            <span class="attribute-name">Attaque</span>
-                            <span class="attribute-value">{{ attackValue }}</span>
-                            <span class="attribute-dice">{{ attackDice }}</span>
-                            <span class="attribute-description">Puissance d'attaque</span>
-                        </div>
-                        <div class="attribute">
-                            <span class="attribute-name">Défense</span>
-                            <span class="attribute-value">{{ defenseValue }}</span>
-                            <span class="attribute-dice">{{ defenseDice }}</span>
-                            <span class="attribute-description">Résistance aux dégâts</span>
+                        <div class="avatar-grid">
+                            @for (avatar of avatars; track avatar; let i = $index) {
+                            <button
+                                type="button"
+                                class="avatar-item"
+                                [class.selected]="selectedAvatarIndex === i"
+                                (click)="selectAvatar(i)"
+                            >
+                                <img
+                                [src]="avatar"
+                                [alt]="'Avatar ' + (i + 1)"
+                                />
+                            </button>
+                            }
                         </div>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label>Attribuer le bonus +2 à :</label>
-                    <div class="bonus-selection">
-                        <app-button
-                            [selected]="lifeBonusSelected"
-                            (click)="selectBonus(true)"
-                        >
-                            Vie
-                        </app-button>
-                        <app-button
-                            [selected]="!lifeBonusSelected"
-                            (click)="selectBonus(false)"
-                        >
-                            Rapidité
-                        </app-button>
+                    <div class="form-group">
+                        <label>Attributs du personnage</label>
+                        <div class="attributes-container">
+                            <div class="attribute" [class.has-bonus]="lifeBonusSelected" (click)="selectBonus(true)">
+                                <span class="attribute-name">Vie</span>
+                                <span class="attribute-value">{{ lifeValue }}</span>
+                                <span class="attribute-description">Points de vie du personnage</span>
+                            </div>
+                            <div class="attribute" [class.has-bonus]="!lifeBonusSelected" (click)="selectBonus(false)">
+                                <span class="attribute-name">Rapidité</span>
+                                <span class="attribute-value">{{ speedValue }}</span>
+                                <span class="attribute-description">Vitesse de déplacement</span>
+                            </div>
+                            <div class="attribute" [class.has-bonus]="attackDiceD6" (click)="selectAttackDice(true)">
+                                <span class="attribute-name">Attaque</span>
+                                <span class="attribute-value">{{ attackValue }}</span>
+                                <span class="attribute-dice">{{ attackDice }}</span>
+                                <span class="attribute-description">Puissance d'attaque</span>
+                            </div>
+                            <div class="attribute" [class.has-bonus]="!attackDiceD6" (click)="selectAttackDice(false)">
+                                <span class="attribute-name">Défense</span>
+                                <span class="attribute-value">{{ defenseValue }}</span>
+                                <span class="attribute-dice">{{ defenseDice }}</span>
+                                <span class="attribute-description">Résistance aux dégâts</span>
+                            </div>
+                        </div>
                     </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Assigner le dé D6 à :</label>
-                    <div class="dice-selection">
-                        <app-button
-                            [selected]="attackDiceD6"
-                            (click)="selectAttackDice(true)"
-                        >
-                            Attaque (D6)
-                        </app-button>
-                        <app-button
-                            [selected]="!attackDiceD6"
-                            (click)="selectAttackDice(false)"
-                        >
-                            Défense (D6)
-                        </app-button>
-                    </div>
-                </div>
 
                     <div class="random-button">
                         <app-button (click)="generateRandomCharacter()">

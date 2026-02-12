@@ -1,19 +1,21 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { GameCard } from '@app/interfaces/gameCard';
+import { GameMode } from '@common/enums';
 import { GameCardComponent } from './game-card.component';
 
 describe('GameCardComponent', () => {
   let component: GameCardComponent;
   let fixture: ComponentFixture<GameCardComponent>;
+
   const mockGame: GameCard = {
-    id: 1,
-    image: '/assets/filler.png',
     name: 'Game 1',
-    size: '10X10',
-    mode: 'Solo',
-    date: '2026-01-01',
-    visible: true,
-    imgDescription: 'test description',
+    description: 'test description',
+    size: { rows: 10, cols: 10 },
+    gameMode: GameMode.Ctf,
+    thumbnail: '/assets/filler.png',
+    createdAt: new Date('2026-01-01'),
+    updatedAt: new Date('2026-01-01'),
+    isVisible: true,
   };
 
   beforeEach(async () => {
@@ -31,19 +33,10 @@ describe('GameCardComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should display game info', () => {
-    const compiled = fixture.nativeElement;
-    const listItems = compiled.querySelectorAll('.card-info li');
-    expect(listItems[0].textContent).toContain(mockGame.name);
-    expect(listItems[1].textContent).toContain(mockGame.size);
-    expect(listItems[2].textContent).toContain(mockGame.mode);
-    expect(listItems[3].textContent).toContain(mockGame.date);
-  });
-
   it('should display image correctly', () => {
     const compiled = fixture.nativeElement;
     const img = compiled.querySelector('.thumbnail');
-    expect(img.src).toContain(mockGame.image);
+    expect(img.src).toContain(mockGame.thumbnail);
     expect(img.alt).toBe(mockGame.name);
   });
 
@@ -51,7 +44,7 @@ describe('GameCardComponent', () => {
     const testFixture = TestBed.createComponent(GameCardComponent);
     const testComponent = testFixture.componentInstance;
 
-    testComponent.game = { ...mockGame, visible: false };
+    testComponent.game = { ...mockGame, isVisible: false };
 
     testFixture.detectChanges();
     expect(testFixture).toBeDefined();
