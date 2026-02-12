@@ -225,6 +225,6 @@ describe('MapSetupFacadeService', () => {
 
         await expectAsync(
             (service as unknown as CaptureThumbnailApi).captureThumbnail(CAPTURE_TEST_SEED),
-        ).toBeRejectedWithError("image de prévisualisation est introuvable");
+        ).toBeRejectedWithError(`image de prévisualisation est introuvable`);
     });
 });
