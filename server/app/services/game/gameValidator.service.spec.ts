@@ -49,22 +49,22 @@ describe('GameValidator', () => {
 
     it('isTextLengthValid() should fail if the game name is empty', () => {
         const emptyNameGame = { ...getValidGame(), name: '' };
-        expect(() => gameValidatorService.isTextLengthValid(emptyNameGame)).toThrow('["Le champ nom est vide !"]');
+        expect(() => gameValidatorService.isTextLengthValid(emptyNameGame)).toThrow('Le champ nom est vide !');
     });
 
     it('isTextLengthValid() should fail if the game name exceeds max length', () => {
         const longNameGame = { ...getValidGame(), name: 'QWERTYUIOPASDFGHJKLZXCVBNM' };
-        expect(() => gameValidatorService.isTextLengthValid(longNameGame)).toThrow('["Le champ nom dépasse la longueur maximale !"]');
+        expect(() => gameValidatorService.isTextLengthValid(longNameGame)).toThrow('Le champ nom dépasse la longueur maximale !');
     });
 
     it('isTextLengthValid() should fail if the game desc is empty', () => {
         const emptyDescGame = { ...getValidGame(), description: '' };
-        expect(() => gameValidatorService.isTextLengthValid(emptyDescGame)).toThrow('["Le champ description est vide !"]');
+        expect(() => gameValidatorService.isTextLengthValid(emptyDescGame)).toThrow('Le champ description est vide !');
     });
 
     it('isTextLengthValid() should fail if the game desc is exceeds max length', () => {
         const longDescGame = { ...getValidGame(), description: 'a'.repeat(DESC_MAX_LENGTH + 1) };
-        expect(() => gameValidatorService.isTextLengthValid(longDescGame)).toThrow('["Le champ description dépasse la longueur maximale !"]');
+        expect(() => gameValidatorService.isTextLengthValid(longDescGame)).toThrow('Le champ description dépasse la longueur maximale !');
     });
 
     it('isTextLengthValid() should fail with multiple errors', () => {
