@@ -44,7 +44,12 @@ export class PlayerGameService {
             PlayerGameEvents.GameVisibilityChanged,
             (data) => {
                 if (data.isVisible) {
-                    this.fetchVisibleGames().subscribe();
+                    this.fetchVisibleGames().subscribe({
+                        next: (games) => this.setGames(games),
+                        error: () => {
+                            // Silently handle error
+                        },
+                    });
                 } else {
                     const games = this.gamesSubject.value.filter((game) => game._id !== data.gameId);
                     this.gamesSubject.next(games);
