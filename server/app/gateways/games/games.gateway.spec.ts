@@ -33,10 +33,12 @@ describe('GamesGateway', () => {
     });
 
     it('should be defined', () => {
+        // Ensures GamesGateway instance is properly created and injected
         expect(gateway).toBeDefined();
     });
 
     describe('afterInit', () => {
+        // Verifies gateway logs initialization message to games namespace
         it('should log initialization message', () => {
             gateway.afterInit();
             expect(logger.log).toHaveBeenCalledWith('GamesGateway initialized on /games namespace');
@@ -44,6 +46,7 @@ describe('GamesGateway', () => {
     });
 
     describe('handleConnection', () => {
+        // Confirms gateway logs when player clients connect with socket id
         it('should log when player client connects', () => {
             const mockSocket = { id: 'test-socket-id' } as Socket;
             gateway.handleConnection(mockSocket);
@@ -52,6 +55,7 @@ describe('GamesGateway', () => {
     });
 
     describe('handleDisconnect', () => {
+        // Confirms gateway logs when player clients disconnect with socket id
         it('should log when player client disconnects', () => {
             const mockSocket = { id: 'test-socket-id' } as Socket;
             gateway.handleDisconnect(mockSocket);
@@ -60,6 +64,7 @@ describe('GamesGateway', () => {
     });
 
     describe('notifyGameCreated', () => {
+        // Broadcasts newly created visible game to all player clients
         it('should emit GameCreated event with game data', () => {
             const game = new Game();
             game.name = 'Test Game';
@@ -69,6 +74,7 @@ describe('GamesGateway', () => {
     });
 
     describe('notifyGameDeleted', () => {
+        // Broadcasts game deletion or invisibility to all player clients
         it('should emit GameDeleted event with game id', () => {
             const gameId = 'game-id-123';
             gateway.notifyGameDeleted(gameId);
@@ -77,6 +83,7 @@ describe('GamesGateway', () => {
     });
 
     describe('notifyGameVisibilityChanged', () => {
+        // Broadcasts game visibility state changes to all player clients
         it('should emit GameVisibilityChanged event with gameId and isVisible', () => {
             const gameId = 'game-id-123';
             const isVisible = false;

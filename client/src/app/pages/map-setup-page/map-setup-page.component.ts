@@ -29,6 +29,7 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
 
   private gameSubscription?: Subscription;
   private isSaving = false;
+  private gameDeletedAlertShown = false;
 
   nameMaxLength = NAME_MAX_LENGTH;
   descMaxLength = DESC_MAX_LENGTH;
@@ -69,11 +70,15 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
         const currentGame = games.find(g => g._id === this.game._id);
 
         if (!currentGame) {
+          if (!this.gameDeletedAlertShown){
+            this.gameDeletedAlertShown = true;
+            alert(
+              'Ce jeu a été supprimé par un autre administrateur. ' +
+              'Vous pouvez continuer à travailler et il sera créé comme un nouveau jeu lors de la sauvegarde.',
+            );
+          }
           this.mode = 'create';
-          alert(
-            'Ce jeu a été supprimé par un autre administrateur. ' +
-            'Vous pouvez continuer à travailler et il sera créé comme un nouveau jeu lors de la sauvegarde.',
-          );
+          
         } else if (currentGame.updatedAt !== this.game.updatedAt) {
           if (this.isSaving) {
             this.game = JSON.parse(JSON.stringify(currentGame));
