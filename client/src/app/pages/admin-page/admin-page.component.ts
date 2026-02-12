@@ -1,4 +1,5 @@
 
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
@@ -32,8 +33,9 @@ export class AdminPageComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.adminGameService.fetchAllGames().subscribe({
       next: (games) => this.adminGameService.setGames(games),
-      error: () => {
-        throw new Error(`There was an error while fetching all games for database`);
+      error: (error: HttpErrorResponse) => {
+        const errorMessage = error.error || 'Erreur lors de la récupération des jeux';
+        alert(`Erreur: ${errorMessage}`);
       },
     });
 
@@ -70,13 +72,23 @@ export class AdminPageComponent implements OnInit, OnDestroy {
   changeVisibility(name: string) {
     const game = this.games.find(g => g.name === name);
     if (!game) return;
-    this.communicationService.updateVisiblity(game).subscribe();
+    this.communicationService.updateVisiblity(game).subscribe({
+      error: (error: HttpErrorResponse) => {
+        const errorMessage = error.error || 'Erreur lors du changement de visibilité';
+        alert(`Erreur: ${errorMessage}`);
+      },
+    });
   }
 
   removeGame(name: string) {
     const game = this.games.find(g => g.name === name);
     if (!game) return;
 
-    this.communicationService.deleteGame(game._id).subscribe();
+    this.communicationService.deleteGame(game._id).subscribe({
+      error: (error: HttpErrorResponse) => {
+        const errorMessage = error.error || 'Erreur lors de la suppression du jeu';
+        alert(`Erreur: ${errorMessage}`);
+      },
+    });
   }
 }
