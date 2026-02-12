@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { Game } from '@app/interfaces/game';
@@ -84,9 +83,8 @@ export class MapSetupFacadeService {
             alert(`Jeu ${mode === 'create' ? 'créé' : 'sauvegardé'} avec succès !`);
             this.router.navigate(['/admin']);
           },
-          error: (error: HttpErrorResponse) => {
-            const errorMessage = error.error || 'Une erreur s\'est produite en enregistrant un jeu édité !';
-            alert(`Erreur: ${errorMessage}`);
+          error: () => {
+            alert('Une erreur s\'est produite en enregistrant un jeu édité !');
           },
         });
       });
@@ -98,9 +96,8 @@ export class MapSetupFacadeService {
           alert(`Partie créée avec succès !`);
           this.router.navigate(['/admin']);
         },
-        error: (error: HttpErrorResponse) => {
-          const errorMessage = error.error || 'Une erreur s\'est produite en enregistrant un nouveau jeu';
-          alert(`Erreur: ${errorMessage}`);
+        error: () => {
+          alert('Une erreur s\'est produite en enregistrant un nouveau jeu');
         },
       });
     }
