@@ -19,5 +19,6 @@ export const NO_TERRAIN_TILES = "Il n'y a pas de tuiles de terrain !";
 export const UNREACHABLE_TILES = 'Une ou plusieurs tuiles sont inaccessibles !';
 export const DOOR_ON_GRID_BORDER = 'ne peut pas être sur le bord de la carte !';
 export const INVALID_DOOR_PLACEMENT = 'Placement de porte invalide à la position';
+export const DESC_INVALID_DOOR_PLACEMENT = 'Une porte ne doit pas être bloquée par un obstacle (porte ou mur)';
 export const FLAG_NOT_PLACED = "Le drapeau n'est pas placé !";
 export const VALIDATION_ERRORS_PREFIX = 'Erreurs de validation';
