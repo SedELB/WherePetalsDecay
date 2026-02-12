@@ -9,24 +9,27 @@
             @if(games.length === 0){
                 <p class="no-games">Aucun jeu disponible</p>
             }
-            <div class="list-container">
-                @for(game of games; track game._id){
-                    <app-game-card
-                        [game]="{
-                            name: game.name,
-                            description: game.description,
-                            size: getGameSizeLabel(game),
-                            gameMode: game.gameMode,
-                            createdAt: game.createdAt,
-                            updatedAt: game.updatedAt,
-                            thumbnail: game.thumbnail,
-                            isVisible: game.isVisible,
-                        }"
-                    >
-                        <app-button [height]="50" (click)="selectGame(game)">Sélectionner</app-button>
-                    </app-game-card>
-                }
-            </div>
+            @else {
+                <div class="list-container">
+                    @for(game of games; track game._id){
+                        <app-game-card
+                            [game]="{
+                                name: game.name,
+                                description: game.description,
+                                size: getGameSizeLabel(game),
+                                gameMode: game.gameMode,
+                                createdAt: game.createdAt,
+                                updatedAt: game.updatedAt,
+                                thumbnail: game.thumbnail,
+                                isVisible: game.isVisible,
+                            }"
+                        >
+                            <app-button [height]="50" (click)="selectGame(game)">Sélectionner</app-button>
+                        </app-game-card>
+                    }
+                </div>
+            }
+            
         </section>
     }
     @if(currentPhase === 'character-creation'){
