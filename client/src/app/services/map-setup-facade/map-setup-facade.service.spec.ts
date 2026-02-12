@@ -126,7 +126,7 @@ describe('MapSetupFacadeService', () => {
 
         expect(game.thumbnail).toBe('new-thumb');
         expect(communication.createGame).toHaveBeenCalledWith(game);
-        expect(alertSpy).toHaveBeenCalledWith('Game created successfully!');
+        expect(alertSpy).toHaveBeenCalledWith('Partie créée avec succès !');
         expect(router.navigate).toHaveBeenCalledWith(['/admin']);
     });
 
@@ -155,7 +155,7 @@ describe('MapSetupFacadeService', () => {
 
         await service.saveGame(game, 'create');
 
-        expect(alertSpy).toHaveBeenCalledWith('Save failed: unable to generate map thumbnail.');
+        expect(alertSpy).toHaveBeenCalledWith("Problème d'enregistrement : la génération de l'image a échouée ");
         expect(validator.validate).not.toHaveBeenCalled();
     });
 
@@ -177,7 +177,7 @@ describe('MapSetupFacadeService', () => {
 
         await service.saveGame(game, 'edit');
 
-        expect(alertSpy).toHaveBeenCalledWith('Save failed: unable to generate map thumbnail.');
+        expect(alertSpy).toHaveBeenCalledWith("Problème d'enregistrement : la génération de l'image a échouée ");
         expect(communication.modifyGame).not.toHaveBeenCalled();
     });
 
@@ -201,7 +201,7 @@ describe('MapSetupFacadeService', () => {
 
         await service.saveGame(game, 'edit');
 
-        expect(alertSpy).toHaveBeenCalledWith('Save failed: unable to generate map thumbnail.');
+        expect(alertSpy).toHaveBeenCalledWith("Problème d'enregistrement : la génération de l'image a échouée ");
     });
 
     it('captures a thumbnail when the DOM element exists', async () => {
@@ -225,6 +225,6 @@ describe('MapSetupFacadeService', () => {
 
         await expectAsync(
             (service as unknown as CaptureThumbnailApi).captureThumbnail(CAPTURE_TEST_SEED),
-        ).toBeRejectedWithError('Thumbnail element not found');
+        ).toBeRejectedWithError("image de prévisualisation est introuvable");
     });
 });
