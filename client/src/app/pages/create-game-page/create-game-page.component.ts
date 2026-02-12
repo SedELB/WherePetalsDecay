@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { Game } from '@app/interfaces/game';
@@ -12,7 +12,7 @@ import { GameMode, MaxPlayers } from '@common/enums';
 })
 
 export class CreateGamePageComponent {
-  private readonly router = inject(Router);
+  constructor(private readonly router: Router) {}
 
   gameModeEnum = GameMode;
   gameMode: GameMode | null = null;

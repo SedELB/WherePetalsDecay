@@ -1,4 +1,4 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { Game } from '@app/interfaces/game';
@@ -20,10 +20,12 @@ import { Subscription } from 'rxjs';
   styleUrl: './map-setup-page.component.scss',
 })
 export class MapSetupPageComponent implements OnInit, OnDestroy {
-  private readonly mapSetupFacade = inject(MapSetupFacadeService);
-  private readonly mapSetupService = inject(MapSetupService);
-  private readonly tileItemCountService = inject(TileItemCountService);
-  private readonly adminGameService = inject(AdminGameService);
+  constructor(
+    private readonly mapSetupFacade: MapSetupFacadeService,
+    private readonly mapSetupService: MapSetupService,
+    private readonly tileItemCountService: TileItemCountService,
+    private readonly adminGameService: AdminGameService,
+  ) {}
 
   private gameSubscription?: Subscription;
   private isSaving = false;
