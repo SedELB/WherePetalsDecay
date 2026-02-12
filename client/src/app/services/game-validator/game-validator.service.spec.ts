@@ -84,13 +84,13 @@ describe('GameValidatorService', () => {
     it('should report missing name field', () => {
         const broken = draft({ name: '' });
         const errors = service.validate(broken).errors;
-        expect(errors).toContain('Le nom du jeu est requis !');
+        expect(errors).toContain('Le champ nom est vide !');
     });
 
     it('should report missing description field', () => {
         const broken = draft({ description: '' });
         const errors = service.validate(broken).errors;
-        expect(errors).toContain('La description du jeu est requise !');
+        expect(errors).toContain('Le champ description est vide !');
     });
 
     it('should report missing mode field', () => {
