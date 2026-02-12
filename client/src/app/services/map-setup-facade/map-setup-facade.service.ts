@@ -7,6 +7,7 @@ import { TileItemCounts } from '@app/services/map-setup.types';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import html2canvas from 'html2canvas';
+import { HttpErrorResponse } from '@angular/common/http';
 
 const THUMBNAIL_QUALITY = 0.85;
 const THUMBNAIL_MAX_SIZE = 256;
@@ -83,8 +84,8 @@ export class MapSetupFacadeService {
             alert(`Jeu ${mode === 'create' ? 'créé' : 'sauvegardé'} avec succès !`);
             this.router.navigate(['/admin']);
           },
-          error: () => {
-            alert('Une erreur s\'est produite en enregistrant un jeu édité !');
+          error: (err: HttpErrorResponse) => {
+            alert(`Une erreur s'est produite en enregistrant un jeu édité ! : ${err.error}`);
           },
         });
       });
@@ -96,8 +97,8 @@ export class MapSetupFacadeService {
           alert(`Partie créée avec succès !`);
           this.router.navigate(['/admin']);
         },
-        error: () => {
-          alert('Une erreur s\'est produite en enregistrant un nouveau jeu');
+        error: (err : HttpErrorResponse) => {
+          alert(`Une erreur s'est produite en enregistrant un nouveau jeu : ${err.error}`);
         },
       });
     }

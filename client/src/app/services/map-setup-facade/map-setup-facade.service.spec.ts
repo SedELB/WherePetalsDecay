@@ -233,7 +233,7 @@ describe('MapSetupFacadeService', () => {
 
         await service.saveGame(game, 'edit');
 
-        expect(alertSpy).toHaveBeenCalledWith('Une erreur s\'est produite en enregistrant un jeu édité !');
+        expect(alertSpy).toHaveBeenCalledWith(`Une erreur s'est produite en enregistrant un jeu édité ! : bad`);
     });
 
     // Test fallback to create mode when game doesn't exist
@@ -285,7 +285,7 @@ describe('MapSetupFacadeService', () => {
 
         await service.saveGame(game, 'create');
 
-        expect(alertSpy).toHaveBeenCalledWith('Une erreur s\'est produite en enregistrant un nouveau jeu');
+        expect(alertSpy).toHaveBeenCalledWith("Une erreur s'est produite en enregistrant un nouveau jeu : creation failed");
     });
 
     // Test default mode behavior

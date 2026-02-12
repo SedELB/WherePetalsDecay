@@ -33,10 +33,12 @@ describe('AdminGateway', () => {
     });
 
     it('should be defined', () => {
+        // Ensures AdminGateway instance is properly created and injected
         expect(gateway).toBeDefined();
     });
 
     describe('afterInit', () => {
+        // Verifies gateway logs initialization message to admin namespace
         it('should log initialization message', () => {
             gateway.afterInit();
             expect(logger.log).toHaveBeenCalledWith('AdminGateway initialized on admin namespace');
@@ -44,6 +46,7 @@ describe('AdminGateway', () => {
     });
 
     describe('handleConnection', () => {
+        // Confirms gateway logs when admin clients connect with socket id
         it('should log when admin client connects', () => {
             const mockSocket = { id: 'test-socket-id' } as Socket;
             gateway.handleConnection(mockSocket);
@@ -52,6 +55,7 @@ describe('AdminGateway', () => {
     });
 
     describe('handleDisconnect', () => {
+        // Confirms gateway logs when admin clients disconnect with socket id
         it('should log when admin client disconnects', () => {
             const mockSocket = { id: 'test-socket-id' } as Socket;
             gateway.handleDisconnect(mockSocket);
@@ -60,6 +64,7 @@ describe('AdminGateway', () => {
     });
 
     describe('notifyGameCreated', () => {
+        // Broadcasts newly created game data to all admin clients
         it('should emit GameCreated event with game data', () => {
             const game = new Game();
             game.name = 'Test Game';
@@ -69,6 +74,7 @@ describe('AdminGateway', () => {
     });
 
     describe('notifyGameUpdated', () => {
+        // Broadcasts updated game data to all admin clients
         it('should emit GameUpdated event with game data', () => {
             const game = new Game();
             game.name = 'Updated Game';
@@ -78,6 +84,7 @@ describe('AdminGateway', () => {
     });
 
     describe('notifyGameDeleted', () => {
+        // Broadcasts game deletion notification to all admin clients
         it('should emit GameDeleted event with game id', () => {
             const gameId = 'game-id-123';
             gateway.notifyGameDeleted(gameId);
@@ -86,6 +93,7 @@ describe('AdminGateway', () => {
     });
 
     describe('notifyGameVisibilityChanged', () => {
+        // Broadcasts game visibility state changes to all admin clients
         it('should emit GameVisibilityChanged event with gameId and isVisible', () => {
             const gameId = 'game-id-123';
             const isVisible = true;
@@ -95,6 +103,7 @@ describe('AdminGateway', () => {
     });
 
     describe('notifyGamesUpdated', () => {
+        // Notifies admin clients that games list has been updated
         it('should emit GamesUpdated event', () => {
             gateway.notifyGamesUpdated();
             expect(mockServer.emit).toHaveBeenCalledWith(AdminGameEvents.GamesUpdated);

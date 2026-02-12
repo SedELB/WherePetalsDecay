@@ -82,11 +82,13 @@ describe('GameServiceE2E', () => {
     });
 
     it('service and model should be defined', () => {
+        // Ensures GameService and GameModel are properly injected and available
         expect(gameService).toBeDefined();
         expect(gameModel).toBeDefined();
     });
 
     it('start() should populate the database when there is no data', async () => {
+        // Verifies that DB initialization triggers population with default games
         const spyPopulateDB = jest.spyOn(gameService, 'populateDB');
         const spyCountDocuments = jest.spyOn(gameModel, 'countDocuments');
         await gameModel.deleteMany({});
@@ -96,6 +98,7 @@ describe('GameServiceE2E', () => {
     });
 
     it('populateDB() should add 3 new games', async () => {
+        // Ensures default games are correctly inserted into database
         const countsBefore = await gameModel.countDocuments();
         const spyInsertMany = jest.spyOn(gameModel, 'insertMany');
         const spyLog = jest.spyOn(logger, 'log');
@@ -107,6 +110,7 @@ describe('GameServiceE2E', () => {
     });
 
     it('isGameNameUnique() should return true if the game name is unique', async () => {
+        // Confirms unique game names pass validation
         const spyFindOne = jest.spyOn(gameModel, 'findOne');
         const result = await gameService.isGameNameUnique('Completely Unique Name');
         expect(result).toEqual(true);
@@ -114,6 +118,7 @@ describe('GameServiceE2E', () => {
     });
 
     it('isGameNameUnique() should throw error if the game name already exists', async () => {
+        // Rejects duplicate game names to maintain database integrity
         const createdGame = await gameModel.create(validGame);
         const spyFindOne = jest.spyOn(gameModel, 'findOne');
         await expect(gameService.isGameNameUnique(createdGame.name)).rejects.toThrow("Le nom du jeu n'est pas unique !");
@@ -121,6 +126,7 @@ describe('GameServiceE2E', () => {
     });
 
     it('getAllGames() return all three games in database', async () => {
+        // Retrieves all games from database after population
         const spyFind = jest.spyOn(gameModel, 'find');
         await gameService.populateDB();
         const result = await gameService.getAllGames();
@@ -129,10 +135,12 @@ describe('GameServiceE2E', () => {
     });
 
     it('getAllGames() should fail if there are no games in the database', async () => {
+        // Throws error when attempting to retrieve from empty database
         await expect((gameService.getAllGames())).rejects.toThrow(NO_GAMES_FOUND);
     });
 
     it('getGameById() return correct game with the specified id', async () => {
+        // Fetches specific game by ID from database
         const createdGame = await gameModel.create(validGame);
         const spyFindById = jest.spyOn(gameModel, 'findById');
         const result = await gameService.getGameById(createdGame._id.toString());
@@ -141,11 +149,13 @@ describe('GameServiceE2E', () => {
     });
 
     it('getGameById() should fail if there are no game with the specified id', async () => {
+        // Throws error when game ID does not exist
         const nonExistentId = new ObjectId().toString();
         await expect(gameService.getGameById(nonExistentId)).rejects.toThrow(GAME_NOT_FOUND);
     });
 
     it('addGame() should add a valid game to the DB', async () => {
+        // Validates and inserts new game into database
         const spyIsGameNameUnique = jest.spyOn(gameService, 'isGameNameUnique');
         const spyIsGameValid = jest.spyOn(gameValidatorService, 'isGameValid');
         await gameService.addGame(validGame);
@@ -158,6 +168,7 @@ describe('GameServiceE2E', () => {
     });
 
     it('addGame() with an invalid game should throw an error', async () => {
+        // Rejects invalid games failing validator checks
         const spyIsGameNameUnique = jest.spyOn(gameService, 'isGameNameUnique');
         const spyIsGameValid = jest.spyOn(gameValidatorService, 'isGameValid');
         await expect(gameService.addGame(invalidGame)).rejects.toThrow();
@@ -166,6 +177,7 @@ describe('GameServiceE2E', () => {
     });
 
     it('modifyGame() should modify a game', async () => {
+        // Updates existing game with new data and validates changes
         const createdGame = await gameModel.create(validGame);
         const modifiedFakeGame = { ...validGame, name: 'Modified Game' };
         const spyIsGameNameUnique = jest.spyOn(gameService, 'isGameNameUnique');
@@ -177,6 +189,7 @@ describe('GameServiceE2E', () => {
     });
 
     it('modifyGame() with an invalid id should fail', async () => {
+        // Rejects modification requests with malformed ObjectId
         const modifiedFakeGame = validGame;
         const nonExistentId = new ObjectId().toString();
         modifiedFakeGame.name = 'Modified Game';
@@ -184,6 +197,7 @@ describe('GameServiceE2E', () => {
     });
 
     it('modifyGame() should fail if the game does not exist', async () => {
+        // Throws error when attempting to modify non-existent game
         const modifiedFakeGame = validGame;
         modifiedFakeGame.name = 'Modified Game';
         const nonExistentId = new ObjectId().toString();
@@ -193,6 +207,7 @@ describe('GameServiceE2E', () => {
     });
 
     it('deleteGame() should delete the game with the specified id', async () => {
+        // Removes game from database by ID
         const createdGame = await gameModel.create(validGame);
         const spyFindByIdAndDelete = jest.spyOn(gameModel, 'findByIdAndDelete');
         await gameService.deleteGame(createdGame._id.toString());
@@ -201,6 +216,7 @@ describe('GameServiceE2E', () => {
     });
 
     it('deleteCourse() should fail if the course does not exist', async () => {
+        // Throws error when attempting to delete non-existent game
         const nonExistentId = new ObjectId().toString();
         const spyLog = jest.spyOn(logger, 'log');
         await expect(gameService.deleteGame(nonExistentId)).rejects.toThrow();
@@ -208,6 +224,7 @@ describe('GameServiceE2E', () => {
     });
 
     it('updateVisibility() should update the game visibility', async () => {
+        // Changes game's visibility status in database
         const createdGame = await gameModel.create(validGame);
         const spyFindByIdAndUpdate = jest.spyOn(gameModel, 'findByIdAndUpdate');
         await gameService.updateVisibility(createdGame._id.toString(), false);
@@ -220,12 +237,14 @@ describe('GameServiceE2E', () => {
     });
 
     it('updateVisibility() should fail if the game does not exist', async () => {
+        // Throws error when game ID doesn't exist
         await gameModel.create(validGame);
         const nonExistentId = new ObjectId().toString();
         await expect(gameService.updateVisibility(nonExistentId, false)).rejects.toThrow();
     });
 
     it('getAllVisibleGames() should return all visible games', async () => {
+        // Retrieves only publicly visible games from database
         const visibleGame1 = { ...validGame, name: 'Visible game 1', isVisible: true };
         const visibleGame2 = { ...validGame, name: 'Visible game 2', isVisible: true };
         const visibleGame3 = { ...validGame, name: 'Visible game 3', isVisible: true };
@@ -238,6 +257,7 @@ describe('GameServiceE2E', () => {
     });
 
     it('getAllVisibleGames() should fail if there are no visible games in the database', async () => {
+        // Throws error when no public games are available
         const nonVisibleGame = { ...validGame, isVisible: false };
         await gameService.addGame(nonVisibleGame);
         await expect(gameService.getAllVisibleGames()).rejects.toThrow(NO_VISIBLE_GAMES_FOUND);
