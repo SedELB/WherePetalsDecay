@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { Game } from '@app/interfaces/game';
@@ -12,7 +12,7 @@ import { GameMode, MaxPlayers } from '@common/enums';
 })
 
 export class CreateGamePageComponent {
-  private readonly router = inject(Router);
+  constructor(private readonly router: Router) {}
 
   gameModeEnum = GameMode;
   gameMode: GameMode | null = null;
@@ -52,7 +52,7 @@ export class CreateGamePageComponent {
       size: this.sizes[this.mapSize ?? ''] ?? { rows: 0, cols: 0 },
       gameMode: this.gameMode ?? GameMode.Classic,
       thumbnail: '',
-      maxPlayers: this.getMaxPlayers, // Always 6 players: server expects this for spawn validation
+      maxPlayers: this.getMaxPlayers,
       grid: [],
       isVisible: true,
       createdAt: new Date(),
