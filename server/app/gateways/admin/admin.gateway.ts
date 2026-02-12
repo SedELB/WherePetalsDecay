@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { AdminGameEvents } from './admin.gateway.events';
+import { Game } from '@app/model/schema/game.schema';
 
 @WebSocketGateway({ namespace: SocketNamespace.Admin, cors: true })
 @Injectable()
@@ -23,11 +24,11 @@ export class AdminGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         this.logger.log(`Admin client disconnected: ${socket.id}`);
     }
 
-    notifyGameCreated(game: unknown) {
+    notifyGameCreated(game: Game) {
         this.server.emit(AdminGameEvents.GameCreated, game);
     }
 
-    notifyGameUpdated(game: unknown) {
+    notifyGameUpdated(game: Game) {
         this.server.emit(AdminGameEvents.GameUpdated, game);
     }
 

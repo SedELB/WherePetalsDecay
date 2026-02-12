@@ -6,7 +6,6 @@ import { THUMBNAIL1_INIT } from '@app/utils/thumbnail.constants/thumbnail1.const
 import { THUMBNAIL2_INIT } from '@app/utils/thumbnail.constants/thumbnail2.constant';
 import { THUMBNAIL3_INIT } from '@app/utils/thumbnail.constants/thumbnail3.constant';
 
-
 import { GameMode, NbPlayersMedium, NbPlayersSmall } from '@app/utils/game.enum';
 import {
     GAME_CREATION_FAILED,
@@ -63,7 +62,7 @@ export class GameService {
         };
 
         const invalidGame3: CreateGameDto = {
-            name: 'Invalid Game 3',
+            name: 'Valid Game 3',
             description: 'Desc. 3 - CLASSIC',
             size: { rows: BASE_15, cols: BASE_15 },
             gameMode: GameMode.Classic,
@@ -156,12 +155,13 @@ export class GameService {
         }
     }
 
-    async updateVisibility(id: string, newVisibility: boolean): Promise<void> {
+    async updateVisibility(id: string, newVisibility: boolean): Promise<Game> {
         try {
             const updatedGame = await this.gameModel.findByIdAndUpdate(id, { isVisible: newVisibility }, { new: true, timestamps: false }).exec();
             if (!updatedGame) {
                 throw new Error(GAME_NOT_FOUND);
             }
+            return updatedGame;
         } catch (error) {
             throw new Error(`${GAME_VISIBILITY_UPDATE_FAILED} : ${error.message}`);
         }
