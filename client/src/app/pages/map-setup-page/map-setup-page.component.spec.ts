@@ -35,7 +35,7 @@ const makeGame = (): Game => ({
     size: { rows: SIZE_SMALL, cols: SIZE_SMALL },
     gameMode: GameMode.Classic,
     thumbnail: 'thumb',
-    maxPlayers: 4,
+    maxPlayers: 2,
     grid: makeGrid(SIZE_SMALL, SIZE_SMALL),
     isVisible: true,
     createdAt: new Date('2024-01-15'),

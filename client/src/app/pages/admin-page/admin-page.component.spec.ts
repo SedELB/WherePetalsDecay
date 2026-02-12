@@ -32,8 +32,8 @@ describe('AdminPageComponent', () => {
       description: 'test1description',
       size: { rows: 20, cols: 20 },
       gameMode: GameMode.Classic,
-      thumbnail: 'assets/filler.png',
-      maxPlayers: 4,
+      thumbnail: 'thumb',
+      maxPlayers: 6,
       grid: [],
       createdAt: new Date('2024-01-15'),
       updatedAt: new Date('2024-01-15'),
@@ -45,7 +45,7 @@ describe('AdminPageComponent', () => {
       description: 'test2description',
       size: { rows: 10, cols: 10 },
       gameMode: GameMode.Ctf,
-      thumbnail: 'assets/filler.png',
+      thumbnail: 'thumb',
       maxPlayers: 2,
       grid: [],
       createdAt: new Date('2024-02-10'),
@@ -58,8 +58,8 @@ describe('AdminPageComponent', () => {
       description: 'test3description',
       size: { rows: 15, cols: 15 },
       gameMode: GameMode.Classic,
-      thumbnail: 'assets/test3.png',
-      maxPlayers: 2,
+      thumbnail: 'thumb',
+      maxPlayers: 4,
       grid: [],
       createdAt: new Date('2024-03-01'),
       updatedAt: new Date('2024-03-01'),
@@ -134,7 +134,7 @@ describe('AdminPageComponent', () => {
     expect(firstGameCard.description).toBe('test1description');
     expect(firstGameCard.size).toEqual({ rows: 20, cols: 20 });
     expect(firstGameCard.gameMode).toBe(GameMode.Classic);
-    expect(firstGameCard.thumbnail).toBe('assets/filler.png');
+    expect(firstGameCard.thumbnail).toBe('thumb');
     expect(firstGameCard.createdAt).toEqual(new Date('2024-01-15'));
     expect(firstGameCard.updatedAt).toEqual(new Date('2024-01-15'));
     expect(firstGameCard.isVisible).toBe(true);

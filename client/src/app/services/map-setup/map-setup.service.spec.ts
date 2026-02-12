@@ -36,7 +36,7 @@ const gameFactory = (rows = 2, cols = 2, mode: GameMode = GameMode.Classic): Gam
     size: { rows, cols },
     gameMode: mode,
     thumbnail: 'thumb',
-    maxPlayers: 4,
+    maxPlayers: 6,
     grid: grid(rows, cols),
     isVisible: true,
     createdAt: new Date(),
