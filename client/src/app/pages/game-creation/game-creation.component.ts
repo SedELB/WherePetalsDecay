@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -50,8 +51,9 @@ export class GameCreationComponent implements OnInit, OnDestroy {
     ngOnInit(): void {
         this.playerGameService.fetchVisibleGames().subscribe({
             next: (games) => this.playerGameService.setGames(games),
-            error: () => {
-                throw new Error('Failed to fetch visible games');
+            error: (error: HttpErrorResponse) => {
+                const errorMessage = error.error || 'Erreur lors de la récupération des jeux';
+                alert(`Erreur: ${errorMessage}`);
             },
         });
 
