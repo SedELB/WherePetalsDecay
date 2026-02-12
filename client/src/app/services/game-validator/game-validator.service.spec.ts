@@ -77,11 +77,9 @@ describe('GameValidatorService', () => {
         });
 
         const errors = service.validate(broken).errors;
-        expect(errors).toContain('Game name is required!');
-        expect(errors).toContain('Game description is required!');
-        expect(errors).toContain('Game mode is required!');
-        expect(errors).toContain('Game size is invalid!');
-        expect(errors).toContain('Placed objects are required!');
+        expect(errors).toContain('Le mode de jeu est requis !');
+        expect(errors).toContain('La taille du jeu est invalide !');
+        expect(errors).toContain('Les objets placés sont requis !');
 
         const tooLong = draft({
             name: 'a'.repeat(NAME_TOO_LONG),
@@ -89,37 +87,37 @@ describe('GameValidatorService', () => {
         });
 
         const lengthErrors = service.validate(tooLong).errors;
-        expect(lengthErrors).toContain('The name field exceeds the maximum length!');
-        expect(lengthErrors).toContain('The description field exceeds the maximum length!');
+        expect(lengthErrors).toContain('Le champ description dépasse la longueur maximale !');
+        expect(lengthErrors).toContain('Le champ nom dépasse la longueur maximale !');
 
         const requiredErrors = internal.validateRequiredFields({
             ...draft(),
             grid: null as unknown as TileTexture[][],
         });
 
-        expect(requiredErrors).toContain('Game grid is required!');
+        expect(requiredErrors).toContain('La grille du jeu est requise !');
     });
 
     it('validates game mode and grid dimensions', () => {
         const badMode = draft({ mode: 'invalid' as unknown as GameMode });
         const modeErrors = service.validate(badMode).errors;
-        expect(modeErrors.some((e) => e.startsWith('Game mode must be one of:'))).toBeTrue();
+        expect(modeErrors.some((e) => e.startsWith(`Le mode de jeu doit être l'un de :`))).toBeTrue();
 
         const badSize = draft({ size: { rows: 0, cols: 0 }, grid: buildGrid(1, 1) });
         const sizeErrors = service.validate(badSize).errors;
-        expect(sizeErrors).toContain('Grid size must be square and one of: 10x15x20, 10x15x20, 10x15x20');
-        expect(sizeErrors).toContain('Grid dimensions must be positive!');
+        expect(sizeErrors).toContain('La grille doit être carrée et de taille : 10x15x20, 10x15x20, 10x15x20');
+        expect(sizeErrors).toContain('Les dimensions de la grille doivent être positives !');
 
         const rowMismatch = draft({ grid: buildGrid(GRID_MISMATCH, SIZE_SMALL) });
-        expect(service.validate(rowMismatch).errors).toContain('Grid rows do not match the specified size!');
+        expect(service.validate(rowMismatch).errors).toContain('Le nombre de lignes de la grille ne correspond pas à la taille spécifiée !');
 
         const colMismatchGrid = buildGrid(SIZE_SMALL, SIZE_SMALL);
         colMismatchGrid[0] = Array.from({ length: GRID_MISMATCH }, () => TileTexture.Floor);
         const colMismatch = draft({ grid: colMismatchGrid });
-        expect(service.validate(colMismatch).errors).toContain('Grid columns do not match the specified size!');
+        expect(service.validate(colMismatch).errors).toContain('Le nombre de colonnes de la grille ne correspond pas à la taille spécifiée !');
 
         const emptyGrid = draft({ grid: [] as TileTexture[][] });
-        expect(service.validate(emptyGrid).errors).toContain('Grid is empty!');
+        expect(service.validate(emptyGrid).errors).toContain('La grille est vide !');
     });
 
     it('rejects unknown tile textures', () => {
@@ -127,7 +125,7 @@ describe('GameValidatorService', () => {
         grid[0][0] = 'lava' as TileTexture;
 
         const result = service.validate(draft({ grid }));
-        expect(result.errors.some((e) => e.startsWith('Invalid tile type at position (0, 0):'))).toBeTrue();
+        expect(result.errors.some((e) => e.startsWith('Type de case invalide à la position (0, 0) : lava'))).toBeTrue();
     });
 
     it('validates placed object types and positions (including duplicates)', () => {
@@ -137,8 +135,8 @@ describe('GameValidatorService', () => {
         ];
 
         const errors = service.validate(draft({ placedObjects })).errors;
-        expect(errors).toContain('Invalid placed object type: invalid');
-        expect(errors).toContain('Placed object has invalid position!');
+        expect(errors).toContain(`Type d'objet placé invalide : invalid`);
+        expect(errors).toContain(`L'objet placé a une position invalide !`);
 
         const duplicates: PlacedObject[] = [
             { type: TileItem.Spawn, position: { x: -1, y: 0 } },
@@ -147,8 +145,8 @@ describe('GameValidatorService', () => {
         ];
 
         const duplicateErrors = service.validate(draft({ placedObjects: duplicates })).errors;
-        expect(duplicateErrors.some((e) => e.includes('is out of bounds!'))).toBeTrue();
-        expect(duplicateErrors.some((e) => e.includes('Multiple objects placed at the same position'))).toBeTrue();
+        expect(duplicateErrors.some((e) => e.includes('hors limites'))).toBeTrue();
+        expect(duplicateErrors.some((e) => e.includes('Plusieurs objets placés à la même position'))).toBeTrue();
     });
 
     it('checks required object counts and the fallback naming', () => {
@@ -160,7 +158,7 @@ describe('GameValidatorService', () => {
         });
 
         const errors = service.validate(ctfDraft).errors;
-        expect(errors.some((e) => e.includes('Expected'))).toBeTrue();
+        expect(errors.some((e) => e.includes('On attend'))).toBeTrue();
         expect(errors.some((e) => e.includes('spawn point'))).toBeTrue();
         expect(errors.some((e) => e.includes('flag'))).toBeTrue();
 

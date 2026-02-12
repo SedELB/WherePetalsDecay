@@ -44,14 +44,6 @@ export class GameValidatorService {
     private validateRequiredFields(draft: GameDraftForValidation): string[] {
         const errors: string[] = [];
 
-    if (!draft.name || typeof draft.name !== 'string') {
-        errors.push('Le nom du jeu est requis !');
-    }
-
-    if (!draft.description || typeof draft.description !== 'string') {
-        errors.push('La description du jeu est requise !');
-    }
-
     if (!draft.mode || typeof draft.mode !== 'string') {
         errors.push('Le mode de jeu est requis !');
     }
@@ -92,7 +84,7 @@ export class GameValidatorService {
     private validateGameMode(mode: string): string[] {
         const validModes = Object.values(GameMode);
         if (!validModes.includes(mode as GameMode)) {
-            return [`Le mode de jeu doit être l’un de : ${validModes.join(', ')}`];
+            return [`Le mode de jeu doit être l'un de : ${validModes.join(', ')}`];
         }
         return [];
     }
@@ -163,11 +155,11 @@ export class GameValidatorService {
 
         for (const obj of placedObjects) {
             if (!validItemTypes.includes(obj.type)) {
-                errors.push(`Type d’objet placé invalide : ${obj.type}`);
+                errors.push(`Type d'objet placé invalide : ${obj.type}`);
             }
 
             if (!obj.position || typeof obj.position.x !== 'number' || typeof obj.position.y !== 'number') {
-                errors.push('L’objet placé a une position invalide !');
+                errors.push(`L'objet placé a une position invalide !`);
             }
         }
 
@@ -179,7 +171,7 @@ export class GameValidatorService {
 
         for (const obj of placedObjects) {
             if (obj.position.x < 0 || obj.position.x >= size.cols || obj.position.y < 0 || obj.position.y >= size.rows) {
-                errors.push(`L’objet placé à la position (${obj.position.y}, ${obj.position.x}) est hors limites !`);
+                errors.push(`L'objet placé à la position (${obj.position.y}, ${obj.position.x}) est hors limites !`);
             }
         }
 
@@ -187,7 +179,7 @@ export class GameValidatorService {
         for (const obj of placedObjects) {
             const key = `${obj.position.x},${obj.position.y}`;
             if (positionSet.has(key)) {
-                errors.push(`Plusieurs objets placés à la même position (${obj.position.y}, ${obj.position.x}) !`);
+                errors.push(`Plusieurs objets placés à la même position : (${obj.position.y}, ${obj.position.x}) !`);
             }
             positionSet.add(key);
         }

@@ -80,11 +80,11 @@ export class MapSetupFacadeService {
 
         saveOperation.subscribe({
           next: () => {
-            alert(`Jeu ${mode === 'create' ? 'créé' : 'sauvegardé'} avec succès!`);
+            alert(`Jeu ${mode === 'create' ? 'créé' : 'sauvegardé'} avec succès !`);
             this.router.navigate(['/admin']);
           },
           error: () => {
-            alert(`Une erreur s'est produite en enregistrant un jeu édité`);
+            alert(`Une erreur s'est produite en enregistrant un jeu édité !`);
           },
         });
       });
@@ -106,7 +106,7 @@ export class MapSetupFacadeService {
   private async captureThumbnail(): Promise<string> {
     const element = document.getElementById('thumbnail');
     if (!element) {
-      throw new Error('image de pévisualisation est introuvable');
+      throw new Error('image de prévisualisation est introuvable');
     }
 
     const canvas = await html2canvas(element, {
@@ -119,7 +119,7 @@ export class MapSetupFacadeService {
 
     const maxSize = THUMBNAIL_MAX_SIZE;
     const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Impossible d’obtenir le contexte du canvas');
+    if (!ctx) throw new Error("Impossible d'obtenir le contexte du canvas");
 
     const width = canvas.width > canvas.height ? maxSize : (canvas.width / canvas.height) * maxSize;
     const height = canvas.height > canvas.width ? maxSize : (canvas.height / canvas.width) * maxSize;
@@ -129,7 +129,7 @@ export class MapSetupFacadeService {
     resizedCanvas.height = height;
 
     const resizedCtx = resizedCanvas.getContext('2d');
-    if (!resizedCtx) throw new Error('Impossible d’obtenir le contexte du canvas redimensionné');
+    if (!resizedCtx) throw new Error("Impossible d'obtenir le contexte du canvas redimensionné");
 
     resizedCtx.imageSmoothingEnabled = true;
     resizedCtx.imageSmoothingQuality = 'high';
