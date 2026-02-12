@@ -2,8 +2,9 @@ import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
 import { Game, GameDocument } from '@app/model/schema/game.schema';
 import { BASE_10, BASE_15, CUSTOM_GRID_CLASSIC_MEDIUM, CUSTOM_GRID_CLASSIC_SMALL, CUSTOM_GRID_CTF_SMALL } from '@app/utils/game.constants';
-import { THUMBNAIL1_INIT } from '@app/utils/thumbnail.constants/thumbnail1.constant'
-import { THUMBNAIL2_INIT } from '@app/utils/thumbnail.constants/thumbnail2.constant'
+import { THUMBNAIL1_INIT } from '@app/utils/thumbnail.constants/thumbnail1.constant';
+import { THUMBNAIL2_INIT } from '@app/utils/thumbnail.constants/thumbnail2.constant';
+import { THUMBNAIL3_INIT } from '@app/utils/thumbnail.constants/thumbnail3.constant';
 
 import { GameMode, NbPlayersMedium, NbPlayersSmall } from '@app/utils/game.enum';
 import {
@@ -61,11 +62,11 @@ export class GameService {
         };
 
         const invalidGame3: CreateGameDto = {
-            name: 'Invalid Game 3',
+            name: 'Valid Game 3',
             description: 'Desc. 3 - CLASSIC',
             size: { rows: BASE_15, cols: BASE_15 },
             gameMode: GameMode.Classic,
-            thumbnail: 'N/A',
+            thumbnail: THUMBNAIL3_INIT,
             maxPlayers: NbPlayersMedium.MaxPLayers,
             grid: CUSTOM_GRID_CLASSIC_MEDIUM,
             isVisible: true,
@@ -154,12 +155,13 @@ export class GameService {
         }
     }
 
-    async updateVisibility(id: string, newVisibility: boolean): Promise<void> {
+    async updateVisibility(id: string, newVisibility: boolean): Promise<Game> {
         try {
             const updatedGame = await this.gameModel.findByIdAndUpdate(id, { isVisible: newVisibility }, { new: true, timestamps: false }).exec();
             if (!updatedGame) {
                 throw new Error(GAME_NOT_FOUND);
             }
+            return updatedGame;
         } catch (error) {
             throw new Error(`${GAME_VISIBILITY_UPDATE_FAILED} : ${error.message}`);
         }

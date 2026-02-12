@@ -1,3 +1,4 @@
+import { Game } from '@app/model/schema/game.schema';
 import { SocketNamespace } from '@common/enums';
 import { Injectable, Logger } from '@nestjs/common';
 import { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
@@ -23,7 +24,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
         this.logger.log(`Player client disconnected: ${socket.id}`);
     }
 
-    notifyGameCreated(game: unknown) {
+    notifyGameCreated(game: Game) {
         this.server.emit(PlayerGameEvents.GameCreated, game);
     }
 

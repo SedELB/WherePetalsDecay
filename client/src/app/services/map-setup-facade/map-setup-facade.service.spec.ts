@@ -169,7 +169,7 @@ describe('MapSetupFacadeService', () => {
 
         expect(game.thumbnail).toBe('edit-thumb');
         expect(communication.modifyGame).toHaveBeenCalledWith(game);
-        expect(alertSpy).toHaveBeenCalledWith('Jeu sauvegardé avec succès!');
+        expect(alertSpy).toHaveBeenCalledWith('Jeu sauvegardé avec succès !');
         expect(router.navigate).toHaveBeenCalledWith(['/admin']);
     });
 
@@ -233,7 +233,7 @@ describe('MapSetupFacadeService', () => {
 
         await service.saveGame(game, 'edit');
 
-        expect(alertSpy).toHaveBeenCalledWith('Une erreur s\'est produite en enregistrant un jeu édité');
+        expect(alertSpy).toHaveBeenCalledWith('Une erreur s\'est produite en enregistrant un jeu édité !');
     });
 
     // Test fallback to create mode when game doesn't exist
@@ -260,7 +260,7 @@ describe('MapSetupFacadeService', () => {
 
         expect(communication.createGame).toHaveBeenCalledWith(game);
         expect(communication.modifyGame).not.toHaveBeenCalled();
-        expect(alertSpy).toHaveBeenCalledWith('Jeu créé avec succès!');
+        expect(alertSpy).toHaveBeenCalledWith('Jeu créé avec succès !');
         expect(router.navigate).toHaveBeenCalledWith(['/admin']);
     });
 
@@ -324,6 +324,6 @@ describe('MapSetupFacadeService', () => {
 
         await expectAsync(
             (service as unknown as CaptureThumbnailApi).captureThumbnail(CAPTURE_TEST_SEED),
-        ).toBeRejectedWithError('image de pévisualisation est introuvable');
+        ).toBeRejectedWithError('image de prévisualisation est introuvable');
     });
 });

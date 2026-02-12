@@ -12,7 +12,7 @@ body {
     box-sizing: border-box;
 }
 
-body > app-button {
+#back-button {
     position: absolute;
     top: 75px;
     left: 60px;
@@ -29,12 +29,9 @@ p {
 }
 
 .add-button {
+    margin-top: 30px;
     width: auto;
     height: auto;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
 
     svg {
         width: 30px;  
