@@ -2,6 +2,7 @@ import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { Game, GameDocument, gameSchema } from '@app/model/schema/game.schema';
 import { BASE_10, CUSTOM_GRID_CLASSIC_SMALL, CUSTOM_GRID_CLASSIC_SMALL_INVALID } from '@app/utils/game.constants';
 import { GameMode, NbPlayersSmall } from '@app/utils/game.enum';
+import { GAME_NOT_FOUND, NO_GAMES_FOUND, NO_VISIBLE_GAMES_FOUND } from '@common/error-messages';
 import { Logger } from '@nestjs/common';
 import { getConnectionToken, getModelToken, MongooseModule } from '@nestjs/mongoose';
 import { Test } from '@nestjs/testing';
@@ -128,7 +129,7 @@ describe('GameServiceE2E', () => {
     });
 
     it('getAllGames() should fail if there are no games in the database', async () => {
-        await expect((gameService.getAllGames())).rejects.toThrow('Aucun jeu trouvé dans la base de données');
+        await expect((gameService.getAllGames())).rejects.toThrow(NO_GAMES_FOUND);
     });
 
     it('getGameById() return correct game with the specified id', async () => {
@@ -141,7 +142,7 @@ describe('GameServiceE2E', () => {
 
     it('getGameById() should fail if there are no game with the specified id', async () => {
         const nonExistentId = new ObjectId().toString();
-        await expect(gameService.getGameById(nonExistentId)).rejects.toThrow('Aucun jeu trouvé avec cet identifiant');
+        await expect(gameService.getGameById(nonExistentId)).rejects.toThrow(GAME_NOT_FOUND);
     });
 
     it('addGame() should add a valid game to the DB', async () => {
@@ -187,7 +188,7 @@ describe('GameServiceE2E', () => {
         modifiedFakeGame.name = 'Modified Game';
         const nonExistentId = new ObjectId().toString();
         const spyFindById = jest.spyOn(gameModel, 'findById');
-        await expect(gameService.modifyGame(nonExistentId, modifiedFakeGame)).rejects.toThrow('Aucun jeu trouvé avec cet identifiant');
+        await expect(gameService.modifyGame(nonExistentId, modifiedFakeGame)).rejects.toThrow(GAME_NOT_FOUND);
         expect(spyFindById).toHaveBeenCalledWith(nonExistentId);
     });
 
@@ -239,7 +240,7 @@ describe('GameServiceE2E', () => {
     it('getAllVisibleGames() should fail if there are no visible games in the database', async () => {
         const nonVisibleGame = { ...validGame, isVisible: false };
         await gameService.addGame(nonVisibleGame);
-        await expect(gameService.getAllVisibleGames()).rejects.toThrow('Aucun jeu visible trouvé dans la base de données');
+        await expect(gameService.getAllVisibleGames()).rejects.toThrow(NO_VISIBLE_GAMES_FOUND);
     });
 
 });
