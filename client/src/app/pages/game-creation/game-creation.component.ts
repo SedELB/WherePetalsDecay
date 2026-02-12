@@ -48,12 +48,32 @@ export class GameCreationComponent implements OnInit, OnDestroy {
         private readonly playerGameService: PlayerGameService,
     ) {}
 
+    private formatErrorMessage(error: HttpErrorResponse, fallbackMessage: string): string {
+        if (!error.error) {
+            return fallbackMessage;
+        }
+
+        if (Array.isArray(error.error)) {
+            return error.error.join('\n');
+        }
+
+        if (typeof error.error === 'string') {
+            return error.error;
+        }
+
+        if (error.error.message) {
+            return error.error.message;
+        }
+
+        return fallbackMessage;
+    }
+
     ngOnInit(): void {
         this.playerGameService.fetchVisibleGames().subscribe({
             next: (games) => this.playerGameService.setGames(games),
             error: (error: HttpErrorResponse) => {
-                const errorMessage = error.error || 'Erreur lors de la récupération des jeux';
-                alert(`Erreur: ${errorMessage}`);
+                const errorMessage = this.formatErrorMessage(error, 'Erreur lors de la récupération des jeux');
+                alert(`Erreur:\n${errorMessage}`);
             },
         });
 
