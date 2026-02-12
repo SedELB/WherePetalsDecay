@@ -73,7 +73,7 @@ describe('GameValidator', () => {
         const emptyDescGame = { ...getValidGame(), description: '' };
         expect(() => gameValidatorService.isTextLengthValid(emptyDescGame)).toThrow(DESCRIPTION_FIELD_EMPTY);
     });
-DESCRIPTION_FIELD_TOO_LONG
+
     it('isTextLengthValid() should fail if the game desc is exceeds max length', () => {
         const longDescGame = { ...getValidGame(), description: 'a'.repeat(DESC_MAX_LENGTH + 1) };
         expect(() => gameValidatorService.isTextLengthValid(longDescGame)).toThrow(DESCRIPTION_FIELD_TOO_LONG);
