@@ -1,13 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
-import { AVAILABLE_GAMES } from '@app/constants/games.constants';
 import { ROUTES } from '@app/constants/routes.constants';
-import { AVATARS, BASE_STATS } from '@app/interfaces/character';
-import { CharacterService } from '@app/services/character.service';
+import { AVATARS_PATH, BASE_STATS } from '@app/interfaces/character';
+import { Game } from '@app/interfaces/game';
+import { CharacterService } from '@app/services/character/character.service';
+import { NAME_MAX_LENGTH } from '@app/services/game-validator/game-validator.service';
+import { PlayerGameService } from '@app/services/player-game/player-game.service';
+import { Subscription } from 'rxjs';
 
 @Component({
     selector: 'app-game-creation',
@@ -21,20 +24,58 @@ import { CharacterService } from '@app/services/character.service';
     templateUrl: './game-creation.component.html',
     styleUrls: ['./game-creation.component.scss'],
 })
-export class GameCreationComponent {
+
+export class GameCreationComponent implements OnInit, OnDestroy {
     currentPhase: 'game-selection' | 'character-creation' = 'game-selection';
-    selectedGame: string | null = null;
+    selectedGame: Game | null = null;
     characterName: string = '';
     selectedAvatarIndex: number | null = null;
     lifeBonusSelected: boolean = true;
     attackDiceD6: boolean = true;
 
-    readonly avatars = AVATARS;
+    nameMaxLength = NAME_MAX_LENGTH;
+    games: Game[] = [];
+    private gamesSubscription: Subscription | null = null;
+
+    readonly avatars = AVATARS_PATH;
     readonly baseStats = BASE_STATS;
-    readonly availableGames = AVAILABLE_GAMES;
     readonly routes = ROUTES;
 
-    constructor(private readonly router: Router, private readonly characterService: CharacterService) {}
+    constructor(
+        private readonly router: Router,
+        private readonly characterService: CharacterService,
+        private readonly playerGameService: PlayerGameService,
+    ) {}
+
+    ngOnInit(): void {
+        this.playerGameService.fetchVisibleGames().subscribe({
+            next: (games) => this.playerGameService.setGames(games),
+            error: () => {
+                throw new Error('Failed to fetch visible games');
+            },
+        });
+
+        this.gamesSubscription = this.playerGameService.visibleGames$.subscribe((games) => {
+            this.games = games.sort((a, b) => {
+                const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+                const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+                return dateA.getTime() - dateB.getTime();
+            });
+
+            if (this.selectedGame && !games.find((g) => g._id === this.selectedGame?._id)) {
+                this.handleGameNoLongerAvailable();
+            }
+        });
+    }
+
+    ngOnDestroy(): void {
+        this.gamesSubscription?.unsubscribe();
+    }
+
+    handleGameNoLongerAvailable(): void {
+        alert('Le jeu sélectionné n\'est plus disponible.');
+        this.goBackToGameSelection();
+    }
 
     get lifeValue(): number {
         return this.baseStats.life + (this.lifeBonusSelected ? this.baseStats.bonus : 0);
@@ -60,8 +101,8 @@ export class GameCreationComponent {
         return this.attackDiceD6 ? 'D4' : 'D6';
     }
 
-    selectGame(gameName: string): void {
-        this.selectedGame = gameName;
+    selectGame(game: Game): void {
+        this.selectedGame = game;
         this.currentPhase = 'character-creation';
     }
 
@@ -118,5 +159,9 @@ export class GameCreationComponent {
         );
 
         this.router.navigate([this.routes.waitingRoom]);
+    }
+
+    getGameSizeLabel(game: Game): { rows: number, cols: number } {
+        return game.size;
     }
 }

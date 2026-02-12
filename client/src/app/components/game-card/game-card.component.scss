@@ -1,4 +1,4 @@
-@use "src/const.scss" as *;
+@use "src/styles.scss" as *;
 
 .gameCard {
     background-color: $frame-color;
@@ -22,6 +22,9 @@
         display: flex;
         flex-direction: column;
         gap: 5px;
+    }
+    li span {
+        color: aqua;
     }
 }
 
@@ -56,7 +59,7 @@
 }
 
 .hidden{
-    background-color: red;
+    opacity: 0.5;
     transition: all 0.3s ease;
 }
 

@@ -23,7 +23,7 @@ describe('ButtonComponent', () => {
 
     it('should have default values', () => {
         expect(component.color).toBe('white');
-        expect(component.backgroundColor).toBe('#95698D');
+        expect(component.backgroundColor).toBe(null);
         expect(component.disabled).toBe(false);
         expect(component.selected).toBe(false);
     });

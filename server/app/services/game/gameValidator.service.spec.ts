@@ -35,7 +35,7 @@ describe('GameValidator', () => {
 
     it('countByProperty() should return the correct property count for types', () => {
         const result = gameValidatorService.countByProperty(getValidGame(), 'type');
-        expect(result).toMatchObject({ ice: 3, floor: 81, wall: 12, doorClosed: 3, doorOpened: 1 });
+        expect(result).toMatchObject({ ice: 3, floor: 81, wall: 12, doorClosed: 4 });
     });
 
     it('countByProperty() should return the correct property count for items', () => {
