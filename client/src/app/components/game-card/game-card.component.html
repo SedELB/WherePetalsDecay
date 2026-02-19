@@ -1,7 +1,7 @@
-<div class="gameCard" 
-  [ngClass]="{hidden: !game.isVisible}">
+<div class="gameCard">
   <div class="image-frame">
     <img
+      [ngClass]="{hidden: !game.isVisible, visible: game.isVisible}"
       class="thumbnail"
       [src]="game.thumbnail"
       [alt]="game.name"
