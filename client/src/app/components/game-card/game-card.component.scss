@@ -59,7 +59,12 @@
 }
 
 .hidden{
-    opacity: 0.5;
+    opacity: 0.3;
+    transition: all 0.3s ease;
+}
+
+.visible{
+    opacity: 1;
     transition: all 0.3s ease;
 }
 

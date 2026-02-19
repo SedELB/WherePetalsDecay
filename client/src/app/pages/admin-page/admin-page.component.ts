@@ -29,7 +29,7 @@ export class AdminPageComponent implements OnInit, OnDestroy {
     private readonly adminGameService: AdminGameService,
     private readonly router: Router,
   ) {}
-
+  
   ngOnInit(): void {
     this.adminGameService.fetchAllGames().subscribe({
       next: (games) => this.adminGameService.setGames(games),
