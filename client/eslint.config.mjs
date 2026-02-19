@@ -32,6 +32,8 @@ export default [
             ],
             '@angular-eslint/use-lifecycle-interface': 'error',
             '@angular-eslint/no-input-rename': 'error',
+
+            quotes: ['error', 'backtick'],
         },
     },
     {

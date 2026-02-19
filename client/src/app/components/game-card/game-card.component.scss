@@ -13,6 +13,11 @@
     color: $text-color;
 }
 
+.gameCard:hover{
+    transform: scale(1.02);
+    transition: transform 0.3s ease-out;
+}
+
 .card-info{
     flex: 2;
     display: flex;
@@ -71,21 +76,22 @@
 .deleted {
     opacity: 0;
     height: 0;
-    overflow: hidden;
     transition: all 0.3s ease;
 }
 
 .tooltip{
-    position: absolute;
+    position: fixed;
+    transform: translateX(-350px);
+    transition: opacity 0.3s ease, top 0.2s ease;
     padding: 6px 10px;
     border-radius: 6px;
+    opacity: 1;
     font-size: 20px;
     pointer-events: none;
     background: rgba(0,0,0,0.85);
-    top: 50%;
-    left: 20px;
     width: 300px;
     height: auto;
+    color: $text-color;
     white-space: normal;
     word-wrap: break-word;
     overflow-wrap: break-word;

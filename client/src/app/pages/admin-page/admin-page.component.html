@@ -7,8 +7,7 @@
     <p>Créez, modifiez ou supprimez un jeu</p>
     <div class="list-container">
         @for(game of gameCards; track game.name){
-            <app-game-card [game]="game"
-            (removeParent)="removeGame(game.name)">
+            <app-game-card [game]="game">
                 <app-button [height]="50" (clicked)="navigateToGameEditor(game.name)">Modifier</app-button>
                 <app-button [height]="50" (clicked)="changeVisibility(game.name)">{{ game.isVisible ? 'Cacher' : 'Afficher' }}</app-button>
                 <app-button [height]="50" (clicked)="removeGame(game.name)">Supprimer</app-button>

@@ -5,15 +5,11 @@
       class="thumbnail"
       [src]="game.thumbnail"
       [alt]="game.name"
-      (mouseenter)="show = true"
-      (mouseleave)="show = false"
+      (mouseenter)="onMouseEnter()"
+      (mouseleave)="onMouseLeave()"
+      (mousemove)="updateTooltipPosition()"
+      #thumbnail
     />
-
-    @if (show) {
-      <div class="tooltip">
-        {{ game.description }}
-      </div>
-    }
   </div>
 
   <div class="card-info">
@@ -28,4 +24,8 @@
       <ng-content></ng-content>
     </div>
   </div>
+</div>
+
+<div class="tooltip" [style.top.px]="tooltipVerticalPos" [style.opacity]="show ? 1 : 0" #tooltip>
+  {{ game.description }}
 </div>
