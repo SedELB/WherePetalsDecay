@@ -32,19 +32,19 @@ export class AdminGameService {
     private setupWebSocketListeners(): void {
         this.webSocketService.onNamespace<Game>(this.namespace, AdminGameEvents.GameCreated, (game) => {
             const games = this.gamesSubject.value;
-            this.gamesSubject.next([...games, game]);
+            this.setGames([...games, game]);
         });
 
         this.webSocketService.onNamespace<Game>(this.namespace, AdminGameEvents.GameUpdated, (updatedGame) => {
             const games = this.gamesSubject.value.map((game) =>
                 game._id === updatedGame._id ? updatedGame : game,
             );
-            this.gamesSubject.next(games);
+            this.setGames(games);
         });
 
         this.webSocketService.onNamespace<string>(this.namespace, AdminGameEvents.GameDeleted, (gameId) => {
             const games = this.gamesSubject.value.filter((game) => game._id !== gameId);
-            this.gamesSubject.next(games);
+            this.setGames(games);
         });
 
         this.webSocketService.onNamespace<{ gameId: string; isVisible: boolean }>(
@@ -60,7 +60,7 @@ export class AdminGameService {
         const games = this.gamesSubject.value.map((game) =>
             game._id === gameId ? { ...game, isVisible } : game,
         );
-        this.gamesSubject.next(games);
+        this.setGames(games);
     }
 
     setGames(games: Game[]): void {

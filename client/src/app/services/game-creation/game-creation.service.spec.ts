@@ -12,7 +12,7 @@ import { Game } from '@app/interfaces/game';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { GameMode, SocketNamespace } from '@common/enums';
 import { environment } from 'src/environments/environment';
-import { PlayerGameEvents, PlayerGameService } from './player-game.service';
+import { PlayerGameEvents, PlayerGameService } from './game-creation.service';
 
 describe('PlayerGameService', () => {
     let service: PlayerGameService;

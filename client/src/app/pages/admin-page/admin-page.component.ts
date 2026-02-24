@@ -10,9 +10,7 @@ import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { CommunicationService } from '@app/services/communication/communication.service';
 import { Subscription } from 'rxjs';
 // eslint-disable-next-line
-import { SweetAlertResult } from 'sweetalert2';
-// eslint-disable-next-line
-import Swal from "sweetalert2"
+import Swal from "sweetalert2";
 
 @Component({
   selector: 'app-admin-page',
@@ -89,14 +87,14 @@ export class AdminPageComponent implements OnInit, OnDestroy {
     const game = this.games.find(g => g.name === name);
     if (!game) return;
 
-    const result: SweetAlertResult = await Swal.fire({
+    const result = await Swal.fire({
       title: 'Es-tu sûr ?',
       text: `Cette action est irréversible !`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
       cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Oui, supprimer',
+      confirmButtonText: 'Supprimer',
     });
 
     if (result.isConfirmed) {

@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
@@ -9,8 +9,9 @@ import { ROUTES } from '@app/constants/routes.constants';
 import { AVATARS_PATH, BASE_STATS } from '@app/interfaces/character';
 import { Game } from '@app/interfaces/game';
 import { CharacterService } from '@app/services/character/character.service';
+import { PlayerGameService } from '@app/services/game-creation/game-creation.service';
 import { NAME_MAX_LENGTH } from '@app/services/game-validator/game-validator.service';
-import { PlayerGameService } from '@app/services/player-game/player-game.service';
+import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -41,6 +42,8 @@ export class GameCreationComponent implements OnInit, OnDestroy {
     readonly avatars = AVATARS_PATH;
     readonly baseStats = BASE_STATS;
     readonly routes = ROUTES;
+
+    webSocketService = inject(WebSocketService);
 
     constructor(
         private readonly router: Router,
@@ -148,6 +151,8 @@ export class GameCreationComponent implements OnInit, OnDestroy {
         if (!this.isFormValid() || this.selectedAvatarIndex === null) {
             return;
         }
+
+        this.webSocketService.emitNamespace<Game>()
 
         this.characterService.createCharacter(
             this.characterName,

@@ -13,7 +13,7 @@ import { provideRouter } from '@angular/router';
 import { AVATARS_PATH, BASE_STATS, RANDOM_NAMES } from '@app/interfaces/character';
 import { Game } from '@app/interfaces/game';
 import { CharacterService } from '@app/services/character/character.service';
-import { PlayerGameService } from '@app/services/player-game/player-game.service';
+import { PlayerGameService } from '@app/services/game-creation/game-creation.service';
 import { GameMode } from '@common/enums';
 import { BehaviorSubject, of } from 'rxjs';
 import { GameCreationComponent } from './game-creation.component';
