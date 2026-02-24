@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { JoinGamePageComponent } from './join-game-page.component';
 
 describe('JoinGamePageComponent', () => {
@@ -8,7 +7,7 @@ describe('JoinGamePageComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [JoinGamePageComponent]
+      imports: [JoinGamePageComponent],
     })
     .compileComponents();
 
