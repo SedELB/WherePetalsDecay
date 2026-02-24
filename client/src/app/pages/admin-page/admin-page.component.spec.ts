@@ -15,6 +15,11 @@ import { CommunicationService } from '@app/services/communication/communication.
 import { GameMode } from '@common/enums';
 import { BehaviorSubject, of } from 'rxjs';
 import { AdminPageComponent } from './admin-page.component';
+// eslint-disable-next-line
+import { SweetAlertResult } from 'sweetalert2';
+// eslint-disable-next-line
+import Swal from "sweetalert2"
+
 
 describe('AdminPageComponent', () => {
   let component: AdminPageComponent;
@@ -76,7 +81,6 @@ describe('AdminPageComponent', () => {
       'deleteGame',
       'updateVisiblity',
     ]);
-
     // AdminGameService owns the game list
     adminGameService = jasmine.createSpyObj(
       'AdminGameService',
@@ -236,21 +240,42 @@ describe('AdminPageComponent', () => {
   });
 
   // Testing deleting a game
-  it('should call deleteGame with correct game id', () => {
+  it('should call deleteGame with correct game id', async () => {
     fixture.detectChanges();
     communicationService.deleteGame.and.returnValue(of(void 0));
 
-    component.removeGame('Test1');
+    spyOn(Swal, 'fire').and.returnValue(
+      Promise.resolve({ isConfirmed: true } as SweetAlertResult),
+    );
+
+    await component.removeGame('Test1');
 
     expect(communicationService.deleteGame).toHaveBeenCalledWith('1');
   });
 
   // Can't delete non existing game with no errors
-  it('should not call deleteGame when game does not exist', () => {
+  it('should not call deleteGame when game does not exist', async () => {
     fixture.detectChanges();
     communicationService.deleteGame.and.returnValue(of(void 0));
 
-    component.removeGame('Random');
+    spyOn(Swal, 'fire').and.returnValue(
+      Promise.resolve({ isConfirmed: true } as SweetAlertResult),
+    );
+
+    await component.removeGame('Random');
+
+    expect(communicationService.deleteGame).not.toHaveBeenCalled();
+  });
+
+  it('should not call deleteGame when user cancels suppression', async () => {
+    fixture.detectChanges();
+    communicationService.deleteGame.and.returnValue(of(void 0));
+    
+    spyOn(Swal, 'fire').and.returnValue(
+      Promise.resolve({ isConfirmed: false } as SweetAlertResult),
+    );
+
+    await component.removeGame('Random');
 
     expect(communicationService.deleteGame).not.toHaveBeenCalled();
   });

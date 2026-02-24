@@ -40,7 +40,7 @@ describe('GameCardComponent', () => {
     expect(img.alt).toBe(mockGame.name);
   });
 
-  it('should add hidden class when visible is false', () => {
+  it('should add hidden class to thumbnail when visible is false', () => {
     const testFixture = TestBed.createComponent(GameCardComponent);
     const testComponent = testFixture.componentInstance;
 
@@ -49,8 +49,9 @@ describe('GameCardComponent', () => {
     testFixture.detectChanges();
     expect(testFixture).toBeDefined();
     const card: HTMLElement = testFixture.nativeElement.querySelector('.gameCard');
+    const thumbnail: HTMLElement = testFixture.nativeElement.querySelector('.thumbnail');
     expect(card).toBeTruthy();
-    expect(card.classList.contains('hidden')).toBeTrue();
+    expect(thumbnail.classList.contains('hidden')).toBeTrue();
   });
 
   it('should toggle tooltip on hover events', () => {

@@ -29,6 +29,7 @@ export class GameCardComponent {
   show = false;
   gameMode = GameMode;
   tooltipVerticalPos: number = 0;
+  tooltipTopPadding : number = 140;
 
   displayTime(): string {
     const rawDate = this.game.updatedAt;
@@ -63,7 +64,7 @@ export class GameCardComponent {
     const centerOfThumbnail = rect.top + rect.height / 2;
     const maxTop = windowHeight - tooltipHeight - tooltipPadding;
 
-    this.tooltipVerticalPos = Math.min(Math.max(centerOfThumbnail - tooltipHeight / 2, 140), maxTop);
+    this.tooltipVerticalPos = Math.min(Math.max(centerOfThumbnail - tooltipHeight / 2, this.tooltipTopPadding), maxTop);
   }
 
 }

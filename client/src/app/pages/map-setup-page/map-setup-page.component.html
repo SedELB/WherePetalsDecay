@@ -32,6 +32,7 @@
               [attr.data-tile]="cell.type"
               [class.cell--clickable]="activeTileTexture !== null || activeTileItem !== null"
               [attr.title]="game.grid[rowIndex][colIndex].item ? objectPlacementTools[game.grid[rowIndex][colIndex].item!].description : null"
+              [attr.title]="game.grid[rowIndex][colIndex].type ? tileToolsDescription[game.grid[rowIndex][colIndex].type!].description : null"
               (mousedown)="onCellMouseDown(rowIndex, colIndex, $event)"
               (mouseenter)="onCellMouseEnter(rowIndex, colIndex, $event)"
               (contextmenu)="$event.preventDefault()"
@@ -73,19 +74,20 @@
             class="object-tool"
             [class.object-tool--active]="activeTileItem === objTool.type"
             [class.object-tool--complete]="isObjectTypeComplete(objTool.type)"
-            (click)="selectTileItem(objTool.type)"
-          >
+            (click)="selectTileItem(objTool.type)">
+
+            <span class="object-tool__label">{{ objTool.label }}</span>
               <span class="object-tool__slot">
                 <img class="object-tool__img" [src]="objTool.image" [alt]="objTool.label" />
               </span>
-              <span class="object-tool__label">{{ objTool.label }}</span>
               @if (objTool.type === tileItemEnum.Spawn) {
                 <span class="object-tool__count">{{ getPlacedSpawnCount() }} / {{ getRequiredSpawnCount() }}</span>
               }
-              <span class="object-tool__desc" role="tooltip">{{ objTool.description }}</span>
               @if (objTool.type === tileItemEnum.Flag) {
                 <span class="object-tool__count">{{ getPlacedFlagCount() }} / {{ getRequiredFlagCount() }}</span>
               }
+              <span class="tool__desc" role="tooltip">{{ objTool.description }}</span>
+
             </button>
           }
         }

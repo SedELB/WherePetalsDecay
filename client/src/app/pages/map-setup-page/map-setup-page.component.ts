@@ -42,6 +42,8 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
   activeTileItem: TileItem | null = null;
 
   readonly objectPlacementTools = OBJECT_PLACEMENT_TOOL;
+  readonly tileToolsDescription = TILE_TOOLS;
+
   readonly objectPlacementToolsArray = Object.values(OBJECT_PLACEMENT_TOOL);
   readonly tileTools = Object.values(TILE_TOOLS).filter(
     (tool) => ![TileTexture.Floor, TileTexture.DoorOpened].includes(tool.type),

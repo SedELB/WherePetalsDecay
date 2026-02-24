@@ -9,6 +9,10 @@ import { GameCard } from '@app/interfaces/gameCard';
 import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { CommunicationService } from '@app/services/communication/communication.service';
 import { Subscription } from 'rxjs';
+// eslint-disable-next-line
+import { SweetAlertResult } from 'sweetalert2';
+// eslint-disable-next-line
+import Swal from "sweetalert2"
 
 @Component({
   selector: 'app-admin-page',
@@ -80,15 +84,28 @@ export class AdminPageComponent implements OnInit, OnDestroy {
     });
   }
 
-  removeGame(name: string) {
+  async removeGame(name: string) {
+
     const game = this.games.find(g => g.name === name);
     if (!game) return;
 
-    this.communicationService.deleteGame(game._id).subscribe({
-      error: (error: HttpErrorResponse) => {
-        const errorMessage = error.error || 'Erreur lors de la suppression du jeu';
-        alert(`Erreur: ${errorMessage}`);
-      },
+    const result: SweetAlertResult = await Swal.fire({
+      title: 'Es-tu sûr ?',
+      text: `Cette action est irréversible !`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Oui, supprimer',
     });
+
+    if (result.isConfirmed) {
+      this.communicationService.deleteGame(game._id).subscribe({
+        error: (error: HttpErrorResponse) => {
+          const errorMessage = error.error || 'Erreur lors de la suppression du jeu';
+          alert(`Erreur: ${errorMessage}`);
+        },
+      });
+    }
   }
 }
