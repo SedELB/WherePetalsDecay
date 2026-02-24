@@ -10,7 +10,9 @@ import { PlayerGameEvents } from './games.gateway.events';
 export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     @WebSocketServer() private server: Server;
 
-    constructor(private readonly logger: Logger) {}
+    constructor(private readonly logger: Logger) {
+        this.server.onNa
+    }
 
     afterInit() {
         this.logger.log('GamesGateway initialized on /games namespace');
@@ -35,4 +37,5 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     notifyGameVisibilityChanged(gameId: string, isVisible: boolean) {
         this.server.emit(PlayerGameEvents.GameVisibilityChanged, { gameId, isVisible });
     }
+
 }

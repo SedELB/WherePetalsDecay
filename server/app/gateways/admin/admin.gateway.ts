@@ -39,8 +39,4 @@ export class AdminGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     notifyGameVisibilityChanged(gameId: string, isVisible: boolean) {
         this.server.emit(AdminGameEvents.GameVisibilityChanged, { gameId, isVisible });
     }
-
-    notifyGamesUpdated() {
-        this.server.emit(AdminGameEvents.GamesUpdated);
-    }
 }
