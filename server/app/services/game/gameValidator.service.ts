@@ -14,7 +14,6 @@ import {
     NO_TERRAIN_TILES,
     SPAWN_POINTS_NOT_PLACED,
     UNREACHABLE_TILES,
-    VALIDATION_ERRORS_PREFIX,
     DESC_INVALID_DOOR_PLACEMENT,
 } from '@common/error-messages';
 import { Injectable } from '@nestjs/common';
@@ -234,7 +233,7 @@ export class GameValidatorService {
             }
         }
         if (errors.length > 0) {
-            throw new Error(`${VALIDATION_ERRORS_PREFIX} : ${errors.join('; ')}`);
+            throw new Error(`${errors.join('\n- ')}`);
         }
         return true;
     }
