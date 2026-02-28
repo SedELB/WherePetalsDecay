@@ -31,7 +31,8 @@
         "mongoose": "^8.21.0",
         "reflect-metadata": "^0.2.2",
         "rimraf": "6.0.1",
-        "rxjs": "^7.8.2"
+        "rxjs": "^7.8.2",
+        "sweetalert2": "^11.26.20"
     },
     "devDependencies": {
         "@eslint/js": "9.39.1",
@@ -43,9 +44,9 @@
         "@types/node": "^24.2.1",
         "@types/sinon": "^17.0.4",
         "@types/supertest": "^6.0.3",
-        "@typescript-eslint/eslint-plugin": "8.49.0",
-        "@typescript-eslint/parser": "8.49.0",
-        "eslint": "9.39.1",
+        "@typescript-eslint/eslint-plugin": "^8.56.0",
+        "@typescript-eslint/parser": "^8.56.0",
+        "eslint": "^9.39.1",
         "jest": "30.2.0",
         "mongodb-memory-server": "10.2.0",
         "prettier": "^3.6.2",

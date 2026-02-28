@@ -12,7 +12,6 @@ import {
     NO_TERRAIN_TILES,
     SPAWN_POINTS_NOT_PLACED,
     UNREACHABLE_TILES,
-    VALIDATION_ERRORS_PREFIX,
 } from '@common/error-messages';
 import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -332,24 +331,24 @@ describe('GameValidator', () => {
     });
 
     it('isGameValid() should throw with multiple validation errors', () => {
-        // Collects and reports all validation failures at once with error prefix
+        // Collects and reports all validation failures at once
         const invalidGameMultiple = {
             ...invalidGame,
             name: '',
             description: '',
         };
-        expect(() => gameValidatorService.isGameValid(invalidGameMultiple)).toThrow(VALIDATION_ERRORS_PREFIX);
+        expect(() => gameValidatorService.isGameValid(invalidGameMultiple)).toThrow(NAME_FIELD_EMPTY);
     });
 
     it('isGameValid() should handle single validation error', () => {
-        // Throws validation error prefix even when only one problem exists (e.g., empty name)
+        // Throws with the specific error message when only one problem exists (e.g., empty name)
         const game = getCleanGame();
         game.grid[0][0].item = TileItem.Spawn;
         game.grid[0][1].item = TileItem.Spawn;
         game.grid[1][0].item = TileItem.Spawn;
         game.grid[1][1].item = TileItem.Spawn;
         game.name = '';
-        expect(() => gameValidatorService.isGameValid(game)).toThrow(VALIDATION_ERRORS_PREFIX);
+        expect(() => gameValidatorService.isGameValid(game)).toThrow(NAME_FIELD_EMPTY);
     });
 
     it('isGameValid() should catch all validation errors in one call', () => {
@@ -360,7 +359,7 @@ describe('GameValidator', () => {
         try {
             gameValidatorService.isGameValid(invalidGame);
         } catch (error) {
-            expect(error.message).toContain(VALIDATION_ERRORS_PREFIX);
+            expect(error.message).toContain(NO_TERRAIN_TILES);
         }
 
         expect(spyIsTextLengthValid).toHaveBeenCalled();
