@@ -17,7 +17,8 @@ import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { GameMode, TileItem, TileTexture } from '@common/enums';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
+import swal from 'sweetalert2';
 import { MapSetupPageComponent } from './map-setup-page.component';
 
 const makeGrid = (rows: number, cols: number): Tile[][] =>
@@ -84,7 +85,7 @@ describe('MapSetupPageComponent', () => {
         ]);
 
         const counts = makeCounts();
-        facade.initializeFromNavigation.and.returnValue({ game, mode: 'edit', itemCounts: counts });
+        facade.initializeFromNavigation.and.returnValue(Promise.resolve({ game, mode: 'edit', itemCounts: counts }));
 
         service.getObjectAt.and.returnValue(game.grid[0][0]);
         service.selectTileTexture.and.returnValue({ activeTileTexture: TileTexture.Wall, activeTileItem: null });
@@ -102,9 +103,10 @@ describe('MapSetupPageComponent', () => {
         tileItemCountService.isObjectTypeComplete.and.returnValue(true);
         tileItemCountService.createRequiredCounts.and.returnValue(counts);
 
-        adminGameService = jasmine.createSpyObj('AdminGameService', [], {
+        adminGameService = jasmine.createSpyObj('AdminGameService', ['fetchAllGames', 'setGames'], {
             games$: gamesSubject.asObservable(),
         });
+        adminGameService.fetchAllGames.and.returnValue(of([game]));
 
         await TestBed.configureTestingModule({
             imports: [MapSetupPageComponent],
@@ -127,54 +129,57 @@ describe('MapSetupPageComponent', () => {
     });
 
     // Test initialization from facade
-    it('should initialize from facade on ngOnInit', () => {
+    it('should initialize from facade on ngOnInit', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         expect(facade.initializeFromNavigation).toHaveBeenCalled();
         expect(component.game).toBe(game);
         expect(component.mode).toBe('edit');
     });
 
     // Test that initialGameState is saved
-    it('should save initial game state on ngOnInit', () => {
+    it('should save initial game state on ngOnInit', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         const initialState = (component as unknown as { initialGameState: Game }).initialGameState;
         expect(initialState).toBeTruthy();
         expect(initialState._id).toBe(game._id);
     });
 
     // Test subscription to games$ in edit mode
-    it('should subscribe to games$ when in edit mode', () => {
+    it('should subscribe to games$ when in edit mode', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         expect(component.mode).toBe('edit');
         const subscription = (component as unknown as { gameSubscription?: unknown }).gameSubscription;
         expect(subscription).toBeTruthy();
     });
 
     // Test no subscription in create mode
-    it('should not subscribe to games$ when in create mode', () => {
-        facade.initializeFromNavigation.and.returnValue({ game, mode: 'create', itemCounts: makeCounts() });
+    it('should not subscribe to games$ when in create mode', async () => {
+        facade.initializeFromNavigation.and.returnValue(Promise.resolve({ game, mode: 'create', itemCounts: makeCounts() }));
         fixture.detectChanges();
+        await fixture.whenStable();
         const subscription = (component as unknown as { gameSubscription?: unknown }).gameSubscription;
         expect(subscription).toBeUndefined();
     });
 
     // Test game deletion scenario
-    it('should switch to create mode when game is deleted by another admin', () => {
+    it('should switch to create mode when game is deleted by another admin', async () => {
         fixture.detectChanges();
-        spyOn(window, 'alert');
+        await fixture.whenStable();
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
 
         gamesSubject.next([]);
 
         expect(component.mode).toBe('create');
-        expect(window.alert).toHaveBeenCalledWith(
-            'Ce jeu a été supprimé par un autre administrateur. ' +
-            'Vous pouvez continuer à travailler et il sera créé comme un nouveau jeu lors de la sauvegarde.',
-        );
+        expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Jeu supprimé' }));
     });
 
     // Test concurrent edit with user accepting update
-    it('should update game when another admin modifies it and user accepts', () => {
+    it('should update game when another admin modifies it and user accepts', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         spyOn(window, 'confirm').and.returnValue(true);
 
         const updatedGame = { ...game, updatedAt: new Date('2024-02-15') };
@@ -186,8 +191,9 @@ describe('MapSetupPageComponent', () => {
     });
 
     // Test concurrent edit with user rejecting update
-    it('should keep local changes when another admin modifies and user rejects', () => {
+    it('should keep local changes when another admin modifies and user rejects', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         spyOn(window, 'confirm').and.returnValue(false);
 
         const originalGameName = component.game.name;
@@ -199,8 +205,9 @@ describe('MapSetupPageComponent', () => {
     });
 
     // Test save scenario updates isSaving flag
-    it('should not prompt user when game is updated during save', () => {
+    it('should not prompt user when game is updated during save', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         spyOn(window, 'confirm');
         (component as unknown as { isSaving: boolean }).isSaving = true;
 
@@ -212,8 +219,9 @@ describe('MapSetupPageComponent', () => {
     });
 
     // Test ngOnDestroy cleanup
-    it('should unsubscribe from games$ on ngOnDestroy', () => {
+    it('should unsubscribe from games$ on ngOnDestroy', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         const subscription = (component as unknown as { gameSubscription: { unsubscribe: () => void } }).gameSubscription;
         spyOn(subscription, 'unsubscribe');
 
@@ -229,59 +237,68 @@ describe('MapSetupPageComponent', () => {
     });
 
     // Test tile count delegation
-    it('should delegate getRequiredSpawnCount to service', () => {
+    it('should delegate getRequiredSpawnCount to service', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         expect(component.getRequiredSpawnCount()).toBe(2);
         expect(tileItemCountService.getRequiredSpawnCount).toHaveBeenCalledWith(game);
     });
 
-    it('should delegate getRequiredFlagCount to service', () => {
+    it('should delegate getRequiredFlagCount to service', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         expect(component.getRequiredFlagCount()).toBe(0);
         expect(tileItemCountService.getRequiredFlagCount).toHaveBeenCalledWith(game);
     });
 
-    it('should delegate countTileTexture to service', () => {
+    it('should delegate countTileTexture to service', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         expect(component.countTileTexture(TileTexture.Wall)).toBe(WALL_COUNT);
         expect(tileItemCountService.countTileTexture).toHaveBeenCalledWith(game, TileTexture.Wall);
     });
 
-    it('should delegate countTileItem to service', () => {
+    it('should delegate countTileItem to service', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         expect(component.countTileItem(TileItem.Spawn)).toBe(1);
         expect(tileItemCountService.countTileItem).toHaveBeenCalledWith(game, TileItem.Spawn);
     });
 
-    it('should delegate getPlacedSpawnCount to service', () => {
+    it('should delegate getPlacedSpawnCount to service', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         expect(component.getPlacedSpawnCount()).toBe(1);
         expect(tileItemCountService.getPlacedSpawnCount).toHaveBeenCalledWith(game);
     });
 
-    it('should delegate getPlacedFlagCount to service', () => {
+    it('should delegate getPlacedFlagCount to service', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         expect(component.getPlacedFlagCount()).toBe(0);
         expect(tileItemCountService.getPlacedFlagCount).toHaveBeenCalledWith(game);
     });
 
-    it('should delegate isObjectTypeComplete to service', () => {
+    it('should delegate isObjectTypeComplete to service', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         expect(component.isObjectTypeComplete(TileItem.Spawn)).toBe(true);
         expect(tileItemCountService.isObjectTypeComplete).toHaveBeenCalledWith(game, TileItem.Spawn);
     });
 
     // Test object queries
-    it('should delegate getObjectAt to service', () => {
+    it('should delegate getObjectAt to service', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         const tile = component.getObjectAt(0, 0);
         expect(tile).toBe(game.grid[0][0]);
         expect(service.getObjectAt).toHaveBeenCalledWith(game, 0, 0);
     });
 
     // Test tile texture selection
-    it('should select tile texture and update active states', () => {
+    it('should select tile texture and update active states', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         component.selectTileTexture(TileTexture.Wall);
 
         expect(service.selectTileTexture).toHaveBeenCalled();
@@ -290,8 +307,9 @@ describe('MapSetupPageComponent', () => {
     });
 
     // Test tile item selection
-    it('should select tile item and update active states', () => {
+    it('should select tile item and update active states', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         component.selectTileItem(TileItem.Spawn);
 
         expect(service.selectTileItem).toHaveBeenCalled();
@@ -300,8 +318,9 @@ describe('MapSetupPageComponent', () => {
     });
 
     // Test mouse down interaction
-    it('should handle cell mouse down event', () => {
+    it('should handle cell mouse down event', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         const event = {} as MouseEvent;
         component.onCellMouseDown(1, 1, event);
 
@@ -311,8 +330,9 @@ describe('MapSetupPageComponent', () => {
     });
 
     // Test mouse enter interaction
-    it('should handle cell mouse enter event', () => {
+    it('should handle cell mouse enter event', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         const event = {} as MouseEvent;
         component.onCellMouseEnter(1, 1, event);
 
@@ -322,8 +342,9 @@ describe('MapSetupPageComponent', () => {
     });
 
     // Test grid mouse leave
-    it('should reset interaction state on grid mouse leave', () => {
+    it('should reset interaction state on grid mouse leave', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         component.onGridMouseLeave();
 
         expect(service.resetInteractionState).toHaveBeenCalled();
@@ -332,8 +353,9 @@ describe('MapSetupPageComponent', () => {
     });
 
     // Test document mouse up
-    it('should reset interaction state on document mouse up', () => {
+    it('should reset interaction state on document mouse up', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         component.onDocumentMouseUp();
 
         expect(service.resetInteractionState).toHaveBeenCalled();
@@ -342,8 +364,9 @@ describe('MapSetupPageComponent', () => {
     });
 
     // Test navigation back
-    it('should navigate to admin page on back', () => {
+    it('should navigate to admin page on back', async () => {
         fixture.detectChanges();
+        await fixture.whenStable();
         component.onBack();
 
         expect(facade.navigateToAdmin).toHaveBeenCalled();

@@ -59,7 +59,7 @@ export class CreateGamePageComponent {
       updatedAt: new Date(),
     };
 
-    this.router.navigate(['/editor'], { state: { game, mode: 'create' } });
+    this.router.navigate(['/editor/new'], { state: { game, mode: 'create' } });
   }
 
 }
