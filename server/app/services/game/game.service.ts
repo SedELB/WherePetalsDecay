@@ -8,11 +8,9 @@ import { THUMBNAIL3_INIT } from '@app/utils/thumbnail.constants/thumbnail3.const
 
 import { GameMode, NbPlayersMedium, NbPlayersSmall } from '@app/utils/game.enum';
 import {
-    GAME_CREATION_FAILED,
     GAME_DELETION_FAILED,
     GAME_NAME_NOT_UNIQUE,
     GAME_NOT_FOUND,
-    GAME_UPDATE_FAILED,
     GAME_VISIBILITY_UPDATE_FAILED,
     NO_GAMES_FOUND,
     NO_VISIBLE_GAMES_FOUND,
@@ -118,7 +116,7 @@ export class GameService {
             const createdGame = await this.gameModel.create(game);
             return createdGame;
         } catch (error) {
-            throw new Error(`${GAME_CREATION_FAILED}: ${error.message}`);
+            throw new Error(`${error.message}`);
         }
     }
 
@@ -139,7 +137,7 @@ export class GameService {
             const updatedGame = await this.gameModel.findByIdAndUpdate(id, fullGameData, { new: true }).exec();
             return updatedGame;
         } catch (error) {
-            throw new Error(`${GAME_UPDATE_FAILED} : ${error.message}`);
+            throw new Error(`${error.message}`);
         }
     }
 

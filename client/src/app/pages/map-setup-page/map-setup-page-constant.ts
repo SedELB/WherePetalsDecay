@@ -31,8 +31,8 @@ export const OBJECT_PLACEMENT_TOOL: Record<TileItem, ObjectPlacementTool> = {
     [TileItem.Flag]: {
         type: TileItem.Flag,
         label: 'Drapeau',
-        description: 'Emplacement où un joueur peut placer un drapeau.',
-        image: '/assets/icons/blackflag.svg',
+        description: 'Le drapeau à capturer',
+        image: '/assets/icons/blackflag.svg',   
     },
     [TileItem.HealingSanctuary]: {
         type: TileItem.HealingSanctuary,
