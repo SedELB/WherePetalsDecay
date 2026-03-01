@@ -11,6 +11,7 @@ export class WebSocketService implements OnDestroy {
     private readonly serverUrl = environment.serverUrl.replace('/api', '');
 
     constructor() {
+        // Connexions automatiques pour admin et games
         this.connectNamespace(SocketNamespace.Admin);
         this.connectNamespace(SocketNamespace.Games);
     }
@@ -37,6 +38,11 @@ export class WebSocketService implements OnDestroy {
         socket?.on(event, callback as (...args: unknown[]) => void);
     }
 
+    offNamespace(namespace: string, event: string): void {
+        const socket = this.sockets.get(namespace);
+        socket?.off(event);
+    }
+
     emitNamespace<T>(namespace: string, event: string, data?: T): void {
         const socket = this.sockets.get(namespace);
         socket?.emit(event, data);
@@ -44,6 +50,10 @@ export class WebSocketService implements OnDestroy {
 
     isConnectedNamespace(namespace: string): boolean {
         return this.sockets.get(namespace)?.connected ?? false;
+    }
+
+    getSocketId(namespace: string): string | undefined {
+        return this.sockets.get(namespace)?.id;
     }
 
     ngOnDestroy(): void {
