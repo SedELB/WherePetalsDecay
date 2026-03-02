@@ -19,7 +19,7 @@ export const BASE_STATS = {
     bonus: 2,
 };
 
-const BASE_AVATAR_PATH = 'assets/avatars';
+const BASE_AVATAR_PATH = './assets/avatars';
 
 export const AVATARS_PATH: readonly string[] = [
     `${BASE_AVATAR_PATH}/archer.png`,
