@@ -18,7 +18,6 @@ export class LobbyService {
             game,
             hostSocketId,
             playerCount: 1,
-            maxPlayers: game.maxPlayers,
             isLocked: false,
             players: [player],
         };
@@ -32,7 +31,9 @@ export class LobbyService {
     }
 
     getAvailableLobbies() : Lobby[] {
-        const availableLobbies = Array.from(this.lobbies.values()).filter(lobby => lobby.isLocked === false && lobby.playerCount < lobby.maxPlayers);
+        const availableLobbies = Array.from(this.lobbies.values()).filter(
+            lobby => lobby.isLocked === false && lobby.playerCount < lobby.game.maxPlayers);
+
         return availableLobbies;
     }
 
@@ -43,7 +44,7 @@ export class LobbyService {
 
         lobby.players.push(player);
         lobby.playerCount++;
-        if (lobby.playerCount === lobby.maxPlayers) lobby.isLocked = true;
+        if (lobby.playerCount === lobby.game.maxPlayers) lobby.isLocked = true;
         return lobby;
     }
 

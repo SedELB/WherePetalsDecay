@@ -6,7 +6,6 @@ export interface Lobby {
     game: Game,
     hostSocketId: string,
     playerCount: number,
-    maxPlayers: number,
     isLocked: boolean,
     players: Player[],
 };

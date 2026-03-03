@@ -10,23 +10,20 @@
             @else {
                 <div class="list-container">
                     @for(lobby of activeLobbies; track lobby.gameId){
-                        <app-game-card
-                            [game]="{
-                                name: lobby.game.name,
-                                description: lobby.game.description,
-                                size: lobby.game.size,
-                                gameMode: lobby.game.gameMode,
-                                createdAt: lobby.game.createdAt,
-                                updatedAt: lobby.game.updatedAt,
-                                thumbnail: lobby.game.thumbnail,
-                                isVisible: lobby.game.isVisible,
+                        <app-lobby-card
+                            [lobby]="{
+                                gameId: lobby.gameId,
+                                game: lobby.game,
+                                hostSocketId: lobby.hostSocketId,
+                                playerCount: lobby.playerCount,
+                                isLocked: lobby.isLocked,
+                                players: lobby.players,
                             }"
                         >
                             <app-button [height]="50">Sélectionner</app-button>
-                        </app-game-card>
+                        </app-lobby-card>
                     }
                 </div>
             }
-            
         </section>
 </div>
