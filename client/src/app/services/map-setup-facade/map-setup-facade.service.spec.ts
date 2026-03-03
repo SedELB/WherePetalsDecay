@@ -18,9 +18,9 @@ import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 
-import type { Game } from '@app/interfaces/game';
-import type { Tile } from '@app/interfaces/tile';
 import { GameMode, TileTexture } from '@common/enums';
+import type { Game } from '@common/game';
+import type { Tile } from '@common/tile';
 
 const grid = (rows: number, cols: number): Tile[][] =>
     Array.from({ length: rows }, () =>

@@ -1,6 +1,6 @@
-import { GameMode, TileItem } from '@common/enums';
-import { Tile } from './tile';
+import { GameMode, TileItem } from './enums';
 import { Vec2 } from './vec2';
+import { Tile } from './tile'
 
 export interface PlacedObject {
     type: TileItem;

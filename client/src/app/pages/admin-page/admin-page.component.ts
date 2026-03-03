@@ -4,10 +4,10 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
-import { Game } from '@app/interfaces/game';
-import { GameCard } from '@app/interfaces/gameCard';
 import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { CommunicationService } from '@app/services/communication/communication.service';
+import { Game } from '@common/game';
+import { GameCard } from '@app/interfaces/gameCard';
 import { Subscription } from 'rxjs';
 // eslint-disable-next-line
 import Swal from "sweetalert2";
@@ -31,7 +31,7 @@ export class AdminPageComponent implements OnInit, OnDestroy {
     private readonly adminGameService: AdminGameService,
     private readonly router: Router,
   ) {}
-  
+
   ngOnInit(): void {
     this.adminGameService.fetchAllGames().subscribe({
       next: (games) => this.adminGameService.setGames(games),

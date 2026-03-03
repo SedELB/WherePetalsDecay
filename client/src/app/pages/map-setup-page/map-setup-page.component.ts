@@ -1,8 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from '@app/components/button/button.component';
-import { Game } from '@app/interfaces/game';
-import { Tile } from '@app/interfaces/tile';
+import { Game } from '@common/game';
 import { OBJECT_PLACEMENT_TOOL, TILE_TOOLS } from '@app/pages/map-setup-page/map-setup-page-constant';
 import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { DESC_MAX_LENGTH, NAME_MAX_LENGTH } from '@app/services/game-validator/game-validator.service';
@@ -11,6 +10,7 @@ import { TileItemCounts } from '@app/services/map-setup.types';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { TileItem, TileTexture } from '@common/enums';
+import { Tile } from '@common/tile';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -72,7 +72,7 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
         const currentGame = games.find(g => g._id === this.game._id);
 
         if (!currentGame) {
-          if (!this.gameDeletedAlertShown){
+          if (!this.gameDeletedAlertShown) {
             this.gameDeletedAlertShown = true;
             alert(
               'Ce jeu a été supprimé par un autre administrateur. ' +
@@ -80,7 +80,7 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
             );
           }
           this.mode = 'create';
-          
+
         } else if (currentGame.updatedAt !== this.game.updatedAt) {
           if (this.isSaving) {
             this.game = JSON.parse(JSON.stringify(currentGame));

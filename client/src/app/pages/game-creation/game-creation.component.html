@@ -107,11 +107,9 @@
                     <div class="navigation-buttons">
                         <app-button (click)="goBackToGameSelection()">Retour</app-button>
                         <app-button
-                            [disabled]="!isFormValid()"
+                            [disabled]="!isFormValid() || isSubmitting"
                             (click)="confirmCharacter()"
-                        >
-                            Confirmer
-                        </app-button>
+                        >Confirmer</app-button>
                     </div>
                 </div>
             </div>

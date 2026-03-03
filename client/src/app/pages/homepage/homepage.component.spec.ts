@@ -53,10 +53,4 @@ describe('HomePageComponent', () => {
         expect(buttons.length).toBe(EXPECTED_MENU_BUTTONS_COUNT);
     });
 
-    it('should have the "Joindre une partie" button disabled', () => {
-        const compiled = fixture.nativeElement;
-        const buttons = compiled.querySelectorAll('app-button');
-        const firstButton = buttons[0].querySelector('button');
-        expect(firstButton?.disabled).toBeTrue();
-    });
 });

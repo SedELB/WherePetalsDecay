@@ -1,3 +1,32 @@
 <div class="container">
-    
+    <app-button [width]="100" [route]="routes.home">Retour</app-button>
+    <section class="game-selection">
+            <h2>Joindre une partie</h2>
+            <p>Sélectionnez une partie à rejoindre</p>
+
+            @if(activeLobbies.length === 0){
+                <p class="no-games">Aucun partie disponible</p>
+            }
+            @else {
+                <div class="list-container">
+                    @for(lobby of activeLobbies; track lobby.gameId){
+                        <app-game-card
+                            [game]="{
+                                name: lobby.game.name,
+                                description: lobby.game.description,
+                                size: lobby.game.size,
+                                gameMode: lobby.game.gameMode,
+                                createdAt: lobby.game.createdAt,
+                                updatedAt: lobby.game.updatedAt,
+                                thumbnail: lobby.game.thumbnail,
+                                isVisible: lobby.game.isVisible,
+                            }"
+                        >
+                            <app-button [height]="50">Sélectionner</app-button>
+                        </app-game-card>
+                    }
+                </div>
+            }
+            
+        </section>
 </div>
