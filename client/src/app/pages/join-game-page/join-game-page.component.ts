@@ -1,17 +1,17 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
-import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { ROUTES } from '@app/constants/routes.constants';
+import { LobbyCardComponent } from '@app/components/lobby-card/lobby-card.component';
 
 // The page after clicking "Joindre une partie"
 @Component({
   selector: 'app-join-game-page',
-  imports: [ButtonComponent, GameCardComponent],
+  imports: [ButtonComponent, LobbyCardComponent],
   templateUrl: './join-game-page.component.html',
   styleUrl: './join-game-page.component.scss',
 })
@@ -55,4 +55,10 @@ export class JoinGamePageComponent implements OnInit, OnDestroy {
       gameId,
     );
   }
+
+  selectLobby(lobby: Lobby) {
+    this.router.navigate(['/character-selection', lobby.gameId]);
+  }
+
+  
 }

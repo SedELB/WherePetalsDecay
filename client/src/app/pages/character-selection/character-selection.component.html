@@ -1,0 +1,82 @@
+<div class="container">
+    <app-button [width]="100" (click)="goBack()">Retour</app-button>
+
+    <section class="character-creation">
+        <h2>Création de personnage</h2>
+        
+        <p>Jeu sélectionné : {{ selectedGame?.name || 'Chargement...' }}</p>
+
+        <div class="list-container">
+            <div class="form-container">
+                <div class="form-group">
+                    <label for="characterName">Nom du personnage</label>
+                    <input
+                        type="text"
+                        id="characterName"
+                        [(ngModel)]="characterName"
+                        placeholder="Entrez un nom"
+                        [maxlength]="nameMaxLength"
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label>Choisissez un avatar</label>
+                    <div class="avatar-grid">
+                        @for (avatar of avatars; track avatar; let i = $index) {
+                        <button
+                            type="button"
+                            class="avatar-item"
+                            [class.selected]="selectedAvatarIndex === i"
+                            (click)="selectAvatar(i)"
+                        >
+                            <img [src]="avatar" [alt]="'Avatar ' + (i + 1)" />
+                        </button>
+                        }
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Attributs du personnage</label>
+                    <div class="attributes-container">
+                        <div class="attribute" [class.has-bonus]="lifeBonusSelected" (click)="selectBonus(true)">
+                            <span class="attribute-name">Vie</span>
+                            <span class="attribute-value">{{ lifeValue }}</span>
+                            <span class="attribute-description">Points de vie</span>
+                        </div>
+                        <div class="attribute" [class.has-bonus]="!lifeBonusSelected" (click)="selectBonus(false)">
+                            <span class="attribute-name">Rapidité</span>
+                            <span class="attribute-value">{{ speedValue }}</span>
+                            <span class="attribute-description">Vitesse de déplacement</span>
+                        </div>
+                        <div class="attribute" [class.has-bonus]="attackDiceD6" (click)="selectAttackDice(true)">
+                            <span class="attribute-name">Attaque</span>
+                            <span class="attribute-value">{{ attackValue }}</span>
+                            <span class="attribute-dice">{{ attackDice }}</span>
+                            <span class="attribute-description">Puissance d'attaque</span>
+                        </div>
+                        <div class="attribute" [class.has-bonus]="!attackDiceD6" (click)="selectAttackDice(false)">
+                            <span class="attribute-name">Défense</span>
+                            <span class="attribute-value">{{ defenseValue }}</span>
+                            <span class="attribute-dice">{{ defenseDice }}</span>
+                            <span class="attribute-description">Résistance aux dégâts</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="random-button">
+                    <app-button (click)="generateRandomCharacter()">
+                        Générer un personnage aléatoire
+                    </app-button>
+                </div>
+
+                <div class="navigation-buttons">
+                    <app-button (click)="goBack()">Annuler</app-button>
+                    <app-button
+                        [disabled]="!isFormValid() || isSubmitting"
+                        (click)="confirmCharacter()"
+                    >Confirmer</app-button>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
