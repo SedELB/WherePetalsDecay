@@ -1,13 +1,13 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { Game } from '@app/interfaces/game';
 import { CommunicationService } from '@app/services/communication/communication.service';
 import { GameValidatorService } from '@app/services/game-validator/game-validator.service';
 import { TileItemCounts } from '@app/services/map-setup.types';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
+import { Game } from '@common/game';
 import html2canvas from 'html2canvas';
-import { HttpErrorResponse } from '@angular/common/http';
 
 const THUMBNAIL_QUALITY = 0.85;
 const THUMBNAIL_MAX_SIZE = 256;
@@ -97,7 +97,7 @@ export class MapSetupFacadeService {
           alert(`Partie créée avec succès !`);
           this.router.navigate(['/admin']);
         },
-        error: (err : HttpErrorResponse) => {
+        error: (err: HttpErrorResponse) => {
           alert(`Une erreur s'est produite en enregistrant un nouveau jeu : ${err.error}`);
         },
       });

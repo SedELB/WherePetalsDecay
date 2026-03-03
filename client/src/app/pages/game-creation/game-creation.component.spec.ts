@@ -10,8 +10,8 @@
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { AVATARS_PATH, BASE_STATS, RANDOM_NAMES } from '@app/interfaces/character';
-import { Game } from '@app/interfaces/game';
+import { AVATARS_PATH, BASE_STATS, RANDOM_NAMES } from '@common/character';
+import { Game } from '@common/game';
 import { CharacterService } from '@app/services/character/character.service';
 import { PlayerGameService } from '@app/services/game-creation/game-creation.service';
 import { GameMode } from '@common/enums';

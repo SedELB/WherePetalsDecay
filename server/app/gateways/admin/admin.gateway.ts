@@ -1,9 +1,9 @@
+import { Game } from '@app/model/schema/game.schema';
 import { SocketNamespace } from '@common/enums';
 import { Injectable, Logger } from '@nestjs/common';
 import { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { AdminGameEvents } from './admin.gateway.events';
-import { Game } from '@app/model/schema/game.schema';
 
 @WebSocketGateway({ namespace: SocketNamespace.Admin, cors: true })
 @Injectable()
@@ -38,5 +38,9 @@ export class AdminGateway implements OnGatewayConnection, OnGatewayDisconnect, O
 
     notifyGameVisibilityChanged(gameId: string, isVisible: boolean) {
         this.server.emit(AdminGameEvents.GameVisibilityChanged, { gameId, isVisible });
+    }
+
+    notifyGamesUpdated() {
+        this.server.emit(AdminGameEvents.GamesUpdated);
     }
 }

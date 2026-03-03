@@ -9,16 +9,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
-import { Game } from '@app/interfaces/game';
+import { Game } from '@common/game';
 import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { CommunicationService } from '@app/services/communication/communication.service';
 import { GameMode } from '@common/enums';
 import { BehaviorSubject, of } from 'rxjs';
 import { AdminPageComponent } from './admin-page.component';
-// eslint-disable-next-line
-import { SweetAlertResult } from 'sweetalert2';
-// eslint-disable-next-line
-import Swal from "sweetalert2"
+import swal, {SweetAlertResult} from 'sweetalert2';
 
 
 describe('AdminPageComponent', () => {
@@ -244,7 +241,7 @@ describe('AdminPageComponent', () => {
     fixture.detectChanges();
     communicationService.deleteGame.and.returnValue(of(void 0));
 
-    spyOn(Swal, 'fire').and.returnValue(
+    spyOn(swal, 'fire').and.returnValue(
       Promise.resolve({ isConfirmed: true } as SweetAlertResult),
     );
 
@@ -258,7 +255,7 @@ describe('AdminPageComponent', () => {
     fixture.detectChanges();
     communicationService.deleteGame.and.returnValue(of(void 0));
 
-    spyOn(Swal, 'fire').and.returnValue(
+    spyOn(swal, 'fire').and.returnValue(
       Promise.resolve({ isConfirmed: true } as SweetAlertResult),
     );
 
@@ -271,7 +268,7 @@ describe('AdminPageComponent', () => {
     fixture.detectChanges();
     communicationService.deleteGame.and.returnValue(of(void 0));
     
-    spyOn(Swal, 'fire').and.returnValue(
+    spyOn(swal, 'fire').and.returnValue(
       Promise.resolve({ isConfirmed: false } as SweetAlertResult),
     );
 

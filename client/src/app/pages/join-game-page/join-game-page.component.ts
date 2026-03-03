@@ -2,11 +2,13 @@ import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
-import { Game } from '@app/interfaces/game';
-import { HostedGame } from '@app/interfaces/hostedGame';
-import { JoinGameService } from '@app/services/join-game/join-game.service';
-import { Subscription } from 'rxjs';
+import { WebSocketService } from '@app/services/web-socket/web-socket.service';
+import { SocketNamespace } from '@common/enums';
+import { JoinGameEvents } from '@common/join.gateway.events';
+import { Lobby } from '@common/lobby';
+import { ROUTES } from '@app/constants/routes.constants';
 
+// The page after clicking "Joindre une partie"
 @Component({
   selector: 'app-join-game-page',
   imports: [ButtonComponent, GameCardComponent],
@@ -14,64 +16,43 @@ import { Subscription } from 'rxjs';
   styleUrl: './join-game-page.component.scss',
 })
 export class JoinGamePageComponent implements OnInit, OnDestroy {
-
-  games: Game[] = [];
-  gameCards: HostedGame[] = [];
-  private subscription?: Subscription;
+  private readonly webSocketService = inject(WebSocketService);
+  private readonly router = inject(Router);
+  readonly routes = ROUTES;
   
-  joinGameService = inject(JoinGameService);
-
-  constructor(
-    private readonly router: Router,
-  ) {}
+  activeLobbies: Lobby[] = [];
   
   ngOnInit(): void {
-    this.adminGameService.fetchAllGames().subscribe({
-      next: (games) => this.adminGameService.setGames(games),
-      error: (error: HttpErrorResponse) => {
-        const errorMessage = error.error || 'Erreur lors de la récupération des jeux';
-        alert(`Erreur: ${errorMessage}`);
+    // Listener for updating available lobbies
+    this.webSocketService.onNamespace<Lobby[]>(
+      SocketNamespace.Join,
+      JoinGameEvents.UpdatedLobbiesList,
+      (availableLobbies) => {
+        this.activeLobbies = availableLobbies;
       },
-    });
+    );
 
-    this.subscription = this.adminGameService.games$.subscribe((games) => {
-      this.games = games;
-      this.gameCards = games
-        .map(game => ({
-          name: game.name,
-          description: game.description,
-          size: game.size,
-          gameMode: game.gameMode,
-          thumbnail: game.thumbnail,
-          createdAt: game.createdAt,
-          updatedAt: game.updatedAt,
-          isVisible: game.isVisible,
-        }))
-        .sort((a, b) => {
-          const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
-          const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
-          return dateA.getTime() - dateB.getTime();
-        });
-    });
+    // Listener for joining a game after backend confirmation
+    this.webSocketService.onNamespace<void>(
+      SocketNamespace.Join,
+      JoinGameEvents.LobbyJoined,
+      () => this.router.navigate([this.routes.waitingRoom]),
+    );
+
+    // Emit event to get available lobbies on init.
+    this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.GetLobbies);
   }
 
   ngOnDestroy(): void {
-    this.subscription?.unsubscribe();
+    this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.UpdatedLobbiesList);
+    this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.LobbyJoined);
   }
 
-  navigateToWaitingRoom(name: string): void {
-    const game = this.games.find((g) => (g.name === name));
-    this.router.navigate(['/waiting-room']);
-  }
-
-  changeVisibility(name: string) {
-    const game = this.games.find(g => g.name === name);
-    if (!game) return;
-    this.communicationService.updateVisiblity(game).subscribe({
-      error: (error: HttpErrorResponse) => {
-        const errorMessage = error.error || 'Erreur lors du changement de visibilité';
-        alert(`Erreur: ${errorMessage}`);
-      },
-    });
+  joinLobby(gameId: string) {
+    this.webSocketService.emitNamespace(
+      SocketNamespace.Join,
+      JoinGameEvents.JoinLobby,
+      gameId,
+    );
   }
 }

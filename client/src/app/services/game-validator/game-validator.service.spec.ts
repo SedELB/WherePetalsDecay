@@ -7,9 +7,9 @@
  * - Placed object validation (types, positions, counts)
  */
 
-import type { PlacedObject } from '@app/interfaces/game';
 import { GameValidatorService, type GameDraftForValidation } from '@app/services/game-validator/game-validator.service';
 import { GameMode, GridSizes, MaxPlayers, TileItem, TileTexture } from '@common/enums';
+import type { PlacedObject } from '@common/game';
 
 type GameValidatorServiceInternal = {
     validateRequiredFields: (draft: GameDraftForValidation) => string[];

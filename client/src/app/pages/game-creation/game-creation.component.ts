@@ -6,14 +6,17 @@ import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { ROUTES } from '@app/constants/routes.constants';
-import { AVATARS_PATH, BASE_STATS } from '@app/interfaces/character';
-import { Game } from '@app/interfaces/game';
+import { AVATARS_PATH, BASE_STATS } from '@common/character';
+import { Game } from '@common/game';
 import { CharacterService } from '@app/services/character/character.service';
 import { PlayerGameService } from '@app/services/game-creation/game-creation.service';
 import { NAME_MAX_LENGTH } from '@app/services/game-validator/game-validator.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Subscription } from 'rxjs';
+import { SocketNamespace } from '@common/enums';
+import { JoinGameEvents } from '@common/join.gateway.events';
 
+// The page after clicking "Creer une partie"
 @Component({
     selector: 'app-game-creation',
     standalone: true,
@@ -34,11 +37,11 @@ export class GameCreationComponent implements OnInit, OnDestroy {
     selectedAvatarIndex: number | null = null;
     lifeBonusSelected: boolean = true;
     attackDiceD6: boolean = true;
+    isSubmitting = false;
 
     nameMaxLength = NAME_MAX_LENGTH;
     games: Game[] = [];
     private gamesSubscription: Subscription | null = null;
-
     readonly avatars = AVATARS_PATH;
     readonly baseStats = BASE_STATS;
     readonly routes = ROUTES;
@@ -67,10 +70,33 @@ export class GameCreationComponent implements OnInit, OnDestroy {
                 return dateA.getTime() - dateB.getTime();
             });
         });
+
+        this.setupNavigationListener();
     }
 
     ngOnDestroy(): void {
         this.gamesSubscription?.unsubscribe();
+        this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.GameHosted);
+        this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.LobbyError);
+    }
+
+    private setupNavigationListener(): void {
+        this.webSocketService.onNamespace<void>(
+            SocketNamespace.Join,
+            JoinGameEvents.GameHosted,
+            () => {
+                this.isSubmitting = false;
+                this.router.navigate([this.routes.waitingRoom]);
+            });
+
+        this.webSocketService.onNamespace<string>(
+            SocketNamespace.Join,
+            JoinGameEvents.LobbyError,
+            (errorMessage) => {
+                this.isSubmitting = false;
+                alert(`Erreur: ${errorMessage}`);
+            },
+        );
     }
 
     handleGameNoLongerAvailable(): void {
@@ -148,20 +174,27 @@ export class GameCreationComponent implements OnInit, OnDestroy {
     }
 
     confirmCharacter(): void {
-        if (!this.isFormValid() || this.selectedAvatarIndex === null) {
+        if (!this.isFormValid() || this.selectedAvatarIndex === null || !this.selectedGame) {
             return;
         }
 
-        this.webSocketService.emitNamespace<Game>()
+        this.isSubmitting = true;
 
-        this.characterService.createCharacter(
+        const character = this.characterService.createCharacter(
             this.characterName,
             this.selectedAvatarIndex,
             this.lifeBonusSelected,
             this.attackDiceD6,
         );
 
-        this.router.navigate([this.routes.waitingRoom]);
+        const payload = {
+            game: this.selectedGame,
+            player: {
+                character,
+            },
+        };
+
+        this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.CreateLobby, payload);
     }
 
     getGameSizeLabel(game: Game): { rows: number, cols: number } {

@@ -11,7 +11,6 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     @WebSocketServer() private server: Server;
 
     constructor(private readonly logger: Logger) {
-        this.server.onNa
     }
 
     afterInit() {
