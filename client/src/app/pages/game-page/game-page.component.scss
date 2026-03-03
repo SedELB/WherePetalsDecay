@@ -1,0 +1,31 @@
+@use "src/styles.scss" as *;
+
+.page-bg {
+    position: fixed;
+    inset: 0; // raccourci pour top, right, bottom, left
+    z-index: 0; // ordre de couche
+    background-image: url('../../../assets/background.png');
+    background-size: cover;
+    background-position: center;
+}
+
+.sakura-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none; // les clics passent au travers 
+}
+
+.container {
+    position: relative;
+    z-index: 2;
+    min-height: 100vh;
+    padding: 2rem;
+    box-sizing: border-box;
+}
+
+#back-button {
+    position: absolute;
+    top: 75px;
+    left: 60px;
+}

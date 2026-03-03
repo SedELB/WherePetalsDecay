@@ -55,6 +55,7 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
   readonly tileItemEnum = TileItem;
   readonly tileTextureEnum = TileTexture;
 
+  isGameLoaded = false;
   private isPaintingTiles = false;
   private isErasingTiles = false;
 
@@ -70,6 +71,7 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
     this.mode = init.mode;
     this.itemCounts = init.itemCounts;
     this.initialGameState = JSON.parse(JSON.stringify(this.game));
+    this.isGameLoaded = true;
 
     if (this.mode === 'edit' && this.game?._id) {
       this.adminGameService.fetchAllGames().subscribe({

@@ -10,6 +10,7 @@ import { MapSetupPageComponent } from '@app/pages/map-setup-page/map-setup-page.
 import { environment } from './environments/environment';
 import { AppComponent } from '@app/pages/app/app.component';
 import { WaitingRoomComponent } from '@app/pages/waiting-room/waiting-room.component';
+import { GamePageComponent } from '@app/pages/game-page/game-page.component';
 
 if (environment.production) {
     enableProdMode();
@@ -24,6 +25,7 @@ const routes: Routes = [
     { path: 'editor/:id', component: MapSetupPageComponent },
     { path: 'create', component: GameCreationComponent },
     { path: 'waiting-room', component: WaitingRoomComponent },
+    { path: 'game/:id', component: GamePageComponent},
     { path: '**', redirectTo: '/home' },
 ];
 

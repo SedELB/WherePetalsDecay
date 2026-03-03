@@ -1,0 +1,43 @@
+<div class="page-bg"></div>
+<app-sakura class="sakura-layer"></app-sakura>
+
+<main class="container"> 
+    <!-- <app-button [width]="100" (click)="onAbandon()" [routerLink]="routes.home">Quitter</app-button> -->
+    <app-button id="back-button" [width]="100" [routerLink]="routes.home">Quitter</app-button>
+    
+    <aside class="side-panel left">
+        <section class="game-stats">
+            <h2>Partie</h2>
+        </section>
+
+        <section class="players-list">
+            <h3>Ordre des tours</h3>
+        </section>
+    </aside>
+    
+    <section class="game-board-wrapper">
+        <div class="timer-display">00:30</div>
+        
+        <div class="grid-container">
+            
+        </div>
+
+        <!-- <div @if="isDebugMode" class="debug-indicator">DEBUG</div> -->
+    </section>
+
+    <aside class="side-panel right">
+        <section class="character-sheet">
+            <h2>Mon Héros</h2>
+        </section>
+
+        <section class="chat-box">
+
+        </section>
+
+        <nav class="action-bar">
+            <!-- <app-button (click)="onAction()">Action</app-button>
+            <app-button (click)="onEndTurn()">Finir Tour</app-button> -->
+        </nav>
+    </aside>
+    
+</main>

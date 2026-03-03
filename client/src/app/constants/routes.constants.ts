@@ -2,7 +2,7 @@ export const ROUTES = {
     home: '/home',
     create: '/create',
     waitingRoom: '/waiting-room',
-    game: '/game',
+    game: '/game', // TODO: to use
     admin: '/admin',
     material: '/material',
     editor: '/editor',
