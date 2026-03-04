@@ -29,7 +29,6 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
     gameId: string | null = null; 
     selectedGame: Game | null = null;
     
-    // Constantes (Imports)
     readonly avatars = AVATARS_PATH;
     readonly baseStats = BASE_STATS;
     readonly routes = ROUTES;
@@ -65,7 +64,6 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
 
     get attackDice(): string {
        return this.attackDiceD6 ? 'D6' : 'D4'; 
-    
     }
 
     get defenseDice(): string {

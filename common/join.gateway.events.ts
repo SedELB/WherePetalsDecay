@@ -25,6 +25,8 @@ export enum JoinGameEvents {
 }
 
 /*
+TODO: TO DELETE LATER
+
 Some sequences: 
 (click on Créer une partie) -> JoinGateway (emit CreateLobby) -> LobbyService.createLobby() -> JoinGateway (emit GameHosted + UpdatedLobbiesList) -> Client
 (click on Joindre une partie) -> JoinGateway (emit GetLobbies) -> LobbyService.getAvailableLobbies() -> JoinGateway (emit LobbiesList) -> Client
