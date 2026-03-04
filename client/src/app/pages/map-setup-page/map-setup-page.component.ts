@@ -9,10 +9,11 @@ import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-
 import { TileItemCounts } from '@app/services/map-setup.types';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
-import { TileItem, TileTexture } from '@common/enums';
+import { GameMode, TileItem, TileTexture } from '@common/enums';
 import { Tile } from '@common/tile';
 import { Subscription } from 'rxjs';
-
+import { skip } from 'rxjs/operators';
+import swal from 'sweetalert2';
 @Component({
   selector: 'app-map-setup-page',
   imports: [FormsModule, ButtonComponent],
@@ -29,12 +30,14 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
 
   private gameSubscription?: Subscription;
   private isSaving = false;
+  private saveInProgress = false;
   private gameDeletedAlertShown = false;
+  protected gameMode = GameMode;
 
   nameMaxLength = NAME_MAX_LENGTH;
   descMaxLength = DESC_MAX_LENGTH;
 
-  game: Game;
+  game: Game = { grid: [] } as unknown as Game;
   mode: 'create' | 'edit' = 'edit';
   private initialGameState: Game | null = null;
 
@@ -60,24 +63,30 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
     flagCount: 0,
   };
 
-  ngOnInit(): void {
-    const init = this.mapSetupFacade.initializeFromNavigation();
+  async ngOnInit(): Promise<void> {
+    const init = await this.mapSetupFacade.initializeFromNavigation();
+    if (!init) return;
     this.game = init.game;
     this.mode = init.mode;
     this.itemCounts = init.itemCounts;
     this.initialGameState = JSON.parse(JSON.stringify(this.game));
 
-    if (this.mode === 'edit') {
-      this.gameSubscription = this.adminGameService.games$.subscribe((games) => {
+    if (this.mode === 'edit' && this.game?._id) {
+      this.adminGameService.fetchAllGames().subscribe({
+        next: (games) => this.adminGameService.setGames(games),
+      });
+      this.gameSubscription = this.adminGameService.games$.pipe(skip(1)).subscribe((games) => {
         const currentGame = games.find(g => g._id === this.game._id);
 
         if (!currentGame) {
           if (!this.gameDeletedAlertShown) {
             this.gameDeletedAlertShown = true;
-            alert(
-              'Ce jeu a été supprimé par un autre administrateur. ' +
-              'Vous pouvez continuer à travailler et il sera créé comme un nouveau jeu lors de la sauvegarde.',
-            );
+            swal.fire({
+              title: 'Jeu supprimé',
+              text: 'Ce jeu a été supprimé par un autre administrateur. Vous pouvez continuer à travailler et il sera créé comme un nouveau jeu.',
+              icon: 'warning',
+              confirmButtonText: 'OK',
+            });
           }
           this.mode = 'create';
 
@@ -200,8 +209,11 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
   }
 
   async onSave(): Promise<void> {
+    if (this.saveInProgress) return;
+    this.saveInProgress = true;
     this.isSaving = true;
     await this.mapSetupFacade.saveGame(this.game, this.mode);
+    this.saveInProgress = false;
   }
 
   onReset(): void {

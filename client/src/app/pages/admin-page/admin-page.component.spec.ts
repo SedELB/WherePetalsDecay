@@ -194,7 +194,7 @@ describe('AdminPageComponent', () => {
     component.navigateToGameEditor('Test1');
 
     expect(router.navigate).toHaveBeenCalledWith(
-      ['/editor'],
+      ['/editor', MOCK_GAME_CARDS[0]._id],
       { state: { game: MOCK_GAME_CARDS[0], mode: 'edit' } },
     );
   });
@@ -211,7 +211,7 @@ describe('AdminPageComponent', () => {
     // The admin page is not responsible to handle possible errors we true or fake game
     // we leave this for the editor page
     expect(router.navigate).toHaveBeenCalledWith(
-      ['/editor'],
+      ['/editor', undefined],
       { state: { game: undefined, mode: 'edit' } },
     );
   });
@@ -246,11 +246,23 @@ describe('AdminPageComponent', () => {
     );
 
     await component.removeGame('Test1');
-
     expect(communicationService.deleteGame).toHaveBeenCalledWith('1');
   });
 
   // Can't delete non existing game with no errors
+  it('should not call deleteGame when game does not exist', async () => {
+    fixture.detectChanges();
+    communicationService.deleteGame.and.returnValue(of(void 0));
+
+    spyOn(swal, 'fire').and.returnValue(
+      Promise.resolve({ isConfirmed: true } as SweetAlertResult),
+    );
+
+    await component.removeGame('Random');
+
+    expect(communicationService.deleteGame).not.toHaveBeenCalled();
+  });
+
   it('should not call deleteGame when game does not exist', async () => {
     fixture.detectChanges();
     communicationService.deleteGame.and.returnValue(of(void 0));
@@ -384,5 +396,4 @@ describe('AdminPageComponent', () => {
     expect(component.games.length).toBe(UPDATED_GAME_COUNT);
     expect(component.gameCards.length).toBe(UPDATED_GAME_COUNT);
   });
-
 });
