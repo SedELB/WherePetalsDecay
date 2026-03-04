@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { Router } from '@angular/router';
+import { inject, Injectable } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CommunicationService } from '@app/services/communication/communication.service';
 import { GameValidatorService } from '@app/services/game-validator/game-validator.service';
 import { TileItemCounts } from '@app/services/map-setup.types';
@@ -8,6 +8,7 @@ import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { Game } from '@common/game';
 import html2canvas from 'html2canvas';
+import swal from 'sweetalert2';
 
 const THUMBNAIL_QUALITY = 0.85;
 const THUMBNAIL_MAX_SIZE = 256;
@@ -21,28 +22,42 @@ export interface MapSetupInitResult {
 export class MapSetupFacadeService {
   constructor(
     private readonly router: Router,
-    private readonly communicationService: CommunicationService,
     private readonly gameValidator: GameValidatorService,
     private readonly mapSetupService: MapSetupService,
     private readonly tileItemCountService: TileItemCountService,
+    private readonly route: ActivatedRoute,
   ) {}
 
-  initializeFromNavigation(): MapSetupInitResult {
+  private readonly communicationService = inject(CommunicationService);
+
+  async initializeFromNavigation(): Promise<MapSetupInitResult | null> {
     const state = history.state as { game?: Game; mode?: 'create' | 'edit' };
 
-    if (!state?.game) {
-      // Did not send a game object (did not come from our predifined path, fallback)
-      this.router.navigate(['/games']);
+    if (state?.game) {
+      const stateGame = state.game;
+      const stateMode = state.mode ?? 'edit';
+      this.mapSetupService.initializeGridIfEmpty(stateGame);
+      const stateItemCounts = this.tileItemCountService.createRequiredCounts(stateGame);
+      this.tileItemCountService.adjustCountsForExistingItems(stateGame, stateItemCounts);
+      return { game: stateGame, mode: stateMode, itemCounts: stateItemCounts };
     }
 
-    const game = state.game as Game;
-    const mode = state.mode ?? 'edit';
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id || id === 'new') {
+      this.router.navigate(['/admin']);
+      return null;
+    }
 
-    this.mapSetupService.initializeGridIfEmpty(game);
-    const itemCounts = this.tileItemCountService.createRequiredCounts(game);
-    this.tileItemCountService.adjustCountsForExistingItems(game, itemCounts);
+    const fetchedGame = await this.communicationService.getGameById(id).toPromise();
+    if (!fetchedGame) {
+      this.router.navigate(['/admin']);
+      return null;
+    }
 
-    return { game, mode, itemCounts };
+    this.mapSetupService.initializeGridIfEmpty(fetchedGame);
+    const fetchedItemCounts = this.tileItemCountService.createRequiredCounts(fetchedGame);
+    this.tileItemCountService.adjustCountsForExistingItems(fetchedGame, fetchedItemCounts);
+    return { game: fetchedGame, mode: 'edit', itemCounts: fetchedItemCounts };
   }
 
   navigateToAdmin(): void {
@@ -57,14 +72,26 @@ export class MapSetupFacadeService {
       const thumbnail = await this.captureThumbnail();
       game.thumbnail = thumbnail;
     } catch {
-      alert("Problème d'enregistrement : la génération de l'image a échouée ");
+      // alert("Problème d'enregistrement : la génération de l'image a échouée ");
+      swal.fire({
+        title: `Problème d'enregistrement`,
+        text: `La génération de l'image a échoué.`,
+        icon: 'error',
+        confirmButtonText: 'OK',
+      });
       return;
     }
 
     const validation = this.gameValidator.validate(this.mapSetupService.buildValidationPayload(game));
 
     if (!validation.isValid) {
-      alert(`Jeu invalide! :\n- ${validation.errors.join('\n- ')}`);
+      swal.fire({
+        title: 'Jeu invalide !',
+        html: `<div style="text-align:left; white-space:pre-line">- ${validation.errors.join('\n- ')}</div>`,
+        icon: 'error',
+        confirmButtonText: 'OK',
+        scrollbarPadding: false,
+      });
       return;
     }
 
@@ -81,11 +108,22 @@ export class MapSetupFacadeService {
 
         saveOperation.subscribe({
           next: () => {
-            alert(`Jeu ${mode === 'create' ? 'créé' : 'sauvegardé'} avec succès !`);
+            swal.fire({
+              title: 'Succès',
+              text: `Jeu ${mode === 'create' ? 'créé' : 'sauvegardé'} avec succès !`,
+              icon: 'success',
+              confirmButtonText: 'OK',
+            });
             this.router.navigate(['/admin']);
           },
           error: (err: HttpErrorResponse) => {
-            alert(`Une erreur s'est produite en enregistrant un jeu édité ! : ${err.error}`);
+            swal.fire({
+              title: 'Jeu invalide !',
+              html: `<div style="text-align:left; white-space:pre-line">${err.error.replace(/\\n/g, '\n')}</div>`,
+              icon: 'error',
+              confirmButtonText: 'OK',
+              scrollbarPadding: false,
+            });
           },
         });
       });
@@ -94,7 +132,12 @@ export class MapSetupFacadeService {
 
       saveOperation.subscribe({
         next: () => {
-          alert(`Partie créée avec succès !`);
+          swal.fire({
+            title: 'Succès',
+            text: `Jeu créé avec succès`,
+            icon: 'success',
+            confirmButtonText: 'OK',
+          });
           this.router.navigate(['/admin']);
         },
         error: (err: HttpErrorResponse) => {
@@ -117,6 +160,9 @@ export class MapSetupFacadeService {
       logging: false,
       backgroundColor: null,
       imageTimeout: 0,
+      scrollX: 0,
+      scrollY: -window.scrollY, // compense le scroll actuel
+      foreignObjectRendering: false,
     });
 
     const maxSize = THUMBNAIL_MAX_SIZE;

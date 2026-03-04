@@ -16,7 +16,7 @@
     </aside>
 
     <div class="map-frame" aria-label="Grille de carte">
-      <div class="map-title">Mode de jeu : {{this.game.gameMode}}</div>
+      <div class="map-title">Mode de jeu : {{this.game.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</div>
       <div
         id="thumbnail"
         class="grid"

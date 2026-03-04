@@ -1,9 +1,9 @@
 
 .editor-bg {
   box-sizing: border-box;
-  height: 100%;
+  height: 100vh;
   padding: 24px;
-  background: url('/assets/background.png') center / cover no-repeat;
+  background: url('../../../assets/background.png') center / cover no-repeat;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -194,27 +194,27 @@
   transition: background 0.15s ease;
 
   &[data-tile='floor'] {
-    background-image: url('/assets/tiles/default.png');
+    background-image: url('../../../assets/tiles/default.png');
   }
 
   &[data-tile='wall'] {
-    background-image: url('/assets/tiles/wall.png');
+    background-image: url('../../../assets/tiles/wall.png');
   }
 
   &[data-tile='water'] {
-    background-image: url('/assets/tiles/water.png');
+    background-image: url('../../../assets/tiles/water.png');
   }
 
   &[data-tile='ice'] {
-    background-image: url('/assets/tiles/ice.png');
+    background-image: url('../../../assets/tiles/ice.png');
   }
 
   &[data-tile='doorOpened'] {
-    background-image: url('/assets/tiles/opened_door.png');
+    background-image: url('../../../assets/tiles/opened_door.png');
   }
 
   &[data-tile='doorClosed'] {
-    background-image: url('/assets/tiles/closed_door.png');
+    background-image: url('../../../assets/tiles/closed_door.png');
   }
 
   &.cell--clickable {
