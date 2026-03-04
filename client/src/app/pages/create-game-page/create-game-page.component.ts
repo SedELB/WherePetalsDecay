@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
-import { Game } from '@app/interfaces/game';
+import { Game } from '@common/game';
 import { GameMode, MaxPlayers } from '@common/enums';
 
 @Component({

@@ -4,6 +4,6 @@
     <p>En attente des autres joueurs...</p>
 
     <div class="actions">
-        <app-button [route]="'/home'">Retour à la vue initiale</app-button>
+        <app-button [route]="'/home'" (clicked)="leaveLobby()">Retour à la vue initiale</app-button>
     </div>
 </div>

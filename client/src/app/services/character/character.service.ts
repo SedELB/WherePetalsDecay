@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { AVATARS_PATH, BASE_STATS, Character, RANDOM_NAMES, RANDOM_PROBABILITY } from '@app/interfaces/character';
+import { AVATARS_PATH, BASE_STATS, Character, RANDOM_NAMES, RANDOM_PROBABILITY } from '@common/character';
 
 @Injectable({
     providedIn: 'root',
@@ -43,4 +43,5 @@ export class CharacterService {
     isValidAvatar(index: number | null): boolean {
         return index !== null && index >= 0 && index < AVATARS_PATH.length;
     }
+    
 }

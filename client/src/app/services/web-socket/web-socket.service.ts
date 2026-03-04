@@ -13,6 +13,7 @@ export class WebSocketService implements OnDestroy {
     constructor() {
         this.connectNamespace(SocketNamespace.Admin);
         this.connectNamespace(SocketNamespace.Games);
+        this.connectNamespace(SocketNamespace.Join);
     }
 
     connectNamespace(namespace: string): void {
@@ -44,6 +45,14 @@ export class WebSocketService implements OnDestroy {
 
     isConnectedNamespace(namespace: string): boolean {
         return this.sockets.get(namespace)?.connected ?? false;
+    }
+
+
+    off(namespace: SocketNamespace, event: string): void {
+        const socket = this.sockets.get(namespace);
+        if (socket) {
+            socket.off(event);
+        }
     }
 
     ngOnDestroy(): void {
