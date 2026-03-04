@@ -9,7 +9,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
-import { Game } from '@app/interfaces/game';
+import { Game } from '@common/game';
 import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { CommunicationService } from '@app/services/communication/communication.service';
 import { GameMode } from '@common/enums';
@@ -246,7 +246,6 @@ describe('AdminPageComponent', () => {
     );
 
     await component.removeGame('Test1');
-
     expect(communicationService.deleteGame).toHaveBeenCalledWith('1');
   });
 
@@ -264,10 +263,23 @@ describe('AdminPageComponent', () => {
     expect(communicationService.deleteGame).not.toHaveBeenCalled();
   });
 
-  it('should not call deleteGame when user cancels suppression', async () => {
+  it('should not call deleteGame when game does not exist', async () => {
     fixture.detectChanges();
     communicationService.deleteGame.and.returnValue(of(void 0));
 
+    spyOn(swal, 'fire').and.returnValue(
+      Promise.resolve({ isConfirmed: true } as SweetAlertResult),
+    );
+
+    await component.removeGame('Random');
+
+    expect(communicationService.deleteGame).not.toHaveBeenCalled();
+  });
+
+  it('should not call deleteGame when user cancels suppression', async () => {
+    fixture.detectChanges();
+    communicationService.deleteGame.and.returnValue(of(void 0));
+    
     spyOn(swal, 'fire').and.returnValue(
       Promise.resolve({ isConfirmed: false } as SweetAlertResult),
     );
@@ -384,5 +396,4 @@ describe('AdminPageComponent', () => {
     expect(component.games.length).toBe(UPDATED_GAME_COUNT);
     expect(component.gameCards.length).toBe(UPDATED_GAME_COUNT);
   });
-
 });

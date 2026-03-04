@@ -11,6 +11,8 @@ import { environment } from './environments/environment';
 import { AppComponent } from '@app/pages/app/app.component';
 import { WaitingRoomComponent } from '@app/pages/waiting-room/waiting-room.component';
 import { GamePageComponent } from '@app/pages/game-page/game-page.component';
+import { JoinGamePageComponent } from '@app/pages/join-game-page/join-game-page.component';
+import { CharacterSelectionComponent } from '@app/pages/character-selection/character-selection.component';
 
 if (environment.production) {
     enableProdMode();
@@ -24,8 +26,11 @@ const routes: Routes = [
     { path: 'editor/new', component: MapSetupPageComponent },
     { path: 'editor/:id', component: MapSetupPageComponent },
     { path: 'create', component: GameCreationComponent },
+    { path: 'character-selection/:gameId', component: CharacterSelectionComponent },
+    { path: 'character-selection', component: CharacterSelectionComponent },
     { path: 'waiting-room', component: WaitingRoomComponent },
     { path: 'game/:id', component: GamePageComponent},
+    { path: 'join', component: JoinGamePageComponent },
     { path: '**', redirectTo: '/home' },
 ];
 

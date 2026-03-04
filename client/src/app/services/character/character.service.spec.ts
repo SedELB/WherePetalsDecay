@@ -6,7 +6,7 @@
  */
 
 import { TestBed } from '@angular/core/testing';
-import { AVATARS_PATH, BASE_STATS } from '@app/interfaces/character';
+import { AVATARS_PATH, BASE_STATS } from '@common/character';
 import { CharacterService } from './character.service';
 
 describe('CharacterService', () => {
