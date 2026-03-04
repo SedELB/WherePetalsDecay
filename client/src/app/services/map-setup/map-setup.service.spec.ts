@@ -8,12 +8,12 @@
  * - Validation payload building
  */
 
-import type { Game } from '@app/interfaces/game';
-import type { Tile } from '@app/interfaces/tile';
 import { MouseEventType } from '@app/pages/map-setup-page/map-setup-page-constant';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { GameMode, TileItem, TileTexture } from '@common/enums';
+import type { Game } from '@common/game';
+import type { Tile } from '@common/tile';
 
 const grid = (
     rows: number,

@@ -10,13 +10,13 @@
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
-import { Game } from '@app/interfaces/game';
-import { Tile } from '@app/interfaces/tile';
 import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-facade.service';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { GameMode, TileItem, TileTexture } from '@common/enums';
+import { Game } from '@common/game';
+import { Tile } from '@common/tile';
 import { BehaviorSubject, of } from 'rxjs';
 import swal from 'sweetalert2';
 import { MapSetupPageComponent } from './map-setup-page.component';
