@@ -14,6 +14,8 @@ export enum JoinGameEvents {
     DeleteLobby = 'deleteLobby',
     GetLobbyStatus = 'getLobbyStatus',
     LeaveLobby = 'leaveLobby',
+    SelectAvatar = 'selectAvatar',
+    JoinAvatarRoom = 'joinAvatarRoom',
     
     // Response events (confirmations)
     GameHosted = 'gameHosted',
@@ -22,6 +24,7 @@ export enum JoinGameEvents {
     DeletedLobby = 'deletedLobby',
     LobbyStatusReceived = 'lobbyStatusReceived',
     LeftLobby = 'leftLobby',
+    UpdateOccupiedAvatars = 'updatedOccupiedAvatars',
 }
 
 /*

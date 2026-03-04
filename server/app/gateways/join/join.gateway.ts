@@ -20,7 +20,6 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
     afterInit() {
         this.logger.log('JoinGateway initialized on join namespace');
-
     }
 
     handleConnection(socket: Socket) {
@@ -38,19 +37,6 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         this.processPlayerLeave(socket);
     }
 
-
-    notifyGameHosted(game: Game) {
-        this.server.emit(JoinGameEvents.GameHosted, game);
-    }
-
-    notifyGameClosed(gameId: string) {
-        this.server.emit(JoinGameEvents.GameFull, gameId);
-    }
-
-    notifyGameDeleted(gameId: string) {
-        this.server.emit(JoinGameEvents.GameDeleted, gameId);
-    }
-
     @SubscribeMessage(JoinGameEvents.CreateLobby)
     handleCreateLobby(
         @ConnectedSocket() socket: Socket,
@@ -64,7 +50,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
         if (createdLobby) {
             socket.join(createdLobby.gameId);
-            socket.emit(JoinGameEvents.GameHosted);
+            socket.emit(JoinGameEvents.GameHosted, createdLobby);
             this.handleGetLobbies();
         } else {
             socket.emit(JoinGameEvents.LobbyError, 'The lobby could not be created.');
@@ -96,8 +82,8 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         const updatedLobby = this.lobbyService.joinLobby(payload.gameId, payload.player);
         if (updatedLobby) {
             socket.join(updatedLobby.gameId);
-            socket.emit(JoinGameEvents.LobbyJoined);
-            this.server.to(updatedLobby.gameId).emit(JoinGameEvents.PlayerJoined, payload.player);
+            socket.emit(JoinGameEvents.LobbyJoined, updatedLobby);
+            this.server.to(updatedLobby.gameId).emit(JoinGameEvents.PlayerJoined, payload.player); // For the waiting room, to add new player's info
             this.handleGetLobbies();
         }
     }
@@ -115,6 +101,43 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         }
     }
 
+    @SubscribeMessage(JoinGameEvents.SelectAvatar)
+    handleSelectAvatar(
+        @ConnectedSocket() socket: Socket, 
+        @MessageBody() payload: { gameId: string, avatar: string },
+    ) {
+        const { gameId, avatar } = payload;
+        const lobby = this.lobbyService.getLobby(gameId);
+        
+        if (!lobby) return;
+        this.lobbyService.updatePlayerAvatar(gameId, socket.id, avatar);
+        const confirmedAvatars = lobby.players
+        .map(p => p.character?.avatar)
+        .filter(a => !!a);
+
+        const allOccupied = [...confirmedAvatars, ...Object.values(lobby.pendingAvatars)];
+        this.server.to(gameId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupied);
+    }
+
+    @SubscribeMessage('joinAvatarRoom')
+    handleJoinAvatarRoom(@ConnectedSocket() socket: Socket, @MessageBody() gameId: string) {
+        const lobby = this.lobbyService.getLobby(gameId);
+        if (lobby) {
+            socket.join(gameId);
+
+            const confirmedAvatars = lobby.players
+            .map(p => p.character?.avatar)
+            .filter(a => !!a);
+
+            const pending = Object.values(lobby.pendingAvatars);
+            const allOccupied = [...confirmedAvatars, ...pending];
+            socket.emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupied);
+        } else {
+            this.logger.log(`>>> ERROR: LOBBY NOT FOUND FOR ${gameId}`);
+        }
+    }
+    
+
     private processPlayerLeave(socket: Socket){
         const lobby = this.lobbyService.findLobbyBySocketId(socket.id);
 
@@ -126,11 +149,11 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             } else {
                 this.logger.log(`Player left lobby: ${lobby.gameId}`);
                 this.lobbyService.removePlayerFromLobby(lobby.gameId, socket.id);
+                this.handleJoinAvatarRoom(socket, lobby.gameId);
                 // TODO UPDATE CURRENT PLAYERS THAT A PLAYER LEFT.
             }
 
             this.handleGetLobbies();
         }
     }
-
 }

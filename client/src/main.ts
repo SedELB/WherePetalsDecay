@@ -28,6 +28,7 @@ const routes: Routes = [
     { path: 'character-selection/:gameId', component: CharacterSelectionComponent },
     { path: 'character-selection', component: CharacterSelectionComponent },
     { path: 'waiting-room', component: WaitingRoomComponent },
+    { path: 'waiting-room/:id', component: WaitingRoomComponent },
     { path: 'join', component: JoinGamePageComponent },
     { path: '**', redirectTo: '/home' },
 ];
