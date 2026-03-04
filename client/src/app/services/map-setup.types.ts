@@ -1,5 +1,5 @@
-import { Game } from '@app/interfaces/game';
 import { TileItem, TileTexture } from '@common/enums';
+import { Game } from '@common/game';
 
 export interface TileItemCounts {
   spawnCount: number;

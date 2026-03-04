@@ -6,4 +6,5 @@ export const ROUTES = {
     admin: '/admin',
     material: '/material',
     editor: '/editor',
+    joinGame: '/join',
 } as const;

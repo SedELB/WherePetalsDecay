@@ -8,9 +8,9 @@
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { Game } from '@app/interfaces/game';
 import { CommunicationService } from '@app/services/communication/communication.service';
 import { GameMode } from '@common/enums';
+import { Game } from '@common/game';
 import { environment } from 'src/environments/environment';
 
 const MOCK_GAME: Game = {
