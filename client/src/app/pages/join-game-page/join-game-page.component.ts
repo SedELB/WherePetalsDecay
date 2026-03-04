@@ -59,6 +59,4 @@ export class JoinGamePageComponent implements OnInit, OnDestroy {
   selectLobby(lobby: Lobby) {
     this.router.navigate(['/character-selection', lobby.gameId]);
   }
-
-  
 }

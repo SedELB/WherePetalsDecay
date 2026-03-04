@@ -18,9 +18,10 @@
                                 playerCount: lobby.playerCount,
                                 isLocked: lobby.isLocked,
                                 players: lobby.players,
+                                pendingAvatars: lobby.pendingAvatars,
                             }"
                         >
-                            <app-button [height]="50">Sélectionner</app-button>
+                            <app-button [height]="50" (clicked)="selectLobby(lobby)">Sélectionner</app-button>
                         </app-lobby-card>
                     }
                 </div>

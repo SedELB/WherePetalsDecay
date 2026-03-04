@@ -11,6 +11,7 @@ import { AVATARS_PATH, BASE_STATS } from '@common/character';
 import { SocketNamespace } from '@common/enums';
 import { Game } from '@common/game';
 import { JoinGameEvents } from '@common/join.gateway.events';
+import { Lobby } from '@common/lobby';
 
 @Component({
   selector: 'app-character-selection',
@@ -20,7 +21,7 @@ import { JoinGameEvents } from '@common/join.gateway.events';
 })
 export class CharacterSelectionComponent implements OnInit, OnDestroy {
     characterName: string = '';
-    selectedAvatarIndex: number | null = null;
+    selectedAvatar: string | null = null;
     lifeBonusSelected: boolean = true;
     attackDiceD6: boolean = true;
     isSubmitting = false;
@@ -28,6 +29,7 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
     nameMaxLength = NAME_MAX_LENGTH;
     gameId: string | null = null; 
     selectedGame: Game | null = null;
+    currentlySelectedAvatars: string[] = [];
     
     readonly avatars = AVATARS_PATH;
     readonly baseStats = BASE_STATS;
@@ -41,16 +43,26 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
     ) {}
 
     ngOnInit(): void {
-      // Get gameID from the URL parameter.
+      // Get gameID from the URL parameter. (Join an existing lobby)
       this.gameId = this.route.snapshot.paramMap.get('gameId');
 
-      // Get game object from History (in router after redirection from selecting a game).
+      // Get game object from History (Host a new lobby).
       const state = history.state;
       if (state && state.game){
         this.selectedGame = state.game;
       }
 
+      if (!this.gameId && !this.selectedGame){
+        this.router.navigate([this.routes.home]);
+        return;
+      }
+
+      if (this.gameId) {
+        this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.JoinAvatarRoom, this.gameId);
+      }
+
       this.setupNavigationListener();
+      this.setupUpdatesListener();
     }
 
     
@@ -80,14 +92,21 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
 
     isFormValid(): boolean {
         return (
-            this.characterService.isValidName(this.characterName) &&
-            this.characterService.isValidAvatar(this.selectedAvatarIndex)
+            this.characterService.isValidName(this.characterName)
         );
     }
 
     
-    selectAvatar(index: number): void {
-       this.selectedAvatarIndex = index; 
+    selectAvatar(avatar: string): void {
+        if (this.currentlySelectedAvatars.includes(avatar)) return;
+        this.selectedAvatar = avatar;
+
+        const payload = {
+            gameId: this.gameId,
+            avatar: this.selectedAvatar,
+        };
+
+        this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.SelectAvatar, payload);
     }
 
     selectBonus(isLifeBonus: boolean): void {
@@ -99,12 +118,12 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
     }
 
     confirmCharacter(): void {
-        if (!this.isFormValid() || this.selectedAvatarIndex === null) return;
+        if (!this.isFormValid() || this.selectedAvatar === null) return;
 
         this.isSubmitting = true;
         const character = this.characterService.createCharacter(
             this.characterName,
-            this.selectedAvatarIndex,
+            this.selectedAvatar,
             this.lifeBonusSelected,
             this.attackDiceD6,
         );
@@ -115,6 +134,7 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
                 gameId: this.gameId,
                 player: { character },
             });
+
         } else if (this.selectedGame) {
             // Creating a lobby as host
             this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.CreateLobby, {
@@ -125,25 +145,42 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
     }
 
     private setupNavigationListener(): void {
-        this.webSocketService.onNamespace<void>(SocketNamespace.Join, JoinGameEvents.GameHosted, () => {
-            this.router.navigate([this.routes.waitingRoom]);
-        });
-        
-        this.webSocketService.onNamespace<void>(SocketNamespace.Join, JoinGameEvents.PlayerJoined, () => {
-            this.router.navigate([this.routes.waitingRoom]);
+        const navigateToLobby = (lobbyData: Lobby) => {
+                this.router.navigate([this.routes.waitingRoom, lobbyData.gameId], {
+                    state: { lobby: lobbyData },
+                });
+            };
+
+        this.webSocketService.onNamespace(SocketNamespace.Join, JoinGameEvents.GameHosted, navigateToLobby);
+        this.webSocketService.onNamespace(SocketNamespace.Join, JoinGameEvents.LobbyJoined, navigateToLobby);
+    }
+
+    private setupUpdatesListener(): void {
+        this.webSocketService.onNamespace<string[]>(SocketNamespace.Join, JoinGameEvents.UpdateOccupiedAvatars, (occupiedAvatars) => {
+            this.currentlySelectedAvatars = occupiedAvatars;
         });
     }
 
     generateRandomCharacter(): void {
-        const random = this.characterService.generateRandomCharacter();
+        let random = this.characterService.generateRandomCharacter();
+
+        while (this.currentlySelectedAvatars.includes(random.avatarPath)) {
+            random = this.characterService.generateRandomCharacter();
+        }
+
         this.characterName = random.name;
-        this.selectedAvatarIndex = random.avatarIndex;
         this.lifeBonusSelected = random.lifeBonus;
         this.attackDiceD6 = random.attackDiceD6;
+
+        this.selectAvatar(random.avatarPath);
     }
 
     goBack(): void {
         if (this.gameId) {
+            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.SelectAvatar, {
+                gameId: this.gameId,
+                avatar: null,
+            });
             this.router.navigate([this.routes.joinGame]);
         } else {
             this.router.navigate([this.routes.create]);
@@ -152,6 +189,9 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
 
     ngOnDestroy(): void {
         this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.GameHosted);
-        this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.PlayerJoined);
+        this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.LobbyJoined);
+        this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.UpdateOccupiedAvatars);
+        this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.JoinAvatarRoom);
     }
+
 }

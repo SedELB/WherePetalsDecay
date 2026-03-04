@@ -20,6 +20,7 @@ export class LobbyService {
             playerCount: 1,
             isLocked: false,
             players: [player],
+            pendingAvatars: {},
         };
 
         this.lobbies.set(gameId, lobby);
@@ -61,6 +62,24 @@ export class LobbyService {
         const lobby = this.lobbies.get(gameId);
         if (lobby) {
             lobby.players = lobby.players.filter(player => player.socketId !== socketId);
+            delete lobby.pendingAvatars[socketId];
+        }
+    }
+
+    updatePlayerAvatar(gameId: string, socketId: string, avatarPath: string | null): void {
+        const lobby = this.getLobby(gameId);
+        if (!lobby) return;
+
+        const player = lobby.players.find(p => p.socketId === socketId);
+
+        if (player && player.character) {
+            if (avatarPath) player.character.avatar = avatarPath;
+        } else {
+            if (!avatarPath){
+                delete lobby.pendingAvatars[socketId];
+            } else {
+                lobby.pendingAvatars[socketId] = avatarPath;
+            }
         }
     }
 }
