@@ -1,3 +1,4 @@
+import { Character } from '@common/character';
 import { Player } from '@common/player';
 import { Room, RoomCreatePayload } from '@common/room';
 import { Injectable } from '@nestjs/common';
@@ -5,7 +6,7 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class WaitingRoomService {
     private rooms: Map<string, Room> = new Map();
-    private playerToRoom: Map<string, string> = new Map(); // socketId -> roomCode
+    private playerToRoom: Map<string, string> = new Map();
 
     generateRoomCode(): string {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -19,16 +20,9 @@ export class WaitingRoomService {
     createRoom(socketId: string, payload: RoomCreatePayload): Room {
         const code = this.generateRoomCode();
         const organizer: Player = {
-            id: socketId,
-            name: payload.player.name,
-            avatar: payload.player.avatar,
-            isOrganizer: true,
-            life: payload.player.life,
-            speed: payload.player.speed,
-            attack: payload.player.attack,
-            defense: payload.player.defense,
-            attackDice: payload.player.attackDice,
-            defenseDice: payload.player.defenseDice,
+            socketId,
+            character: payload.player.character,
+            isHost: true,
         };
 
         const room: Room = {
@@ -55,22 +49,21 @@ export class WaitingRoomService {
         return code ? this.rooms.get(code) : undefined;
     }
 
-    addPlayer(code: string, socketId: string, playerData: Omit<Player, 'id' | 'isOrganizer'>): Room | null {
+    addPlayer(code: string, socketId: string, character: Character): Room | null {
         const room = this.rooms.get(code);
         if (!room) return null;
         if (room.isLocked) return null;
         if (room.players.length >= room.maxPlayers) return null;
 
         const player: Player = {
-            id: socketId,
-            ...playerData,
-            isOrganizer: false,
+            socketId,
+            character,
+            isHost: false,
         };
 
         room.players.push(player);
         this.playerToRoom.set(socketId, code);
 
-        // Auto-lock si max atteint
         if (room.players.length >= room.maxPlayers) {
             room.isLocked = true;
         }
@@ -85,15 +78,14 @@ export class WaitingRoomService {
         const room = this.rooms.get(code);
         if (!room) return null;
 
-        const playerIndex = room.players.findIndex((p) => p.id === socketId);
+        const playerIndex = room.players.findIndex((p) => p.socketId === socketId);
         if (playerIndex === -1) return null;
 
         const removedPlayer = room.players.splice(playerIndex, 1)[0];
         this.playerToRoom.delete(socketId);
 
-        const wasOrganizer = removedPlayer.isOrganizer;
+        const wasOrganizer = removedPlayer.isHost;
 
-        // Auto-unlock si sous le max
         if (room.players.length < room.maxPlayers) {
             room.isLocked = false;
         }
@@ -104,16 +96,15 @@ export class WaitingRoomService {
     kickPlayer(organizerId: string, targetPlayerId: string): { room: Room; kickedPlayer: Player } | null {
         const room = this.getRoomByPlayerId(organizerId);
         if (!room) return null;
-        if (room.organizerId !== organizerId) return null; // Seul l'organisateur peut kick
+        if (room.organizerId !== organizerId) return null;
 
-        const targetIndex = room.players.findIndex((p) => p.id === targetPlayerId);
+        const targetIndex = room.players.findIndex((p) => p.socketId === targetPlayerId);
         if (targetIndex === -1) return null;
-        if (room.players[targetIndex].isOrganizer) return null; // Ne peut pas se kick soi-même
+        if (room.players[targetIndex].isHost) return null;
 
         const kickedPlayer = room.players.splice(targetIndex, 1)[0];
         this.playerToRoom.delete(targetPlayerId);
 
-        // Auto-unlock si sous le max
         if (room.players.length < room.maxPlayers) {
             room.isLocked = false;
         }
@@ -126,7 +117,7 @@ export class WaitingRoomService {
         if (!room) return [];
 
         const players = [...room.players];
-        players.forEach((p) => this.playerToRoom.delete(p.id));
+        players.forEach((p) => this.playerToRoom.delete(p.socketId));
         this.rooms.delete(code);
 
         return players;
@@ -144,9 +135,8 @@ export class WaitingRoomService {
         if (!room) return null;
         if (room.organizerId !== organizerId) return null;
 
-        // Ne peut pas unlock si déjà au max
         if (room.isLocked && room.players.length >= room.maxPlayers) {
-            return room; // Reste locked
+            return room;
         }
 
         room.isLocked = !room.isLocked;
@@ -160,13 +150,13 @@ export class WaitingRoomService {
     getUsedAvatars(code: string): string[] {
         const room = this.rooms.get(code);
         if (!room) return [];
-        return room.players.map((p) => p.avatar);
+        return room.players.map((p) => p.character.avatar);
     }
 
     isNameTaken(code: string, name: string): boolean {
         const room = this.rooms.get(code);
         if (!room) return false;
-        return room.players.some((p) => p.name.toLowerCase() === name.toLowerCase());
+        return room.players.some((p) => p.character.name.toLowerCase() === name.toLowerCase());
     }
 
     getUniquePlayerName(code: string, baseName: string): string {
@@ -176,7 +166,7 @@ export class WaitingRoomService {
         let name = baseName;
         let suffix = 2;
 
-        while (room.players.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
+        while (room.players.some((p) => p.character.name.toLowerCase() === name.toLowerCase())) {
             name = `${baseName}-${suffix}`;
             suffix++;
         }
