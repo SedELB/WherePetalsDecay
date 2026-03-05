@@ -13,6 +13,7 @@ import { Game } from '@common/game';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import swal from 'sweetalert2';
+const SMALL_DELAY = 100;
 
 @Component({
   selector: 'app-character-selection',
@@ -166,10 +167,20 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
                 title: `Erreur`,
                 text: `${message}`,
                 icon: 'error',
-                confirmButtonText: 'OK',
-            });
+                confirmButtonText: `Retourner à l'acceuil`,
+            }).then(() => {
+                if (this.gameId){
+                    this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.SelectAvatar, {
+                        gameId: this.gameId,
+                        avatar: null,
+                    });
+                }
 
-            this.router.navigate([this.routes.home]);
+                this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.LeaveLobby);
+                setTimeout(() => {
+                    this.router.navigate([this.routes.home]);
+                }, SMALL_DELAY);
+            });
         });
     }
 

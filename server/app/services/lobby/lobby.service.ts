@@ -54,9 +54,13 @@ export class LobbyService {
     }
 
     findLobbyBySocketId(socketId: string) : Lobby | undefined {
-        return Array.from(this.lobbies.values()).find(lobby => 
-        lobby.hostSocketId === socketId || 
-        lobby.players.some(player => player.socketId === socketId));
+        for (const lobby of this.lobbies.values()) {
+            if (lobby.hostSocketId === socketId) return lobby;
+            if (lobby.players.some(p => p.socketId === socketId)) return lobby;
+            if (Object.keys(lobby.pendingAvatars).includes(socketId)) return lobby;
+        }
+
+        return undefined;
     }
 
     removePlayerFromLobby(gameId: string, socketId: string) : void {
