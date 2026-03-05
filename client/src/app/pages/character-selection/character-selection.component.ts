@@ -16,10 +16,10 @@ import swal from 'sweetalert2';
 const SMALL_DELAY = 100;
 
 @Component({
-  selector: 'app-character-selection',
-  imports: [CommonModule, FormsModule, ButtonComponent],
-  templateUrl: './character-selection.component.html',
-  styleUrl: './character-selection.component.scss',
+    selector: 'app-character-selection',
+    imports: [CommonModule, FormsModule, ButtonComponent],
+    templateUrl: './character-selection.component.html',
+    styleUrl: './character-selection.component.scss',
 })
 export class CharacterSelectionComponent implements OnInit, OnDestroy {
     characterName: string = '';
@@ -29,10 +29,10 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
     isSubmitting = false;
 
     nameMaxLength = NAME_MAX_LENGTH;
-    gameId: string | null = null; 
+    gameId: string | null = null;
     selectedGame: Game | null = null;
     currentlySelectedAvatars: string[] = [];
-    
+
     readonly avatars = AVATARS_PATH;
     readonly baseStats = BASE_STATS;
     readonly routes = ROUTES;
@@ -45,43 +45,43 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
     ) {}
 
     ngOnInit(): void {
-      // Get gameID from the URL parameter. (Join an existing lobby)
-      this.gameId = this.route.snapshot.paramMap.get('gameId');
+        // Get gameID from the URL parameter. (Join an existing lobby)
+        this.gameId = this.route.snapshot.paramMap.get('gameId');
 
-      // Get game object from History (Host a new lobby).
-      const state = history.state;
-      if (state && state.game){
-        this.selectedGame = state.game;
-      }
+        // Get game object from History (Host a new lobby).
+        const state = history.state;
+        if (state && state.game) {
+            this.selectedGame = state.game;
+        }
 
-      if (!this.gameId && !this.selectedGame){
-        this.router.navigate([this.routes.home]);
-        return;
-      }
+        if (!this.gameId && !this.selectedGame) {
+            this.router.navigate([this.routes.home]);
+            return;
+        }
 
-      if (this.gameId) {
-        this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.JoinAvatarRoom, this.gameId);
-      }
+        if (this.gameId) {
+            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.JoinAvatarRoom, this.gameId);
+        }
 
-      this.setupNavigationListener();
-      this.setupUpdatesListener();
+        this.setupNavigationListener();
+        this.setupUpdatesListener();
     }
 
-    
-    get lifeValue(): number { 
-      return this.baseStats.life + (this.lifeBonusSelected ? this.baseStats.bonus : 0);
+
+    get lifeValue(): number {
+        return this.baseStats.life + (this.lifeBonusSelected ? this.baseStats.bonus : 0);
     }
 
     get speedValue(): number {
-       return this.baseStats.speed + (!this.lifeBonusSelected ? this.baseStats.bonus : 0); 
+        return this.baseStats.speed + (!this.lifeBonusSelected ? this.baseStats.bonus : 0);
     }
 
     get attackDice(): string {
-       return this.attackDiceD6 ? 'D6' : 'D4'; 
+        return this.attackDiceD6 ? 'D6' : 'D4';
     }
 
     get defenseDice(): string {
-       return this.attackDiceD6 ? 'D4' : 'D6'; 
+        return this.attackDiceD6 ? 'D4' : 'D6';
     }
 
     get attackValue(): number {
@@ -94,11 +94,12 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
 
     isFormValid(): boolean {
         return (
-            this.characterService.isValidName(this.characterName)
+            this.characterService.isValidName(this.characterName) &&
+            this.selectedAvatar !== null
         );
     }
 
-    
+
     selectAvatar(avatar: string): void {
         if (this.currentlySelectedAvatars.includes(avatar)) return;
         this.selectedAvatar = avatar;
@@ -112,11 +113,11 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
     }
 
     selectBonus(isLifeBonus: boolean): void {
-      this.lifeBonusSelected = isLifeBonus; 
+        this.lifeBonusSelected = isLifeBonus;
     }
 
-    selectAttackDice(isD6: boolean): void { 
-      this.attackDiceD6 = isD6; 
+    selectAttackDice(isD6: boolean): void {
+        this.attackDiceD6 = isD6;
     }
 
     confirmCharacter(): void {
@@ -148,10 +149,10 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
 
     private setupNavigationListener(): void {
         const navigateToLobby = (lobbyData: Lobby) => {
-                this.router.navigate([this.routes.waitingRoom, lobbyData.gameId], {
-                    state: { lobby: lobbyData },
-                });
-            };
+            this.router.navigate([this.routes.waitingRoom, lobbyData.gameId], {
+                state: { lobby: lobbyData },
+            });
+        };
 
         this.webSocketService.onNamespace(SocketNamespace.Join, JoinGameEvents.GameHosted, navigateToLobby);
         this.webSocketService.onNamespace(SocketNamespace.Join, JoinGameEvents.LobbyJoined, navigateToLobby);
@@ -169,7 +170,7 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
                 icon: 'error',
                 confirmButtonText: `Retourner à l'acceuil`,
             }).then(() => {
-                if (this.gameId){
+                if (this.gameId) {
                     this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.SelectAvatar, {
                         gameId: this.gameId,
                         avatar: null,
