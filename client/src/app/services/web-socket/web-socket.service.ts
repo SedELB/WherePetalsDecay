@@ -11,7 +11,6 @@ export class WebSocketService implements OnDestroy {
     private readonly serverUrl = environment.serverUrl.replace('/api', '');
 
     constructor() {
-        // Connexions automatiques pour admin, games et join
         this.connectNamespace(SocketNamespace.Admin);
         this.connectNamespace(SocketNamespace.Games);
         this.connectNamespace(SocketNamespace.Join);
