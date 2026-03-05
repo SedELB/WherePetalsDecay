@@ -1,5 +1,4 @@
-import { Player } from '@common/player';
-import { Room, RoomCreatePayload, RoomJoinPayload } from '@common/room';
+import { RoomCreatePayload, RoomJoinPayload } from '@common/room';
 import { SocketNamespace } from '@common/enums';
 import { WaitingRoomEvents } from '@common/waiting-room-events';
 import { Logger } from '@nestjs/common';
@@ -65,10 +64,11 @@ export class WaitingRoomGateway implements OnGatewayInit, OnGatewayConnection, O
             return;
         }
 
-        const uniqueName = this.waitingRoomService.getUniquePlayerName(payload.roomCode, payload.player.name);
-        const playerData = { ...payload.player, name: uniqueName };
+        // Ajuster le nom si déjà pris
+        const uniqueName = this.waitingRoomService.getUniquePlayerName(payload.roomCode, payload.player.character.name);
+        const character = { ...payload.player.character, name: uniqueName };
 
-        const updatedRoom = this.waitingRoomService.addPlayer(payload.roomCode, socket.id, playerData);
+        const updatedRoom = this.waitingRoomService.addPlayer(payload.roomCode, socket.id, character);
 
         if (!updatedRoom) {
             socket.emit(WaitingRoomEvents.Error, { message: 'Impossible de rejoindre la salle.' });
@@ -77,7 +77,7 @@ export class WaitingRoomGateway implements OnGatewayInit, OnGatewayConnection, O
 
         socket.join(payload.roomCode);
 
-        const newPlayer = updatedRoom.players.find((p) => p.id === socket.id);
+        const newPlayer = updatedRoom.players.find((p) => p.socketId === socket.id);
         socket.emit(WaitingRoomEvents.RoomJoined, updatedRoom);
         socket.to(payload.roomCode).emit(WaitingRoomEvents.PlayerJoined, newPlayer);
 
@@ -104,15 +104,12 @@ export class WaitingRoomGateway implements OnGatewayInit, OnGatewayConnection, O
 
         const { room, kickedPlayer } = result;
 
-        // Notifier le joueur exclu
         this.server.to(targetPlayerId).emit(WaitingRoomEvents.PlayerKicked, {
             message: "Vous avez été exclu de la salle d'attente par l'organisateur.",
         });
 
-        // Le faire quitter la room socket.io via broadcast
         this.server.in(targetPlayerId).socketsLeave(room.code);
 
-        // Notifier les autres
         socket.to(room.code).emit(WaitingRoomEvents.PlayerLeft, kickedPlayer);
         this.server.to(room.code).emit(WaitingRoomEvents.RoomUpdated, room);
 
@@ -178,18 +175,15 @@ export class WaitingRoomGateway implements OnGatewayInit, OnGatewayConnection, O
         socket.leave(room.code);
 
         if (wasOrganizer) {
-            // L'organisateur a quitté -> fermer la salle
             this.waitingRoomService.deleteRoom(room.code);
             this.server.to(room.code).emit(WaitingRoomEvents.RoomClosed, {
                 message: "L'organisateur a quitté la salle. La partie est annulée.",
             });
 
-            // Faire quitter tous les joueurs de la room socket.io
             this.server.in(room.code).socketsLeave(room.code);
 
             this.logger.log(`Room ${room.code} closed (organizer left)`);
         } else {
-            // Un joueur normal a quitté
             socket.to(room.code).emit(WaitingRoomEvents.PlayerLeft, removedPlayer);
             this.server.to(room.code).emit(WaitingRoomEvents.RoomUpdated, room);
 

@@ -100,7 +100,7 @@ export class WaitingRoomService implements OnDestroy {
             if (current) {
                 this.roomSubject.next({
                     ...current,
-                    players: current.players.filter((p) => p.id !== player.id),
+                    players: current.players.filter((p) => p.socketId !== player.socketId),
                 });
             }
         });
@@ -133,7 +133,6 @@ export class WaitingRoomService implements OnDestroy {
             SocketNamespace.WaitingRoom,
             WaitingRoomEvents.GameStarting,
             (data) => {
-                // TODO: Naviguer vers la vue de jeu avec les données
                 this.router.navigate(['/game'], { state: data });
             },
         );
