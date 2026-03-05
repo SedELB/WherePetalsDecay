@@ -20,12 +20,10 @@ import { Subscription } from 'rxjs';
     styleUrls: ['./waiting-room.component.scss'],
 })
 export class WaitingRoomComponent implements OnInit, OnDestroy {
-    // === Propriétés de ma version (gestion salle d'attente) ===
     room: Room | null = null;
     currentPlayerId: string = '';
     private roomSubscription: Subscription | null = null;
 
-    // === Propriétés de dev (synchronisation avec join-game) ===
     selectedGame: Game;
     private readonly webSocketService = inject(WebSocketService);
 
@@ -41,13 +39,11 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
     }
 
     ngOnInit(): void {
-        // === Ma version : connexion au service waiting-room ===
         this.waitingRoomService.connect();
         this.roomSubscription = this.waitingRoomService.room$.subscribe((room) => {
             this.room = room;
         });
 
-        // === Version dev : écoute du statut du lobby ===
         this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.GetLobbyStatus);
         this.webSocketService.onNamespace(SocketNamespace.Join, JoinGameEvents.LobbyStatusReceived, (lobbyData: Lobby) => {
             this.selectedGame = lobbyData.game;
@@ -55,18 +51,15 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
     }
 
     ngOnDestroy(): void {
-        // === Ma version ===
         this.roomSubscription?.unsubscribe();
         this.waitingRoomService.disconnect();
 
-        // === Version dev ===
         if (this.selectedGame) {
             this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.LeaveLobby, this.selectedGame._id.toString());
         }
         this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.LobbyStatusReceived);
     }
 
-    // === Getters de ma version ===
     get isOrganizer(): boolean {
         return this.room?.organizerId === this.currentPlayerId;
     }
@@ -82,7 +75,6 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
         return organizer ? [organizer, ...others] : others;
     }
 
-    // === Méthodes de ma version ===
     onKickPlayer(playerId: string): void {
         if (this.isOrganizer && playerId !== this.currentPlayerId) {
             this.waitingRoomService.kickPlayer(playerId);
@@ -106,7 +98,6 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
         this.router.navigate(['/home']);
     }
 
-    // === Méthode de dev ===
     leaveLobby(): void {
         this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.LeaveLobby);
     }
