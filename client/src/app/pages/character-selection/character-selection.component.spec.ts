@@ -22,6 +22,7 @@ describe('CharacterSelectionComponent', () => {
   const LIFE_WITH_BONUS = BASE_STATS.life + BASE_STATS.bonus;
   const SPEED_WITH_BONUS = BASE_STATS.speed + BASE_STATS.bonus;
   const TEST_AVATAR_INDEX = 5;
+  const TEST_AVATAR_PATH = AVATARS_PATH[TEST_AVATAR_INDEX];
 
   beforeEach(async () => {
     webSocketServiceSpy = jasmine.createSpyObj('WebSocketService', ['emitNamespace', 'onNamespace', 'off']);
@@ -50,8 +51,8 @@ describe('CharacterSelectionComponent', () => {
 
   // Test avatar selection
   it('should select avatar when clicked', () => {
-    component.selectAvatar(TEST_AVATAR_INDEX);
-    expect(component.selectedAvatarIndex).toBe(TEST_AVATAR_INDEX);
+    component.selectAvatar(TEST_AVATAR_PATH);
+    expect(component.selectedAvatar).toBe(TEST_AVATAR_PATH);
   });
 
   // Test life bonus calculation
@@ -143,29 +144,28 @@ describe('CharacterSelectionComponent', () => {
 
     expect(component.characterName).toBeTruthy();
     expect(RANDOM_NAMES).toContain(component.characterName);
-    expect(component.selectedAvatarIndex).not.toBeNull();
-    expect(component.selectedAvatarIndex).toBeGreaterThanOrEqual(0);
-    expect(component.selectedAvatarIndex).toBeLessThan(AVATARS_PATH.length);
+    expect(component.selectedAvatar).not.toBeNull();
+    expect(AVATARS_PATH).toContain(component.selectedAvatar as string);
   });
 
   // Test form validation with empty name
   it('should validate form as invalid when name is empty', () => {
     component.characterName = '';
-    component.selectedAvatarIndex = TEST_AVATAR_INDEX;
+    component.selectedAvatar = TEST_AVATAR_PATH;
     expect(component.isFormValid()).toBe(false);
   });
 
   // Test form validation with no avatar
   it('should validate form as invalid when avatar is not selected', () => {
     component.characterName = 'Test';
-    component.selectedAvatarIndex = null;
+    component.selectedAvatar = null;
     expect(component.isFormValid()).toBe(false);
   });
 
   // Test form validation with whitespace name
   it('should validate form as invalid when name is only whitespace', () => {
     component.characterName = '   ';
-    component.selectedAvatarIndex = TEST_AVATAR_INDEX;
+    component.selectedAvatar = TEST_AVATAR_PATH;
     expect(component.isFormValid()).toBe(false);
   });
 });

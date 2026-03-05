@@ -12,6 +12,7 @@ describe('LobbyCardComponent', () => {
     hostSocketId: 'socket-1',
     playerCount: 1,
     isLocked: false,
+    pendingAvatars: {},
     players: [],
     game: {
       _id: 'game-1',
