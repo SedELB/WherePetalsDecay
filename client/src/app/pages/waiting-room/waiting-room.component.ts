@@ -1,4 +1,5 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { SocketNamespace } from '@common/enums';
@@ -16,6 +17,7 @@ import { Lobby } from '@common/lobby';
 export class WaitingRoomComponent implements OnInit, OnDestroy {
     selectedGame: Game;
     private readonly webSocketService = inject(WebSocketService);
+    private router: Router = inject(Router);
 
     ngOnInit(): void {
         this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.GetLobbyStatus);
@@ -35,5 +37,6 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
 
     leaveLobby() {
         this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.LeaveLobby);
+        this.router.navigate(['/home']);
     }
 }
