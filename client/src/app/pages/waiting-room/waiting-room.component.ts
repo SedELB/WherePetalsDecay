@@ -1,10 +1,15 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { WaitingRoomService } from '@app/services/waiting-room/waiting-room.service';
+import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Room } from '@common/room';
 import { Player } from '@common/player';
+import { Game } from '@common/game';
+import { Lobby } from '@common/lobby';
+import { SocketNamespace } from '@common/enums';
+import { JoinGameEvents } from '@common/join.gateway.events';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -15,15 +20,19 @@ import { Subscription } from 'rxjs';
     styleUrls: ['./waiting-room.component.scss'],
 })
 export class WaitingRoomComponent implements OnInit, OnDestroy {
+    // === Propriétés de ma version (gestion salle d'attente) ===
     room: Room | null = null;
     currentPlayerId: string = '';
     private roomSubscription: Subscription | null = null;
+
+    // === Propriétés de dev (synchronisation avec join-game) ===
+    selectedGame: Game;
+    private readonly webSocketService = inject(WebSocketService);
 
     constructor(
         private readonly waitingRoomService: WaitingRoomService,
         private readonly router: Router,
     ) {
-        // Récupérer les données de navigation (si créateur/organisateur)
         const navigation = this.router.getCurrentNavigation();
         const state = navigation?.extras.state as { roomCode?: string; playerId?: string };
         if (state?.playerId) {
@@ -32,17 +41,32 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
     }
 
     ngOnInit(): void {
+        // === Ma version : connexion au service waiting-room ===
         this.waitingRoomService.connect();
         this.roomSubscription = this.waitingRoomService.room$.subscribe((room) => {
             this.room = room;
         });
+
+        // === Version dev : écoute du statut du lobby ===
+        this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.GetLobbyStatus);
+        this.webSocketService.onNamespace(SocketNamespace.Join, JoinGameEvents.LobbyStatusReceived, (lobbyData: Lobby) => {
+            this.selectedGame = lobbyData.game;
+        });
     }
 
     ngOnDestroy(): void {
+        // === Ma version ===
         this.roomSubscription?.unsubscribe();
         this.waitingRoomService.disconnect();
+
+        // === Version dev ===
+        if (this.selectedGame) {
+            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.LeaveLobby, this.selectedGame._id.toString());
+        }
+        this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.LobbyStatusReceived);
     }
 
+    // === Getters de ma version ===
     get isOrganizer(): boolean {
         return this.room?.organizerId === this.currentPlayerId;
     }
@@ -53,12 +77,12 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
 
     get players(): Player[] {
         if (!this.room) return [];
-        // Organisateur en premier, puis les autres dans l'ordre d'arrivée
-        const organizer = this.room.players.find((p) => p.isOrganizer);
-        const others = this.room.players.filter((p) => !p.isOrganizer);
+        const organizer = this.room.players.find((p) => p.isHost);
+        const others = this.room.players.filter((p) => !p.isHost);
         return organizer ? [organizer, ...others] : others;
     }
 
+    // === Méthodes de ma version ===
     onKickPlayer(playerId: string): void {
         if (this.isOrganizer && playerId !== this.currentPlayerId) {
             this.waitingRoomService.kickPlayer(playerId);
@@ -80,5 +104,10 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
     onLeaveRoom(): void {
         this.waitingRoomService.leaveRoom();
         this.router.navigate(['/home']);
+    }
+
+    // === Méthode de dev ===
+    leaveLobby(): void {
+        this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.LeaveLobby);
     }
 }

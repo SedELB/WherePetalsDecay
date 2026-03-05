@@ -1,11 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
 
-<body>
+<main>
 
     <app-button id="back-button" [width]="100" [route]="'/home'">Retour</app-button>
 
@@ -13,8 +7,7 @@
     <p>Créez, modifiez ou supprimez un jeu</p>
     <div class="list-container">
         @for(game of gameCards; track game.name){
-            <app-game-card [game]="game"
-            (removeParent)="removeGame(game.name)">
+            <app-game-card [game]="game">
                 <app-button [height]="50" (clicked)="navigateToGameEditor(game.name)">Modifier</app-button>
                 <app-button [height]="50" (clicked)="changeVisibility(game.name)">{{ game.isVisible ? 'Cacher' : 'Afficher' }}</app-button>
                 <app-button [height]="50" (clicked)="removeGame(game.name)">Supprimer</app-button>
@@ -25,5 +18,5 @@
     <app-button [width]="200" class="add-button" [route]="'./create'">
         Créer
     </app-button>
-</body>
-</html>
+</main>
+

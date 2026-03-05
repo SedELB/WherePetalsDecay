@@ -1,0 +1,18 @@
+<div class="lobbyCard">
+  <div class="image-frame">
+    <img class="thumbnail" [src]="lobby.game.thumbnail" [alt]="lobby.game.name"/>
+  </div>
+
+  <div class="card-info">
+    <ul>
+      <li>Nom du jeu : <span>{{ lobby.game.name }}</span></li>
+      <li>Taille du jeu : <span>{{ lobby.game.size.rows }}X{{ lobby.game.size.cols }}</span></li>
+      <li>Mode de jeu : <span>{{ lobby.game.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</span></li>
+      <li>Nombre de joueurs : <span>{{ lobby.playerCount }}/{{ lobby.game.maxPlayers }}</span></li>
+    </ul>
+
+    <div class="card-buttons">
+      <ng-content></ng-content>
+    </div>
+  </div>
+</div>
