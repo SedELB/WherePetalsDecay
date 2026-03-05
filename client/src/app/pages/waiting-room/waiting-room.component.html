@@ -17,17 +17,17 @@
             <div class="players-section">
                 <h2>Joueurs</h2>
                 <ul class="players-list">
-                    @for (player of players; track player.id) {
-                        <li class="player-item" [class.organizer]="player.isOrganizer">
-                            <img [src]="player.avatar" [alt]="player.name" class="player-avatar" />
+                    @for (player of players; track player.socketId) {
+                        <li class="player-item" [class.organizer]="player.isHost">
+                            <img [src]="player.character.avatar" [alt]="player.character.name" class="player-avatar" />
                             <span class="player-name">
-                                {{ player.name }}
-                                @if (player.isOrganizer) {
+                                {{ player.character.name }}
+                                @if (player.isHost) {
                                     <span class="organizer-badge">👑 Organisateur</span>
                                 }
                             </span>
-                            @if (isOrganizer && !player.isOrganizer) {
-                                <button class="kick-btn" (click)="onKickPlayer(player.id)">Exclure</button>
+                            @if (isOrganizer && !player.isHost) {
+                                <button class="kick-btn" (click)="onKickPlayer(player.socketId)">Exclure</button>
                             }
                         </li>
                     }
@@ -58,7 +58,7 @@
         } @else {
             <p>Chargement de la salle...</p>
             <div class="actions">
-                <app-button [route]="'/home'">Retour à l'accueil</app-button>
+                <app-button [route]="'/home'" (clicked)="leaveLobby()">Retour à la vue initiale</app-button>
             </div>
         }
     </div>

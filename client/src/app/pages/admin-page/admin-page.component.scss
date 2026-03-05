@@ -1,7 +1,7 @@
 @use "src/styles.scss" as *;
 
-body {
-    background-image: url("/assets/background.png");
+main {
+    background-image: url('../../../assets/background.png');
     background-size: cover;
     min-height: 100vh;
     display: flex;
@@ -49,6 +49,8 @@ p {
     overflow-y: auto;
     overflow-x: hidden;
     height: 600px;
-    width: 800px;
+    width: auto;
     align-items: center;
+    
+    
 }

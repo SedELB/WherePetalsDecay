@@ -1,7 +1,7 @@
 import { NgClass } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { GameCard } from '@app/interfaces/gameCard';
+import { Component, ElementRef, Input, ViewChild } from '@angular/core';
 import { GameMode } from '@common/enums';
+import { GameCard } from '@app/interfaces/gameCard';
 
 @Component({
   selector: 'app-game-card',
@@ -23,12 +23,16 @@ export class GameCardComponent {
     isVisible: true,
   };
 
-  @Output() removeParent = new EventEmitter<void>();
+  @ViewChild('tooltip') tooltipRef!: ElementRef;
+  @ViewChild('thumbnail') thumbnailRef!: ElementRef;
+
   show = false;
   gameMode = GameMode;
+  tooltipVerticalPos: number = 0;
+  tooltipTopPadding: number = 140;
 
   displayTime(): string {
-    const rawDate = this.game.createdAt;
+    const rawDate = this.game.updatedAt;
     const date = rawDate instanceof Date ? rawDate : new Date(rawDate);
 
     if (Number.isNaN(date.getTime())) {
@@ -40,4 +44,27 @@ export class GameCardComponent {
       timeStyle: 'short',
     });
   }
+
+  onMouseEnter(): void {
+    this.show = true;
+    this.updateTooltipPosition();
+  }
+
+  onMouseLeave(): void {
+    this.show = false;
+    this.tooltipVerticalPos = 0;
+  }
+
+  updateTooltipPosition(): void {
+    const rect = this.thumbnailRef.nativeElement.getBoundingClientRect();
+    const tooltipHeight = this.tooltipRef.nativeElement.offsetHeight;
+    const windowHeight = window.innerHeight;
+    const tooltipPadding = 10;
+
+    const centerOfThumbnail = rect.top + rect.height / 2;
+    const maxTop = windowHeight - tooltipHeight - tooltipPadding;
+
+    this.tooltipVerticalPos = Math.min(Math.max(centerOfThumbnail - tooltipHeight / 2, this.tooltipTopPadding), maxTop);
+  }
+
 }

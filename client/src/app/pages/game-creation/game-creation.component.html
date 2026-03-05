@@ -1,120 +1,28 @@
 <div class="container">
     <app-button [width]="100" [route]="routes.home">Retour</app-button>
-
-    @if(currentPhase === 'game-selection'){
-        <section class="game-selection">
-            <h2>Créer une partie</h2>
-            <p>Sélectionnez un jeu pour créer une nouvelle partie</p>
-
-            @if(games.length === 0){
+    <section class="game-selection">
+        <h2>Créer une partie</h2>
+        <p>Sélectionnez un jeu pour créer une nouvelle partie</p>
+        <div class="list-container">
+            @for(game of games; track game._id){
+                <app-game-card
+                    [game]="{
+                        name: game.name,
+                        description: game.description,
+                        size: getGameSizeLabel(game),
+                        gameMode: game.gameMode,
+                        createdAt: game.createdAt,
+                        updatedAt: game.updatedAt,
+                        thumbnail: game.thumbnail,
+                        isVisible: game.isVisible,
+                    }"
+                >
+                    <app-button [height]="50" (click)="selectGame(game)">Sélectionner</app-button>
+                </app-game-card>
+            }
+            @empty {
                 <p class="no-games">Aucun jeu disponible</p>
             }
-            @else {
-                <div class="list-container">
-                    @for(game of games; track game._id){
-                        <app-game-card
-                            [game]="{
-                                name: game.name,
-                                description: game.description,
-                                size: getGameSizeLabel(game),
-                                gameMode: game.gameMode,
-                                createdAt: game.createdAt,
-                                updatedAt: game.updatedAt,
-                                thumbnail: game.thumbnail,
-                                isVisible: game.isVisible,
-                            }"
-                        >
-                            <app-button [height]="50" (click)="selectGame(game)">Sélectionner</app-button>
-                        </app-game-card>
-                    }
-                </div>
-            }
-            
-        </section>
-    }
-    @if(currentPhase === 'character-creation'){
-        <section class="character-creation">
-            <h2>Création de personnage</h2>
-            <p>Jeu sélectionné : {{ selectedGame?.name }}</p>
-
-            <div class="list-container">
-                <div class="form-container">
-                    <div class="form-group">
-                        <label for="characterName">Nom du personnage</label>
-                        <input
-                            type="text"
-                            id="characterName"
-                            [(ngModel)]="characterName"
-                            placeholder="Entrez un nom"
-                            [maxlength]="nameMaxLength"
-                        />
-                    </div>
-
-                    <div class="form-group">
-                    <label>Choisissez un avatar</label>
-
-                        <div class="avatar-grid">
-                            @for (avatar of avatars; track avatar; let i = $index) {
-                            <button
-                                type="button"
-                                class="avatar-item"
-                                [class.selected]="selectedAvatarIndex === i"
-                                (click)="selectAvatar(i)"
-                            >
-                                <img
-                                [src]="avatar"
-                                [alt]="'Avatar ' + (i + 1)"
-                                />
-                            </button>
-                            }
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Attributs du personnage</label>
-                        <div class="attributes-container">
-                            <div class="attribute" [class.has-bonus]="lifeBonusSelected" (click)="selectBonus(true)">
-                                <span class="attribute-name">Vie</span>
-                                <span class="attribute-value">{{ lifeValue }}</span>
-                                <span class="attribute-description">Points de vie du personnage</span>
-                            </div>
-                            <div class="attribute" [class.has-bonus]="!lifeBonusSelected" (click)="selectBonus(false)">
-                                <span class="attribute-name">Rapidité</span>
-                                <span class="attribute-value">{{ speedValue }}</span>
-                                <span class="attribute-description">Vitesse de déplacement</span>
-                            </div>
-                            <div class="attribute" [class.has-bonus]="attackDiceD6" (click)="selectAttackDice(true)">
-                                <span class="attribute-name">Attaque</span>
-                                <span class="attribute-value">{{ attackValue }}</span>
-                                <span class="attribute-dice">{{ attackDice }}</span>
-                                <span class="attribute-description">Puissance d'attaque</span>
-                            </div>
-                            <div class="attribute" [class.has-bonus]="!attackDiceD6" (click)="selectAttackDice(false)">
-                                <span class="attribute-name">Défense</span>
-                                <span class="attribute-value">{{ defenseValue }}</span>
-                                <span class="attribute-dice">{{ defenseDice }}</span>
-                                <span class="attribute-description">Résistance aux dégâts</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="random-button">
-                        <app-button (click)="generateRandomCharacter()">
-                            Générer un personnage aléatoire
-                        </app-button>
-                    </div>
-
-                    <div class="navigation-buttons">
-                        <app-button (click)="goBackToGameSelection()">Retour</app-button>
-                        <app-button
-                            [disabled]="!isFormValid()"
-                            (click)="confirmCharacter()"
-                        >
-                            Confirmer
-                        </app-button>
-                    </div>
-                </div>
-            </div>
-        </section>
-    }
+        </div>
+    </section>
 </div>

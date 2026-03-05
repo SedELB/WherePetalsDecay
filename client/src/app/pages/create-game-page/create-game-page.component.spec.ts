@@ -104,7 +104,7 @@ describe('CreateGamePageComponent', () => {
     component.createAndNavigateToGameEditor();
 
     expect(navigateSpy).toHaveBeenCalledWith(
-      ['/editor'],
+      ['/editor/new'],
       jasmine.objectContaining({
         state: jasmine.objectContaining({
           game: jasmine.objectContaining({
@@ -127,7 +127,7 @@ describe('CreateGamePageComponent', () => {
     component.createAndNavigateToGameEditor();
 
     expect(navigateSpy).toHaveBeenCalledWith(
-      ['/editor'],
+      ['/editor/new'],
       jasmine.objectContaining({
         state: jasmine.objectContaining({
           game: jasmine.objectContaining({
@@ -150,7 +150,7 @@ describe('CreateGamePageComponent', () => {
     component.createAndNavigateToGameEditor();
 
     expect(navigateSpy).toHaveBeenCalledWith(
-      ['/editor'],
+      ['/editor/new'],
       jasmine.objectContaining({
         state: jasmine.objectContaining({
           game: jasmine.objectContaining({
@@ -173,7 +173,7 @@ describe('CreateGamePageComponent', () => {
     component.createAndNavigateToGameEditor();
 
     expect(navigateSpy).toHaveBeenCalledWith(
-      ['/editor'],
+      ['/editor/new'],
       jasmine.objectContaining({
         state: jasmine.objectContaining({
           game: jasmine.objectContaining({

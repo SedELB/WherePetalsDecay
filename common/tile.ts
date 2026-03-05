@@ -1,4 +1,4 @@
-import { TileItem, TileTexture } from '@common/enums';
+import { TileItem, TileTexture } from './enums';
 
 export interface Tile {
     type: TileTexture;
