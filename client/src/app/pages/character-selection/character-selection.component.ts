@@ -12,6 +12,7 @@ import { SocketNamespace } from '@common/enums';
 import { Game } from '@common/game';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
+import swal from 'sweetalert2';
 
 @Component({
   selector: 'app-character-selection',
@@ -159,6 +160,17 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
         this.webSocketService.onNamespace<string[]>(SocketNamespace.Join, JoinGameEvents.UpdateOccupiedAvatars, (occupiedAvatars) => {
             this.currentlySelectedAvatars = occupiedAvatars;
         });
+
+        this.webSocketService.onNamespace(SocketNamespace.Join, JoinGameEvents.LobbyError, (message) => {
+            swal.fire({
+                title: `Erreur`,
+                text: `${message}`,
+                icon: 'error',
+                confirmButtonText: 'OK',
+            });
+
+            this.router.navigate([this.routes.home]);
+        });
     }
 
     generateRandomCharacter(): void {
@@ -181,8 +193,11 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
                 gameId: this.gameId,
                 avatar: null,
             });
+
+            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.LeaveLobby);
             this.router.navigate([this.routes.joinGame]);
         } else {
+            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.LeaveLobby);
             this.router.navigate([this.routes.create]);
         }
     }
@@ -192,6 +207,7 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
         this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.LobbyJoined);
         this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.UpdateOccupiedAvatars);
         this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.JoinAvatarRoom);
+        this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.LobbyError);
     }
 
 }

@@ -44,7 +44,7 @@ export class LobbyService {
         if (lobby.isLocked === true) throw new Error('The lobby is locked');
 
         lobby.players.push(player);
-        lobby.playerCount++;
+        lobby.playerCount = lobby.players.length;
         if (lobby.playerCount === lobby.game.maxPlayers) lobby.isLocked = true;
         return lobby;
     }
@@ -54,8 +54,9 @@ export class LobbyService {
     }
 
     findLobbyBySocketId(socketId: string) : Lobby | undefined {
-        const hostLobby = Array.from(this.lobbies.values()).find(lobby => lobby.hostSocketId === socketId);
-        return hostLobby;
+        return Array.from(this.lobbies.values()).find(lobby => 
+        lobby.hostSocketId === socketId || 
+        lobby.players.some(player => player.socketId === socketId));
     }
 
     removePlayerFromLobby(gameId: string, socketId: string) : void {
@@ -63,6 +64,11 @@ export class LobbyService {
         if (lobby) {
             lobby.players = lobby.players.filter(player => player.socketId !== socketId);
             delete lobby.pendingAvatars[socketId];
+            lobby.playerCount = lobby.players.length;
+
+            if (lobby.playerCount < lobby.game.maxPlayers) {
+                lobby.isLocked = false;
+            }
         }
     }
 
