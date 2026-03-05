@@ -218,7 +218,6 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
         this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.GameHosted);
         this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.LobbyJoined);
         this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.UpdateOccupiedAvatars);
-        this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.JoinAvatarRoom);
         this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.LobbyError);
     }
 

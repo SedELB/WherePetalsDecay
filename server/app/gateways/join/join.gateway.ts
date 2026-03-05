@@ -20,7 +20,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     constructor(private readonly logger: Logger, private readonly lobbyService: LobbyService) {}
 
     afterInit() {
-        this.logger.log('JoinGateway initialized on join namespace');
+        this.logger.log('JoinGateway initialized on /join namespace');
     }
 
     handleConnection(socket: Socket) {
@@ -44,7 +44,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         @MessageBody() payload: {game: Game, player: Player},
     ) {
 
-        this.logger.log(`Payload (creation de lobby) reçu de ${socket.id}:`);
+        this.logger.log(`Payload (Lobby Created) by ${socket.id}`);
         payload.player.socketId = socket.id;
         payload.player.isHost = true;
         const createdLobby = this.lobbyService.createLobby(payload.game, socket.id, payload.player);
@@ -128,7 +128,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
             socket.emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
         } else {
-            this.logger.log(`>>> ERROR: LOBBY NOT FOUND FOR ${gameId}`);
+            this.logger.log(`Lobby not found for ${gameId} (handleJoinAvatarRoom)`);
         }
     }
     

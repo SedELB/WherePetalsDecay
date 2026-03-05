@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { GameModule } from './modules/game.module';
+import { LobbyModule } from './modules/lobby.module';
 
 @Module({
     imports: [
@@ -13,10 +14,9 @@ import { GameModule } from './modules/game.module';
                 uri: config.get<string>('DATABASE_CONNECTION_STRING'), // Loaded from .env
             }),
         }),
-        GameModule, // Rend son export GameService injectable ailleurs ex. game.controller.ts
+        GameModule,
+        LobbyModule,
     ],
-    // controllers: [CourseController, DateController, ExampleController],
-    // providers: [ChatGateway, CourseService, DateService, ExampleService, Logger],
     controllers: [],
     providers: [],
 
