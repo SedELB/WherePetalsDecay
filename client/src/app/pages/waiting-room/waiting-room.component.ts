@@ -6,7 +6,7 @@ import { SocketNamespace } from '@common/enums';
 import { Game } from '@common/game';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
-
+const SMALL_DELAY = 100;
 @Component({
     selector: 'app-waiting-room',
     standalone: true,
@@ -37,6 +37,8 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
 
     leaveLobby() {
         this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.LeaveLobby);
-        this.router.navigate(['/home']);
+        setTimeout(() => {
+            this.router.navigate(['/home']);
+        }, SMALL_DELAY);
     }
 }
