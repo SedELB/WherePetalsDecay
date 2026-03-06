@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Server, Socket } from 'socket.io';
 import { AdminGateway } from './admin.gateway';
-import { AdminGameEvents } from './admin.gateway.events';
+import { AdminGameEvents } from '@common/socket-events/admin.gateway.events';
 
 describe('AdminGateway', () => {
     let gateway: AdminGateway;
