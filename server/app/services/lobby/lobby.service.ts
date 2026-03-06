@@ -2,6 +2,10 @@ import { Game } from '@common/game';
 import { Injectable } from '@nestjs/common';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
+const BASE_36 = 36;
+const BASE_2 = 2;
+const BASE_7 = 7;
+const BASE_5 = 5;
 
 @Injectable()
 export class LobbyService {
@@ -11,9 +15,22 @@ export class LobbyService {
 
     private lobbies: Map<string, Lobby>;
 
+
+    private generateLobbyId(): string {
+        let newLobbyId: string;
+        do {
+            newLobbyId = Math.random().toString(BASE_36).substring(BASE_2, BASE_7).padEnd(BASE_5, 'X').toUpperCase();
+        } while (this.lobbies.has(newLobbyId));
+
+        return newLobbyId;
+    }
+
     createLobby(game: Game, hostSocketId: string, player: Player) : Lobby {
         const gameId = game._id.toString();
+        const lobbyId = this.generateLobbyId();
+
         const lobby: Lobby = {
+            lobbyId,
             gameId,
             game,
             hostSocketId,
@@ -23,12 +40,12 @@ export class LobbyService {
             pendingAvatars: {},
         };
 
-        this.lobbies.set(gameId, lobby);
+        this.lobbies.set(lobbyId, lobby);
         return lobby;
     }
 
-    getLobby(gameId: string) : Lobby | undefined {
-        return this.lobbies.get(gameId);
+    getLobby(lobbyId: string) : Lobby | undefined {
+        return this.lobbies.get(lobbyId);
     }
 
     getAvailableLobbies() : Lobby[] {
@@ -38,8 +55,8 @@ export class LobbyService {
         return availableLobbies;
     }
 
-    joinLobby(gameId: string, player: Player) : Lobby {
-        const lobby = this.lobbies.get(gameId);
+    joinLobby(lobbyId: string, player: Player) : Lobby {
+        const lobby = this.lobbies.get(lobbyId);
         if (!lobby) throw new Error('There is no lobby associated with the provided ID');
         if (lobby.isLocked === true) throw new Error('The lobby is locked');
 
@@ -49,8 +66,8 @@ export class LobbyService {
         return lobby;
     }
 
-    deleteLobby(gameId) : void {
-        this.lobbies.delete(gameId);
+    deleteLobby(lobbyId) : void {
+        this.lobbies.delete(lobbyId);
     }
 
     findLobbyBySocketId(socketId: string) : Lobby | undefined {
@@ -63,8 +80,8 @@ export class LobbyService {
         return undefined;
     }
 
-    removePlayerFromLobby(gameId: string, socketId: string) : void {
-        const lobby = this.lobbies.get(gameId);
+    removePlayerFromLobby(lobbyId: string, socketId: string) : void {
+        const lobby = this.lobbies.get(lobbyId);
         if (lobby) {
             lobby.players = lobby.players.filter(player => player.socketId !== socketId);
             delete lobby.pendingAvatars[socketId];
@@ -76,8 +93,8 @@ export class LobbyService {
         }
     }
 
-    updatePlayerAvatar(gameId: string, socketId: string, avatarPath: string | null): void {
-        const lobby = this.getLobby(gameId);
+    updatePlayerAvatar(lobbyId: string, socketId: string, avatarPath: string | null): void {
+        const lobby = this.getLobby(lobbyId);
         if (!lobby) return;
 
         const player = lobby.players.find(p => p.socketId === socketId);
@@ -92,4 +109,35 @@ export class LobbyService {
             }
         }
     }
+    
+    toggleLock(lobbyId: string, hostSocketId: string): Lobby | undefined {
+        const lobby = this.getLobby(lobbyId);
+        if (lobby && lobby.hostSocketId === hostSocketId){
+            lobby.isLocked = !lobby.isLocked;
+            return lobby;
+        }
+
+        return undefined;
+    }
+
+    canStartGame(lobbyId: string, hostSocketId: string): boolean {
+        const lobby = this.getLobby(lobbyId);
+        if (lobby && lobby.hostSocketId === hostSocketId){
+            return lobby.playerCount >= 2;
+        }
+
+        return false;
+    }
+
+    kickPlayer(lobbyId: string, hostSocketId: string, targetSocketId: string): boolean {
+        const lobby = this.getLobby(lobbyId);
+        if (lobby && lobby.hostSocketId === hostSocketId) {
+            this.removePlayerFromLobby(lobbyId, targetSocketId);
+            return true;
+        }
+
+        return false;
+    }
+
+
 }

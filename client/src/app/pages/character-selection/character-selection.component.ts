@@ -29,7 +29,7 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
     isSubmitting = false;
 
     nameMaxLength = NAME_MAX_LENGTH;
-    gameId: string | null = null;
+    lobbyId: string | null = null;
     selectedGame: Game | null = null;
     currentlySelectedAvatars: string[] = [];
 
@@ -46,7 +46,7 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
 
     ngOnInit(): void {
         // Get gameID from the URL parameter. (Join an existing lobby)
-        this.gameId = this.route.snapshot.paramMap.get('gameId');
+        this.lobbyId = this.route.snapshot.paramMap.get('lobbyId');
 
         // Get game object from History (Host a new lobby).
         const state = history.state;
@@ -54,13 +54,13 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
             this.selectedGame = state.game;
         }
 
-        if (!this.gameId && !this.selectedGame) {
+        if (!this.lobbyId && !this.selectedGame) {
             this.router.navigate([this.routes.home]);
             return;
         }
 
-        if (this.gameId) {
-            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.JoinAvatarRoom, this.gameId);
+        if (this.lobbyId) {
+            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.JoinAvatarRoom, this.lobbyId);
         }
 
         this.setupNavigationListener();
@@ -105,7 +105,7 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
         this.selectedAvatar = avatar;
 
         const payload = {
-            gameId: this.gameId,
+            lobbyId: this.lobbyId,
             avatar: this.selectedAvatar,
         };
 
@@ -131,15 +131,15 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
             this.attackDiceD6,
         );
 
-        if (this.gameId) {
+        if (this.lobbyId) {
             // Joining an existing lobby
             this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.JoinLobby, {
-                gameId: this.gameId,
+                lobbyId: this.lobbyId,
                 player: { character },
             });
 
         } else if (this.selectedGame) {
-            // Creating a lobby as host
+            // Creating a lobby as host (a host lobbyId will be null since his URL in character-selection will not contain a pre-exising lobbyId)
             this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.CreateLobby, {
                 game: this.selectedGame,
                 player: { character },
@@ -149,7 +149,7 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
 
     private setupNavigationListener(): void {
         const navigateToLobby = (lobbyData: Lobby) => {
-            this.router.navigate([this.routes.waitingRoom, lobbyData.gameId], {
+            this.router.navigate([this.routes.waitingRoom, lobbyData.lobbyId], {
                 state: { lobby: lobbyData },
             });
         };
@@ -168,11 +168,11 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
                 title: `Erreur`,
                 text: `${message}`,
                 icon: 'error',
-                confirmButtonText: `Retourner à l'acceuil`,
+                confirmButtonText: `Retourner à l'accueil`,
             }).then(() => {
-                if (this.gameId) {
+                if (this.lobbyId) {
                     this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.SelectAvatar, {
-                        gameId: this.gameId,
+                        lobbyId: this.lobbyId,
                         avatar: null,
                     });
                 }
@@ -200,9 +200,9 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
     }
 
     goBack(): void {
-        if (this.gameId) {
+        if (this.lobbyId) {
             this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.SelectAvatar, {
-                gameId: this.gameId,
+                lobbyId: this.lobbyId,
                 avatar: null,
             });
 
