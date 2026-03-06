@@ -41,7 +41,8 @@ describe('JoinGateway', () => {
     };
 
     const fakeLobby: Lobby = {
-        gameId: 'lobby-1',
+        lobbyId: 'lobby-1',
+        gameId: '1',
         game: mockGame,
         hostSocketId: 'socket-123',
         playerCount: 1,
@@ -173,7 +174,7 @@ describe('JoinGateway', () => {
         it('should emit LobbyError if lobby does not exist', () => {
             jest.spyOn(lobbyService, 'getLobby').mockReturnValue(null);
 
-            gateway.handleJoinLobby(mockSocket, { gameId: 'lobby-1', player: makeMockPlayer() });
+            gateway.handleJoinLobby(mockSocket, { lobbyId: 'lobby-1', player: makeMockPlayer() });
             expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyError, `Ce salon n'existe plus.`);
         });
 
@@ -182,12 +183,12 @@ describe('JoinGateway', () => {
         it('should emit LobbyError if lobby is full', () => {
             jest.spyOn(lobbyService, 'getLobby').mockReturnValue({ ...fakeLobby, playerCount: 4 });
 
-            gateway.handleJoinLobby(mockSocket, { gameId: 'lobby-1', player: makeMockPlayer() });
+            gateway.handleJoinLobby(mockSocket, { lobbyId: 'lobby-1', player: makeMockPlayer() });
             expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyError, 'Ce salon est plein !');
         });
 
         it('should join lobby and emit LobbyJoined on success', () => {
-            const mockPayload = { gameId: 'lobby-1', player: makeMockPlayer() };
+            const mockPayload = { lobbyId: 'lobby-1', player: makeMockPlayer() };
             jest.spyOn(lobbyService, 'getLobby').mockReturnValue(fakeLobby);
             jest.spyOn(lobbyService, 'joinLobby').mockReturnValue(fakeLobby);
             jest.spyOn(lobbyService, 'getAvailableLobbies').mockReturnValue([]);
@@ -204,14 +205,14 @@ describe('JoinGateway', () => {
             jest.spyOn(lobbyService, 'findLobbyBySocketId').mockReturnValue(fakeLobby);
 
             gateway.handleGetStatus(mockSocket);
-            expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyStatusReceived, { game: mockGame });
+            expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyStatusReceived, fakeLobby);
         });
 
         it('should emit LobbyError if lobby not found', () => {
             jest.spyOn(lobbyService, 'findLobbyBySocketId').mockReturnValue(null);
 
             gateway.handleGetStatus(mockSocket);
-            expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyError, 'Lobby not found');
+            expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyError, 'Ce salon est introuvable.');
         });
     });
 
@@ -221,14 +222,14 @@ describe('JoinGateway', () => {
         it('should do nothing if lobby does not exist', () => {
             jest.spyOn(lobbyService, 'getLobby').mockReturnValue(null);
 
-            gateway.handleSelectAvatar(mockSocket, { gameId: 'lobby-1', avatar: 'avatar.png' });
+            gateway.handleSelectAvatar(mockSocket, { lobbyId: 'lobby-1', avatar: 'avatar.png' });
             expect(lobbyService.updatePlayerAvatar).not.toHaveBeenCalled();
         });
 
         it('should update avatar and broadcast UpdateOccupiedAvatars', () => {
             jest.spyOn(lobbyService, 'getLobby').mockReturnValue(fakeLobby);
 
-            gateway.handleSelectAvatar(mockSocket, { gameId: 'lobby-1', avatar: 'avatar.png' });
+            gateway.handleSelectAvatar(mockSocket, { lobbyId: 'lobby-1', avatar: 'avatar.png' });
             expect(lobbyService.updatePlayerAvatar).toHaveBeenCalledWith('lobby-1', 'socket-123', 'avatar.png');
             expect(mockServer.to).toHaveBeenCalledWith('lobby-1');
             expect(mockTo.emit).toHaveBeenCalledWith(JoinGameEvents.UpdateOccupiedAvatars, []);

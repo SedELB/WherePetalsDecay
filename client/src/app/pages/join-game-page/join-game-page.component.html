@@ -1,30 +1,17 @@
 <div class="container">
     <app-button [width]="100" [route]="routes.home">Retour</app-button>
     <section class="game-selection">
-            <h2>Joindre une partie</h2>
-            <p>Sélectionnez une partie à rejoindre</p>
+        <h2>Joindre une partie</h2>
+        <p>Sélectionnez une partie à rejoindre</p>
 
-            @if(activeLobbies.length === 0){
-                <p class="no-games">Aucun partie disponible</p>
+        <div class="list-container">
+            @for(lobby of activeLobbies; track lobby.lobbyId) {
+                <app-lobby-card [lobby]="lobby">
+                    <app-button [height]="50" (clicked)="selectLobby(lobby)">Sélectionner</app-button>
+                </app-lobby-card>
+            } @empty {
+                <p class="no-games">Aucun salon disponible</p>
             }
-            @else {
-                <div class="list-container">
-                    @for(lobby of activeLobbies; track lobby.gameId){
-                        <app-lobby-card
-                            [lobby]="{
-                                gameId: lobby.gameId,
-                                game: lobby.game,
-                                hostSocketId: lobby.hostSocketId,
-                                playerCount: lobby.playerCount,
-                                isLocked: lobby.isLocked,
-                                players: lobby.players,
-                                pendingAvatars: lobby.pendingAvatars,
-                            }"
-                        >
-                            <app-button [height]="50" (clicked)="selectLobby(lobby)">Sélectionner</app-button>
-                        </app-lobby-card>
-                    }
-                </div>
-            }
-        </section>
+        </div>
+    </section>
 </div>

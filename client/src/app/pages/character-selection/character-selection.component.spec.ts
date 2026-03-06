@@ -131,7 +131,7 @@ describe('CharacterSelectionComponent', () => {
   it('should navigate to create page on goBack when no gameId', () => {
     const router = TestBed.inject(Router);
     spyOn(router, 'navigate');
-    component.gameId = null;
+    component.lobbyId = null;
 
     component.goBack();
 

@@ -70,17 +70,17 @@ describe('LobbyService', () => {
         });
 
         it('should make the lobby retrievable after creation', () => {
-            service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
 
-            expect(service.getLobby('1')).toBeDefined();
+            expect(service.getLobby(lobby.lobbyId)).toBeDefined();
         });
     });
 
     describe('getLobby', () => {
         it('should return the lobby if it exists', () => {
-            service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
 
-            expect(service.getLobby('1')?.gameId).toBe('1');
+            expect(service.getLobby(lobby.lobbyId)?.gameId).toBe('1');
         });
 
         it('should return undefined if lobby does not exist', () => {
@@ -96,9 +96,9 @@ describe('LobbyService', () => {
         });
 
         it('should not return locked lobbies', () => {
-            service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
-            const lobby = service.getLobby('1');
-            lobby.isLocked = true;
+            const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            const retrievedLobby = service.getLobby(lobby.lobbyId);
+            retrievedLobby.isLocked = true;
 
             expect(service.getAvailableLobbies()).toHaveLength(0);
         });
@@ -114,9 +114,9 @@ describe('LobbyService', () => {
 
     describe('joinLobby', () => {
         it('should add a player and update playerCount', () => {
-            service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
 
-            const updatedLobby = service.joinLobby('1', { ...mockPlayer, socketId: 'socket-2' });
+            const updatedLobby = service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' });
 
             expect(updatedLobby.players).toHaveLength(2);
             expect(updatedLobby.playerCount).toBe(2);
@@ -126,9 +126,9 @@ describe('LobbyService', () => {
         // This prevents race conditions where multiple players join simultaneously
         it('should lock the lobby when it reaches maxPlayers', () => {
             const smallGame = { ...mockGame, _id: '2', maxPlayers: 2 };
-            service.createLobby(smallGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            const lobby = service.createLobby(smallGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
 
-            const updatedLobby = service.joinLobby('2', { ...mockPlayer, socketId: 'socket-2' });
+            const updatedLobby = service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' });
 
             expect(updatedLobby.isLocked).toBe(true);
         });
@@ -140,20 +140,20 @@ describe('LobbyService', () => {
         // EDGE CASE: Attempting to join a locked lobby fails with error
         // This prevents players from circumventing the maxPlayers limit
         it('should throw if lobby is locked', () => {
-            service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
-            const lobby = service.getLobby('1');
-            lobby.isLocked = true;
+            const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            const retrievedLobby = service.getLobby(lobby.lobbyId);
+            retrievedLobby.isLocked = true;
 
-            expect(() => service.joinLobby('1', { ...mockPlayer, socketId: 'socket-2' })).toThrow();
+            expect(() => service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' })).toThrow();
         });
     });
 
     describe('deleteLobby', () => {
         it('should remove the lobby', () => {
-            service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
-            service.deleteLobby('1');
+            const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            service.deleteLobby(lobby.lobbyId);
 
-            expect(service.getLobby('1')).toBeUndefined();
+            expect(service.getLobby(lobby.lobbyId)).toBeUndefined();
         });
     });
 
@@ -165,16 +165,16 @@ describe('LobbyService', () => {
         });
 
         it('should find lobby by player socketId', () => {
-            service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
-            service.joinLobby('1', { ...mockPlayer, socketId: 'socket-2' });
+            const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' });
 
             expect(service.findLobbyBySocketId('socket-2')).toBeDefined();
         });
 
         it('should find lobby by pendingAvatars key', () => {
-            service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
-            const lobby = service.getLobby('1');
-            lobby.pendingAvatars['socket-pending'] = 'avatar.png';
+            const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            const retrievedLobby = service.getLobby(lobby.lobbyId);
+            retrievedLobby.pendingAvatars['socket-pending'] = 'avatar.png';
 
             expect(service.findLobbyBySocketId('socket-pending')).toBeDefined();
         });
@@ -186,37 +186,37 @@ describe('LobbyService', () => {
 
     describe('removePlayerFromLobby', () => {
         it('should remove the player and update playerCount', () => {
-            service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
-            service.joinLobby('1', { ...mockPlayer, socketId: 'socket-2' });
+            const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' });
 
-            service.removePlayerFromLobby('1', 'socket-2');
+            service.removePlayerFromLobby(lobby.lobbyId, 'socket-2');
 
-            const lobby = service.getLobby('1');
-            expect(lobby.players).toHaveLength(1);
-            expect(lobby.playerCount).toBe(1);
+            const updatedLobby = service.getLobby(lobby.lobbyId);
+            expect(updatedLobby.players).toHaveLength(1);
+            expect(updatedLobby.playerCount).toBe(1);
         });
 
         // EDGE CASE: Lobby automatically unlocks when a player leaves and playerCount drops below maxPlayers
         // This allows new players to join again after someone disconnects
         it('should unlock lobby when playerCount drops below maxPlayers', () => {
             const smallGame = { ...mockGame, _id: '2', maxPlayers: 2 };
-            service.createLobby(smallGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
-            service.joinLobby('2', { ...mockPlayer, socketId: 'socket-2' });
+            const lobby = service.createLobby(smallGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' });
 
-            service.removePlayerFromLobby('2', 'socket-2');
+            service.removePlayerFromLobby(lobby.lobbyId, 'socket-2');
 
-            const lobby = service.getLobby('2');
-            expect(lobby.isLocked).toBe(false);
+            const updatedLobby = service.getLobby(lobby.lobbyId);
+            expect(updatedLobby.isLocked).toBe(false);
         });
 
         it('should remove player from pendingAvatars on leave', () => {
-            service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
-            const lobby = service.getLobby('1');
-            lobby.pendingAvatars['socket-2'] = 'avatar.png';
+            const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            const retrievedLobby = service.getLobby(lobby.lobbyId);
+            retrievedLobby.pendingAvatars['socket-2'] = 'avatar.png';
 
-            service.removePlayerFromLobby('1', 'socket-2');
+            service.removePlayerFromLobby(lobby.lobbyId, 'socket-2');
 
-            expect(lobby.pendingAvatars['socket-2']).toBeUndefined();
+            expect(retrievedLobby.pendingAvatars['socket-2']).toBeUndefined();
         });
 
         // EDGE CASE: Removing a non-existent lobby doesn't throw error
@@ -228,35 +228,35 @@ describe('LobbyService', () => {
 
     describe('updatePlayerAvatar', () => {
         it('should update avatar of a confirmed player', () => {
-            service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
 
-            service.updatePlayerAvatar('1', 'socket-1', 'new-avatar.png');
+            service.updatePlayerAvatar(lobby.lobbyId, 'socket-1', 'new-avatar.png');
 
-            const lobby = service.getLobby('1');
-            expect(lobby.players[0].character.avatar).toBe('new-avatar.png');
+            const updatedLobby = service.getLobby(lobby.lobbyId);
+            expect(updatedLobby.players[0].character.avatar).toBe('new-avatar.png');
         });
 
         // EDGE CASE: Avatar update for a pending socket (not yet confirmed player) is stored separately
         // This allows players to select avatars before fully joining (character selection phase)
         it('should store avatar in pendingAvatars for unknown socket', () => {
-            service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
 
-            service.updatePlayerAvatar('1', 'socket-pending', 'avatar.png');
+            service.updatePlayerAvatar(lobby.lobbyId, 'socket-pending', 'avatar.png');
 
-            const lobby = service.getLobby('1');
-            expect(lobby.pendingAvatars['socket-pending']).toBe('avatar.png');
+            const updatedLobby = service.getLobby(lobby.lobbyId);
+            expect(updatedLobby.pendingAvatars['socket-pending']).toBe('avatar.png');
         });
 
         // EDGE CASE: Passing null as avatarPath removes the pending avatar
         // This is used during cleanup when a player cancel avatar selection
         it('should delete pendingAvatar when avatarPath is null', () => {
-            service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
-            const lobby = service.getLobby('1');
-            lobby.pendingAvatars['socket-pending'] = 'avatar.png';
+            const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            const retrievedLobby = service.getLobby(lobby.lobbyId);
+            retrievedLobby.pendingAvatars['socket-pending'] = 'avatar.png';
 
-            service.updatePlayerAvatar('1', 'socket-pending', null);
+            service.updatePlayerAvatar(lobby.lobbyId, 'socket-pending', null);
 
-            expect(lobby.pendingAvatars['socket-pending']).toBeUndefined();
+            expect(retrievedLobby.pendingAvatars['socket-pending']).toBeUndefined();
         });
 
         it('should do nothing if lobby does not exist', () => {

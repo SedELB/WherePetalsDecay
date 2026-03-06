@@ -50,7 +50,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         const createdLobby = this.lobbyService.createLobby(payload.game, socket.id, payload.player);
 
         if (createdLobby) {
-            socket.join(createdLobby.gameId);
+            socket.join(createdLobby.lobbyId);
             socket.emit(JoinGameEvents.GameHosted, createdLobby);
             this.handleGetLobbies();
         } else {
@@ -66,8 +66,8 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
 
     @SubscribeMessage(JoinGameEvents.JoinLobby)
-    handleJoinLobby(@ConnectedSocket() socket: Socket, @MessageBody() payload: {gameId: string, player: Player}) {
-        const lobby = this.lobbyService.getLobby(payload.gameId);
+    handleJoinLobby(@ConnectedSocket() socket: Socket, @MessageBody() payload: {lobbyId: string, player: Player}) {
+        const lobby = this.lobbyService.getLobby(payload.lobbyId);
         if (!lobby) {
             socket.emit(JoinGameEvents.LobbyError, `Ce salon n'existe plus.`);
             return;
@@ -83,11 +83,11 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         payload.player.character.name = finalPlayerName;
         payload.player.socketId = socket.id;
         payload.player.isHost = false;
-        const updatedLobby = this.lobbyService.joinLobby(payload.gameId, payload.player);
+        const updatedLobby = this.lobbyService.joinLobby(payload.lobbyId, payload.player);
         if (updatedLobby) {
-            socket.join(updatedLobby.gameId);
+            socket.join(updatedLobby.lobbyId);
             socket.emit(JoinGameEvents.LobbyJoined, updatedLobby);
-            this.server.to(updatedLobby.gameId).emit(JoinGameEvents.PlayerJoined, payload.player); // For the waiting room, to add new player's info
+            this.server.to(updatedLobby.lobbyId).emit(JoinGameEvents.PlayerJoined, payload.player); // For the waiting room, to add new player's info
             this.handleGetLobbies();
         }
     }
@@ -97,38 +97,74 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         const lobby = this.lobbyService.findLobbyBySocketId(socket.id);
         
         if (lobby) {
-            socket.emit(JoinGameEvents.LobbyStatusReceived, {
-                game: lobby.game,
-            });
+            socket.emit(JoinGameEvents.LobbyStatusReceived, lobby);
         } else {
-            socket.emit(JoinGameEvents.LobbyError, 'Lobby not found');
+            socket.emit(JoinGameEvents.LobbyError, 'Ce salon est introuvable.');
         }
     }
 
     @SubscribeMessage(JoinGameEvents.SelectAvatar)
     handleSelectAvatar(
         @ConnectedSocket() socket: Socket, 
-        @MessageBody() payload: { gameId: string, avatar: string },
+        @MessageBody() payload: { lobbyId: string, avatar: string },
     ) {
-        const { gameId, avatar } = payload;
-        const lobby = this.lobbyService.getLobby(gameId);
+        const { lobbyId, avatar } = payload;
+        const lobby = this.lobbyService.getLobby(lobbyId);
         
         if (!lobby) return;
-        this.lobbyService.updatePlayerAvatar(gameId, socket.id, avatar);
+        this.lobbyService.updatePlayerAvatar(lobbyId, socket.id, avatar);
         
         const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
-        this.server.to(gameId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
+        this.server.to(lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
     }
 
     @SubscribeMessage(JoinGameEvents.JoinAvatarRoom)
-    handleJoinAvatarRoom(@ConnectedSocket() socket: Socket, @MessageBody() gameId: string) {
-        const lobby = this.lobbyService.getLobby(gameId);
+    handleJoinAvatarRoom(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string) {
+        const lobby = this.lobbyService.getLobby(lobbyId);
         if (lobby) {
-            socket.join(gameId);
+            socket.join(lobbyId);
             const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
             socket.emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
         } else {
-            this.logger.log(`Lobby not found for ${gameId} (handleJoinAvatarRoom)`);
+            this.logger.log(`Lobby not found for ${lobbyId} (handleJoinAvatarRoom)`);
+        }
+    }
+
+    @SubscribeMessage(JoinGameEvents.ToggleLock)
+    handleToggleLock(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string) {
+        const updatedLobby = this.lobbyService.toggleLock(lobbyId, socket.id);
+        if (updatedLobby) {
+            this.server.to(lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby);
+            this.handleGetLobbies();
+        }
+    }
+
+    @SubscribeMessage(JoinGameEvents.StartGame)
+    handleStartGame(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string) {
+        if (this.lobbyService.canStartGame(lobbyId, socket.id)) {
+            this.server.to(lobbyId).emit(JoinGameEvents.GameStarting, lobbyId);
+        } else {
+            socket.emit(JoinGameEvents.LobbyError, `Impossible de demarrer la partie. (Minimum 2 joueurs requis.)`);
+        }
+    }
+
+    @SubscribeMessage(JoinGameEvents.KickPlayer)
+    handleKickPlayer(@ConnectedSocket() socket: Socket, @MessageBody() payload: {lobbyId: string, targetSocketId: string}) {
+        const success = this.lobbyService.kickPlayer(payload.lobbyId, socket.id, payload.targetSocketId);
+        if (success) {
+            this.server.to(payload.targetSocketId).emit(JoinGameEvents.PlayerKicked, `Vous avez été exclu par l'organisateur.`);
+            const targetSocket = this.server.sockets.sockets.get(payload.targetSocketId);
+
+            if (targetSocket) {
+                targetSocket.leave(payload.lobbyId);
+            }
+
+            const updatedLobby = this.lobbyService.getLobby(payload.lobbyId);
+            this.server.to(payload.lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby);
+
+            const allOccupiedAvatars = this.getOccupiedAvatars(updatedLobby);
+            this.server.to(payload.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
+            this.handleGetLobbies();
         }
     }
     
@@ -157,16 +193,16 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
         if (lobby) {
             if (lobby.hostSocketId === socket.id){
-                this.logger.log(`Host left. Deleting lobby: ${lobby.gameId}`);
-                this.server.to(lobby.gameId).emit(JoinGameEvents.GameDeleted); // Warn lobby members that host was disconnected.
-                this.lobbyService.deleteLobby(lobby.gameId);
+                this.logger.log(`Host left. Deleting lobby: ${lobby.lobbyId}`);
+                this.server.to(lobby.lobbyId).emit(JoinGameEvents.GameDeleted); // Warn lobby members that host was disconnected.
+                this.lobbyService.deleteLobby(lobby.lobbyId);
             } else {
-                this.logger.log(`Player left lobby: ${lobby.gameId}`);
-                this.lobbyService.removePlayerFromLobby(lobby.gameId, socket.id);
+                this.logger.log(`Player left lobby: ${lobby.lobbyId}`);
+                this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
                 
                 const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
-                this.server.to(lobby.gameId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars); // Release selected avatars for both pending and confirmed characters.
-                // TODO UPDATE CURRENT PLAYERS THAT A PLAYER LEFT.
+                this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars); // Release selected avatars for both pending and confirmed characters.
+                this.server.to(lobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, lobby);
             }
 
             this.handleGetLobbies();
