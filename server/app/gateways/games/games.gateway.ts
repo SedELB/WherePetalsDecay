@@ -3,7 +3,7 @@ import { SocketNamespace } from '@common/enums';
 import { Injectable, Logger } from '@nestjs/common';
 import { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { PlayerGameEvents } from './games.gateway.events';
+import { GameCreationEvents } from '@common/socket-events/games.gateway.events';
 
 @WebSocketGateway({ namespace: SocketNamespace.Games, cors: true })
 @Injectable()
@@ -26,15 +26,15 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, O
     }
 
     notifyGameCreated(game: Game) {
-        this.server.emit(PlayerGameEvents.GameCreated, game);
+        this.server.emit(GameCreationEvents.GameCreated, game);
     }
 
     notifyGameDeleted(gameId: string) {
-        this.server.emit(PlayerGameEvents.GameDeleted, gameId);
+        this.server.emit(GameCreationEvents.GameDeleted, gameId);
     }
 
     notifyGameVisibilityChanged(gameId: string, isVisible: boolean) {
-        this.server.emit(PlayerGameEvents.GameVisibilityChanged, { gameId, isVisible });
+        this.server.emit(GameCreationEvents.GameVisibilityChanged, { gameId, isVisible });
     }
 
 }

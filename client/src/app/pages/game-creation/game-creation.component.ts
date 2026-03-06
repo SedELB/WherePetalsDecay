@@ -7,7 +7,7 @@ import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { ROUTES } from '@app/constants/routes.constants';
 import { Game } from '@common/game';
-import { PlayerGameService } from '@app/services/game-creation/game-creation.service';
+import { GameCreationService } from '@app/services/game-creation/game-creation.service';
 import { Subscription } from 'rxjs';
 
 // The page after clicking "Creer une partie"
@@ -21,7 +21,7 @@ import { Subscription } from 'rxjs';
         GameCardComponent,
     ],
     templateUrl: './game-creation.component.html',
-    styleUrls: ['./game-creation.component.scss'],
+    styleUrl: './game-creation.component.scss',
 })
 
 export class GameCreationComponent implements OnInit, OnDestroy {
@@ -31,19 +31,19 @@ export class GameCreationComponent implements OnInit, OnDestroy {
 
     constructor(
         private readonly router: Router,
-        private readonly playerGameService: PlayerGameService,
+        private readonly gameCreationService: GameCreationService,
     ) {}
 
     ngOnInit(): void {
-        this.playerGameService.fetchVisibleGames().subscribe({
-            next: (games) => this.playerGameService.setGames(games),
+        this.gameCreationService.fetchVisibleGames().subscribe({
+            next: (games) => this.gameCreationService.setGames(games),
             error: (error: HttpErrorResponse) => {
                 const errorMessage = error.error || 'Erreur lors de la récupération des jeux';
                 alert(`Erreur: ${errorMessage}`);
             },
         });
 
-        this.gamesSubscription = this.playerGameService.visibleGames$.subscribe((games) => {
+        this.gamesSubscription = this.gameCreationService.visibleGames$.subscribe((games) => {
             this.games = games.sort((a, b) => {
                 const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
                 const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);

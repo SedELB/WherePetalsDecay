@@ -3,15 +3,9 @@ import { Injectable } from '@angular/core';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { SocketNamespace } from '@common/enums';
 import { Game } from '@common/game';
+import { AdminGameEvents } from '@common/socket-events/admin.gateway.events';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
-
-export enum AdminGameEvents {
-    GameCreated = 'gameCreated',
-    GameUpdated = 'gameUpdated',
-    GameDeleted = 'gameDeleted',
-    GameVisibilityChanged = 'gameVisibilityChanged',
-}
 
 @Injectable({
     providedIn: 'root',

@@ -32,7 +32,7 @@ export const OBJECT_PLACEMENT_TOOL: Record<TileItem, ObjectPlacementTool> = {
         type: TileItem.Flag,
         label: 'Drapeau',
         description: 'Le drapeau à capturer',
-        image: './assets/icons/blackflag.svg',   
+        image: './assets/icons/blackflag.svg',
     },
     [TileItem.HealingSanctuary]: {
         type: TileItem.HealingSanctuary,
