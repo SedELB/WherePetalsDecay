@@ -57,7 +57,7 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
         if (this.selectedGame) {
             this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.LeaveLobby, this.selectedGame._id.toString());
         }
-        this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.LobbyStatusReceived);
+        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.LobbyStatusReceived);
     }
 
     get isOrganizer(): boolean {

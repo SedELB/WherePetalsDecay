@@ -1,13 +1,13 @@
 import { Player } from './player';
 
 export interface Room {
-    code: string;           // Code unique de la salle (ex:"ABC123" )
-    gameId: string;         // ID du jeu selectionne
+    code: string;
+    gameId: string;     
     gameName: string;
     maxPlayers: number;
     players: Player[];
     isLocked: boolean;
-    organizerId: string;    // socket.id de lorganisateur
+    organizerId: string;    
 }
 
 export interface RoomJoinPayload {
