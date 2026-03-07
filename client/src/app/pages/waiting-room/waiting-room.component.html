@@ -1,9 +1,64 @@
-
 <div class="container">
-    <h1>Salle d'attente</h1>
-    <p>En attente des autres joueurs...</p>
+    <div class="waiting-room-card">
+        <h1>Salle d'attente</h1>
 
-    <div class="actions">
-        <app-button [route]="'/home'" (clicked)="leaveLobby()">Retour à la vue initiale</app-button>
+        @if (room) {
+            <div class="room-info">
+                <p class="room-code">Code: <strong>{{ room.code }}</strong></p>
+                <p class="game-name">Jeu: {{ room.gameName }}</p>
+                <p class="player-count">
+                    Joueurs: {{ room.players.length }} / {{ room.maxPlayers }}
+                    @if (room.isLocked) {
+                        <span class="lock-badge">🔒 Verrouillée</span>
+                    }
+                </p>
+            </div>
+
+            <div class="players-section">
+                <h2>Joueurs</h2>
+                <ul class="players-list">
+                    @for (player of players; track player.socketId) {
+                        <li class="player-item" [class.organizer]="player.isHost">
+                            <img [src]="player.character.avatar" [alt]="player.character.name" class="player-avatar" />
+                            <span class="player-name">
+                                {{ player.character.name }}
+                                @if (player.isHost) {
+                                    <span class="organizer-badge">👑 Organisateur</span>
+                                }
+                            </span>
+                            @if (isOrganizer && !player.isHost) {
+                                <button class="kick-btn" (click)="onKickPlayer(player.socketId)">Exclure</button>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+
+            <div class="chat-section">
+                <h2>Chat</h2>
+                <div class="chat-placeholder">
+                    <p>Zone de clavardage (à implémenter)</p>
+                </div>
+            </div>
+
+            <div class="actions">
+                @if (isOrganizer) {
+                    <app-button (clicked)="onStartGame()" [disabled]="!canStartGame">
+                        Démarrer la partie
+                    </app-button>
+                    <app-button (clicked)="onToggleLock()">
+                        {{ room.isLocked ? 'Déverrouiller' : 'Verrouiller' }}
+                    </app-button>
+                }
+                <app-button (clicked)="onLeaveRoom()">
+                    {{ isOrganizer ? 'Annuler la partie' : 'Quitter' }}
+                </app-button>
+            </div>
+        } @else {
+            <p>Chargement de la salle...</p>
+            <div class="actions">
+                <app-button [route]="'/home'" (clicked)="leaveLobby()">Retour à la vue initiale</app-button>
+            </div>
+        }
     </div>
 </div>
