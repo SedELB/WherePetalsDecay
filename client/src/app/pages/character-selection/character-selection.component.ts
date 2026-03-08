@@ -215,10 +215,10 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
     }
 
     ngOnDestroy(): void {
-        this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.GameHosted);
-        this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.LobbyJoined);
-        this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.UpdateOccupiedAvatars);
-        this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.LobbyError);
+        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.GameHosted);
+        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.LobbyJoined);
+        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.UpdateOccupiedAvatars);
+        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.LobbyError);
     }
 
 }

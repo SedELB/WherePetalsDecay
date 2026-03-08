@@ -40,5 +40,6 @@ export enum SanctuaryCount {
 export enum SocketNamespace {
     Admin = '/admin',
     Games = '/game',
-    Join = '/join',
+    WaitingRoom = '/waiting-room',
+    Join = '/join'
 }

@@ -25,7 +25,7 @@ describe('CharacterSelectionComponent', () => {
   const TEST_AVATAR_PATH = AVATARS_PATH[TEST_AVATAR_INDEX];
 
   beforeEach(async () => {
-    webSocketServiceSpy = jasmine.createSpyObj('WebSocketService', ['emitNamespace', 'onNamespace', 'off']);
+    webSocketServiceSpy = jasmine.createSpyObj('WebSocketService', ['emitNamespace', 'onNamespace', 'offNamespace']);
 
     await TestBed.configureTestingModule({
       imports: [CharacterSelectionComponent, HttpClientTestingModule],

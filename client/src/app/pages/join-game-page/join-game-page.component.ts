@@ -44,8 +44,8 @@ export class JoinGamePageComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.UpdatedLobbiesList);
-    this.webSocketService.off(SocketNamespace.Join, JoinGameEvents.LobbyJoined);
+    this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.UpdatedLobbiesList);
+    this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.LobbyJoined);
   }
 
   selectLobby(lobby: Lobby) {

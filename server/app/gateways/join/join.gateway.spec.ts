@@ -74,6 +74,7 @@ describe('JoinGateway', () => {
             id: 'socket-123',
             emit: jest.fn(),
             join: jest.fn(),
+            to: jest.fn().mockReturnValue(mockTo),
         } as unknown as Socket;
 
         mockServer = {
@@ -196,7 +197,8 @@ describe('JoinGateway', () => {
             gateway.handleJoinLobby(mockSocket, mockPayload);
             expect(mockSocket.join).toHaveBeenCalledWith('lobby-1');
             expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyJoined, fakeLobby);
-            expect(mockTo.emit).toHaveBeenCalledWith(JoinGameEvents.PlayerJoined, mockPayload.player);
+            expect(mockServer.to).toHaveBeenCalledWith('lobby-1');
+            expect(mockTo.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyUpdated, fakeLobby);
         });
     });
 
@@ -261,7 +263,7 @@ describe('JoinGateway', () => {
             jest.spyOn(lobbyService, 'getAvailableLobbies').mockReturnValue([]);
 
             gateway.handleDisconnect(mockSocket);
-            expect(mockServer.to).toHaveBeenCalledWith('lobby-1');
+            expect(mockSocket.to).toHaveBeenCalledWith('lobby-1');
             expect(mockTo.emit).toHaveBeenCalledWith(JoinGameEvents.GameDeleted);
             expect(lobbyService.deleteLobby).toHaveBeenCalledWith('lobby-1');
         });
@@ -274,7 +276,9 @@ describe('JoinGateway', () => {
 
             gateway.handleDisconnect(mockSocket);
             expect(lobbyService.removePlayerFromLobby).toHaveBeenCalledWith('lobby-1', 'socket-123');
+            expect(mockServer.to).toHaveBeenCalledWith('lobby-1');
             expect(mockTo.emit).toHaveBeenCalledWith(JoinGameEvents.UpdateOccupiedAvatars, []);
+            expect(mockTo.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyUpdated, expect.any(Object));
         });
 
         // EDGE CASE: Disconnect from a socket not in any lobby (ghost connection)
