@@ -83,11 +83,13 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         payload.player.character.name = finalPlayerName;
         payload.player.socketId = socket.id;
         payload.player.isHost = false;
+
         const updatedLobby = this.lobbyService.joinLobby(payload.lobbyId, payload.player);
+
         if (updatedLobby) {
             socket.join(updatedLobby.lobbyId);
             socket.emit(JoinGameEvents.LobbyJoined, updatedLobby);
-            this.server.to(updatedLobby.lobbyId).emit(JoinGameEvents.PlayerJoined, payload.player); // For the waiting room, to add new player's info
+            this.server.to(updatedLobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby); // For the waiting room, to add new player's info
             this.handleGetLobbies();
         }
     }
@@ -97,6 +99,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         const lobby = this.lobbyService.findLobbyBySocketId(socket.id);
         
         if (lobby) {
+            socket.join(lobby.lobbyId);
             socket.emit(JoinGameEvents.LobbyStatusReceived, lobby);
         } else {
             socket.emit(JoinGameEvents.LobbyError, 'Ce salon est introuvable.');
@@ -151,13 +154,10 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     @SubscribeMessage(JoinGameEvents.KickPlayer)
     handleKickPlayer(@ConnectedSocket() socket: Socket, @MessageBody() payload: {lobbyId: string, targetSocketId: string}) {
         const success = this.lobbyService.kickPlayer(payload.lobbyId, socket.id, payload.targetSocketId);
+        
         if (success) {
             this.server.to(payload.targetSocketId).emit(JoinGameEvents.PlayerKicked, `Vous avez été exclu par l'organisateur.`);
-            const targetSocket = this.server.sockets.sockets.get(payload.targetSocketId);
-
-            if (targetSocket) {
-                targetSocket.leave(payload.lobbyId);
-            }
+            this.server.in(payload.targetSocketId).socketsLeave(payload.lobbyId);
 
             const updatedLobby = this.lobbyService.getLobby(payload.lobbyId);
             this.server.to(payload.lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby);
@@ -194,7 +194,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         if (lobby) {
             if (lobby.hostSocketId === socket.id){
                 this.logger.log(`Host left. Deleting lobby: ${lobby.lobbyId}`);
-                this.server.to(lobby.lobbyId).emit(JoinGameEvents.GameDeleted); // Warn lobby members that host was disconnected.
+                socket.to(lobby.lobbyId).emit(JoinGameEvents.GameDeleted); // Warn lobby members that host was disconnected.
                 this.lobbyService.deleteLobby(lobby.lobbyId);
             } else {
                 this.logger.log(`Player left lobby: ${lobby.lobbyId}`);

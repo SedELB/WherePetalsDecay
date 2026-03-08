@@ -3,7 +3,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { GameModule } from './modules/game.module';
 import { LobbyModule } from './modules/lobby.module';
-
 @Module({
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),
@@ -11,7 +10,7 @@ import { LobbyModule } from './modules/lobby.module';
             imports: [ConfigModule],
             inject: [ConfigService],
             useFactory: async (config: ConfigService) => ({
-                uri: config.get<string>('DATABASE_CONNECTION_STRING'), // Loaded from .env
+                uri: config.get<string>('DATABASE_CONNECTION_STRING'),
             }),
         }),
         GameModule,
@@ -19,6 +18,5 @@ import { LobbyModule } from './modules/lobby.module';
     ],
     controllers: [],
     providers: [],
-
 })
 export class AppModule {}

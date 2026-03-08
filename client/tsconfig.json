@@ -2,6 +2,7 @@
 {
     "compileOnSave": false,
     "compilerOptions": {
+      "types": ["jasmine"],
       "baseUrl": "./",
       "rootDir": "..",
       "outDir": "./dist/out-tsc",
