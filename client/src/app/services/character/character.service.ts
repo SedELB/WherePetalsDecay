@@ -5,13 +5,13 @@ import { AVATARS_PATH, BASE_STATS, Character, RANDOM_NAMES, RANDOM_PROBABILITY }
     providedIn: 'root',
 })
 export class CharacterService {
-    createCharacter(name: string, avatarIndex: number, lifeBonus: boolean, attackDiceD6: boolean): Character {
+    createCharacter(name: string, avatarPath: string, lifeBonus: boolean, attackDiceD6: boolean): Character {
         const life = BASE_STATS.life + (lifeBonus ? BASE_STATS.bonus : 0);
         const speed = BASE_STATS.speed + (!lifeBonus ? BASE_STATS.bonus : 0);
 
         return {
             name: name.trim(),
-            avatar: AVATARS_PATH[avatarIndex],
+            avatar: avatarPath,
             life,
             speed,
             attack: BASE_STATS.attack,
@@ -22,15 +22,16 @@ export class CharacterService {
         };
     }
 
-    generateRandomCharacter(): { name: string; avatarIndex: number; lifeBonus: boolean; attackDiceD6: boolean } {
+    generateRandomCharacter(): { name: string; avatarPath: string; lifeBonus: boolean; attackDiceD6: boolean } {
+        const randomAvatarIndex: number = Math.floor(Math.random() * RANDOM_NAMES.length);
         const randomNameIndex: number = Math.floor(Math.random() * RANDOM_NAMES.length);
-        const avatarIndex: number = Math.floor(Math.random() * AVATARS_PATH.length);
+        const randomAvatar: string = AVATARS_PATH[randomAvatarIndex];
         const lifeBonus: boolean = Math.random() < RANDOM_PROBABILITY;
         const attackDiceD6: boolean = Math.random() < RANDOM_PROBABILITY;
 
         return {
             name: RANDOM_NAMES[randomNameIndex],
-            avatarIndex,
+            avatarPath: randomAvatar,
             lifeBonus,
             attackDiceD6,
         };

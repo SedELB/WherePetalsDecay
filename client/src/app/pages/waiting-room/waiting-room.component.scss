@@ -80,16 +80,25 @@ h2 {
     margin-bottom: 0.5rem;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 8px;
-    transition: background 0.2s;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
 
     &:hover {
         background: rgba(255, 255, 255, 0.1);
     }
 
-    &.organizer {
+    &.is-me {
         background: rgba(255, 215, 0, 0.1);
-        border: 1px solid rgba(255, 215, 0, 0.3);
+        border-color: rgba(255, 215, 0, 0.5);
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
     }
+}
+
+.me-badge {
+    font-size: 0.85em;
+    font-weight: bold;
+    color: #ffd700;
+    margin-left: 4px;
 }
 
 .player-avatar {

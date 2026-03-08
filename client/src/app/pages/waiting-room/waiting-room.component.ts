@@ -1,16 +1,14 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
-import { WaitingRoomService } from '@app/services/waiting-room/waiting-room.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
-import { Room } from '@common/room';
-import { Player } from '@common/player';
-import { Game } from '@common/game';
 import { Lobby } from '@common/lobby';
 import { SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { Subscription } from 'rxjs';
+import { ROUTES } from '@app/constants/routes.constants';
+import swal from 'sweetalert2';
+const SMALL_DELAY = 100;
 
 @Component({
     selector: 'app-waiting-room',
@@ -20,85 +18,118 @@ import { Subscription } from 'rxjs';
     styleUrls: ['./waiting-room.component.scss'],
 })
 export class WaitingRoomComponent implements OnInit, OnDestroy {
-    room: Room | null = null;
-    currentPlayerId: string = '';
-    private roomSubscription: Subscription | null = null;
-
-    selectedGame: Game;
+    lobbyId = signal<string | null>(null);
+    currentLobby = signal<Lobby | undefined>(undefined);
     private readonly webSocketService = inject(WebSocketService);
-
-    constructor(
-        private readonly waitingRoomService: WaitingRoomService,
-        private readonly router: Router,
-    ) {
-        const navigation = this.router.getCurrentNavigation();
-        const state = navigation?.extras.state as { roomCode?: string; playerId?: string };
-        if (state?.playerId) {
-            this.currentPlayerId = state.playerId;
-        }
-    }
+    private readonly router = inject(Router);
+    private readonly route = inject(ActivatedRoute);
+    private readonly routes = ROUTES;
 
     ngOnInit(): void {
-        this.waitingRoomService.connect();
-        this.roomSubscription = this.waitingRoomService.room$.subscribe((room) => {
-            this.room = room;
+        this.lobbyId.set(this.route.snapshot.paramMap.get('lobbyId'));
+
+        if (!this.lobbyId()) {
+            this.router.navigate([this.routes.home]);
+            return;
+        }
+
+        const state = history.state;
+        if (state && state.lobby) {
+            this.currentLobby.set(state.lobby);
+        } else {
+            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.GetLobbyStatus);
+        }
+
+        this.setupUpdateListeners();
+    }
+
+    setupUpdateListeners(): void {
+        // Listener for lobby updates
+        this.webSocketService.onNamespace<Lobby>(SocketNamespace.Join, JoinGameEvents.LobbyUpdated, (updatedLobby) => {
+            this.currentLobby.set(updatedLobby);
         });
 
-        this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.GetLobbyStatus);
-        this.webSocketService.onNamespace(SocketNamespace.Join, JoinGameEvents.LobbyStatusReceived, (lobbyData: Lobby) => {
-            this.selectedGame = lobbyData.game;
+        // Listener for getting Lobby status after a refresh
+        this.webSocketService.onNamespace<Lobby>(SocketNamespace.Join, JoinGameEvents.LobbyStatusReceived, (updatedLobby) => {
+            this.currentLobby.set(updatedLobby);
+        });
+
+        // Listener for redirecting after game start.
+        this.webSocketService.onNamespace<string>(SocketNamespace.Join, JoinGameEvents.GameStarting, (lobbyId) => {
+            this.router.navigate(['/game', lobbyId], {state: {lobby: this.currentLobby()}});
+        });
+
+        // Listener for player kick
+        this.webSocketService.onNamespace<string>(SocketNamespace.Join, JoinGameEvents.PlayerKicked, (msg) => {
+            this.router.navigate([this.routes.home]);
+            swal.fire('Oh oh!', msg, 'warning');
+        });
+
+        // Listener for host leaving
+        this.webSocketService.onNamespace<void>(SocketNamespace.Join, JoinGameEvents.GameDeleted, () => {
+            this.router.navigate([ROUTES.home]);
+            swal.fire('Partie annulée', "L'organisateur a quitté le salon.", 'info');
         });
     }
 
     ngOnDestroy(): void {
-        this.roomSubscription?.unsubscribe();
-        this.waitingRoomService.disconnect();
-
-        if (this.selectedGame) {
-            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.LeaveLobby, this.selectedGame._id.toString());
-        }
+        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.LobbyUpdated);
         this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.LobbyStatusReceived);
+        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.GameStarting);
+        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.PlayerKicked);
+        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.GameDeleted);
     }
 
-    get isOrganizer(): boolean {
-        return this.room?.organizerId === this.currentPlayerId;
-    }
+    currentPlayer = computed(() => {
+        const lobby = this.currentLobby();
+        if (!lobby) return undefined;
+        return lobby.players.find(p => p.socketId === this.webSocketService.getSocketId(SocketNamespace.Join));
+    });
 
-    get canStartGame(): boolean {
-        return this.isOrganizer && (this.room?.players.length ?? 0) >= 2;
-    }
+    isOrganizer = computed(() => {
+        return this.currentLobby()?.hostSocketId === this.currentPlayer()?.socketId;
+    });
 
-    get players(): Player[] {
-        if (!this.room) return [];
-        const organizer = this.room.players.find((p) => p.isHost);
-        const others = this.room.players.filter((p) => !p.isHost);
+    canStartGame = computed(() => {
+        const lobby = this.currentLobby();
+        return this.isOrganizer() && (lobby?.playerCount ?? 0) >= 2;
+    });
+
+
+    players = computed(() => {
+        const lobby = this.currentLobby();
+        if (!lobby) return [];
+        
+        const organizer = lobby.players.find(p => p.socketId === lobby.hostSocketId);
+        const others = lobby.players.filter(p => p.socketId !== lobby.hostSocketId);
         return organizer ? [organizer, ...others] : others;
-    }
+    });
 
-    onKickPlayer(playerId: string): void {
-        if (this.isOrganizer && playerId !== this.currentPlayerId) {
-            this.waitingRoomService.kickPlayer(playerId);
+    onKickPlayer(targetSocketId: string): void {
+        if (this.isOrganizer() && targetSocketId !== this.currentPlayer()?.socketId) {
+            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.KickPlayer, {
+                lobbyId: this.lobbyId(),
+                targetSocketId,
+            });
         }
     }
 
     onStartGame(): void {
-        if (this.canStartGame) {
-            this.waitingRoomService.startGame();
+        if (this.canStartGame()) {
+            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.StartGame, this.lobbyId());
         }
     }
 
     onToggleLock(): void {
-        if (this.isOrganizer) {
-            this.waitingRoomService.toggleLock();
+        if (this.isOrganizer()) {
+            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.ToggleLock, this.lobbyId());
         }
-    }
-
-    onLeaveRoom(): void {
-        this.waitingRoomService.leaveRoom();
-        this.router.navigate(['/home']);
     }
 
     leaveLobby(): void {
         this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.LeaveLobby);
+        setTimeout(() => {
+            this.router.navigate(['/home']);
+        }, SMALL_DELAY);
     }
 }
