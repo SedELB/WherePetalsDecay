@@ -25,9 +25,10 @@ const routes: Routes = [
     { path: 'editor/new', component: MapSetupPageComponent },
     { path: 'editor/:id', component: MapSetupPageComponent },
     { path: 'create', component: GameCreationComponent },
-    { path: 'character-selection/:gameId', component: CharacterSelectionComponent },
+    { path: 'character-selection/:lobbyId', component: CharacterSelectionComponent },
     { path: 'character-selection', component: CharacterSelectionComponent },
     { path: 'waiting-room', component: WaitingRoomComponent },
+    { path: 'waiting-room/:lobbyId', component: WaitingRoomComponent },
     { path: 'join', component: JoinGamePageComponent },
     { path: '**', redirectTo: '/home' },
 ];

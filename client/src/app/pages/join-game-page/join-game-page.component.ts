@@ -33,10 +33,10 @@ export class JoinGamePageComponent implements OnInit, OnDestroy {
     );
 
     // Listener for joining a game after backend confirmation
-    this.webSocketService.onNamespace<void>(
+    this.webSocketService.onNamespace<Lobby>(
       SocketNamespace.Join,
       JoinGameEvents.LobbyJoined,
-      () => this.router.navigate([this.routes.waitingRoom]),
+      (lobbyData) => this.router.navigate([this.routes.waitingRoom, lobbyData.lobbyId], {state: {lobby: lobbyData}}),
     );
 
     // Emit event to get available lobbies on init.
@@ -48,17 +48,7 @@ export class JoinGamePageComponent implements OnInit, OnDestroy {
     this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.LobbyJoined);
   }
 
-  joinLobby(gameId: string) {
-    this.webSocketService.emitNamespace(
-      SocketNamespace.Join,
-      JoinGameEvents.JoinLobby,
-      gameId,
-    );
-  }
-
   selectLobby(lobby: Lobby) {
-    this.router.navigate(['/character-selection', lobby.gameId]);
+    this.router.navigate(['/character-selection', lobby.lobbyId], {state: {game: lobby.game}});
   }
-
-  
 }

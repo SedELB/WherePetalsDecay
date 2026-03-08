@@ -2,8 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { GameModule } from './modules/game.module';
-import { WaitingRoomModule } from './modules/waiting-room.module';
-
+import { LobbyModule } from './modules/lobby.module';
 @Module({
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),
@@ -15,7 +14,7 @@ import { WaitingRoomModule } from './modules/waiting-room.module';
             }),
         }),
         GameModule,
-        WaitingRoomModule,
+        LobbyModule,
     ],
     controllers: [],
     providers: [],
