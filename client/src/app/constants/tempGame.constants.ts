@@ -449,4 +449,5 @@ export const testLobby: Lobby = {
     playerCount: 6,
     isLocked: true,
     players: [player1, player2, player3, player4, player5, player6],
+    pendingAvatars: {},
 };

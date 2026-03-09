@@ -9,4 +9,5 @@ export interface Lobby {
     playerCount: number;
     isLocked: boolean;
     players: Player[];
+    pendingAvatars: Record<string, string>;
 }
