@@ -47,6 +47,10 @@ export class WebSocketService implements OnDestroy {
         return this.sockets.get(namespace)?.connected ?? false;
     }
 
+    getSocketId(namespace: SocketNamespace): string | undefined {
+        const socket = this.sockets.get(namespace);
+        return socket?.id;
+    }
 
     off(namespace: SocketNamespace, event: string): void {
         const socket = this.sockets.get(namespace);
