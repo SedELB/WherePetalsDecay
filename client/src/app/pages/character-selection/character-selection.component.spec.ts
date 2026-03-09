@@ -77,9 +77,9 @@ describe('CharacterSelectionComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  // ============================================================================
+
   // Avatar and Stats Tests
-  // ============================================================================
+
   // These tests validate the character form's primary inputs: avatar selection and
   // stat distribution. We verify that selecting an avatar updates the component state,
   // and that bonus selection logic correctly modifies stat values.
@@ -90,9 +90,9 @@ describe('CharacterSelectionComponent', () => {
     expect(component.selectedAvatar).toBe(TEST_AVATAR_PATH);
   });
 
-  // ============================================================================
+
   // WebSocket Avatar Events Tests
-  // ============================================================================
+
   // These tests validate that avatar selection is properly communicated via WebSocket.
   // When a user selects an avatar, it's emitted to the server. When other players'
   // avatar selections arrive via WebSocket events, the component updates accordingly
@@ -206,9 +206,9 @@ describe('CharacterSelectionComponent', () => {
     });
   });
 
-  // ============================================================================
+
   // Dice Selection Tests
-  // ============================================================================
+
   // These tests validate the dice trade-off system: choosing D6 for attack forces D4
   // for defense (and vice versa). This represents a strategic choice that affects
   // combat mechanics.
@@ -237,9 +237,8 @@ describe('CharacterSelectionComponent', () => {
     });
   });
 
-  // ============================================================================
   // Navigation Tests
-  // ============================================================================
+
   // These tests verify routing behavior when users navigate away from character
   // creation. The routing destination depends on context: if lobbyId exists
   // (joining existing game), return to create page; otherwise navigate to join.
@@ -255,9 +254,8 @@ describe('CharacterSelectionComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith([ROUTES.create]);
   });
 
-  // ============================================================================
   // Random Character Generation
-  // ============================================================================
+  
   // Tests the randomization feature that generates a complete valid character
   // using predefined name/avatar pools. Validates that generated values are
   // always drawn from valid option sets.
@@ -272,9 +270,8 @@ describe('CharacterSelectionComponent', () => {
     expect(AVATARS_PATH).toContain(component.selectedAvatar as string);
   });
 
-  // ============================================================================
   // Form Validation Tests
-  // ============================================================================
+  
   // Comprehensive validation tests covering critical edge cases:
   // 1. Empty name string - prevents submission
   // 2. Missing avatar - prevents submission (guards against null selection)

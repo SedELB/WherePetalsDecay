@@ -130,9 +130,9 @@ describe('JoinGamePageComponent', () => {
 
   // Component initialization and WebSocket event listeners
   describe('ngOnInit', () => {
-    // ========================================================================
+
     // Event Listener Registration Tests
-    // ========================================================================
+
     // These tests verify that ngOnInit correctly subscribes to two WebSocket
     // events: UpdatedLobbiesList (array of lobbies) and LobbyJoined (single
     // lobby). Both events are critical for the join game flow.
@@ -210,9 +210,8 @@ describe('JoinGamePageComponent', () => {
       }, randomNetworkLatency());
     });
 
-    // ========================================================================
     // Synchronization and Initialization Tests
-    // ========================================================================
+
     // These tests verify the component properly initializes by requesting
     // lobby data and ensuring both listeners are attached exactly twice
     // (no duplicate subscriptions causing memory leaks).
@@ -234,9 +233,8 @@ describe('JoinGamePageComponent', () => {
     });
   });
 
-  // ========================================================================
   // Subscription Cleanup Tests
-  // ========================================================================
+
   // These tests verify that ngOnDestroy properly unsubscribes from both
   // WebSocket listeners. Proper cleanup prevents memory leaks and ensures
   // old event handlers don't fire after component is destroyed.
@@ -273,9 +271,8 @@ describe('JoinGamePageComponent', () => {
 
   // Test lobby selection and navigation to character creation
   describe('selectLobby', () => {
-    // ========================================================================
     // Navigation and State Passing Tests
-    // ========================================================================
+
     // These tests verify the selectLobby() method which is called when a user
     // clicks on a lobby in the UI. The method must navigate to character
     // selection with the lobbyId as a route parameter and the Game object
@@ -320,9 +317,8 @@ describe('JoinGamePageComponent', () => {
 
   // Test activeLobbies property updates from WebSocket events
   describe('activeLobbies property', () => {
-    // ========================================================================
     // Component State Management Tests
-    // ========================================================================
+    
     // These tests verify that activeLobbies property correctly represents
     // the current state of available lobbies. Initially empty, it updates
     // whenever UpdatedLobbiesList WebSocket event is received. This property
