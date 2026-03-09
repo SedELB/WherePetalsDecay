@@ -14,6 +14,11 @@ export enum JoinGameEvents {
     DeleteLobby = 'deleteLobby',
     GetLobbyStatus = 'getLobbyStatus',
     LeaveLobby = 'leaveLobby',
+    SelectAvatar = 'selectAvatar',
+    JoinAvatarRoom = 'joinAvatarRoom',
+    ToggleLock = 'toggleLock',
+    StartGame = 'startGame',
+    KickPlayer = 'kickPlayer',
 
     // Response events (confirmations)
     GameHosted = 'gameHosted',
@@ -23,8 +28,13 @@ export enum JoinGameEvents {
     LobbyStatusReceived = 'lobbyStatusReceived',
     LeftLobby = 'leftLobby',
 
+    UpdateOccupiedAvatars = 'updatedOccupiedAvatars',
+    LobbyUpdated = 'lobbyUpdated',
+    GameStarting = 'gameStarting',
+    PlayerKicked = 'playerKicked',
+
     //--------Game-View-Events--------
-    GameStarted = 'gameStarted',
+    // GameStarted = 'gameStarted', // TODO: to review later
     TurnUpdated = 'turnUpdated',
     EndTurn = 'endTurn',
     PlayerAbandon = 'playerabandon',

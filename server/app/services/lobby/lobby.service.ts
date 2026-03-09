@@ -2,6 +2,10 @@ import { Game } from '@common/game';
 import { Injectable } from '@nestjs/common';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
+const BASE_36 = 36;
+const BASE_2 = 2;
+const BASE_7 = 7;
+const BASE_5 = 5;
 
 @Injectable()
 export class LobbyService {
@@ -11,58 +15,139 @@ export class LobbyService {
 
     private lobbies: Map<string, Lobby>;
 
+    private generateLobbyId(): string {
+        let newLobbyId: string;
+        do {
+            newLobbyId = Math.random().toString(BASE_36).substring(BASE_2, BASE_7).padEnd(BASE_5, 'X').toUpperCase();
+        } while (this.lobbies.has(newLobbyId));
+
+        return newLobbyId;
+    }
+
     createLobby(game: Game, hostSocketId: string, player: Player): Lobby {
         const gameId = game._id.toString();
+        const lobbyId = this.generateLobbyId();
+
         const lobby: Lobby = {
-            lobbyId: 'N/A',
+            lobbyId,
             gameId,
             game,
             hostSocketId,
             playerCount: 1,
             isLocked: false,
             players: [player],
+            pendingAvatars: {},
         };
 
-        this.lobbies.set(gameId, lobby);
+        this.lobbies.set(lobbyId, lobby);
         return lobby;
     }
 
-    getLobby(gameId: string): Lobby | undefined {
-        return this.lobbies.get(gameId);
+    getLobby(lobbyId: string): Lobby | undefined {
+        return this.lobbies.get(lobbyId);
     }
 
     getAvailableLobbies(): Lobby[] {
         const availableLobbies = Array.from(this.lobbies.values()).filter(
-            lobby => lobby.isLocked === false && lobby.playerCount < lobby.game.maxPlayers,
+            (lobby) => lobby.isLocked === false && lobby.playerCount < lobby.game.maxPlayers,
         );
 
         return availableLobbies;
     }
 
-    joinLobby(gameId: string, player: Player): Lobby {
-        const lobby = this.lobbies.get(gameId);
+    joinLobby(lobbyId: string, player: Player): Lobby {
+        const lobby = this.lobbies.get(lobbyId);
         if (!lobby) throw new Error('There is no lobby associated with the provided ID');
         if (lobby.isLocked === true) throw new Error('The lobby is locked');
 
         lobby.players.push(player);
-        lobby.playerCount++;
+        lobby.playerCount = lobby.players.length;
         if (lobby.playerCount === lobby.game.maxPlayers) lobby.isLocked = true;
         return lobby;
     }
 
-    deleteLobby(gameId: string): void {
-        this.lobbies.delete(gameId);
+    deleteLobby(lobbyId): void {
+        this.lobbies.delete(lobbyId);
     }
 
     findLobbyBySocketId(socketId: string): Lobby | undefined {
-        const hostLobby = Array.from(this.lobbies.values()).find(lobby => lobby.hostSocketId === socketId);
-        return hostLobby;
+        for (const lobby of this.lobbies.values()) {
+            if (lobby.hostSocketId === socketId) return lobby;
+            if (lobby.players.some((p) => p.socketId === socketId)) return lobby;
+            if (Object.keys(lobby.pendingAvatars).includes(socketId)) return lobby;
+        }
+
+        return undefined;
     }
 
-    removePlayerFromLobby(gameId: string, socketId: string): void {
-        const lobby = this.lobbies.get(gameId);
+    removePlayerFromLobby(lobbyId: string, socketId: string): void {
+        const lobby = this.lobbies.get(lobbyId);
         if (lobby) {
-            lobby.players = lobby.players.filter(player => player.socketId !== socketId);
+            lobby.players = lobby.players.filter((player) => player.socketId !== socketId);
+            delete lobby.pendingAvatars[socketId];
+            lobby.playerCount = lobby.players.length;
+
+            if (lobby.playerCount < lobby.game.maxPlayers) {
+                lobby.isLocked = false;
+            }
         }
+    }
+
+    updatePlayerAvatar(lobbyId: string, socketId: string, avatarPath: string | null): void {
+        const lobby = this.getLobby(lobbyId);
+        if (!lobby) return;
+
+        const player = lobby.players.find((p) => p.socketId === socketId);
+
+        if (player && player.character) {
+            if (avatarPath) player.character.avatar = avatarPath;
+        } else {
+            if (!avatarPath) {
+                delete lobby.pendingAvatars[socketId];
+            } else {
+                lobby.pendingAvatars[socketId] = avatarPath;
+            }
+        }
+    }
+
+    toggleLock(lobbyId: string, hostSocketId: string): Lobby | undefined {
+        const lobby = this.getLobby(lobbyId);
+        if (lobby && lobby.hostSocketId === hostSocketId) {
+            lobby.isLocked = !lobby.isLocked;
+            return lobby;
+        }
+
+        return undefined;
+    }
+
+    // Temporary method to shuffle players in a lobby made by AI
+    // TODO: to change later
+    shufflePlayers(players: Player[]): Player[] {
+        const shuffled = [...players];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1)); // Random index from 0 to i
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+
+    canStartGame(lobbyId: string, hostSocketId: string): Lobby | undefined {
+        const lobby = this.getLobby(lobbyId);
+        if (lobby && lobby.hostSocketId === hostSocketId && lobby.playerCount >= 2) {
+            lobby.isLocked = true;
+            lobby.players = this.shufflePlayers(lobby.players);
+            return lobby;
+        }
+        return undefined;
+    }
+
+    kickPlayer(lobbyId: string, hostSocketId: string, targetSocketId: string): boolean {
+        const lobby = this.getLobby(lobbyId);
+        if (lobby && lobby.hostSocketId === hostSocketId) {
+            this.removePlayerFromLobby(lobbyId, targetSocketId);
+            return true;
+        }
+
+        return false;
     }
 }

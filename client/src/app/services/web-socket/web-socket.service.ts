@@ -38,6 +38,11 @@ export class WebSocketService implements OnDestroy {
         socket?.on(event, callback as (...args: unknown[]) => void);
     }
 
+    offNamespace(namespace: string, event: string): void {
+        const socket = this.sockets.get(namespace);
+        socket?.off(event);
+    }
+
     emitNamespace<T>(namespace: string, event: string, data?: T): void {
         const socket = this.sockets.get(namespace);
         socket?.emit(event, data);
@@ -47,16 +52,8 @@ export class WebSocketService implements OnDestroy {
         return this.sockets.get(namespace)?.connected ?? false;
     }
 
-    getSocketId(namespace: SocketNamespace): string | undefined {
-        const socket = this.sockets.get(namespace);
-        return socket?.id;
-    }
-
-    off(namespace: SocketNamespace, event: string): void {
-        const socket = this.sockets.get(namespace);
-        if (socket) {
-            socket.off(event);
-        }
+    getSocketId(namespace: string): string | undefined {
+        return this.sockets.get(namespace)?.id;
     }
 
     ngOnDestroy(): void {

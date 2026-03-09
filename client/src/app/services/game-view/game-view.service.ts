@@ -16,7 +16,7 @@ export class GameViewService {
     }
 
     private setupWebSocketListeners(): void {
-        this.webSocketService.onNamespace<Lobby>(this.namespace, JoinGameEvents.GameStarted, (lobby) => {
+        this.webSocketService.onNamespace<Lobby>(this.namespace, JoinGameEvents.GameStarting, (lobby) => {
             this.setGames(lobby);
         });
     }

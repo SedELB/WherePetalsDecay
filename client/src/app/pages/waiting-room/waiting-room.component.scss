@@ -1,5 +1,8 @@
 @use "src/styles.scss" as *;
 
+$primary-color: #8b5cf6;
+$text-color: #ffffff;
+
 .container {
     background-image: url('../../../assets/background.png');
     background-size: cover;
@@ -12,17 +15,145 @@
     box-sizing: border-box;
 }
 
-h1 {
+.waiting-room-card {
+    background: rgba(0, 0, 0, 0.85);
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 800px;
+    width: 100%;
     color: $text-color;
-    margin-bottom: 1rem;
 }
 
-p {
-    color: $text-color;
+h1 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: $primary-color;
+}
+
+h2 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 0.5rem;
+}
+
+.room-info {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 1rem;
     margin-bottom: 2rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+
+    .room-code {
+        font-size: 1.2rem;
+        strong {
+            color: $primary-color;
+            font-family: monospace;
+            font-size: 1.5rem;
+        }
+    }
+
+    .lock-badge {
+        margin-left: 0.5rem;
+        color: #ffa500;
+    }
+}
+
+.players-section {
+    margin-bottom: 2rem;
+}
+
+.players-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.player-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    &.is-me {
+        background: rgba(255, 215, 0, 0.1);
+        border-color: rgba(255, 215, 0, 0.5);
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+    }
+}
+
+.me-badge {
+    font-size: 0.85em;
+    font-weight: bold;
+    color: #ffd700;
+    margin-left: 4px;
+}
+
+.player-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.player-name {
+    flex: 1;
+    font-size: 1.1rem;
+}
+
+.organizer-badge {
+    margin-left: 0.5rem;
+    font-size: 0.85rem;
+    color: gold;
+}
+
+.kick-btn {
+    padding: 0.4rem 0.8rem;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+
+    &:hover {
+        background: #c82333;
+    }
+}
+
+.chat-section {
+    margin-bottom: 2rem;
+}
+
+.chat-placeholder {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .actions {
     display: flex;
+    justify-content: center;
     gap: 1rem;
+    flex-wrap: wrap;
 }
