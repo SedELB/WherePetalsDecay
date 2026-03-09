@@ -2,31 +2,41 @@ import { Game } from '@common/game';
 import { SocketNamespace } from '@common/enums';
 import { Injectable, Logger } from '@nestjs/common';
 import {
-    ConnectedSocket, MessageBody, OnGatewayConnection, OnGatewayDisconnect,
-    OnGatewayInit, SubscribeMessage, WebSocketGateway, WebSocketServer,
+    ConnectedSocket,
+    MessageBody,
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    OnGatewayInit,
+    SubscribeMessage,
+    WebSocketGateway,
+    WebSocketServer,
 } from '@nestjs/websockets';
 
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Server, Socket } from 'socket.io';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Player } from '@common/player';
+import { GameLogicService } from '@app/services/game-logic/game-logic.service';
 
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
 export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     @WebSocketServer() private server: Server;
 
-    constructor(private readonly logger: Logger, private readonly lobbyService: LobbyService) {}
+    constructor(
+        private readonly logger: Logger,
+        private readonly lobbyService: LobbyService,
+        private readonly gameLogicService: GameLogicService,
+    ) {}
 
     afterInit() {
         this.logger.log('JoinGateway initialized on join namespace');
-
     }
 
     handleConnection(socket: Socket) {
         this.logger.log(`Player client connected: ${socket.id}`);
     }
-    
+
     // Automatic disconnect
     handleDisconnect(socket: Socket) {
         this.processPlayerLeave(socket);
@@ -37,7 +47,6 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     handleLeaveLobby(@ConnectedSocket() socket: Socket) {
         this.processPlayerLeave(socket);
     }
-
 
     notifyGameHosted(game: Game) {
         this.server.emit(JoinGameEvents.GameHosted, game);
@@ -52,11 +61,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     }
 
     @SubscribeMessage(JoinGameEvents.CreateLobby)
-    handleCreateLobby(
-        @ConnectedSocket() socket: Socket,
-        @MessageBody() payload: {game: Game, player: Player},
-    ) {
-
+    handleCreateLobby(@ConnectedSocket() socket: Socket, @MessageBody() payload: { game: Game; player: Player }) {
         this.logger.log(`Payload (creation de lobby) reçu de ${socket.id}:`);
         payload.player.socketId = socket.id;
         payload.player.isHost = true;
@@ -77,16 +82,15 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         this.server.emit(JoinGameEvents.UpdatedLobbiesList, availableLobbies);
     }
 
-
     @SubscribeMessage(JoinGameEvents.JoinLobby)
-    handleJoinLobby(@ConnectedSocket() socket: Socket, @MessageBody() payload: {gameId: string, player: Player}) {
+    handleJoinLobby(@ConnectedSocket() socket: Socket, @MessageBody() payload: { gameId: string; player: Player }) {
         const lobby = this.lobbyService.getLobby(payload.gameId);
         if (!lobby) {
             socket.emit(JoinGameEvents.LobbyError, 'This lobby does not exist anymore');
             return;
         }
 
-        if (lobby.playerCount >= lobby.game.maxPlayers){
+        if (lobby.playerCount >= lobby.game.maxPlayers) {
             socket.emit(JoinGameEvents.LobbyError, 'This lobby is full');
             return;
         }
@@ -105,7 +109,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     @SubscribeMessage(JoinGameEvents.GetLobbyStatus)
     handleGetStatus(@ConnectedSocket() socket: Socket) {
         const lobby = this.lobbyService.findLobbyBySocketId(socket.id);
-        
+
         if (lobby) {
             socket.emit(JoinGameEvents.LobbyStatusReceived, {
                 game: lobby.game,
@@ -115,11 +119,11 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         }
     }
 
-    private processPlayerLeave(socket: Socket){
+    private processPlayerLeave(socket: Socket) {
         const lobby = this.lobbyService.findLobbyBySocketId(socket.id);
 
         if (lobby) {
-            if (lobby.hostSocketId === socket.id){
+            if (lobby.hostSocketId === socket.id) {
                 this.logger.log(`Host left. Deleting lobby: ${lobby.gameId}`);
                 this.server.to(lobby.gameId).emit(JoinGameEvents.GameDeleted); // Warn lobby members that host was disconnected.
                 this.lobbyService.deleteLobby(lobby.gameId);
@@ -132,5 +136,23 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             this.handleGetLobbies();
         }
     }
+    // TODO: ...
+    @SubscribeMessage(JoinGameEvents.GameStarted)
+    handleStartGame(@ConnectedSocket() socket: Socket) {
+        const lobby = this.lobbyService.findLobbyBySocketId(socket.id);
 
+        if (lobby && lobby.hostSocketId === socket.id) {
+            // Verrouiller le lobby pour que personne d'autre ne rejoigne
+            lobby.isLocked = true;
+
+            // Mélanger les joueurs
+            lobby.players = this.gameLogicService.shufflePlayers(lobby.players);
+
+            // 3. Informer TOUT LE MONDE dans la room que le jeu commence
+            // On envoie le lobby mis à jour (avec l'ordre des joueurs)
+            this.server.to(lobby.gameId).emit(JoinGameEvents.GameStarted, lobby);
+
+            // this.logger.log(`Game started for lobby ${lobby.gameId}. Order: ${lobby.players.map((p) => p.character.name)}`);
+        }
+    }
 }
