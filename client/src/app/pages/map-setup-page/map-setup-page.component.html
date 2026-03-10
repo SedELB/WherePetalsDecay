@@ -1,6 +1,7 @@
 <main class="editor-bg" aria-label="Vue d'édition (Sprint 1)">
   <app-button class="pos-back"  [width]="100" (clicked)="onBack()">Retour</app-button>
 
+  @if (isGameLoaded) {
   <section class="editor-stage">
 
     <aside class="info-card">
@@ -97,4 +98,5 @@
     <app-button [width]="200" class="pos-reset" [variant]="'default'" (clicked)="onReset()">Réinitialiser</app-button>
     <app-button [width]="200" class="pos-save" [variant]="'default'" (clicked)="onSave()">Enregistrer</app-button>
   </section>
+  }
 </main>

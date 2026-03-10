@@ -35,7 +35,7 @@ export class ChatService {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.ChatSendMessage, {
             lobbyId,
             message: trimmed,
-            characterName: playerName?.trim(),
+            senderName: playerName?.trim(),
         });
     }
 

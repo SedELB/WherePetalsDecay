@@ -1,6 +1,6 @@
 export enum GameMode {
     Classic = 'classic',
-    Ctf = 'ctf'
+    Ctf = 'ctf',
 }
 
 export enum TileTexture {
@@ -23,7 +23,7 @@ export enum GridSizes {
     Small = 10,
     Medium = 15,
     Large = 20,
-};
+}
 
 export enum MaxPlayers {
     Small = 2,

@@ -7,7 +7,7 @@
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { PlayerGameService } from '@app/services/game-creation/game-creation.service';
+import { GameCreationService } from '@app/services/game-creation/game-creation.service';
 import { GameMode } from '@common/enums';
 import { Game } from '@common/game';
 import { BehaviorSubject, of } from 'rxjs';
@@ -16,7 +16,7 @@ import { GameCreationComponent } from './game-creation.component';
 describe('GameCreationComponent', () => {
     let component: GameCreationComponent;
     let fixture: ComponentFixture<GameCreationComponent>;
-    let playerGameService: jasmine.SpyObj<PlayerGameService>;
+    let gameCreationService: jasmine.SpyObj<GameCreationService>;
     let visibleGamesSubject: BehaviorSubject<Game[]>;
 
     const MOCK_GAMES: Game[] = [
@@ -65,22 +65,22 @@ describe('GameCreationComponent', () => {
         // Mock BehaviorSubject for visible games stream
         visibleGamesSubject = new BehaviorSubject<Game[]>(MOCK_GAMES);
 
-        // Mock PlayerGameService
-        playerGameService = jasmine.createSpyObj(
-            'PlayerGameService',
+        // Mock GameCreationService
+        gameCreationService = jasmine.createSpyObj(
+            'GameCreationService',
             ['fetchVisibleGames', 'setGames'],
             { visibleGames$: visibleGamesSubject.asObservable() },
         );
 
         // Make fetchVisibleGames return our mock data
-        playerGameService.fetchVisibleGames.and.returnValue(of(MOCK_GAMES));
+        gameCreationService.fetchVisibleGames.and.returnValue(of(MOCK_GAMES));
 
         // Configure the testing module
         await TestBed.configureTestingModule({
             imports: [GameCreationComponent, HttpClientTestingModule],
             providers: [
                 provideRouter([]),
-                { provide: PlayerGameService, useValue: playerGameService },
+                { provide: GameCreationService, useValue: gameCreationService },
             ],
         }).compileComponents();
 
@@ -96,13 +96,13 @@ describe('GameCreationComponent', () => {
     // Fetch visible games on component construction
     it('should call fetchVisibleGames on ngOnInit', () => {
         fixture.detectChanges();
-        expect(playerGameService.fetchVisibleGames).toHaveBeenCalled();
+        expect(gameCreationService.fetchVisibleGames).toHaveBeenCalled();
     });
 
     // Successful call of fetchVisibleGames
     it('should call setGames with fetched games on successful fetch', () => {
         fixture.detectChanges();
-        expect(playerGameService.setGames).toHaveBeenCalledWith(MOCK_GAMES);
+        expect(gameCreationService.setGames).toHaveBeenCalledWith(MOCK_GAMES);
     });
 
     // Testing the subscription to visibleGames$, websocket

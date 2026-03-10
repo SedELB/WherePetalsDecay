@@ -26,7 +26,7 @@ export class CommunicationService {
         return this.http.delete<void>(`${this.baseUrl}/game/${id}`);
     }
 
-    getGameById(id: string) {
+    getGameById(id: string): Observable<Game> {
         return this.http.get<Game>(`${this.baseUrl}/game/singleGame/${id}`);
     }
 

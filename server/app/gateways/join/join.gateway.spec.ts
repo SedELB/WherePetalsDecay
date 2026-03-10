@@ -8,6 +8,7 @@
  */
 
 import { LobbyService } from '@app/services/lobby/lobby.service';
+import { GameLogicService } from '@app/services/game-logic/game-logic.service';
 import { GameMode } from '@common/enums';
 import { Game } from '@common/game';
 import { JoinGameEvents } from '@common/join.gateway.events';
@@ -66,6 +67,8 @@ describe('JoinGateway', () => {
             defenseDice: 'D6',
         },
         isHost: false,
+        winsCount: 0,
+        hasAbandonned: false,
     });
 
     beforeEach(async () => {
@@ -97,6 +100,7 @@ describe('JoinGateway', () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 JoinGateway,
+                
                 {
                     provide: Logger,
                     useValue: { log: jest.fn() },
@@ -104,6 +108,10 @@ describe('JoinGateway', () => {
                 {
                     provide: LobbyService,
                     useValue: mockLobbyService,
+                },
+                {
+                    provide: GameLogicService,
+                    useValue: { shufflePlayers: jest.fn((players) => players) },
                 },
             ],
         }).compile();
@@ -153,10 +161,7 @@ describe('JoinGateway', () => {
 
             gateway.handleCreateLobby(mockSocket, mockPayload);
 
-            expect(mockSocket.emit).toHaveBeenCalledWith(
-                JoinGameEvents.LobbyError,
-                `Ce salon n'a pas pu être créé. (handleCreateLobby)`,
-            );
+            expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyError, `Ce salon n'a pas pu être créé. (handleCreateLobby)`);
             expect(mockSocket.join).not.toHaveBeenCalled();
         });
     });

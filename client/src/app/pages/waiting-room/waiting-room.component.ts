@@ -9,6 +9,7 @@ import { SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { ROUTES } from '@app/constants/routes.constants';
 import swal from 'sweetalert2';
+import { GameViewService } from '@app/services/game-view/game-view.service';
 const SMALL_DELAY = 100;
 
 @Component({
@@ -24,6 +25,7 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
     private readonly webSocketService = inject(WebSocketService);
     private readonly router = inject(Router);
     private readonly route = inject(ActivatedRoute);
+    private readonly gameViewService = inject(GameViewService);
     private readonly routes = ROUTES;
 
     ngOnInit(): void {
@@ -56,8 +58,9 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
         });
 
         // Listener for redirecting after game start.
-        this.webSocketService.onNamespace<string>(SocketNamespace.Join, JoinGameEvents.GameStarting, (lobbyId) => {
-            this.router.navigate(['/game', lobbyId], {state: {lobby: this.currentLobby()}});
+        this.webSocketService.onNamespace<Lobby>(SocketNamespace.Join, JoinGameEvents.GameStarting, (finalLobby) => {
+            this.gameViewService.setLobby(finalLobby);
+            this.router.navigate(['/game', finalLobby.lobbyId]);
         });
 
         // Listener for player kick
@@ -84,7 +87,7 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
     currentPlayer = computed(() => {
         const lobby = this.currentLobby();
         if (!lobby) return undefined;
-        return lobby.players.find(p => p.socketId === this.webSocketService.getSocketId(SocketNamespace.Join));
+        return lobby.players.find((p) => p.socketId === this.webSocketService.getSocketId(SocketNamespace.Join));
     });
 
     isOrganizer = computed(() => {
@@ -96,13 +99,12 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
         return this.isOrganizer() && (lobby?.playerCount ?? 0) >= 2;
     });
 
-
     players = computed(() => {
         const lobby = this.currentLobby();
         if (!lobby) return [];
-        
-        const organizer = lobby.players.find(p => p.socketId === lobby.hostSocketId);
-        const others = lobby.players.filter(p => p.socketId !== lobby.hostSocketId);
+
+        const organizer = lobby.players.find((p) => p.socketId === lobby.hostSocketId);
+        const others = lobby.players.filter((p) => p.socketId !== lobby.hostSocketId);
         return organizer ? [organizer, ...others] : others;
     });
 

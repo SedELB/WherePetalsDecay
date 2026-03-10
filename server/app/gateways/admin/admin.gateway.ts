@@ -3,7 +3,7 @@ import { SocketNamespace } from '@common/enums';
 import { Injectable, Logger } from '@nestjs/common';
 import { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { AdminGameEvents } from './admin.gateway.events';
+import { AdminGameEvents } from '@common/socket-events/admin.gateway.events';
 
 @WebSocketGateway({ namespace: SocketNamespace.Admin, cors: true })
 @Injectable()
