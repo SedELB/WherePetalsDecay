@@ -1,12 +1,9 @@
 import { GameController } from '@app/controllers/game/game.controller';
 import { AdminGateway } from '@app/gateways/admin/admin.gateway';
 import { GamesGateway } from '@app/gateways/games/games.gateway';
-import { JoinGateway } from '@app/gateways/join/join.gateway';
 import { Game, gameSchema } from '@app/model/schema/game.schema';
-import { GameLogicService } from '@app/services/game-logic/game-logic.service';
 import { GameService } from '@app/services/game/game.service';
 import { GameValidatorService } from '@app/services/game/gameValidator.service';
-import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Logger, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
@@ -14,7 +11,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 @Module({
     imports: [MongooseModule.forFeature([{ name: Game.name, schema: gameSchema }])],
     controllers: [GameController],
-    providers: [GameService, GameValidatorService, AdminGateway, GamesGateway, Logger, LobbyService, JoinGateway, GameLogicService],
-    exports: [GameService], // Seul GameService sera accessible a lexterieur.
+    providers: [GameService, GameValidatorService, AdminGateway, GamesGateway, Logger],
+    exports: [GameService],
 })
 export class GameModule {}

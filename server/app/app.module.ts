@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { GameModule } from './modules/game.module';
-import { GameLogicService } from './services/game-logic/game-logic.service';
 import { LobbyModule } from './modules/lobby.module';
 @Module({
     imports: [
@@ -18,6 +17,6 @@ import { LobbyModule } from './modules/lobby.module';
         LobbyModule,
     ],
     controllers: [],
-    providers: [GameLogicService],
+    providers: [],
 })
 export class AppModule {}

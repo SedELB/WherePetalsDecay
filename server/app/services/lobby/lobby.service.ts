@@ -1,7 +1,10 @@
 import { Game } from '@common/game';
-import { Injectable } from '@nestjs/common';
 import { Lobby } from '@common/lobby';
+import { Injectable } from '@nestjs/common';
 import { Player } from '@common/player';
+import { ChatMessage } from '@common/chat-message';
+
+const HISTORY_MAX_MESSAGE = 100;
 const BASE_36 = 36;
 const BASE_2 = 2;
 const BASE_7 = 7;
@@ -37,6 +40,7 @@ export class LobbyService {
             isLocked: false,
             players: [player],
             pendingAvatars: {},
+            chatHistory : [],
         };
 
         this.lobbies.set(lobbyId, lobby);
@@ -118,6 +122,14 @@ export class LobbyService {
         }
 
         return undefined;
+    }
+
+    saveMessage(lobbyId: string, message: ChatMessage) {
+        const lobby = this.getLobby(lobbyId);
+        lobby.chatHistory.push(message);
+        if(lobby.chatHistory.length > HISTORY_MAX_MESSAGE){
+            lobby.chatHistory.shift();
+        }
     }
 
     canStartGame(lobbyId: string, hostSocketId: string): Lobby | undefined {

@@ -72,6 +72,7 @@ describe('JoinGamePageComponent', () => {
       isLocked: false,
       players: [],
       pendingAvatars: {},
+      chatHistory: [],
     },
     {
       lobbyId: 'lobby-2',
@@ -82,6 +83,7 @@ describe('JoinGamePageComponent', () => {
       isLocked: false,
       players: [],
       pendingAvatars: {},
+      chatHistory: [],
     },
   ];
 
