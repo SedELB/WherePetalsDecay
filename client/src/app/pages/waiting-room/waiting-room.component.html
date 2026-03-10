@@ -42,7 +42,7 @@
             <div class="chat-section">
                 <h2>Chat</h2>
                 <app-chat
-                    [roomId]="currentLobby()?.lobbyId ?? ''"
+                    [lobbyId]="currentLobby()?.lobbyId ?? ''"
                     [playerName]="currentPlayer()?.character?.name ?? ''"
                 ></app-chat>
             </div>

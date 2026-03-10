@@ -19,8 +19,6 @@ describe('ChatComponentComponent', () => {
           provide: ChatService,
           useValue: {
             connected$: connected$.asObservable(),
-            joinRoom: () => {},
-            sendMessage: () => {},
             roomMessages$: () => new BehaviorSubject([]).asObservable(),
           },
         },

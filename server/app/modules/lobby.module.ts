@@ -9,7 +9,7 @@ import { Logger, Module } from '@nestjs/common';
     JoinGateway,
     LobbyService,
     Logger,
-    ChatGateway
+    ChatGateway,
   ],
   exports: [LobbyService],
 })
