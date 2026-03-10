@@ -28,6 +28,7 @@ describe('LobbyCardComponent', () => {
       updatedAt: new Date(),
       isVisible: true,
     },
+    chatHistory: [],
   };
 
   beforeEach(async () => {
