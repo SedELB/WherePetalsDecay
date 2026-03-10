@@ -24,11 +24,11 @@
       @if (messages.length === 0) {
         <div class="chat__empty">Aucun message pour l’instant.</div>
       } @else {
-        @for (m of messages; track m.id) {
+        @for (m of messages; track $index) {
           <div class="chat__message">
             <div class="chat__meta">
               <span class="chat__time">{{ m.sentAt | date:'HH:mm:ss' }}</span>
-              <span class="chat__author">{{ m.authorName }}</span>
+              <span class="chat__author">{{ m.characterName }}</span>
             </div>
             <div class="chat__text">{{ m.message }}</div>
           </div>

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { Game } from '@app/interfaces/game';
 import { TileItemCounts } from '@app/services/map-setup.types';
 import { GameMode, GridSizes, MaxPlayers, SanctuaryCount, TileItem, TileTexture } from '@common/enums';
+import { Game } from '@common/game';
 
 @Injectable({ providedIn: 'root' })
 export class TileItemCountService {

@@ -9,8 +9,10 @@
  * - Mode switching (create/edit) logic
  */
 
-import { Router } from '@angular/router';
+import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
+import swal from 'sweetalert2';
 
 import { CommunicationService } from '@app/services/communication/communication.service';
 import { GameValidatorService } from '@app/services/game-validator/game-validator.service';
@@ -18,9 +20,9 @@ import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 
-import type { Game } from '@app/interfaces/game';
-import type { Tile } from '@app/interfaces/tile';
 import { GameMode, TileTexture } from '@common/enums';
+import type { Game } from '@common/game';
+import type { Tile } from '@common/tile';
 
 const grid = (rows: number, cols: number): Tile[][] =>
     Array.from({ length: rows }, () =>
@@ -54,18 +56,21 @@ const gameFactory = (rows = 2, cols = 2, mode: GameMode = GameMode.Classic): Gam
 
 describe('MapSetupFacadeService', () => {
     let router: jasmine.SpyObj<Router>;
+    let route: ActivatedRoute;
     let communication: jasmine.SpyObj<CommunicationService>;
     let validator: jasmine.SpyObj<GameValidatorService>;
     let mapSetup: jasmine.SpyObj<MapSetupService>;
     let tileItemCount: jasmine.SpyObj<TileItemCountService>;
     let service: MapSetupFacadeService;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+        route = { snapshot: { paramMap: { get: () => null } } } as unknown as ActivatedRoute;
         communication = jasmine.createSpyObj<CommunicationService>('CommunicationService', [
             'createGame',
             'modifyGame',
             'getAllGames',
+            'getGameById',
         ]);
         validator = jasmine.createSpyObj<GameValidatorService>('GameValidatorService', ['validate']);
         mapSetup = jasmine.createSpyObj<MapSetupService>('MapSetupService', [
@@ -77,24 +82,31 @@ describe('MapSetupFacadeService', () => {
             'adjustCountsForExistingItems',
         ]);
 
-        service = new MapSetupFacadeService(
-            router,
-            communication,
-            validator,
-            mapSetup as unknown as MapSetupService,
-            tileItemCount as unknown as TileItemCountService,
-        );
+        await TestBed.configureTestingModule({
+            providers: [
+                MapSetupFacadeService,
+                provideRouter([]),
+                { provide: Router, useValue: router },
+                { provide: CommunicationService, useValue: communication },
+                { provide: GameValidatorService, useValue: validator },
+                { provide: MapSetupService, useValue: mapSetup },
+                { provide: TileItemCountService, useValue: tileItemCount },
+                { provide: ActivatedRoute, useValue: route },
+            ],
+        }).compileComponents();
+
+        service = TestBed.inject(MapSetupFacadeService);
     });
 
     // Test navigation state initialization with valid game
-    it('reads the game from navigation state and prepares item counts', () => {
+    it('reads the game from navigation state and prepares item counts', async () => {
         const game = gameFactory(SIZE_SMALL, SIZE_SMALL, GameMode.Classic);
         const counts = { spawnCount: 2, healingSanctuaryCount: 1, combatSanctuaryCount: 1, flagCount: 0 };
 
         history.pushState({ game, mode: 'edit' }, '', '');
         tileItemCount.createRequiredCounts.and.returnValue(counts);
 
-        const result = service.initializeFromNavigation();
+        const result = await service.initializeFromNavigation();
 
         expect(mapSetup.initializeGridIfEmpty).toHaveBeenCalledWith(game);
         expect(tileItemCount.adjustCountsForExistingItems).toHaveBeenCalledWith(game, counts);
@@ -102,14 +114,12 @@ describe('MapSetupFacadeService', () => {
     });
 
     // Test navigation with missing game state
-    it('redirects to /games when navigation state is invalid', () => {
+    it('redirects to /admin when navigation state is invalid', async () => {
         history.pushState({}, '', '');
-        mapSetup.initializeGridIfEmpty.and.callFake(() => {
-            throw new Error('no game');
-        });
 
-        expect(() => service.initializeFromNavigation()).toThrow();
-        expect(router.navigate).toHaveBeenCalledWith(['/games']);
+        const result = await service.initializeFromNavigation();
+        expect(result).toBeNull();
+        expect(router.navigate).toHaveBeenCalledWith(['/admin']);
     });
 
     // Test navigation to admin page
@@ -135,13 +145,13 @@ describe('MapSetupFacadeService', () => {
         validator.validate.and.returnValue({ isValid: true, errors: [] });
         communication.createGame.and.returnValue(of(undefined));
 
-        const alertSpy = spyOn(window, 'alert');
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
 
         await service.saveGame(game, 'create');
 
         expect(game.thumbnail).toBe('new-thumb');
         expect(communication.createGame).toHaveBeenCalledWith(game);
-        expect(alertSpy).toHaveBeenCalledWith('Partie créée avec succès !');
+        expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Succès' }));
         expect(router.navigate).toHaveBeenCalledWith(['/admin']);
     });
 
@@ -163,13 +173,13 @@ describe('MapSetupFacadeService', () => {
         communication.getAllGames.and.returnValue(of([game]));
         communication.modifyGame.and.returnValue(of(undefined));
 
-        const alertSpy = spyOn(window, 'alert');
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
 
         await service.saveGame(game, 'edit');
 
         expect(game.thumbnail).toBe('edit-thumb');
         expect(communication.modifyGame).toHaveBeenCalledWith(game);
-        expect(alertSpy).toHaveBeenCalledWith('Jeu sauvegardé avec succès !');
+        expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Succès' }));
         expect(router.navigate).toHaveBeenCalledWith(['/admin']);
     });
 
@@ -178,11 +188,11 @@ describe('MapSetupFacadeService', () => {
         const game = gameFactory(SIZE_SMALL, SIZE_SMALL, GameMode.Classic);
 
         spyOn(service as unknown as CaptureThumbnailApi, 'captureThumbnail').and.rejectWith(new Error('fail'));
-        const alertSpy = spyOn(window, 'alert');
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
 
         await service.saveGame(game, 'create');
 
-        expect(alertSpy).toHaveBeenCalledWith('Problème d\'enregistrement : la génération de l\'image a échouée ');
+        expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ title: `Problème d'enregistrement` }));
         expect(validator.validate).not.toHaveBeenCalled();
     });
 
@@ -202,11 +212,11 @@ describe('MapSetupFacadeService', () => {
         mapSetup.buildValidationPayload.and.returnValue(validationPayload);
         validator.validate.and.returnValue({ isValid: false, errors: ['Erreur 1', 'Erreur 2'] });
 
-        const alertSpy = spyOn(window, 'alert');
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
 
         await service.saveGame(game, 'edit');
 
-        expect(alertSpy).toHaveBeenCalledWith('Jeu invalide! :\n- Erreur 1\n- Erreur 2');
+        expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Jeu invalide !' }));
         expect(communication.modifyGame).not.toHaveBeenCalled();
         expect(communication.createGame).not.toHaveBeenCalled();
     });
@@ -229,11 +239,11 @@ describe('MapSetupFacadeService', () => {
         communication.getAllGames.and.returnValue(of([game]));
         communication.modifyGame.and.returnValue(throwError(() => ({ error: 'bad' })));
 
-        const alertSpy = spyOn(window, 'alert');
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
 
         await service.saveGame(game, 'edit');
 
-        expect(alertSpy).toHaveBeenCalledWith(`Une erreur s'est produite en enregistrant un jeu édité ! : bad`);
+        expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Jeu invalide !' }));
     });
 
     // Test fallback to create mode when game doesn't exist
@@ -254,13 +264,13 @@ describe('MapSetupFacadeService', () => {
         communication.getAllGames.and.returnValue(of([]));
         communication.createGame.and.returnValue(of(undefined));
 
-        const alertSpy = spyOn(window, 'alert');
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
 
         await service.saveGame(game, 'edit');
 
         expect(communication.createGame).toHaveBeenCalledWith(game);
         expect(communication.modifyGame).not.toHaveBeenCalled();
-        expect(alertSpy).toHaveBeenCalledWith('Jeu créé avec succès !');
+        expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Succès' }));
         expect(router.navigate).toHaveBeenCalledWith(['/admin']);
     });
 
@@ -289,16 +299,16 @@ describe('MapSetupFacadeService', () => {
     });
 
     // Test default mode behavior
-    it('defaults mode to edit when not specified in navigation state', () => {
+    it('defaults mode to edit when not specified in navigation state', async () => {
         const game = gameFactory(SIZE_SMALL, SIZE_SMALL, GameMode.Classic);
         const counts = { spawnCount: 2, healingSanctuaryCount: 1, combatSanctuaryCount: 1, flagCount: 0 };
 
         history.pushState({ game }, '', '');
         tileItemCount.createRequiredCounts.and.returnValue(counts);
 
-        const result = service.initializeFromNavigation();
+        const result = await service.initializeFromNavigation();
 
-        expect(result.mode).toBe('edit');
+        expect(result?.mode).toBe('edit');
     });
 
     // Test successful thumbnail capture
