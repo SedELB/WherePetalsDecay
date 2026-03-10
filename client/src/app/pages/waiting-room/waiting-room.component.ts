@@ -8,6 +8,7 @@ import { SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { ROUTES } from '@app/constants/routes.constants';
 import swal from 'sweetalert2';
+import { GameViewService } from '@app/services/game-view/game-view.service';
 const SMALL_DELAY = 100;
 
 @Component({
@@ -23,6 +24,7 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
     private readonly webSocketService = inject(WebSocketService);
     private readonly router = inject(Router);
     private readonly route = inject(ActivatedRoute);
+    private readonly gameViewService = inject(GameViewService);
     private readonly routes = ROUTES;
 
     ngOnInit(): void {
@@ -56,7 +58,8 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
 
         // Listener for redirecting after game start.
         this.webSocketService.onNamespace<Lobby>(SocketNamespace.Join, JoinGameEvents.GameStarting, (finalLobby) => {
-            this.router.navigate(['/game', finalLobby.lobbyId], { state: { lobby: finalLobby } });
+            this.gameViewService.setLobby(finalLobby);
+            this.router.navigate(['/game', finalLobby.lobbyId]);
         });
 
         // Listener for player kick

@@ -3,6 +3,8 @@ import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
+import { Router } from '@angular/router';
+import { ROUTES } from '@app/constants/routes.constants';
 
 @Injectable({
     providedIn: 'root',
@@ -11,13 +13,20 @@ export class GameViewService {
     private readonly namespace = SocketNamespace.Join;
     readonly gameLobby = signal<Lobby | null>(null);
 
-    constructor(private readonly webSocketService: WebSocketService) {
+    constructor(
+        private readonly webSocketService: WebSocketService,
+        private readonly router: Router,
+    ) {
         this.setupWebSocketListeners();
     }
 
     private setupWebSocketListeners(): void {
-        this.webSocketService.onNamespace<Lobby>(this.namespace, JoinGameEvents.GameStarting, (lobby) => {
-            this.setGames(lobby);
+        this.webSocketService.onNamespace<Lobby>(this.namespace, JoinGameEvents.GameLobbyUpdated, (lobby) => {
+            this.setLobby(lobby);
+        });
+        this.webSocketService.onNamespace(this.namespace, JoinGameEvents.LeftLobby, () => {
+            this.setLobby(null);
+            this.router.navigate([ROUTES.home]);
         });
     }
 
@@ -36,7 +45,7 @@ export class GameViewService {
     }
 
     // utils
-    setGames(gameLobby: Lobby): void {
+    setLobby(gameLobby: Lobby | null): void {
         this.gameLobby.set(gameLobby);
     }
 

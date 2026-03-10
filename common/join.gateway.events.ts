@@ -37,8 +37,9 @@ export enum JoinGameEvents {
     // GameStarted = 'gameStarted', // TODO: to review later
     TurnUpdated = 'turnUpdated',
     EndTurn = 'endTurn',
-    PlayerAbandon = 'playerabandon',
+    PlayerAbandon = 'playerAbandon',
     PlayerAction = 'playerAction',
+    GameLobbyUpdated = 'gameLobbyUpdated',
 }
 
 /*
