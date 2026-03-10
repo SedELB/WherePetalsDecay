@@ -1,0 +1,17 @@
+/**
+ * Adapted from https://github.com/Animmaster/Sakura-Effect
+ * Converted to Angular standalone component with TypeScript by Claude Sonnet 4.6.
+ */
+
+:host {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+}

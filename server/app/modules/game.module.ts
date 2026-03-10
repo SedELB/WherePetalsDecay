@@ -9,12 +9,9 @@ import { MongooseModule } from '@nestjs/mongoose';
 
 // Encapsulates the Game logic.
 @Module({
-    imports: [
-        MongooseModule.forFeature([{ name: Game.name, schema: gameSchema }]),
-    ],
+    imports: [MongooseModule.forFeature([{ name: Game.name, schema: gameSchema }])],
     controllers: [GameController],
     providers: [GameService, GameValidatorService, AdminGateway, GamesGateway, Logger],
-    exports: [GameService], // Seul GameService sera accessible a lexterieur.
+    exports: [GameService],
 })
 export class GameModule {}
-

@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Server, Socket } from 'socket.io';
 import { GamesGateway } from './games.gateway';
-import { PlayerGameEvents } from './games.gateway.events';
+import { GameCreationEvents } from '@common/socket-events/games.gateway.events';
 
 describe('GamesGateway', () => {
     let gateway: GamesGateway;
@@ -69,7 +69,7 @@ describe('GamesGateway', () => {
             const game = new Game();
             game.name = 'Test Game';
             gateway.notifyGameCreated(game);
-            expect(mockServer.emit).toHaveBeenCalledWith(PlayerGameEvents.GameCreated, game);
+            expect(mockServer.emit).toHaveBeenCalledWith(GameCreationEvents.GameCreated, game);
         });
     });
 
@@ -78,7 +78,7 @@ describe('GamesGateway', () => {
         it('should emit GameDeleted event with game id', () => {
             const gameId = 'game-id-123';
             gateway.notifyGameDeleted(gameId);
-            expect(mockServer.emit).toHaveBeenCalledWith(PlayerGameEvents.GameDeleted, gameId);
+            expect(mockServer.emit).toHaveBeenCalledWith(GameCreationEvents.GameDeleted, gameId);
         });
     });
 
@@ -88,7 +88,7 @@ describe('GamesGateway', () => {
             const gameId = 'game-id-123';
             const isVisible = false;
             gateway.notifyGameVisibilityChanged(gameId, isVisible);
-            expect(mockServer.emit).toHaveBeenCalledWith(PlayerGameEvents.GameVisibilityChanged, { gameId, isVisible });
+            expect(mockServer.emit).toHaveBeenCalledWith(GameCreationEvents.GameVisibilityChanged, { gameId, isVisible });
         });
     });
 });

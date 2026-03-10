@@ -3,19 +3,14 @@ import { Injectable } from '@angular/core';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { SocketNamespace } from '@common/enums';
 import { Game } from '@common/game';
+import { GameCreationEvents } from '@common/socket-events/games.gateway.events';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
-
-export enum PlayerGameEvents {
-    GameCreated = 'gameCreated',
-    GameDeleted = 'gameDeleted',
-    GameVisibilityChanged = 'gameVisibilityChanged',
-}
 
 @Injectable({
     providedIn: 'root',
 })
-export class PlayerGameService {
+export class GameCreationService {
     private readonly namespace = SocketNamespace.Games;
     private readonly gamesSubject = new BehaviorSubject<Game[]>([]);
 
@@ -29,19 +24,19 @@ export class PlayerGameService {
     }
 
     private setupWebSocketListeners(): void {
-        this.webSocketService.onNamespace<Game>(this.namespace, PlayerGameEvents.GameCreated, (game) => {
+        this.webSocketService.onNamespace<Game>(this.namespace, GameCreationEvents.GameCreated, (game) => {
             const games = this.gamesSubject.value;
             this.gamesSubject.next([...games, game]);
         });
 
-        this.webSocketService.onNamespace<string>(this.namespace, PlayerGameEvents.GameDeleted, (gameId) => {
+        this.webSocketService.onNamespace<string>(this.namespace, GameCreationEvents.GameDeleted, (gameId) => {
             const games = this.gamesSubject.value.filter((game) => game._id !== gameId);
             this.gamesSubject.next(games);
         });
 
         this.webSocketService.onNamespace<{ gameId: string; isVisible: boolean }>(
             this.namespace,
-            PlayerGameEvents.GameVisibilityChanged,
+            GameCreationEvents.GameVisibilityChanged,
             (data) => {
                 if (data.isVisible) {
                     this.fetchVisibleGames().subscribe({

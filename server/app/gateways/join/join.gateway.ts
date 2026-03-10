@@ -2,14 +2,21 @@ import { Game } from '@common/game';
 import { SocketNamespace } from '@common/enums';
 import { Injectable, Logger } from '@nestjs/common';
 import {
-    ConnectedSocket, MessageBody, OnGatewayConnection, OnGatewayDisconnect,
-    OnGatewayInit, SubscribeMessage, WebSocketGateway, WebSocketServer,
+    ConnectedSocket,
+    MessageBody,
+    OnGatewayConnection,
+    OnGatewayDisconnect,
+    OnGatewayInit,
+    SubscribeMessage,
+    WebSocketGateway,
+    WebSocketServer,
 } from '@nestjs/websockets';
 
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Server, Socket } from 'socket.io';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Player } from '@common/player';
+import { GameLogicService } from '@app/services/game-logic/game-logic.service';
 import { Lobby } from '@common/lobby';
 
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
@@ -17,7 +24,11 @@ import { Lobby } from '@common/lobby';
 export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     @WebSocketServer() private server: Server;
 
-    constructor(private readonly logger: Logger, private readonly lobbyService: LobbyService) {}
+    constructor(
+        private readonly logger: Logger,
+        private readonly lobbyService: LobbyService,
+        private readonly gameLogicService: GameLogicService,
+    ) {}
 
     afterInit() {
         this.logger.log('JoinGateway initialized on /join namespace');
@@ -26,7 +37,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     handleConnection(socket: Socket) {
         this.logger.log(`Player client connected: ${socket.id}`);
     }
-    
+
     // Automatic disconnect
     handleDisconnect(socket: Socket) {
         this.processPlayerLeave(socket);
@@ -39,14 +50,11 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     }
 
     @SubscribeMessage(JoinGameEvents.CreateLobby)
-    handleCreateLobby(
-        @ConnectedSocket() socket: Socket,
-        @MessageBody() payload: {game: Game, player: Player},
-    ) {
-
+    handleCreateLobby(@ConnectedSocket() socket: Socket, @MessageBody() payload: { game: Game; player: Player }) {
         this.logger.log(`Payload (Lobby Created) by ${socket.id}`);
         payload.player.socketId = socket.id;
         payload.player.isHost = true;
+        payload.player.winsCount = 0;
         const createdLobby = this.lobbyService.createLobby(payload.game, socket.id, payload.player);
 
         if (createdLobby) {
@@ -64,16 +72,15 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         this.server.emit(JoinGameEvents.UpdatedLobbiesList, availableLobbies);
     }
 
-
     @SubscribeMessage(JoinGameEvents.JoinLobby)
-    handleJoinLobby(@ConnectedSocket() socket: Socket, @MessageBody() payload: {lobbyId: string, player: Player}) {
+    handleJoinLobby(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; player: Player }) {
         const lobby = this.lobbyService.getLobby(payload.lobbyId);
         if (!lobby) {
             socket.emit(JoinGameEvents.LobbyError, `Ce salon n'existe plus.`);
             return;
         }
 
-        if (lobby.playerCount >= lobby.game.maxPlayers){
+        if (lobby.playerCount >= lobby.game.maxPlayers) {
             socket.emit(JoinGameEvents.LobbyError, 'Ce salon est plein !');
             return;
         }
@@ -83,6 +90,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         payload.player.character.name = finalPlayerName;
         payload.player.socketId = socket.id;
         payload.player.isHost = false;
+        payload.player.winsCount = 0;
 
         const updatedLobby = this.lobbyService.joinLobby(payload.lobbyId, payload.player);
 
@@ -97,7 +105,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     @SubscribeMessage(JoinGameEvents.GetLobbyStatus)
     handleGetStatus(@ConnectedSocket() socket: Socket) {
         const lobby = this.lobbyService.findLobbyBySocketId(socket.id);
-        
+
         if (lobby) {
             socket.join(lobby.lobbyId);
             socket.emit(JoinGameEvents.LobbyStatusReceived, lobby);
@@ -107,16 +115,13 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     }
 
     @SubscribeMessage(JoinGameEvents.SelectAvatar)
-    handleSelectAvatar(
-        @ConnectedSocket() socket: Socket, 
-        @MessageBody() payload: { lobbyId: string, avatar: string },
-    ) {
+    handleSelectAvatar(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; avatar: string }) {
         const { lobbyId, avatar } = payload;
         const lobby = this.lobbyService.getLobby(lobbyId);
-        
+
         if (!lobby) return;
         this.lobbyService.updatePlayerAvatar(lobbyId, socket.id, avatar);
-        
+
         const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
         this.server.to(lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
     }
@@ -142,19 +147,10 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         }
     }
 
-    @SubscribeMessage(JoinGameEvents.StartGame)
-    handleStartGame(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string) {
-        if (this.lobbyService.canStartGame(lobbyId, socket.id)) {
-            this.server.to(lobbyId).emit(JoinGameEvents.GameStarting, lobbyId);
-        } else {
-            socket.emit(JoinGameEvents.LobbyError, `Impossible de demarrer la partie. (Minimum 2 joueurs requis.)`);
-        }
-    }
-
     @SubscribeMessage(JoinGameEvents.KickPlayer)
-    handleKickPlayer(@ConnectedSocket() socket: Socket, @MessageBody() payload: {lobbyId: string, targetSocketId: string}) {
+    handleKickPlayer(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; targetSocketId: string }) {
         const success = this.lobbyService.kickPlayer(payload.lobbyId, socket.id, payload.targetSocketId);
-        
+
         if (success) {
             this.server.to(payload.targetSocketId).emit(JoinGameEvents.PlayerKicked, `Vous avez été exclu par l'organisateur.`);
             this.server.in(payload.targetSocketId).socketsLeave(payload.lobbyId);
@@ -167,11 +163,11 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             this.handleGetLobbies();
         }
     }
-    
+
     private getOccupiedAvatars(lobby: Lobby): string[] {
         const confirmedAvatars = lobby.players
-            .map(player => player.character?.avatar)
-            .filter(avat => avat !== undefined && avat !== null && avat !== '');
+            .map((player) => player.character?.avatar)
+            .filter((avat) => avat !== undefined && avat !== null && avat !== '');
 
         const pendingAvatars = Object.values(lobby.pendingAvatars || {});
         return [...confirmedAvatars, ...pendingAvatars];
@@ -180,7 +176,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     private getValidName(name: string, lobby: Lobby): string {
         let finalName = name;
         let counter = 2;
-        while (lobby.players.some(player => player.character.name === finalName)){
+        while (lobby.players.some((player) => player.character.name === finalName)) {
             finalName = `${name}-${counter}`;
             counter++;
         }
@@ -188,18 +184,18 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         return finalName;
     }
 
-    private processPlayerLeave(socket: Socket){
+    private processPlayerLeave(socket: Socket) {
         const lobby = this.lobbyService.findLobbyBySocketId(socket.id);
 
         if (lobby) {
-            if (lobby.hostSocketId === socket.id){
+            if (lobby.hostSocketId === socket.id) {
                 this.logger.log(`Host left. Deleting lobby: ${lobby.lobbyId}`);
                 socket.to(lobby.lobbyId).emit(JoinGameEvents.GameDeleted); // Warn lobby members that host was disconnected.
                 this.lobbyService.deleteLobby(lobby.lobbyId);
             } else {
                 this.logger.log(`Player left lobby: ${lobby.lobbyId}`);
                 this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
-                
+
                 const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
                 this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars); // Release selected avatars for both pending and confirmed characters.
                 this.server.to(lobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, lobby);
@@ -207,5 +203,25 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
             this.handleGetLobbies();
         }
+    }
+
+    @SubscribeMessage(JoinGameEvents.StartGame)
+    handleStartGame(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string) {
+        const finalLobby = this.lobbyService.canStartGame(lobbyId, socket.id);
+        if (finalLobby) {
+            finalLobby.players = this.gameLogicService.shufflePlayers(finalLobby.players);
+            this.server.to(lobbyId).emit(JoinGameEvents.GameStarting, finalLobby);
+        } else {
+            socket.emit(JoinGameEvents.LobbyError, `Impossible de demarrer la partie. (Minimum 2 joueurs requis.)`);
+        }
+    }
+
+    @SubscribeMessage(JoinGameEvents.PlayerAbandon)
+    handlePlayerAbandon(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string) {
+        const updatedLobby = this.lobbyService.abandonPlayer(lobbyId, socket.id);
+        if (updatedLobby) {
+            this.server.to(lobbyId).emit(JoinGameEvents.GameLobbyUpdated, updatedLobby);
+        }
+        socket.emit(JoinGameEvents.LeftLobby);
     }
 }

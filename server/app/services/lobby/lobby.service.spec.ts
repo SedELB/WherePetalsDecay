@@ -44,6 +44,8 @@ describe('LobbyService', () => {
             defenseDice: 'D6',
         },
         isHost: false,
+        winsCount: 0,
+        hasAbandonned: false,
     };
 
     beforeEach(async () => {

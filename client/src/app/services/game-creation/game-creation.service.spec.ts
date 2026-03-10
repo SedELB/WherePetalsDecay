@@ -12,10 +12,12 @@ import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { GameMode, SocketNamespace } from '@common/enums';
 import { Game } from '@common/game';
 import { environment } from 'src/environments/environment';
-import { PlayerGameEvents, PlayerGameService } from './game-creation.service';
+import { GameCreationService } from './game-creation.service';
+import { GameCreationEvents } from '@common/socket-events/games.gateway.events';
 
-describe('PlayerGameService', () => {
-    let service: PlayerGameService;
+
+describe('GameCreationService', () => {
+    let service: GameCreationService;
     let httpMock: HttpTestingController;
     let webSocketService: jasmine.SpyObj<WebSocketService>;
     let gameCreatedCallback: (game: Game) => void;
@@ -55,11 +57,11 @@ describe('PlayerGameService', () => {
 
         // Capture callbacks when onNamespace is called
         webSocketService.onNamespace.and.callFake(<T>(_namespace: string, event: string, callback: (data: T) => void) => {
-            if (event === PlayerGameEvents.GameCreated) {
+            if (event === GameCreationEvents.GameCreated) {
                 gameCreatedCallback = callback as (game: Game) => void;
-            } else if (event === PlayerGameEvents.GameDeleted) {
+            } else if (event === GameCreationEvents.GameDeleted) {
                 gameDeletedCallback = callback as (gameId: string) => void;
-            } else if (event === PlayerGameEvents.GameVisibilityChanged) {
+            } else if (event === GameCreationEvents.GameVisibilityChanged) {
                 visibilityChangedCallback = callback as (data: { gameId: string; isVisible: boolean }) => void;
             }
         });
@@ -67,12 +69,12 @@ describe('PlayerGameService', () => {
         TestBed.configureTestingModule({
             imports: [HttpClientTestingModule],
             providers: [
-                PlayerGameService,
+                GameCreationService,
                 { provide: WebSocketService, useValue: webSocketService },
             ],
         });
 
-        service = TestBed.inject(PlayerGameService);
+        service = TestBed.inject(GameCreationService);
         httpMock = TestBed.inject(HttpTestingController);
     });
 
@@ -90,17 +92,17 @@ describe('PlayerGameService', () => {
         expect(webSocketService.onNamespace).toHaveBeenCalledTimes(EXPECTED_LISTENER_COUNT);
         expect(webSocketService.onNamespace).toHaveBeenCalledWith(
             SocketNamespace.Games,
-            PlayerGameEvents.GameCreated,
+            GameCreationEvents.GameCreated,
             jasmine.any(Function),
         );
         expect(webSocketService.onNamespace).toHaveBeenCalledWith(
             SocketNamespace.Games,
-            PlayerGameEvents.GameDeleted,
+            GameCreationEvents.GameDeleted,
             jasmine.any(Function),
         );
         expect(webSocketService.onNamespace).toHaveBeenCalledWith(
             SocketNamespace.Games,
-            PlayerGameEvents.GameVisibilityChanged,
+            GameCreationEvents.GameVisibilityChanged,
             jasmine.any(Function),
         );
     });

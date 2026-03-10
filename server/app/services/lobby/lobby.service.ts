@@ -18,7 +18,6 @@ export class LobbyService {
 
     private lobbies: Map<string, Lobby>;
 
-
     private generateLobbyId(): string {
         let newLobbyId: string;
         do {
@@ -28,7 +27,7 @@ export class LobbyService {
         return newLobbyId;
     }
 
-    createLobby(game: Game, hostSocketId: string, player: Player) : Lobby {
+    createLobby(game: Game, hostSocketId: string, player: Player): Lobby {
         const gameId = game._id.toString();
         const lobbyId = this.generateLobbyId();
 
@@ -48,18 +47,19 @@ export class LobbyService {
         return lobby;
     }
 
-    getLobby(lobbyId: string) : Lobby | undefined {
+    getLobby(lobbyId: string): Lobby | undefined {
         return this.lobbies.get(lobbyId);
     }
 
-    getAvailableLobbies() : Lobby[] {
+    getAvailableLobbies(): Lobby[] {
         const availableLobbies = Array.from(this.lobbies.values()).filter(
-            lobby => lobby.isLocked === false && lobby.playerCount < lobby.game.maxPlayers);
+            (lobby) => lobby.isLocked === false && lobby.playerCount < lobby.game.maxPlayers,
+        );
 
         return availableLobbies;
     }
 
-    joinLobby(lobbyId: string, player: Player) : Lobby {
+    joinLobby(lobbyId: string, player: Player): Lobby {
         const lobby = this.lobbies.get(lobbyId);
         if (!lobby) throw new Error('There is no lobby associated with the provided ID');
         if (lobby.isLocked === true) throw new Error('The lobby is locked');
@@ -70,24 +70,24 @@ export class LobbyService {
         return lobby;
     }
 
-    deleteLobby(lobbyId) : void {
+    deleteLobby(lobbyId): void {
         this.lobbies.delete(lobbyId);
     }
 
-    findLobbyBySocketId(socketId: string) : Lobby | undefined {
+    findLobbyBySocketId(socketId: string): Lobby | undefined {
         for (const lobby of this.lobbies.values()) {
             if (lobby.hostSocketId === socketId) return lobby;
-            if (lobby.players.some(p => p.socketId === socketId)) return lobby;
+            if (lobby.players.some((p) => p.socketId === socketId)) return lobby;
             if (Object.keys(lobby.pendingAvatars).includes(socketId)) return lobby;
         }
 
         return undefined;
     }
 
-    removePlayerFromLobby(lobbyId: string, socketId: string) : void {
+    removePlayerFromLobby(lobbyId: string, socketId: string): void {
         const lobby = this.lobbies.get(lobbyId);
         if (lobby) {
-            lobby.players = lobby.players.filter(player => player.socketId !== socketId);
+            lobby.players = lobby.players.filter((player) => player.socketId !== socketId);
             delete lobby.pendingAvatars[socketId];
             lobby.playerCount = lobby.players.length;
 
@@ -101,22 +101,22 @@ export class LobbyService {
         const lobby = this.getLobby(lobbyId);
         if (!lobby) return;
 
-        const player = lobby.players.find(p => p.socketId === socketId);
+        const player = lobby.players.find((p) => p.socketId === socketId);
 
         if (player && player.character) {
             if (avatarPath) player.character.avatar = avatarPath;
         } else {
-            if (!avatarPath){
+            if (!avatarPath) {
                 delete lobby.pendingAvatars[socketId];
             } else {
                 lobby.pendingAvatars[socketId] = avatarPath;
             }
         }
     }
-    
+
     toggleLock(lobbyId: string, hostSocketId: string): Lobby | undefined {
         const lobby = this.getLobby(lobbyId);
-        if (lobby && lobby.hostSocketId === hostSocketId){
+        if (lobby && lobby.hostSocketId === hostSocketId) {
             lobby.isLocked = !lobby.isLocked;
             return lobby;
         }
@@ -132,13 +132,14 @@ export class LobbyService {
         }
     }
 
-    canStartGame(lobbyId: string, hostSocketId: string): boolean {
+    canStartGame(lobbyId: string, hostSocketId: string): Lobby | undefined {
         const lobby = this.getLobby(lobbyId);
-        if (lobby && lobby.hostSocketId === hostSocketId){
-            return lobby.playerCount >= 2;
-        }
 
-        return false;
+        if (lobby && lobby.hostSocketId === hostSocketId && lobby.playerCount >= 2) {
+            lobby.isLocked = true;
+            return lobby;
+        }
+        return undefined;
     }
 
     kickPlayer(lobbyId: string, hostSocketId: string, targetSocketId: string): boolean {
@@ -151,5 +152,11 @@ export class LobbyService {
         return false;
     }
 
-
+    abandonPlayer(lobbyId: string, socketId: string): Lobby | undefined {
+        const lobby = this.getLobby(lobbyId);
+        if (!lobby) return undefined;
+        const player = lobby.players.find((p) => p.socketId === socketId);
+        if (player) player.hasAbandonned = true;
+        return lobby;
+    }
 }

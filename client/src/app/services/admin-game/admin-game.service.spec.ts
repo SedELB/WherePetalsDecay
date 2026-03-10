@@ -12,7 +12,8 @@ import { Game } from '@common/game';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { GameMode, SocketNamespace } from '@common/enums';
 import { environment } from 'src/environments/environment';
-import { AdminGameEvents, AdminGameService } from './admin-game.service';
+import { AdminGameService } from './admin-game.service';
+import { AdminGameEvents } from '@common/socket-events/admin.gateway.events';
 
 describe('AdminGameService', () => {
     let service: AdminGameService;

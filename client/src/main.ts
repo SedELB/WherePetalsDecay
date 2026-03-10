@@ -10,6 +10,7 @@ import { MapSetupPageComponent } from '@app/pages/map-setup-page/map-setup-page.
 import { environment } from './environments/environment';
 import { AppComponent } from '@app/pages/app/app.component';
 import { WaitingRoomComponent } from '@app/pages/waiting-room/waiting-room.component';
+import { GamePageComponent } from '@app/pages/game-page/game-page.component';
 import { JoinGamePageComponent } from '@app/pages/join-game-page/join-game-page.component';
 import { CharacterSelectionComponent } from '@app/pages/character-selection/character-selection.component';
 
@@ -27,7 +28,8 @@ const routes: Routes = [
     { path: 'create', component: GameCreationComponent },
     { path: 'character-selection/:lobbyId', component: CharacterSelectionComponent },
     { path: 'character-selection', component: CharacterSelectionComponent },
-    { path: 'waiting-room', component: WaitingRoomComponent },
+    // { path: 'waiting-room', component: WaitingRoomComponent }, // TODO: To delete if not needed
+    { path: 'game/:id', component: GamePageComponent },
     { path: 'waiting-room/:lobbyId', component: WaitingRoomComponent },
     { path: 'join', component: JoinGamePageComponent },
     { path: '**', redirectTo: '/home' },
