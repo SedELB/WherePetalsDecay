@@ -54,6 +54,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         this.logger.log(`Payload (Lobby Created) by ${socket.id}`);
         payload.player.socketId = socket.id;
         payload.player.isHost = true;
+        payload.player.winsCount = 0;
         const createdLobby = this.lobbyService.createLobby(payload.game, socket.id, payload.player);
 
         if (createdLobby) {
@@ -89,6 +90,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         payload.player.character.name = finalPlayerName;
         payload.player.socketId = socket.id;
         payload.player.isHost = false;
+        payload.player.winsCount = 0;
 
         const updatedLobby = this.lobbyService.joinLobby(payload.lobbyId, payload.player);
 

@@ -2,7 +2,6 @@
 <app-sakura class="sakura-layer"></app-sakura>
 
 <main class="container"> 
-    <!-- <app-button [width]="100" (click)="onAbandon()" [routerLink]="routes.home">Quitter</app-button> -->
     <app-button id="back-button" [width]="100" (click)="onAbandon()">Quitter</app-button>
     
     <aside class="side-panel left">
@@ -32,7 +31,7 @@
                                     @if (player.isHost) { <span class="host-indicator">👑</span> }
                                     @if (player.socketId === activePlayer()?.socketId) { <span class="turn-indicator">▶</span> }
                                 </span>
-                                <p>Combats gagnés : <span class="wins">{{ player.winsCount }}</span></p>
+                                <p>Combats gagnés : <span class="wins">{{ player.winsCount  }}</span></p>
                             </div>
                             <!-- @if (player.hasAbandonned) { <span class="status-tag">À abandonné</span> } -->
                         </li>
@@ -81,8 +80,8 @@
             <h3 class="section-title">Mon Personnage</h3>
             <div class="local-player-info">
                 <ul>
+                    <img [src]="localPlayer()?.character?.avatar" [alt]="localPlayer()?.character?.name" class="player-avatar"/>
                     <li>Nom : <span>{{ localPlayer()?.character?.name }}</span></li>
-                    <li><span>{{ localPlayer()?.character?.avatar }}</span></li>
                     <li>PV restants : <span>{{ localPlayer()?.character?.life }}</span></li>
                     <li>PV max : <span>{{ localPlayer()?.character?.life }}</span></li>
                     <li>Rapidité : <span>{{ localPlayer()?.character?.speed }}</span></li>
