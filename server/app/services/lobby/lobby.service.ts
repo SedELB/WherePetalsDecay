@@ -120,22 +120,11 @@ export class LobbyService {
         return undefined;
     }
 
-    // Temporary method to shuffle players in a lobby made by AI
-    // TODO: to change later
-    shufflePlayers(players: Player[]): Player[] {
-        const shuffled = [...players];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1)); // Random index from 0 to i
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
-    }
-
     canStartGame(lobbyId: string, hostSocketId: string): Lobby | undefined {
         const lobby = this.getLobby(lobbyId);
+
         if (lobby && lobby.hostSocketId === hostSocketId && lobby.playerCount >= 2) {
             lobby.isLocked = true;
-            lobby.players = this.shufflePlayers(lobby.players);
             return lobby;
         }
         return undefined;
@@ -149,5 +138,13 @@ export class LobbyService {
         }
 
         return false;
+    }
+
+    abandonPlayer(lobbyId: string, socketId: string): Lobby | undefined {
+        const lobby = this.getLobby(lobbyId);
+        if (!lobby) return undefined;
+        const player = lobby.players.find((p) => p.socketId === socketId);
+        if (player) player.hasAbandonned = true;
+        return lobby;
     }
 }

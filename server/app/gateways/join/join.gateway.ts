@@ -207,9 +207,19 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     handleStartGame(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string) {
         const finalLobby = this.lobbyService.canStartGame(lobbyId, socket.id);
         if (finalLobby) {
+            finalLobby.players = this.gameLogicService.shufflePlayers(finalLobby.players);
             this.server.to(lobbyId).emit(JoinGameEvents.GameStarting, finalLobby);
         } else {
             socket.emit(JoinGameEvents.LobbyError, `Impossible de demarrer la partie. (Minimum 2 joueurs requis.)`);
         }
+    }
+
+    @SubscribeMessage(JoinGameEvents.PlayerAbandon)
+    handlePlayerAbandon(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string) {
+        const updatedLobby = this.lobbyService.abandonPlayer(lobbyId, socket.id);
+        if (updatedLobby) {
+            this.server.to(lobbyId).emit(JoinGameEvents.GameLobbyUpdated, updatedLobby);
+        }
+        socket.emit(JoinGameEvents.LeftLobby);
     }
 }
