@@ -49,6 +49,7 @@ describe('JoinGateway', () => {
         isLocked: false,
         players: [],
         pendingAvatars: {},
+        chatHistory: [],
     };
 
     const makeMockPlayer = (): Player => ({

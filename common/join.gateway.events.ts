@@ -19,6 +19,7 @@ export enum JoinGameEvents {
     ToggleLock = 'toggleLock',
     StartGame = 'startGame',
     KickPlayer = 'kickPlayer',
+    ChatSendMessage = 'chatSendMessage',
     
     // Response events (confirmations)
     GameHosted = 'gameHosted',
@@ -31,6 +32,7 @@ export enum JoinGameEvents {
     LobbyUpdated = 'lobbyUpdated',
     GameStarting = 'gameStarting',
     PlayerKicked = 'playerKicked',
+    ReceivedChatMessage = 'receivedChatMessage',
 }
 
 /*
