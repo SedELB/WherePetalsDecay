@@ -1,0 +1,51 @@
+<div class="chat">
+  <div class="chat__header">
+    <div class="chat__title">
+      <div class="chat__title-main">Clavardage</div>
+      <div class="chat__title-sub">
+        <span class="chat__pill">Nom: {{ playerName || "Connexion en cours..." }}</span>
+        <span class="chat__pill">Partie: {{ lobbyId }}</span>
+        <span class="chat__pill chat__pill--ok">
+          Connecté
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat__body">
+    <div class="chat__messages list-container">
+      @if (messages.length === 0) {
+        <div class="chat__empty">Aucun message pour l’instant.</div>
+      } @else {
+        @for (m of messages; track $index) {
+          <div class="chat__message">
+            <div class="chat__meta">
+              <span class="chat__time">{{ m.sentAt | date:'HH:mm:ss' }}</span>
+              <span class="chat__author">{{ m.senderName }}</span>
+            </div>
+            <div class="chat__text">{{ m.message }}</div>
+          </div>
+        }
+      }
+    </div>
+
+    <div class="chat__composer">
+      @if (hasAbandoned) {
+        <div class="chat__disabled">
+          Tu as abandonné: le clavardage est désactivé.
+        </div>
+      } @else {
+        <input
+          [(ngModel)]="draftMessage"
+          maxlength="200"
+          placeholder="Écris un message (max 200 caractères)…"
+          (keyup.enter)="sendMessage()"
+        />
+        <div class="chat__composer-right">
+          <div class="chat__counter">{{ draftMessage.length }}/200</div>
+          <button type="button" (click)="sendMessage()" [disabled]="!canSend">Envoyer</button>
+        </div>
+      }
+    </div>
+  </div>
+</div>

@@ -41,9 +41,10 @@
 
             <div class="chat-section">
                 <h2>Chat</h2>
-                <div class="chat-placeholder">
-                    <p>Zone de clavardage (à implémenter)</p>
-                </div>
+                <app-chat
+                    [lobbyId]="currentLobby()?.lobbyId ?? ''"
+                    [playerName]="currentPlayer()?.character?.name ?? ''"
+                ></app-chat>
             </div>
 
             <div class="actions">
