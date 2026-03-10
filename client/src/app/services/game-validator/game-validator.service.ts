@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { PlacedObject } from '@app/interfaces/game';
 import { GameMode, GridSizes, MaxPlayers, TileItem, TileTexture } from '@common/enums';
+import { PlacedObject } from '@common/game';
 
 export const NAME_MAX_LENGTH = 20;
 export const DESC_MAX_LENGTH = 500;
@@ -44,23 +44,23 @@ export class GameValidatorService {
     private validateRequiredFields(draft: GameDraftForValidation): string[] {
         const errors: string[] = [];
 
-    if (!draft.mode || typeof draft.mode !== 'string') {
-        errors.push('Le mode de jeu est requis !');
-    }
+        if (!draft.mode || typeof draft.mode !== 'string') {
+            errors.push('Le mode de jeu est requis !');
+        }
 
-    if (!draft.grid || !Array.isArray(draft.grid)) {
-        errors.push('La grille du jeu est requise !');
-    }
+        if (!draft.grid || !Array.isArray(draft.grid)) {
+            errors.push('La grille du jeu est requise !');
+        }
 
-    if (!draft.size || typeof draft.size.rows !== 'number' || typeof draft.size.cols !== 'number') {
-        errors.push('La taille du jeu est invalide !');
-    }
+        if (!draft.size || typeof draft.size.rows !== 'number' || typeof draft.size.cols !== 'number') {
+            errors.push('La taille du jeu est invalide !');
+        }
 
-    if (!draft.placedObjects || !Array.isArray(draft.placedObjects)) {
-        errors.push('Les objets placés sont requis !');
-    }
+        if (!draft.placedObjects || !Array.isArray(draft.placedObjects)) {
+            errors.push('Les objets placés sont requis !');
+        }
 
-    return errors;
+        return errors;
     }
 
     private validateTextLength(name: string, description: string): string[] {

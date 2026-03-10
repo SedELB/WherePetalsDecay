@@ -8,11 +8,11 @@
 
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { Game } from '@app/interfaces/game';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { GameMode, SocketNamespace } from '@common/enums';
+import { Game } from '@common/game';
 import { environment } from 'src/environments/environment';
-import { PlayerGameEvents, PlayerGameService } from './player-game.service';
+import { PlayerGameEvents, PlayerGameService } from './game-creation.service';
 
 describe('PlayerGameService', () => {
     let service: PlayerGameService;

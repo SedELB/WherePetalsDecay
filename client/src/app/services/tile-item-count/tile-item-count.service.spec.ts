@@ -6,10 +6,10 @@
  * - Object placement completion checks
  */
 
-import type { Game } from '@app/interfaces/game';
-import type { Tile } from '@app/interfaces/tile';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { GameMode, GridSizes, MaxPlayers, SanctuaryCount, TileItem, TileTexture } from '@common/enums';
+import type { Game } from '@common/game';
+import type { Tile } from '@common/tile';
 
 const grid = (rows: number, cols: number): Tile[][] =>
     Array.from({ length: rows }, () =>

@@ -6,7 +6,7 @@
  */
 
 import { TestBed } from '@angular/core/testing';
-import { AVATARS_PATH, BASE_STATS } from '@app/interfaces/character';
+import { AVATARS_PATH, BASE_STATS } from '@common/character';
 import { CharacterService } from './character.service';
 
 describe('CharacterService', () => {
@@ -23,7 +23,7 @@ describe('CharacterService', () => {
 
     // Test character creation with life bonus
     it('should create character with life bonus and D6 attack dice', () => {
-        const character = service.createCharacter('Hero', 0, true, true);
+        const character = service.createCharacter('Hero', AVATARS_PATH[0], true, true);
 
         expect(character.name).toBe('Hero');
         expect(character.avatar).toBe(AVATARS_PATH[0]);
@@ -38,7 +38,7 @@ describe('CharacterService', () => {
 
     // Test character creation with speed bonus
     it('should create character with speed bonus and D4 attack dice', () => {
-        const character = service.createCharacter('Speedy', 1, false, false);
+        const character = service.createCharacter('Speedy', AVATARS_PATH[1], false, false);
 
         expect(character.name).toBe('Speedy');
         expect(character.avatar).toBe(AVATARS_PATH[1]);
@@ -51,16 +51,16 @@ describe('CharacterService', () => {
 
     // Test character creation removed whitespace from name
     it('should trim whitespace from character name', () => {
-        const character = service.createCharacter('  Test  ', 0, true, true);
+        const character = service.createCharacter('  Test  ', AVATARS_PATH[0], true, true);
 
         expect(character.name).toBe('Test');
     });
 
     // Test all avatar indices
     it('should create character with each avatar index', () => {
-        for (let i = 0; i < AVATARS_PATH.length; i++) {
-            const character = service.createCharacter('Test', i, true, true);
-            expect(character.avatar).toBe(AVATARS_PATH[i]);
+        for (const avatarPath of AVATARS_PATH) {
+            const character = service.createCharacter('Test', avatarPath, true, true);
+            expect(character.avatar).toBe(avatarPath);
         }
     });
 
@@ -70,8 +70,8 @@ describe('CharacterService', () => {
 
         expect(random.name).toBeTruthy();
         expect(random.name.length).toBeGreaterThan(0);
-        expect(random.avatarIndex).toBeGreaterThanOrEqual(0);
-        expect(random.avatarIndex).toBeLessThan(AVATARS_PATH.length);
+        expect(random.avatarPath).toBeTruthy();
+        expect(AVATARS_PATH).toContain(random.avatarPath);
         expect(typeof random.lifeBonus).toBe('boolean');
         expect(typeof random.attackDiceD6).toBe('boolean');
     });
@@ -84,7 +84,7 @@ describe('CharacterService', () => {
 
         const allSame =
             random1.name === random2.name && random2.name === random3.name &&
-            random1.avatarIndex === random2.avatarIndex && random2.avatarIndex === random3.avatarIndex &&
+            random1.avatarPath === random2.avatarPath && random2.avatarPath === random3.avatarPath &&
             random1.lifeBonus === random2.lifeBonus && random2.lifeBonus === random3.lifeBonus &&
             random1.attackDiceD6 === random2.attackDiceD6 && random2.attackDiceD6 === random3.attackDiceD6;
 
