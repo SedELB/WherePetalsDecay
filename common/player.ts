@@ -4,4 +4,6 @@ export interface Player {
     socketId: string;
     character: Character;
     isHost: boolean;
+    winsCount: number;
+    hasAbandonned: boolean;
 }

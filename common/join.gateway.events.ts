@@ -6,7 +6,7 @@ export enum JoinGameEvents {
     GameDeleted = 'gameDeleted',
     PlayerJoined = 'playerJoined',
     PlayerLeft = 'playerLeft',
-    
+
     // Request events
     CreateLobby = 'createLobby',
     JoinLobby = 'joinLobby',
@@ -14,6 +14,12 @@ export enum JoinGameEvents {
     DeleteLobby = 'deleteLobby',
     GetLobbyStatus = 'getLobbyStatus',
     LeaveLobby = 'leaveLobby',
+    SelectAvatar = 'selectAvatar',
+    JoinAvatarRoom = 'joinAvatarRoom',
+    ToggleLock = 'toggleLock',
+    StartGame = 'startGame',
+    KickPlayer = 'kickPlayer',
+    ChatSendMessage = 'chatSendMessage',
     
     // Response events (confirmations)
     GameHosted = 'gameHosted',
@@ -22,6 +28,20 @@ export enum JoinGameEvents {
     DeletedLobby = 'deletedLobby',
     LobbyStatusReceived = 'lobbyStatusReceived',
     LeftLobby = 'leftLobby',
+
+    UpdateOccupiedAvatars = 'updatedOccupiedAvatars',
+    LobbyUpdated = 'lobbyUpdated',
+    GameStarting = 'gameStarting',
+    PlayerKicked = 'playerKicked',
+    ReceivedChatMessage = 'receivedChatMessage',
+
+    //--------Game-View-Events--------
+    // GameStarted = 'gameStarted', // TODO: to review later
+    TurnUpdated = 'turnUpdated',
+    EndTurn = 'endTurn',
+    PlayerAbandon = 'playerAbandon',
+    PlayerAction = 'playerAction',
+    GameLobbyUpdated = 'gameLobbyUpdated',
 }
 
 /*
@@ -32,4 +52,3 @@ Some sequences:
 (click on Joindre une partie) -> JoinGateway (emit GetLobbies) -> LobbyService.getAvailableLobbies() -> JoinGateway (emit LobbiesList) -> Client
 (click on Rejoindre in available lobby) -> JoinGateway (emit JoinLobby) -> LobbyService.joinLobby() -> JoinGateway (emit LobbyJoined) -> Client
 */
-

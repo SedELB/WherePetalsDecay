@@ -26,8 +26,10 @@
                         <button
                             type="button"
                             class="avatar-item"
-                            [class.selected]="selectedAvatarIndex === i"
-                            (click)="selectAvatar(i)"
+                            [class.selected]="selectedAvatar === avatar"
+                            [class.taken]="currentlySelectedAvatars.includes(avatar) && selectedAvatar !== avatar"
+                            [disabled]="currentlySelectedAvatars.includes(avatar) && selectedAvatar !== avatar"
+                            (click)="selectAvatar(avatar)"
                         >
                             <img [src]="avatar" [alt]="'Avatar ' + (i + 1)" />
                         </button>

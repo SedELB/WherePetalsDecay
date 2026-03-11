@@ -8,10 +8,12 @@ describe('LobbyCardComponent', () => {
   let fixture: ComponentFixture<LobbyCardComponent>;
 
   const MOCK_LOBBY: Lobby = {
+    lobbyId: 'ABCDE',
     gameId: 'game-1',
     hostSocketId: 'socket-1',
     playerCount: 1,
     isLocked: false,
+    pendingAvatars: {},
     players: [],
     game: {
       _id: 'game-1',
@@ -26,6 +28,7 @@ describe('LobbyCardComponent', () => {
       updatedAt: new Date(),
       isVisible: true,
     },
+    chatHistory: [],
   };
 
   beforeEach(async () => {
