@@ -8,7 +8,7 @@
  * - Validation payload building
  */
 
-import { MouseEventType } from '@app/pages/map-setup-page/map-setup-page-constant';
+import { MouseEventType } from '@app/constants/map-setup-page-constant';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { GameMode, TileItem, TileTexture } from '@common/enums';
@@ -22,12 +22,14 @@ const grid = (
     item: TileItem | null = null,
 ): Tile[][] =>
     Array.from({ length: rows }, () =>
-        Array.from({ length: cols }, (): Tile => ({
-            type,
-            item,
-        })),
+        Array.from(
+            { length: cols },
+            (): Tile => ({
+                type,
+                item,
+            }),
+        ),
     );
-
 
 const gameFactory = (rows = 2, cols = 2, mode: GameMode = GameMode.Classic): Game => ({
     _id: 'game-id',
@@ -332,5 +334,4 @@ describe('MapSetupService', () => {
 
         expect(state.isPaintingTiles).toBe(false);
     });
-
 });
