@@ -2,7 +2,7 @@ import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
-import { ChatComponentComponent } from '@app/components/chat/chat.component.component';
+import { ChatComponentComponent } from '@app/components/chat/chat.component';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Lobby } from '@common/lobby';
 import { SocketNamespace } from '@common/enums';
