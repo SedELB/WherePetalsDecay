@@ -13,9 +13,9 @@
   </div>
 
   <div class="chat__body">
-    <div class="chat__messages list-container">
+    <div class="chat__messages list-container" #messagesContainer (scroll)="onScroll()">
       @if (messages.length === 0) {
-        <div class="chat__empty">Aucun message pour l’instant.</div>
+        <div class="chat__empty">Aucun message pour l'instant.</div>
       } @else {
         @for (m of messages; track $index) {
           <div class="chat__message">
@@ -28,6 +28,12 @@
         }
       }
     </div>
+
+    @if (!isNearBottom) {
+      <button class="chat__scroll-to-bottom" (click)="scrollToBottomClicked()" type="button" title="Descendre vers les nouveaux messages">
+        🡻
+      </button>
+    }
 
     <div class="chat__composer">
       @if (hasAbandoned) {
