@@ -127,6 +127,7 @@ export class LobbyService {
     saveMessage(lobbyId: string, message: ChatMessage) {
         const lobby = this.getLobby(lobbyId);
         lobby.chatHistory.push(message);
+        
         if(lobby.chatHistory.length > HISTORY_MAX_MESSAGE){
             lobby.chatHistory.shift();
         }
