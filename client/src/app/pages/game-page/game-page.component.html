@@ -76,6 +76,14 @@
     </section>
 
     <aside class="side-panel right">
+        <section class="chat-box">
+            <h3 class="section-title">Chat</h3>
+            <app-chat 
+                [lobbyId]="lobby()?.lobbyId ?? ''"
+                [playerName]="localPlayer()?.character?.name ?? ''"
+            ></app-chat>
+        </section>
+
         <section class="character-sheet">
             <h3 class="section-title">Mon Personnage</h3>
             <div class="local-player-info">
@@ -91,10 +99,6 @@
                     <li>Nombre actions restantes : <span>{{ 999 }}</span></li>
                 </ul>
             </div>
-        </section>
-
-        <section class="chat-box">
-
         </section>
 
         <nav class="action-bar">
