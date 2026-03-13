@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BehaviorSubject } from 'rxjs';
 
-import { ChatComponentComponent } from './chat.component.component';
+import { ChatComponentComponent } from './chat.component';
 import { ChatService } from '@app/services/chat/chat.service';
 
 describe('ChatComponentComponent', () => {
