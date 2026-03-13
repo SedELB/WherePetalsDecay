@@ -108,7 +108,7 @@
         <div class="tile-info-popup" (click)="gameViewService.tileInfo.set(null)">
             <div class="tile-info-content">
                 <p>Type : <span>{{ info.tile.type }}</span></p>
-                <p>Coût : <span>{{ info.cost === costInfinity ? '∞' : info.cost }}</span></p>
+                <p>Coût : <span>{{ info.cost === null || info.cost === costInfinity ? 'N/A' : info.cost }}</span></p>
                 @if (info.player) {
                     <p>Joueur : <span>{{ info.player.name }}</span></p>
                     <img [src]="info.player.avatar" alt="avatar" class="tile-info-avatar" />
