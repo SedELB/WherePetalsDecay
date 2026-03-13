@@ -7,6 +7,8 @@ import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
 
+const RANDOM_THRESHOLD = 0.5;
+
 @Injectable()
 export class GameSessionService {
     constructor() {
@@ -49,7 +51,7 @@ export class GameSessionService {
         const session = this.sessions.get(gameId);
         if (!session) return undefined;
 
-        const player = session.players.find((player) => player.socketId === socketId);
+        const player = session.players.find((p) => p.socketId === socketId);
         if (player) {
             player.isActive = false;
         }
@@ -99,7 +101,7 @@ export class GameSessionService {
         const sorted = [...players].sort((a, b) => {
             const speedDiff = b.character.speed - a.character.speed;
             if (speedDiff !== 0) return speedDiff;
-            return Math.random() - 0.5;
+            return Math.random() - RANDOM_THRESHOLD;
         });
         return sorted.map((player) => player.socketId);
     }

@@ -36,12 +36,28 @@ export enum JoinGameEvents {
     ReceivedChatMessage = 'receivedChatMessage',
 
     //--------Game-View-Events--------
-    // GameStarted = 'gameStarted', // TODO: to review later
-    TurnUpdated = 'turnUpdated',
+    GameStarted = 'gameStarted',
+    TurnCountdown = 'turnCountdown',
+    TurnStarted = 'turnStarted',
+    TurnEnded = 'turnEnded',
     EndTurn = 'endTurn',
     PlayerAbandon = 'playerAbandon',
-    PlayerAction = 'playerAction',
-    GameLobbyUpdated = 'gameLobbyUpdated',
+    PlayerAbandoned = 'playerAbandoned',
+    GameOver = 'gameOver',
+
+    // Movement
+    RequestMove = 'requestMove',
+    PlayerMoved = 'playerMoved',
+    ReachableTiles = 'reachableTiles',
+    MovementPoints = 'movementPoints',
+
+    // Combat
+    RequestCombat = 'requestCombat',
+    CombatResult = 'combatResult',
+
+    // Info
+    RequestTileInfo = 'requestTileInfo',
+    TileInfo = 'tileInfo',
 }
 
 /*
