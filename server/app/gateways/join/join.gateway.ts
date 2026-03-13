@@ -12,11 +12,11 @@ import {
     WebSocketServer,
 } from '@nestjs/websockets';
 
+import { GameLogicService } from '@app/services/game-logic/game-logic.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Server, Socket } from 'socket.io';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Player } from '@common/player';
-import { GameLogicService } from '@app/services/game-logic/game-logic.service';
 import { Lobby } from '@common/lobby';
 
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
@@ -185,19 +185,43 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     }
 
     private processPlayerLeave(socket: Socket) {
+        // Check if player is in an active game first
+        const activeGame = this.gameLogicService.findActiveGameBySocketId(socket.id);
+        if (activeGame) {
+            const lobbyId = activeGame.lobby.lobbyId;
+            const wasCurrentTurn = this.gameLogicService.isPlayerTurn(lobbyId, socket.id);
+            this.gameLogicService.abandonPlayer(lobbyId, socket.id);
+            this.server.to(lobbyId).emit(JoinGameEvents.PlayerAbandoned, socket.id);
+            socket.leave(lobbyId);
+
+            const activePlayers = this.gameLogicService.getActivePlayers(lobbyId);
+            if (activePlayers.length <= 1) {
+                this.server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: null });
+                this.gameLogicService.endGame(lobbyId);
+                this.lobbyService.deleteLobby(lobbyId);
+                this.server.in(lobbyId).socketsLeave(lobbyId);
+            } else if (wasCurrentTurn) {
+                this.gameLogicService.endTurn(lobbyId);
+            }
+
+            this.handleGetLobbies();
+            return;
+        }
+
+        // Otherwise handle normal lobby leave
         const lobby = this.lobbyService.findLobbyBySocketId(socket.id);
 
         if (lobby) {
             if (lobby.hostSocketId === socket.id) {
                 this.logger.log(`Host left. Deleting lobby: ${lobby.lobbyId}`);
-                socket.to(lobby.lobbyId).emit(JoinGameEvents.GameDeleted); // Warn lobby members that host was disconnected.
+                socket.to(lobby.lobbyId).emit(JoinGameEvents.GameDeleted);
                 this.lobbyService.deleteLobby(lobby.lobbyId);
             } else {
                 this.logger.log(`Player left lobby: ${lobby.lobbyId}`);
                 this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
 
                 const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
-                this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars); // Release selected avatars for both pending and confirmed characters.
+                this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
                 this.server.to(lobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, lobby);
             }
 
@@ -205,23 +229,4 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         }
     }
 
-    @SubscribeMessage(JoinGameEvents.StartGame)
-    handleStartGame(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string) {
-        const finalLobby = this.lobbyService.canStartGame(lobbyId, socket.id);
-        if (finalLobby) {
-            finalLobby.players = this.gameLogicService.shufflePlayers(finalLobby.players);
-            this.server.to(lobbyId).emit(JoinGameEvents.GameStarting, finalLobby);
-        } else {
-            socket.emit(JoinGameEvents.LobbyError, `Impossible de demarrer la partie. (Minimum 2 joueurs requis.)`);
-        }
-    }
-
-    @SubscribeMessage(JoinGameEvents.PlayerAbandon)
-    handlePlayerAbandon(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string) {
-        const updatedLobby = this.lobbyService.abandonPlayer(lobbyId, socket.id);
-        if (updatedLobby) {
-            this.server.to(lobbyId).emit(JoinGameEvents.GameLobbyUpdated, updatedLobby);
-        }
-        socket.emit(JoinGameEvents.LeftLobby);
-    }
 }
