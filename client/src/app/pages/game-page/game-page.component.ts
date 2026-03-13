@@ -4,13 +4,14 @@ import { GameMode } from '@common/enums';
 import { Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
 import { SakuraComponent } from '@app/components/sakura/sakura.component';
-// import { player1, player2, testGame699112c9, testLobby } from '@app/constants/tempGame.constants';
 import { OBJECT_PLACEMENT_TOOL, TILE_TOOLS } from '@app/constants/map-setup-page-constant';
 import { GameViewService } from '@app/services/game-view/game-view.service';
+import { ChatComponent } from '@app/components/chat/chat.component';
+import swal from 'sweetalert2';
 
 @Component({
     selector: 'app-game-page',
-    imports: [ButtonComponent, SakuraComponent],
+    imports: [ButtonComponent, SakuraComponent, ChatComponent],
     templateUrl: './game-page.component.html',
     styleUrl: './game-page.component.scss',
 })
@@ -50,8 +51,20 @@ export class GamePageComponent implements OnInit {
     }
 
     onAbandon() {
-        const lobbyId = this.lobby()?.lobbyId;
-        if (lobbyId) this.gameViewService.sendAbandon(lobbyId);
+        const errorMessage = 'Êtes-vous sûr de vouloir abandonner la partie ? Vous ne pourrez pas revenir dans cette partie si vous quittez.';
+        swal.fire({
+            title: 'Quitter ?',
+            text: `${errorMessage}`,
+            icon: 'warning',
+            confirmButtonText: 'Abandonner',
+            cancelButtonText: 'Annuler',
+            showCancelButton: true,
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const lobbyId = this.lobby()?.lobbyId;
+                if (lobbyId) this.gameViewService.sendAbandon(lobbyId);
+            }
+        });
     }
 
     onAction() {
