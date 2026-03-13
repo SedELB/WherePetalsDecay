@@ -14,7 +14,7 @@ const SCROLL_THRESHOLD = 75; // Pixels from the bottom to consider as "near bott
     templateUrl: './chat.component.html',
     styleUrl: './chat.component.scss',
 })
-export class ChatComponentComponent implements OnInit, OnDestroy, OnChanges, AfterViewChecked {
+export class ChatComponent implements OnInit, OnDestroy, OnChanges, AfterViewChecked {
     @Input() lobbyId: string = 'lobby';
     @Input() playerName: string = '';
     @Input() hasAbandoned: boolean = false;
@@ -37,6 +37,7 @@ export class ChatComponentComponent implements OnInit, OnDestroy, OnChanges, Aft
 
     ngOnChanges(changes: SimpleChanges): void {
         if (changes.lobbyId && this.lobbyId) {
+            this.messagesSub?.unsubscribe();
             this.subscribeToMessages();
         }
     }
