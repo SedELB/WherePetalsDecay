@@ -1,0 +1,53 @@
+<div class="chat list-container">
+    <section class="header">
+        <div class="chat-header">
+            <div class="section-title">Clavardage</div>
+            <div class="title-sub">
+                <span class="info-pill">Nom : {{ playerName || 'Connexion en cours...' }}</span>
+                <span class="info-pill">Partie : {{ lobbyId }}</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="body">
+        <div class="messages-list list-container" #messagesContainer (scroll)="onScroll()">
+            @for (m of messages; track $index) {
+                <div class="message">
+                    <div class="message-info">
+                        <span class="message-time">{{ m.sentAt | date:'HH:mm:ss' }}</span>
+                        <span class="message-author">{{ m.senderName }}</span>
+                    </div>
+                    <div class="message-text">{{ m.message }}</div>
+                </div>
+            } @empty {
+                <div class="chat-empty">Aucun message pour l'instant.</div>
+            }
+        </div>
+        
+        @if (!isNearBottom) {
+            <button class="chat-scroll-to-bottom" (click)="scrollToBottomClicked()" type="button" title="Descendre vers les nouveaux messages">
+            🡻
+            </button>
+        }
+    </section>
+    
+    <section class="footer list-container">
+        @if (hasAbandoned) {
+            <div class="chat-disabled">
+                Tu as abandonné: le clavardage est désactivé.
+            </div>
+        } @else {
+            <input
+                [(ngModel)]="draftMessage"
+                maxlength="200"
+                placeholder="Écris un message (max 200 caractères)…"
+                title="Écris un message (max 200 caractères)…"
+                (keyup.enter)="sendMessage()"
+            />
+            <div class="footer-right">
+                <div class="text-counter">{{ draftMessage.length }}/200</div>
+                <button type="button" (click)="sendMessage()" [disabled]="!canSend">Envoyer</button>
+            </div>
+        }
+    </section>
+</div>
