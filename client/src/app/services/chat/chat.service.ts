@@ -13,18 +13,27 @@ const MAX_LENGHT_MESSAGE = 200;
 export class ChatService {
     private readonly namespace = SocketNamespace.Join;
 
-    private readonly messagesByRoom = new Map<string, BehaviorSubject<ChatMessage[]>>();
+    private readonly chatHistorySubject = new BehaviorSubject<ChatMessage[]>([]);
+    chatHistory$ = this.chatHistorySubject.asObservable();
 
     constructor(private readonly webSocketService: WebSocketService) {
-
         this.webSocketService.onNamespace<ChatMessage>(this.namespace, JoinGameEvents.ReceivedChatMessage, (msg) => {
-            const messages = this.getAllMessagesByRoom(msg.lobbyId);
-            messages.next([...messages.value, msg]);
+            this.chatHistorySubject.next([...this.chatHistorySubject.getValue(), msg]);
+        });
+
+        this.webSocketService.onNamespace<ChatMessage[]>(this.namespace, JoinGameEvents.ChatHistorySent, (chatHistory) => {
+            this.chatHistorySubject.next(chatHistory);
         });
     }
 
-    roomMessages$(roomId: string): Observable<ChatMessage[]> {
-        return this.getAllMessagesByRoom(roomId).asObservable();
+    requestHistory(lobbyId: string): void {
+        if (!lobbyId) return;
+        this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.ChatHistoryRequest, lobbyId);
+    }
+
+    roomMessages$(lobbyId: string): Observable<ChatMessage[]> {
+        this.requestHistory(lobbyId);
+        return this.chatHistory$;
     }
 
     sendMessage(lobbyId: string, playerName: string | undefined, message: string): void {
@@ -37,15 +46,6 @@ export class ChatService {
             message: trimmed,
             senderName: playerName?.trim(),
         });
-    }
-
-    private getAllMessagesByRoom(lobbyId: string): BehaviorSubject<ChatMessage[]> {
-        const chatMessages = this.messagesByRoom.get(lobbyId);
-        if (chatMessages) return chatMessages;
-
-        const subject = new BehaviorSubject<ChatMessage[]>([]);
-        this.messagesByRoom.set(lobbyId, subject);
-        return subject;
     }
 }
 

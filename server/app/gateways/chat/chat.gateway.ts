@@ -42,4 +42,14 @@ export class ChatGateway {
         // Envoie à tout le monde dans la room (incluant l'émetteur)
         this.server.to(lobbyId).emit(JoinGameEvents.ReceivedChatMessage, chatMessage);
     }
+
+    @SubscribeMessage(JoinGameEvents.ChatHistoryRequest)
+    handleChatHistoryRequest(@ConnectedSocket() socket : Socket, @MessageBody() lobbyId: string) {
+        if (!socket.rooms.has(lobbyId)) return;
+
+        const chatHistory = this.lobbyService.getLobby(lobbyId).chatHistory;
+        if (!chatHistory) return;
+
+        socket.emit(JoinGameEvents.ChatHistorySent, chatHistory);
+    }
 }
