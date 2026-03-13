@@ -95,7 +95,8 @@ export class GameViewService {
             }
         });
 
-        this.webSocketService.onNamespace<{ winnerId: string; loserId: string; damage: number; loserHpLeft: number; killed: boolean; loserNewPosition: Vec2 | null }>
+        this.webSocketService.onNamespace
+            <{ winnerId: string; loserId: string; damage: number; loserHpLeft: number; killed: boolean; loserNewPosition: Vec2 | null }>
             (this.namespace, JoinGameEvents.CombatResult, (data) => {
                 this.gameLobby.update((lobby) => {
                     if (!lobby) return lobby;
@@ -111,7 +112,8 @@ export class GameViewService {
                     return { ...lobby, players: updatedPlayers };
                 });
                 if (data.loserNewPosition) {
-                    this.playerPositions.update((positions) => ({ ...positions, [data.loserId]: data.loserNewPosition! }));
+                    const newPos = data.loserNewPosition;
+                    this.playerPositions.update((positions) => ({ ...positions, [data.loserId]: newPos }));
                 }
             });
 
