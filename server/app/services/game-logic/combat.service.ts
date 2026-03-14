@@ -1,5 +1,5 @@
-import { BASE_STATS } from '@common/character';
 import { DIRECTION_OFFSETS } from '@common/direction';
+import { TileItem } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
@@ -34,24 +34,16 @@ export class CombatService {
         if (!attacker || !defender) return null;
 
         game.hasCombatted.set(attackerId, true);
+        attacker.winsCount++;
 
-        const damage = attacker.character.attack;
-        defender.character.life = Math.max(0, defender.character.life - damage);
-
-        const killed = defender.character.life === 0;
-        if (killed) {
-            attacker.winsCount++;
-            defender.character.life = BASE_STATS.life;
-        }
-
-        const loserNewPosition = killed ? this.resetLoserPosition(game, defenderId) : null;
+        const loserNewPosition = this.resetLoserPosition(game, defenderId);
 
         return {
             winnerId: attackerId,
             loserId: defenderId,
-            damage,
+            damage: defender.character.life,
             loserHpLeft: defender.character.life,
-            killed,
+            killed: true,
             loserNewPosition,
         };
     }
@@ -61,43 +53,41 @@ export class CombatService {
     }
 
     private resetLoserPosition(game: ActiveGame, loserId: string): Vec2 | null {
-        const startPos = game.playerStartPositions.get(loserId);
-        if (!startPos) return null;
+        const deathPos = game.playerPositions.get(loserId);
+        if (!deathPos) return null;
 
-        if (!this.isOccupied(game, startPos, loserId)) {
-            game.playerPositions.set(loserId, { ...startPos });
-            return startPos;
-        }
+        const spawnPoints = this.getSpawnPositions(game);
+        const closestSpawn = this.findClosestAvailableSpawn(game, deathPos, spawnPoints, loserId);
 
-        const closest = this.findClosestAvailable(game, startPos, loserId);
-        if (closest) {
-            game.playerPositions.set(loserId, closest);
+        if (closestSpawn) {
+            game.playerPositions.set(loserId, { ...closestSpawn });
         }
-        return closest;
+        return closestSpawn;
     }
 
-    private findClosestAvailable(game: ActiveGame, origin: Vec2, excludeSocketId: string): Vec2 | null {
-        const visited = new Set<string>();
-        const queue: Vec2[] = [origin];
-        visited.add(`${origin.x},${origin.y}`);
-
-        while (queue.length > 0) {
-            const current = queue.shift();
-            if (!current) break;
-
-            for (const offset of Object.values(DIRECTION_OFFSETS)) {
-                const next: Vec2 = { x: current.x + offset.x, y: current.y + offset.y };
-                const key = `${next.x},${next.y}`;
-                if (visited.has(key)) continue;
-                visited.add(key);
-
-                const grid = game.lobby.game.grid;
-                if (next.y < 0 || next.y >= grid.length || next.x < 0 || next.x >= grid[0].length) continue;
-
-                if (!this.isOccupied(game, next, excludeSocketId)) {
-                    return next;
+    private getSpawnPositions(game: ActiveGame): Vec2[] {
+        const spawns: Vec2[] = [];
+        const grid = game.lobby.game.grid;
+        for (let row = 0; row < grid.length; row++) {
+            for (let col = 0; col < grid[row].length; col++) {
+                if (grid[row][col].item === TileItem.Spawn) {
+                    spawns.push({ x: col, y: row });
                 }
-                queue.push(next);
+            }
+        }
+        return spawns;
+    }
+
+    private findClosestAvailableSpawn(game: ActiveGame, origin: Vec2, spawnPoints: Vec2[], excludeSocketId: string): Vec2 | null {
+        const sorted = [...spawnPoints].sort((a, b) => {
+            const distA = Math.abs(a.x - origin.x) + Math.abs(a.y - origin.y);
+            const distB = Math.abs(b.x - origin.x) + Math.abs(b.y - origin.y);
+            return distA - distB;
+        });
+
+        for (const spawn of sorted) {
+            if (!this.isOccupied(game, spawn, excludeSocketId)) {
+                return spawn;
             }
         }
         return null;

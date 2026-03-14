@@ -43,10 +43,10 @@
 
                     <div class="actions">
                         @if (isOrganizer()) {
-                            <app-button (clicked)="onStartGame()" [disabled]="!canStartGame">
+                            <app-button (clicked)="onStartGame()" [disabled]="!canStartGame()">
                                 Démarrer la partie
                             </app-button>
-                            <app-button (clicked)="onToggleLock()">
+                            <app-button (clicked)="onToggleLock()" [disabled]="currentLobby()?.playerCount === currentLobby()?.game?.maxPlayers">
                                 {{ currentLobby()?.isLocked ? 'Déverrouiller' : 'Verrouiller' }}
                             </app-button>
                         }
