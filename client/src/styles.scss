@@ -1,8 +1,12 @@
+@use 'sass:color';
+
 $text-color: white;
-$green-button: #78BC75;
-$rose-button: #95698D;
+$green-button: #78bc75;
+$rose-button: #95698d;
 $frame-color: #242153;
 $transparent-background: rgba(0, 0, 0, 0.41);
+$primary-color: #8b5cf6;
+$scroll-color: #25256b;
 
 html,
 body {
@@ -15,8 +19,84 @@ body {
     overflow: hidden;
 }
 
-
 .list-container {
-    scrollbar-width: auto;
-    scrollbar-color: $frame-color $transparent-background;
+    overflow-y: auto;
+
+    &::-webkit-scrollbar {
+        width: 12px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: none;
+        border-radius: 10px;
+        margin: 14px 0;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: $scroll-color;
+        border-radius: 5px;
+        border-left: 2px solid transparent;
+        border-right: 2px solid transparent;
+        background-clip: padding-box;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background: color.adjust($scroll-color, $lightness: 5%);
+    }
+
+    &::-webkit-scrollbar-thumb:active {
+        background: color.adjust($scroll-color, $lightness: 15%);
+    }
+}
+
+.swal2-popup {
+    background: rgba(12, 14, 34, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.swal2-title {
+    color: $text-color;
+    font-weight: 600;
+}
+
+.swal2-html-container {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.swal2-icon {
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.swal2-icon.swal2-warning {
+    border-color: #ff9800;
+    color: #ff9800;
+}
+
+.swal2-icon.swal2-error {
+    border-color: #ff4444;
+    color: #ff4444;
+}
+
+.swal2-confirm {
+    background: $green-button;
+    color: $text-color;
+}
+
+.swal2-confirm:hover {
+    background: color.adjust($green-button, $lightness: -10%);
+}
+
+.swal2-cancel {
+    background: $rose-button;
+    color: $text-color;
+}
+
+.swal2-cancel:hover {
+    background: color.adjust($rose-button, $lightness: -10%);
+}
+
+.swal2-backdrop {
+    background: rgba(0, 0, 0, 0.7);
 }

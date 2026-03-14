@@ -1,6 +1,7 @@
 import { Component, HostListener, OnInit, computed, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
+import { ChatComponent } from '@app/components/chat/chat.component';
 import { SakuraComponent } from '@app/components/sakura/sakura.component';
 import { OBJECT_PLACEMENT_TOOL, TILE_TOOLS } from '@app/constants/map-setup-page-constant';
 import { ROUTES } from '@app/constants/routes.constants';
@@ -10,12 +11,13 @@ import { DIRECTION_OFFSETS, KEY_TO_DIRECTION } from '@common/direction';
 import { GameMode } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
+import swal from 'sweetalert2';
 
 const GAME_OVER_REDIRECT_DELAY = 3000;
 
 @Component({
     selector: 'app-game-page',
-    imports: [ButtonComponent, SakuraComponent],
+    imports: [ButtonComponent, SakuraComponent, ChatComponent],
     templateUrl: './game-page.component.html',
     styleUrl: './game-page.component.scss',
 })
@@ -141,9 +143,21 @@ export class GamePageComponent implements OnInit {
         if (lobbyId) this.gameViewService.sendEndTurn(lobbyId);
     }
 
-    onAbandon(): void {
-        const lobbyId = this.lobby()?.lobbyId;
-        if (lobbyId) this.gameViewService.sendAbandon(lobbyId);
+    onAbandon() {
+        const errorMessage = 'Êtes-vous sûr de vouloir abandonner la partie ? Vous ne pourrez pas revenir dans cette partie si vous quittez.';
+        swal.fire({
+            title: 'Quitter ?',
+            text: `${errorMessage}`,
+            icon: 'warning',
+            confirmButtonText: 'Abandonner',
+            cancelButtonText: 'Annuler',
+            showCancelButton: true,
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const lobbyId = this.lobby()?.lobbyId;
+                if (lobbyId) this.gameViewService.sendAbandon(lobbyId);
+            }
+        });
     }
 
     onCombat(targetSocketId: string): void {
