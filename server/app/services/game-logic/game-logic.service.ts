@@ -10,6 +10,8 @@ import { ActiveGame, TurnCallbacks } from './active-game.interface';
 import { CombatService } from './combat.service';
 import { MovementService } from './movement.service';
 import { TurnService } from './turn.service';
+import { Server, Socket } from 'socket.io';
+import { JoinGameEvents } from '@common/join.gateway.events';
 
 const RANDOM_THRESHOLD = 0.5;
 
@@ -145,7 +147,7 @@ export class GameLogicService {
 
     // Abandon
 
-    abandonPlayer(lobbyId: string, socketId: string): void {
+    abandonPlayer(lobbyId: string, socketId: string): Lobby | undefined {
         const game = this.activeGames.get(lobbyId);
         if (!game) return;
 
@@ -153,6 +155,40 @@ export class GameLogicService {
         if (player) player.hasAbandonned = true;
 
         game.playerPositions.delete(socketId);
+        return game.lobby;
+    }
+
+    executePlayerAbandon(lobbyId: string, socket: Socket, server: Server): boolean {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return;
+
+        const wasCurrentTurn = this.isPlayerTurn(lobbyId, socket.id);
+        const updatedLobby = this.abandonPlayer(lobbyId, socket.id);
+
+
+        if (updatedLobby) {
+            const payload = { socketId: socket.id, updatedLobby };
+            server.to(lobbyId).emit(JoinGameEvents.PlayerAbandoned, payload);
+        }
+
+        socket.leave(lobbyId);
+
+
+        const activePlayers = this.getActivePlayers(lobbyId);
+        
+        if (activePlayers.length <= 1) {
+            const winnerId = activePlayers.length === 1 ? activePlayers[0].socketId : null;
+            server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId });
+            
+            this.endGame(lobbyId);
+            server.in(lobbyId).socketsLeave(lobbyId);
+            return true;
+        } else if (wasCurrentTurn) {
+            this.endTurn(lobbyId);
+            return false;
+        }
+
+        return false;
     }
 
     getActivePlayers(lobbyId: string): Player[] {

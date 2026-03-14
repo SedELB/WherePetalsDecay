@@ -18,7 +18,6 @@ import { Server, Socket } from 'socket.io';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Player } from '@common/player';
 import { Lobby } from '@common/lobby';
-
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
 export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
@@ -188,49 +187,30 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         return finalName;
     }
 
-    private processPlayerLeave(socket: Socket) {
-        // Check if player is in an active game first
-        const activeGame = this.gameLogicService.findActiveGameBySocketId(socket.id);
-        if (activeGame) {
-            const lobbyId = activeGame.lobby.lobbyId;
-            const wasCurrentTurn = this.gameLogicService.isPlayerTurn(lobbyId, socket.id);
-            this.gameLogicService.abandonPlayer(lobbyId, socket.id);
-            this.server.to(lobbyId).emit(JoinGameEvents.PlayerAbandoned, socket.id);
-            socket.leave(lobbyId);
+    private leaveFromWaitingLobby(lobby: Lobby, socket: Socket) {
+        if (lobby.hostSocketId === socket.id) {
+            this.logger.log(`Host left. Deleting lobby: ${lobby.lobbyId}`);
+            socket.to(lobby.lobbyId).emit(JoinGameEvents.GameDeleted);
+            this.lobbyService.deleteLobby(lobby.lobbyId);
+        } else {
+            this.logger.log(`Player left lobby: ${lobby.lobbyId}`);
+            this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
 
-            const activePlayers = this.gameLogicService.getActivePlayers(lobbyId);
-            if (activePlayers.length <= 1) {
-                this.server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: null });
-                this.gameLogicService.endGame(lobbyId);
-                this.lobbyService.deleteLobby(lobbyId);
-                this.server.in(lobbyId).socketsLeave(lobbyId);
-            } else if (wasCurrentTurn) {
-                this.gameLogicService.endTurn(lobbyId);
-            }
-
-            this.handleGetLobbies();
-            return;
+            const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
+            this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
+            this.server.to(lobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, lobby);
         }
 
-        // Otherwise handle normal lobby leave
-        const lobby = this.lobbyService.findLobbyBySocketId(socket.id);
-
-        if (lobby) {
-            if (lobby.hostSocketId === socket.id) {
-                this.logger.log(`Host left. Deleting lobby: ${lobby.lobbyId}`);
-                socket.to(lobby.lobbyId).emit(JoinGameEvents.GameDeleted);
-                this.lobbyService.deleteLobby(lobby.lobbyId);
-            } else {
-                this.logger.log(`Player left lobby: ${lobby.lobbyId}`);
-                this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
-
-                const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
-                this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
-                this.server.to(lobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, lobby);
-            }
-
-            this.handleGetLobbies();
-        }
+        this.handleGetLobbies();
     }
 
+    private processPlayerLeave(socket: Socket) {
+        const lobby = this.lobbyService.findLobbyBySocketId(socket.id);
+        if (!lobby) return;
+
+        const isGameActive = this.gameLogicService.getActiveGame(lobby.lobbyId);
+        if (isGameActive) return;
+
+        this.leaveFromWaitingLobby(lobby, socket);
+    }
 }
