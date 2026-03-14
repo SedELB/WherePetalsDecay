@@ -20,7 +20,8 @@ export enum JoinGameEvents {
     StartGame = 'startGame',
     KickPlayer = 'kickPlayer',
     ChatSendMessage = 'chatSendMessage',
-    
+    ChatHistoryRequest = "chatHistoryRequest",
+
     // Response events (confirmations)
     GameHosted = 'gameHosted',
     LobbyJoined = 'lobbyJoined',
@@ -58,6 +59,9 @@ export enum JoinGameEvents {
     // Info
     RequestTileInfo = 'requestTileInfo',
     TileInfo = 'tileInfo',
+    PlayerAction = 'playerAction',
+    GameLobbyUpdated = 'gameLobbyUpdated',
+    ChatHistorySent = "chatHistorySent",
 }
 
 /*

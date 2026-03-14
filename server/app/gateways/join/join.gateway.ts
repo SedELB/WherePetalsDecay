@@ -103,8 +103,12 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     }
 
     @SubscribeMessage(JoinGameEvents.GetLobbyStatus)
-    handleGetStatus(@ConnectedSocket() socket: Socket) {
-        const lobby = this.lobbyService.findLobbyBySocketId(socket.id);
+    handleGetStatus(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId?: string) {
+        let lobby = this.lobbyService.findLobbyBySocketId(socket.id);
+
+        if (!lobby && lobbyId) {
+            lobby = this.lobbyService.getLobby(lobbyId);
+        }
 
         if (lobby) {
             socket.join(lobby.lobbyId);

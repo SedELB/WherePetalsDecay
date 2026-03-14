@@ -2,7 +2,8 @@ import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
-import { ChatComponentComponent } from '@app/components/chat/chat.component';
+import { ChatComponent } from '@app/components/chat/chat.component';
+import { ChatService } from '@app/services/chat/chat.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Lobby } from '@common/lobby';
 import { SocketNamespace } from '@common/enums';
@@ -15,7 +16,7 @@ const SMALL_DELAY = 100;
 @Component({
     selector: 'app-waiting-room',
     standalone: true,
-    imports: [CommonModule, ButtonComponent, ChatComponentComponent],
+    imports: [CommonModule, ButtonComponent, ChatComponent],
     templateUrl: './waiting-room.component.html',
     styleUrls: ['./waiting-room.component.scss'],
 })
@@ -23,6 +24,7 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
     lobbyId = signal<string | null>(null);
     currentLobby = signal<Lobby | undefined>(undefined);
     private readonly webSocketService = inject(WebSocketService);
+    private readonly chatService = inject(ChatService);
     private readonly router = inject(Router);
     private readonly route = inject(ActivatedRoute);
     private readonly gameViewService = inject(GameViewService);
@@ -36,14 +38,21 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
             return;
         }
 
-        const state = history.state;
-        if (state && state.lobby) {
-            this.currentLobby.set(state.lobby);
-        } else {
-            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.GetLobbyStatus);
+        // On F5, sessionStorage flag is missing → redirect to home
+        const navigatedKey = 'waitingRoom_' + this.lobbyId();
+        if (!sessionStorage.getItem(navigatedKey)) {
+            const state = history.state;
+            if (state && state.lobby) {
+                sessionStorage.setItem(navigatedKey, 'true');
+                this.currentLobby.set(state.lobby);
+                this.setupUpdateListeners();
+                return;
+            }
+            this.router.navigate([this.routes.home]);
+            return;
         }
-
-        this.setupUpdateListeners();
+        sessionStorage.removeItem(navigatedKey);
+        this.router.navigate([this.routes.home]);
     }
 
     setupUpdateListeners(): void {
@@ -55,6 +64,7 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
         // Listener for getting Lobby status after a refresh
         this.webSocketService.onNamespace<Lobby>(SocketNamespace.Join, JoinGameEvents.LobbyStatusReceived, (updatedLobby) => {
             this.currentLobby.set(updatedLobby);
+            this.chatService.requestHistory(updatedLobby.lobbyId);
         });
 
         // Listener for redirecting after game start.
@@ -77,6 +87,8 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
     }
 
     ngOnDestroy(): void {
+        const id = this.lobbyId();
+        if (id) sessionStorage.removeItem('waitingRoom_' + id);
         this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.LobbyUpdated);
         this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.LobbyStatusReceived);
         this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.GameStarting);
