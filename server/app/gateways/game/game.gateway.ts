@@ -7,14 +7,14 @@ import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Injectable, Logger } from '@nestjs/common';
 import {
-    ConnectedSocket, MessageBody, OnGatewayInit,
+    ConnectedSocket, MessageBody, OnGatewayDisconnect, OnGatewayInit,
     SubscribeMessage, WebSocketGateway, WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
-export class GameGateway implements OnGatewayInit {
+export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     @WebSocketServer() private server: Server;
 
     constructor(
@@ -39,6 +39,10 @@ export class GameGateway implements OnGatewayInit {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnEnded, playerSocketId);
             },
         });
+    }
+
+    handleDisconnect(socket: Socket) {
+        this.processGameDisconnect(socket);
     }
 
     @SubscribeMessage(JoinGameEvents.StartGame)
@@ -130,22 +134,23 @@ export class GameGateway implements OnGatewayInit {
     }
 
     @SubscribeMessage(JoinGameEvents.PlayerAbandon)
-    handlePlayerAbandon(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string) {
-        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+    handlePlayerAbandon(@ConnectedSocket() socket: Socket) {
+        this.processGameDisconnect(socket);
+        socket.emit(JoinGameEvents.LeftLobby);
+    }
+
+    private processGameDisconnect(socket: Socket) {
+        const activeGame = this.gameLogicService.findActiveGameBySocketId(socket.id);
         if (!activeGame) return;
 
-        const wasCurrentTurn = this.gameLogicService.isPlayerTurn(lobbyId, socket.id);
-        this.gameLogicService.abandonPlayer(lobbyId, socket.id);
-        this.server.to(lobbyId).emit(JoinGameEvents.PlayerAbandoned, socket.id);
+        const isGameOver = this.gameLogicService.executePlayerAbandon(
+            activeGame.lobby.lobbyId, 
+            socket,
+            this.server,
+        );
 
-        socket.leave(lobbyId);
-        socket.emit(JoinGameEvents.LeftLobby);
-
-        const activePlayers = this.gameLogicService.getActivePlayers(lobbyId);
-        if (activePlayers.length <= 1) {
-            this.handleGameOver(lobbyId, null);
-        } else if (wasCurrentTurn) {
-            this.gameLogicService.endTurn(lobbyId);
+        if (isGameOver) {
+            this.lobbyService.deleteLobby(activeGame.lobby.lobbyId);
         }
     }
 

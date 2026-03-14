@@ -117,12 +117,15 @@ export class GameViewService {
                 }
             });
 
-        this.webSocketService.onNamespace<string>(this.namespace, JoinGameEvents.PlayerAbandoned, (socketId) => {
+        this.webSocketService.onNamespace<{socketId: string, updatedLobby: Lobby}>(this.namespace, JoinGameEvents.PlayerAbandoned, (payload) => {
+            const {socketId, updatedLobby} = payload;
             this.playerPositions.update((positions) => {
                 const updated = { ...positions };
                 delete updated[socketId];
                 return updated;
             });
+
+            this.setLobby(updatedLobby);
         });
 
         this.webSocketService.onNamespace<{ winnerSocketId: string | null }>(this.namespace, JoinGameEvents.GameOver, (data) => {
