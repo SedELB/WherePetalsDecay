@@ -9,7 +9,6 @@ import { CombatService } from '@app/services/game-logic/combat.service';
 import { GameLogicService } from '@app/services/game-logic/game-logic.service';
 import { MovementService } from '@app/services/game-logic/movement.service';
 import { TurnService } from '@app/services/game-logic/turn.service';
-import { GameSessionService } from '@app/services/game-session/game-session.service';
 import { GameService } from '@app/services/game/game.service';
 import { GameValidatorService } from '@app/services/game/gameValidator.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
@@ -22,7 +21,7 @@ import { MongooseModule } from '@nestjs/mongoose';
     providers: [
         GameService, GameValidatorService,
         AdminGateway, GameGateway, GamesGateway, JoinGateway, ChatGateway,
-        Logger, LobbyService, GameSessionService,
+        Logger, LobbyService,
         GameLogicService, TurnService, MovementService, CombatService,
     ],
     exports: [GameService],
