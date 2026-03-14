@@ -1,9 +1,9 @@
 @use 'src/styles.scss' as *;
-// TODO: comments
+
 .page-bg {
     position: fixed;
-    inset: 0; // raccourci pour top, right, bottom, left
-    z-index: 0; // ordre de couche
+    inset: 0;
+    z-index: 0;
     background-image: url('../../../assets/background.png');
     background-size: cover;
     background-position: center;
@@ -13,7 +13,7 @@
     position: fixed;
     inset: 0;
     z-index: 1;
-    pointer-events: none; // les clics passent au travers
+    pointer-events: none;
 }
 
 .container {
@@ -26,7 +26,9 @@
     flex: 1;
     flex-direction: row;
     align-items: center;
-    justify-content: space-around;
+    justify-content: center;
+    gap: 16px;
+    padding: 16px;
 }
 
 #back-button {
@@ -68,10 +70,9 @@
 .side-panel.left {
     position: absolute;
     left: 16px;
-    // top: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
     width: 280px;
-    // z-index: 10;
-
     border-radius: 14px;
     background: rgba(12, 14, 34, 0.72);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -83,26 +84,25 @@
 .side-panel.right {
     position: absolute;
     right: 16px;
-    bottom: 53px;
-    // top: 2rem;
-    width: 280px;
-    // z-index: 10;
-
+    top: 50%;
+    transform: translateY(-50%);
+    width: min(450px, 25vw);
+    height: min(780px, 85vh);
     border-radius: 14px;
     background: rgba(12, 14, 34, 0.72);
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
     padding: 16px 18px;
     color: rgba(255, 255, 255, 0.92);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .game-stats {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    // justify-content: center;
-    // grid-template-columns: 120px 1fr;
-    // column-gap: 12px;
     margin-bottom: 16px;
     border-bottom: solid rgba(255, 255, 255, 0.4);
 }
@@ -111,6 +111,7 @@
     background-color: rgba(0, 0, 0, 0.25);
     border-radius: 6px;
     text-align: center;
+    padding: 5px 0;
     margin: 5px;
 }
 
@@ -118,6 +119,7 @@
 .list,
 .local-player-info {
     align-self: flex-start;
+    margin-left: 10px;
     width: 100%;
     ul {
         padding-left: 16px;
@@ -234,10 +236,6 @@
     &[data-tile='doorClosed'] {
         background-image: url('../../../assets/tiles/closed_door.png');
     }
-
-    &.cell--clickable {
-        cursor: pointer;
-    }
 }
 
 .cell-object {
@@ -257,17 +255,45 @@
 }
 
 .local-player-info img.player-avatar {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        // z-index: 5;
-        width: 100px;
-        height: 100px;
-        margin: 0;
-        border-radius: 25%;
-        object-fit: cover;
-        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 100px;
+    height: 100px;
+    margin: 0;
+    border-radius: 25%;
+    object-fit: cover;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+}
+
+.chat-box {
+    flex: 1;
+    min-height: 0;
+
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: solid rgba(255, 255, 255, 0.4);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .section-title {
+        flex-shrink: 0;
     }
+
+    app-chat {
+        flex: 1;
+        min-height: 0;
+    }
+}
+
+.character-sheet {
+    flex: 0 0 auto;
+    min-height: 0;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: solid rgba(255, 255, 255, 0.4);
+}
 
 .side-panel.right .local-player-info {
     position: relative;
