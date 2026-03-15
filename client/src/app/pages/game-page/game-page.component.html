@@ -1,17 +1,17 @@
 <div class="page-bg"></div>
 <app-sakura class="sakura-layer"></app-sakura>
 
-<main class="container"> 
+<main class="container">
     <app-button id="back-button" [width]="100" (click)="onAbandon()">Quitter</app-button>
-    
+
     <aside class="side-panel left">
         <section class="game-stats">
             <h3 class="section-title">Informations de partie</h3>
             <div class="game-info">
                 <ul>
-                    <li>Nom du jeu : <span>{{ game()?.name }}</span></li>  <!-- // Optional -->
+                    <li>Nom du jeu : <span>{{ game()?.name }}</span></li>
                     <li>Taille du jeu : <span>{{ game()?.size?.rows }}X{{ game()?.size?.cols }}</span></li>
-                    <li>Mode de jeu : <span>{{ game()?.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</span></li>  <!-- // Optional -->
+                    <li>Mode de jeu : <span>{{ game()?.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</span></li>
                     <li>Nombre de joueurs : <span>{{ lobby()?.playerCount }}</span></li>
                     <li>Joueur actif : <span>{{ activePlayer()?.character?.name }}</span></li>
                 </ul>
@@ -22,31 +22,39 @@
             <h3 class="section-title">Ordre des tours</h3>
             <div class="list">
                 <ul>
-                    @for (player of lobby()?.players ?? []; track player.socketId) {
-                        <li [class.active]="player.socketId === activePlayer()?.socketId"
-                            [class.abandonned]=" player.hasAbandonned">
+                    @for (player of orderedPlayers(); track player.socketId) {
+                        <li [class.active]="player.socketId === activePlayerSocketId()"
+                            [class.abandonned]="player.hasAbandonned">
                             <div class="player-info">
-                                <span class="info"> 
+                                <span class="info">
                                     <span class="name">{{ player.character.name }}</span>
                                     @if (player.isHost) { <span class="host-indicator">👑</span> }
-                                    @if (player.socketId === activePlayer()?.socketId) { <span class="turn-indicator">▶</span> }
+                                    @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator">▶</span> }
                                 </span>
-                                <p>Combats gagnés : <span class="wins">{{ player.winsCount  }}</span></p>
+                                <p>Combats gagnés : <span class="wins">{{ player.winsCount }}</span></p>
                             </div>
-                            <!-- @if (player.hasAbandonned) { <span class="status-tag">À abandonné</span> } -->
                         </li>
                     }
                 </ul>
             </div>
         </section>
     </aside>
-    
+
     <section class="game-board-wrapper">
-        <!-- <div class="map-title">Mode de jeu : {{game.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</div> -->
-        
         <div class="grid-container">
             <div class="map-frame" aria-label="Grille de carte">
-                <div class="timer-display">00:30</div>
+                <div class="controls-panel">
+                    <span class="controls-title">Commandes</span>
+                    <span class="control"><span class="key">W</span> Haut</span>
+                    <span class="control"><span class="key">A</span> Gauche</span>
+                    <span class="control"><span class="key">S</span> Bas</span>
+                    <span class="control"><span class="key">D</span> Droite</span>
+                    <span class="control"><span class="key">Clic droit</span> Info tuile</span>
+                </div>
+                <div class="timer-display">
+                    <span class="timer-label">{{ getTimerLabel() }}</span>
+                    <span class="timer-countdown">{{ getTimerDisplay() }}</span>
+                </div>
                 <div
                     id="thumbnail"
                     class="grid"
@@ -58,12 +66,17 @@
                             <div
                                 class="cell"
                                 [attr.data-tile]="cell.type"
-                                (contextmenu)="$event.preventDefault()"
+                                [class.cell--reachable]="isReachable(colIndex, rowIndex)"
+                                [class.cell--has-player]="getPlayerAtPosition(colIndex, rowIndex)"
+                                (contextmenu)="onRightClick($event, { x: colIndex, y: rowIndex })"
                             >
                                 @if (cell.item; as obj) {
                                     <span class="cell-object" [attr.data-object]="obj">
                                         <img class="cell-object__icon" [src]="items[obj].image" [alt]="obj" />
                                     </span>
+                                }
+                                @if (getPlayerAtPosition(colIndex, rowIndex); as playerSocketId) {
+                                    <img class="player-icon" [src]="getPlayerAvatar(playerSocketId)" alt="player" />
                                 }
                             </div>
                         }
@@ -71,9 +84,38 @@
                 </div>
             </div>
         </div>
-
-        <!-- <div @if="isDebugMode" class="debug-indicator">DEBUG</div> -->
     </section>
+
+    @if (gameOver(); as over) {
+        <div class="game-over-overlay">
+            <div class="game-over-message">
+                @if (over.winnerSocketId) {
+                    <h2>Partie terminée !</h2>
+                    @if (over.winnerSocketId === localPlayer()?.socketId) {
+                        <p>Vous avez gagné avec 3 victoires !</p>
+                    } @else {
+                        <p>{{ getPlayerName(over.winnerSocketId) }} a remporté la partie avec 3 victoires.</p>
+                    }
+                } @else {
+                    <h2>Partie terminée</h2>
+                    <p>Tous les joueurs ont abandonné.</p>
+                }
+            </div>
+        </div>
+    }
+
+    @if (tileInfo(); as info) {
+        <div class="tile-info-popup" (click)="gameViewService.tileInfo.set(null)">
+            <div class="tile-info-content">
+                <p>Type : <span>{{ info.tile.type }}</span></p>
+                <p>Coût : <span>{{ info.cost === null || info.cost === costInfinity ? 'N/A' : info.cost }}</span></p>
+                @if (info.player) {
+                    <p>Joueur : <span>{{ info.player.name }}</span></p>
+                    <img [src]="info.player.avatar" alt="avatar" class="tile-info-avatar" />
+                }
+            </div>
+        </div>
+    }
 
     <aside class="side-panel right">
         <section class="chat-box">
@@ -91,19 +133,25 @@
                     <img [src]="localPlayer()?.character?.avatar" [alt]="localPlayer()?.character?.name" class="player-avatar"/>
                     <li>Nom : <span>{{ localPlayer()?.character?.name }}</span></li>
                     <li>PV restants : <span>{{ localPlayer()?.character?.life }}</span></li>
-                    <li>PV max : <span>{{ localPlayer()?.character?.life }}</span></li>
+                    <li>PV max : <span>{{ maxLife() }}</span></li>
                     <li>Rapidité : <span>{{ localPlayer()?.character?.speed }}</span></li>
                     <li>Attaque | Dés : <span>{{ localPlayer()?.character?.attack }} | {{ localPlayer()?.character?.attackDice }}</span></li>
                     <li>Défense | Dés : <span>{{ localPlayer()?.character?.defense }} | {{ localPlayer()?.character?.defenseDice }}</span></li>
-                    <li>Points de mouvement : <span>{{ 999 }}</span></li>
-                    <li>Nombre actions restantes : <span>{{ 999 }}</span></li>
+                    <li>Points de mouvement : <span>{{ movementPoints() }}</span></li>
                 </ul>
             </div>
         </section>
 
         <nav class="action-bar">
-            <app-button (click)="onAction()">Action</app-button>
-            <app-button (click)="onEndTurn()">Finir Tour</app-button>
+            @if (adjacentPlayers().length > 0 && isMyTurn()) {
+                <div class="combat-actions">
+                    <h4>Combattre</h4>
+                    @for (target of adjacentPlayers(); track target.socketId) {
+                        <app-button (click)="onCombat(target.socketId)">⚔️ {{ target.character.name }}</app-button>
+                    }
+                </div>
+            }
+            <app-button (click)="onEndTurn()" [disabled]="!isMyTurn()">Finir Tour</app-button>
         </nav>
     </aside>
 </main>
