@@ -111,7 +111,15 @@ describe('JoinGateway', () => {
                 },
                 {
                     provide: GameLogicService,
-                    useValue: { shufflePlayers: jest.fn((players) => players) },
+                    useValue: {
+                        shufflePlayers: jest.fn((players) => players),
+                        findActiveGameBySocketId: jest.fn().mockReturnValue(undefined),
+                        getActiveGame: jest.fn().mockReturnValue(undefined),
+                        isPlayerTurn: jest.fn().mockReturnValue(false),
+                        abandonPlayer: jest.fn(),
+                        getActivePlayers: jest.fn().mockReturnValue([]),
+                        endTurn: jest.fn(),
+                    },
                 },
             ],
         }).compile();

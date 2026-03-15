@@ -1,0 +1,100 @@
+import { Direction, DIRECTION_OFFSETS } from '@common/direction';
+import { Game } from '@common/game';
+import { TILE_COSTS } from '@common/tile-costs';
+import { Vec2 } from '@common/vec2';
+import { Injectable } from '@nestjs/common';
+import { ActiveGame } from './active-game.interface';
+
+@Injectable()
+export class MovementService {
+    movePlayer(game: ActiveGame, socketId: string, direction: Direction): Vec2 | null {
+        const currentPos = game.playerPositions.get(socketId);
+        if (!currentPos) return null;
+
+        const offset = DIRECTION_OFFSETS[direction];
+        const targetPos: Vec2 = { x: currentPos.x + offset.x, y: currentPos.y + offset.y };
+
+        if (!this.isValidMove(game, socketId, targetPos)) return null;
+
+        const tile = game.lobby.game.grid[targetPos.y][targetPos.x];
+        const cost = TILE_COSTS[tile.type];
+
+        const remaining = game.movementPoints.get(socketId) - cost;
+        game.movementPoints.set(socketId, remaining);
+        game.playerPositions.set(socketId, targetPos);
+
+        return targetPos;
+    }
+
+    getReachableTiles(game: ActiveGame, socketId: string): Vec2[] {
+        const startPos = game.playerPositions.get(socketId);
+        if (!startPos) return [];
+
+        const remaining = game.movementPoints.get(socketId);
+        const reachable: Vec2[] = [];
+        const visited = new Map<string, number>();
+        const queue: { pos: Vec2; cost: number }[] = [{ pos: startPos, cost: 0 }];
+
+        visited.set(this.posKey(startPos), 0);
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+
+            for (const offset of Object.values(DIRECTION_OFFSETS)) {
+                const nextPos: Vec2 = { x: current.pos.x + offset.x, y: current.pos.y + offset.y };
+                const key = this.posKey(nextPos);
+
+                if (!this.isWithinBounds(game.lobby.game, nextPos)) continue;
+
+                const tile = game.lobby.game.grid[nextPos.y][nextPos.x];
+                const tileCost = TILE_COSTS[tile.type];
+                if (tileCost === Infinity) continue;
+
+                const totalCost = current.cost + tileCost;
+                if (totalCost > remaining) continue;
+                if (this.isTileOccupied(game, nextPos)) continue;
+
+                const previousCost = visited.get(key);
+                if (previousCost !== undefined && previousCost <= totalCost) continue;
+
+                visited.set(key, totalCost);
+                reachable.push(nextPos);
+                queue.push({ pos: nextPos, cost: totalCost });
+            }
+        }
+
+        return reachable;
+    }
+
+    getMovementPoints(game: ActiveGame, socketId: string): number {
+        return game.movementPoints.get(socketId) ?? 0;
+    }
+
+    private isValidMove(game: ActiveGame, socketId: string, targetPos: Vec2): boolean {
+        if (!this.isWithinBounds(game.lobby.game, targetPos)) return false;
+
+        const tile = game.lobby.game.grid[targetPos.y][targetPos.x];
+        const cost = TILE_COSTS[tile.type];
+
+        if (cost === Infinity) return false;
+        if (cost > game.movementPoints.get(socketId)) return false;
+        if (this.isTileOccupied(game, targetPos)) return false;
+
+        return true;
+    }
+
+    private isWithinBounds(game: Game, pos: Vec2): boolean {
+        return pos.y >= 0 && pos.y < game.grid.length && pos.x >= 0 && pos.x < game.grid[0].length;
+    }
+
+    private isTileOccupied(game: ActiveGame, pos: Vec2): boolean {
+        for (const [, playerPos] of game.playerPositions) {
+            if (playerPos.x === pos.x && playerPos.y === pos.y) return true;
+        }
+        return false;
+    }
+
+    private posKey(pos: Vec2): string {
+        return `${pos.x},${pos.y}`;
+    }
+}
