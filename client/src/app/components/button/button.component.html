@@ -9,12 +9,15 @@
     [routerLink]="route"
     [disabled]="disabled"
     [ngClass]="[
-    'btn',
-    'btn--' + variant,
-    disabled ? 'disabled' : '',
-    selected ? 'selected' : ''
+        'btn',
+        'btn--' + variant,
+        disabled ? 'disabled' : '',
+        selected ? 'selected' : ''
     ]"
     (click)="onClick()"
     >
-        <ng-content></ng-content>
+    @if (variant === 'back') {
+        <img src="./assets/icons/back-arrow.svg" class="arrow" alt="back arrow"/>
+    }
+    <ng-content></ng-content>
 </button>

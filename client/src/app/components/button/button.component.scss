@@ -14,7 +14,7 @@
 .btn {
     appearance: none;
     border: 0;
-    cursor: pointer; // pour l'instant on garde ca mais sa va probablement changer au cours de la session
+    cursor: pointer;
     user-select: none;
     font-weight: 800;
     letter-spacing: 0.5px;
@@ -28,15 +28,60 @@
 }
 
 .btn--back {
-    padding: 14px 22px;
-    border-radius: 18px;
-    background: #7e6a96;
-    box-shadow: 0 8px 0 rgba(0, 0, 0, 0.25);
-}
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: $rose-button;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0px 0px 0px 4px rgba(255, 255, 255, 0.253);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    position: relative;
+    padding: 0;
 
-.btn--back:active:not(:disabled) {
-    transform: translateY(2px);
-    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.25);
+    .arrow {
+        width: 24px;
+        height: 24px;
+        filter: invert(1);
+        transition: all 0.3s ease;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    &::before {
+        content: 'Retour';
+        position: absolute;
+        color: white;
+        font-size: 13px;
+        opacity: 0;
+        transition: all 0.3s ease;
+        transform: translateX(20px);
+    }
+
+    &:hover:not(:disabled) {
+        width: 140px;
+        border-radius: 50px;
+
+        .arrow {
+            transform: translate(-150px, -50%);
+            opacity: 0;
+        }
+
+        &::before {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    &:active:not(:disabled) {
+        transform: translateY(2px);
+    }
 }
 
 /* Variant: Sauvegarder (maquette) */
