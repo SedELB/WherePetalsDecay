@@ -1,8 +1,9 @@
-@use "src/styles.scss" as *;
+@use 'src/styles.scss' as *;
 
 main {
     background-image: url('../../../assets/background.png');
     background-size: cover;
+    background-position: center bottom;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -34,7 +35,7 @@ p {
     height: auto;
 
     svg {
-        width: 30px;  
+        width: 30px;
         height: 30px;
     }
 }
@@ -51,6 +52,4 @@ p {
     height: 600px;
     width: auto;
     align-items: center;
-    
-    
 }

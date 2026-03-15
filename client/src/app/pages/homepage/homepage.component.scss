@@ -1,7 +1,8 @@
-@use "src/styles.scss" as *;
+@use 'src/styles.scss' as *;
 
 .container {
     background-image: url('../../../assets/background.png');
+    background-position: center bottom;
     background-size: cover;
     display: flex;
     flex-direction: column;
@@ -10,7 +11,7 @@
     height: 100vh;
     padding: 2rem;
     text-align: center;
-    box-sizing: border-box; 
+    box-sizing: border-box;
 }
 
 .game-header {
@@ -33,7 +34,7 @@
 .menu-options {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem; 
+    gap: 0.5rem;
 }
 
 .team-info {
