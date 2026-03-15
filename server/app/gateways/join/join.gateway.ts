@@ -12,13 +12,12 @@ import {
     WebSocketServer,
 } from '@nestjs/websockets';
 
+import { GameLogicService } from '@app/services/game-logic/game-logic.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Server, Socket } from 'socket.io';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Player } from '@common/player';
-import { GameLogicService } from '@app/services/game-logic/game-logic.service';
 import { Lobby } from '@common/lobby';
-
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
 export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
@@ -188,44 +187,30 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         return finalName;
     }
 
+    private leaveFromWaitingLobby(lobby: Lobby, socket: Socket) {
+        if (lobby.hostSocketId === socket.id) {
+            this.logger.log(`Host left. Deleting lobby: ${lobby.lobbyId}`);
+            socket.to(lobby.lobbyId).emit(JoinGameEvents.GameDeleted);
+            this.lobbyService.deleteLobby(lobby.lobbyId);
+        } else {
+            this.logger.log(`Player left lobby: ${lobby.lobbyId}`);
+            this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
+
+            const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
+            this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
+            this.server.to(lobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, lobby);
+        }
+
+        this.handleGetLobbies();
+    }
+
     private processPlayerLeave(socket: Socket) {
         const lobby = this.lobbyService.findLobbyBySocketId(socket.id);
+        if (!lobby) return;
 
-        if (lobby) {
-            if (lobby.hostSocketId === socket.id) {
-                this.logger.log(`Host left. Deleting lobby: ${lobby.lobbyId}`);
-                socket.to(lobby.lobbyId).emit(JoinGameEvents.GameDeleted); // Warn lobby members that host was disconnected.
-                this.lobbyService.deleteLobby(lobby.lobbyId);
-            } else {
-                this.logger.log(`Player left lobby: ${lobby.lobbyId}`);
-                this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
+        const isGameActive = this.gameLogicService.getActiveGame(lobby.lobbyId);
+        if (isGameActive) return;
 
-                const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
-                this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars); // Release selected avatars for both pending and confirmed characters.
-                this.server.to(lobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, lobby);
-            }
-
-            this.handleGetLobbies();
-        }
-    }
-
-    @SubscribeMessage(JoinGameEvents.StartGame)
-    handleStartGame(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string) {
-        const finalLobby = this.lobbyService.canStartGame(lobbyId, socket.id);
-        if (finalLobby) {
-            finalLobby.players = this.gameLogicService.shufflePlayers(finalLobby.players);
-            this.server.to(lobbyId).emit(JoinGameEvents.GameStarting, finalLobby);
-        } else {
-            socket.emit(JoinGameEvents.LobbyError, `Impossible de demarrer la partie. (Minimum 2 joueurs requis.)`);
-        }
-    }
-
-    @SubscribeMessage(JoinGameEvents.PlayerAbandon)
-    handlePlayerAbandon(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string) {
-        const updatedLobby = this.lobbyService.abandonPlayer(lobbyId, socket.id);
-        if (updatedLobby) {
-            this.server.to(lobbyId).emit(JoinGameEvents.GameLobbyUpdated, updatedLobby);
-        }
-        socket.emit(JoinGameEvents.LeftLobby);
+        this.leaveFromWaitingLobby(lobby, socket);
     }
 }
