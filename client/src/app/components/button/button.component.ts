@@ -19,7 +19,7 @@ export class ButtonComponent {
     @Input() backgroundPath?: string;
     @Input() route?: string;
     @Input() selected: boolean = false;
-    @Input() variant: 'default' | 'back' | 'save' = 'default';
+    @Input() variant: 'default' | 'back' | 'save' | 'delete-game' = 'default';
 
     @Output() clicked = new EventEmitter<void>();
 
