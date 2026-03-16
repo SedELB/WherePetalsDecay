@@ -1,16 +1,19 @@
 @use "src/styles.scss" as *;
 
 .gameCard {
-    background-color: $frame-color;
+    background-color: $card-background;
     display: flex;
     flex-direction: row;
     justify-content: space-around;
     align-items: center;
-    border: 1px solid black;
+    border: $card-border;
+    box-shadow: $card-shadow;
     border-radius: 15px;
     height: 250px;
     width: 800px;
     color: $text-color;
+    transform: scale(1);
+    transition: transform 0.3s ease-out;
 }
 
 .gameCard:hover{
