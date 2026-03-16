@@ -10,7 +10,7 @@
             <app-game-card [game]="game">
                 <app-button [height]="50" (clicked)="navigateToGameEditor(game.name)">Modifier</app-button>
                 <app-button [height]="50" (clicked)="changeVisibility(game.name)">{{ game.isVisible ? 'Cacher' : 'Afficher' }}</app-button>
-                <app-button [height]="50" (clicked)="removeGame(game.name)">Supprimer</app-button>
+                <app-button variant="delete-game" [height]="50" (clicked)="removeGame(game.name)"></app-button>
             </app-game-card>
         }
     </div>
