@@ -68,7 +68,7 @@
                                 [attr.data-tile]="cell.type"
                                 [class.cell--reachable]="isReachable(colIndex, rowIndex)"
                                 [class.cell--has-player]="getPlayerAtPosition(colIndex, rowIndex)"
-                                (contextmenu)="onRightClick($event, { x: colIndex, y: rowIndex })"
+                                (contextmenu)="$event.preventDefault(); onRightClick({ x: colIndex, y: rowIndex })"
                             >
                                 @if (cell.item; as obj) {
                                     <span class="cell-object" [attr.data-object]="obj">
@@ -120,9 +120,10 @@
     <aside class="side-panel right">
         <section class="chat-box">
             <h3 class="section-title">Chat</h3>
-            <app-chat 
+            <app-chat
                 [lobbyId]="lobby()?.lobbyId ?? ''"
                 [playerName]="localPlayer()?.character?.name ?? ''"
+                (chatFocusChange)="onChatFocusChange($event)"
             ></app-chat>
         </section>
 
