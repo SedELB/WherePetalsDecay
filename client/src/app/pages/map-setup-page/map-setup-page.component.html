@@ -5,14 +5,16 @@
   <section class="editor-stage">
 
     <aside class="info-card">
-      <div class="info-row">
-        <span class="info-label">Nom:</span>
-        <input class="info-input" [(ngModel)]="game.name" [maxlength]="nameMaxLength"/>
+      <div class="input-container">
+        <input id="input-game-name" class="info-input" type="text" [(ngModel)]="game.name" [maxlength]="nameMaxLength" required/>
+        <label class="label" for="input-game-name">Nom</label>
+        <div class="underline"></div>
       </div>
 
-      <div class="info-row info-row--top">
-        <span class="info-label">Description:</span>
-        <textarea class="info-textarea" rows="5" [(ngModel)]="game.description" [maxlength]="descMaxLength"></textarea>
+      <div class="textarea-container">
+        <textarea id="input-game-desc" class="info-textarea list-container" rows="5" [(ngModel)]="game.description" [maxlength]="descMaxLength" required></textarea>
+        <label class="label" for="input-game-desc">Description</label>
+        <div class="underline"></div>
       </div>
     </aside>
 
