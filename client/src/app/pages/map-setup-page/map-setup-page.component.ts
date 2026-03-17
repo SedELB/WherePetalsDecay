@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { Game } from '@common/game';
@@ -55,7 +55,9 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
     readonly tileItemEnum = TileItem;
     readonly tileTextureEnum = TileTexture;
 
-    isGameLoaded = false;
+    @ViewChild('thumbnailGrid') thumbnailGridRef!: ElementRef<HTMLElement>;
+
+  isGameLoaded = false;
     private isPaintingTiles = false;
     private isErasingTiles = false;
 
@@ -215,7 +217,7 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
         if (this.saveInProgress) return;
         this.saveInProgress = true;
         this.isSaving = true;
-        await this.mapSetupFacade.saveGame(this.game, this.mode);
+        await this.mapSetupFacade.saveGame(this.game, this.mode, this.thumbnailGridRef.nativeElement);
         this.saveInProgress = false;
     }
 

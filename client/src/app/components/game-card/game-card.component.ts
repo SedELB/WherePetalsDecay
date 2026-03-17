@@ -1,5 +1,5 @@
 import { NgClass } from '@angular/common';
-import { Component, ElementRef, Input, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, Input, OnInit, ViewChild } from '@angular/core';
 import { GameMode } from '@common/enums';
 import { GameCard } from '@app/interfaces/gameCard';
 
@@ -11,7 +11,7 @@ import { GameCard } from '@app/interfaces/gameCard';
   styleUrl: './game-card.component.scss',
 })
 
-export class GameCardComponent {
+export class GameCardComponent implements OnInit {
   @Input() game: GameCard = {
     name: '',
     description: '',
@@ -30,6 +30,16 @@ export class GameCardComponent {
   gameMode = GameMode;
   tooltipVerticalPos: number = 0;
   tooltipTopPadding: number = 140;
+  private windowHeight: number = 0;
+
+  ngOnInit(): void {
+    this.windowHeight = visualViewport?.height ?? 0;
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.windowHeight = visualViewport?.height ?? 0;
+  }
 
   displayTime(): string {
     const rawDate = this.game.updatedAt;
@@ -58,11 +68,10 @@ export class GameCardComponent {
   updateTooltipPosition(): void {
     const rect = this.thumbnailRef.nativeElement.getBoundingClientRect();
     const tooltipHeight = this.tooltipRef.nativeElement.offsetHeight;
-    const windowHeight = window.innerHeight;
     const tooltipPadding = 10;
 
     const centerOfThumbnail = rect.top + rect.height / 2;
-    const maxTop = windowHeight - tooltipHeight - tooltipPadding;
+    const maxTop = this.windowHeight - tooltipHeight - tooltipPadding;
 
     this.tooltipVerticalPos = Math.min(Math.max(centerOfThumbnail - tooltipHeight / 2, this.tooltipTopPadding), maxTop);
   }

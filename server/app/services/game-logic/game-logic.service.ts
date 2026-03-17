@@ -178,7 +178,7 @@ export class GameLogicService {
         
         if (activePlayers.length <= 1) {
             const winnerId = activePlayers.length === 1 ? activePlayers[0].socketId : null;
-            server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId });
+            server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId, isForfeit: true });
             
             this.endGame(lobbyId);
             server.in(lobbyId).socketsLeave(lobbyId);
