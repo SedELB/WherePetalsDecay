@@ -88,3 +88,39 @@ body {
         font-size: 32px;
     }
 }
+
+.swal2-icon {
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.swal2-icon.swal2-warning {
+    border-color: #ff9800;
+    color: #ff9800;
+}
+
+.swal2-icon.swal2-error {
+    border-color: #ff4444;
+    color: #ff4444;
+}
+
+.swal2-confirm {
+    background: $green-button;
+    color: $text-color;
+}
+
+.swal2-confirm:hover {
+    background: color.adjust($green-button, $lightness: -10%);
+}
+
+.swal2-cancel {
+    background: $rose-button;
+    color: $text-color;
+}
+
+.swal2-cancel:hover {
+    background: color.adjust($rose-button, $lightness: -10%);
+}
+
+.swal2-backdrop {
+    background: rgba(0, 0, 0, 0.7);
+}
