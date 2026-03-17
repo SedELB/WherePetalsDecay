@@ -79,8 +79,8 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             return;
         }
 
-        if (lobby.playerCount >= lobby.game.maxPlayers) {
-            socket.emit(JoinGameEvents.LobbyError, 'Ce salon est plein !');
+        if (lobby.isLocked || lobby.playerCount >= lobby.game.maxPlayers) {
+            socket.emit(JoinGameEvents.LobbyError, 'Ce salon est verrouillé ou plein !');
             return;
         }
 
@@ -170,7 +170,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     private getOccupiedAvatars(lobby: Lobby): string[] {
         const confirmedAvatars = lobby.players
             .map((player) => player.character?.avatar)
-            .filter((avat) => avat !== undefined && avat !== null && avat !== '');
+            .filter((avat): avat is string => !!avat);
 
         const pendingAvatars = Object.values(lobby.pendingAvatars || {});
         return [...confirmedAvatars, ...pendingAvatars];

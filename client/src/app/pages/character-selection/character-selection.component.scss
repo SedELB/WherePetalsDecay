@@ -185,6 +185,38 @@ p {
     justify-content: center;
 }
 
+.lock-notification-toast {
+    position: fixed;
+    top: 32px;
+    right: 32px;
+    z-index: 100;
+    background: rgba(12, 14, 34, 0.92);
+    border: 1px solid rgba(0, 200, 100, 0.5);
+    border-radius: 10px;
+    padding: 14px 28px;
+    color: #00c864;
+    font-weight: 700;
+    font-size: 1.1em;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    animation: slide-in-right 0.35s ease-out;
+
+    &.locked {
+        border-color: rgba(255, 80, 80, 0.5);
+        color: #ff5050;
+    }
+}
+
+@keyframes slide-in-right {
+    from {
+        opacity: 0;
+        transform: translateX(60px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
 .no-games {
     color: white;
     text-align: center;
