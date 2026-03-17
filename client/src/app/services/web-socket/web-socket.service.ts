@@ -43,6 +43,10 @@ export class WebSocketService implements OnDestroy {
         socket?.off(event);
     }
 
+    offMultiple(namespace: string, events: string[]) {
+        events.forEach(e => this.offNamespace(namespace, e));
+    }
+
     emitNamespace<T>(namespace: string, event: string, data?: T): void {
         const socket = this.sockets.get(namespace);
         socket?.emit(event, data);
