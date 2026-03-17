@@ -26,7 +26,7 @@ export class GamePageComponent implements OnInit {
     readonly routes = ROUTES;
     readonly costInfinity = Infinity;
     readonly tileNames: Record<string, string> = {
-        floor: 'Plancher',
+        floor: 'Sol',
         wall: 'Mur',
         water: 'Eau',
         ice: 'Glace',
