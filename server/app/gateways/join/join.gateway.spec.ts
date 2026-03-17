@@ -79,6 +79,7 @@ describe('JoinGateway', () => {
             emit: jest.fn(),
             join: jest.fn(),
             to: jest.fn().mockReturnValue(mockTo),
+            broadcast: { to: jest.fn().mockReturnValue(mockTo) },
         } as unknown as Socket;
 
         mockServer = {

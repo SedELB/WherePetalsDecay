@@ -200,7 +200,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             if (leavingPlayer){
                 this.logger.log(`${leavingPlayer.character.name} left lobby: ${lobby.lobbyId}`);
                 this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
-
+                socket.broadcast.to(lobby.lobbyId).emit(JoinGameEvents.PlayerLeft, leavingPlayer);
             } else {
                 this.logger.log(`Pending player ${socket.id} left lobby: ${lobby.lobbyId}`);
                 this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
@@ -209,7 +209,6 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
             this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
             this.server.to(lobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, lobby);
-            socket.broadcast.to(lobby.lobbyId).emit(JoinGameEvents.PlayerLeft, leavingPlayer);
         }
 
         this.handleGetLobbies();
