@@ -117,6 +117,10 @@
         </div>
     }
 
+    @if (isDebugModeActive()){
+        <h2 class="debug-text">DEBUG</h2>
+    }
+
     <aside class="side-panel right">
         <section class="chat-box">
             <h3 class="section-title">Chat</h3>
@@ -142,7 +146,7 @@
             </div>
         </section>
 
-        <nav class="action-bar">
+        <div class="action-bar">
             @if (adjacentPlayers().length > 0 && isMyTurn()) {
                 <div class="combat-actions">
                     <h4>Combattre</h4>
@@ -151,7 +155,7 @@
                     }
                 </div>
             }
-            <app-button (click)="onEndTurn()" [disabled]="!isMyTurn()">Finir Tour</app-button>
-        </nav>
+            <app-button (click)="onEndTurn()" [disabled]="isEndTurnDisabled()">Finir Tour</app-button>
+        </div>
     </aside>
 </main>
