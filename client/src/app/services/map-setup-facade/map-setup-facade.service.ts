@@ -67,14 +67,11 @@ export class MapSetupFacadeService {
   }
 
   async saveGame(game: Game, initialMode: 'create' | 'edit', thumbnailElement: HTMLElement): Promise<void> {
-    let mode = initialMode;
-
-
+    const mode = initialMode;
     try {
       const thumbnail = await this.captureThumbnail(thumbnailElement);
       game.thumbnail = thumbnail;
     } catch {
-      // alert("Problème d'enregistrement : la génération de l'image a échouée ");
       swal.fire({
         title: `Problème d'enregistrement`,
         text: `La génération de l'image a échoué.`,
@@ -93,58 +90,50 @@ export class MapSetupFacadeService {
         icon: 'error',
         confirmButtonText: 'OK',
         scrollbarPadding: false,
+        width: '900px',
       });
       return;
     }
 
+    const handleSuccess = (finalMode: 'create' | 'edit') => {
+      swal.fire({
+        title: 'Succès',
+        text: `Jeu ${finalMode === 'create' ? 'créé' : 'sauvegardé'} avec succès !`,
+        icon: 'success',
+        confirmButtonText: 'OK',
+      });
+      this.router.navigate(['/admin']);
+    };
+
+    const handleError = (err: HttpErrorResponse) => {
+      swal.fire({
+        title: 'Jeu invalide !',
+        html: `<div style="text-align:left; white-space:pre-line">${err.error.replace(/\\n/g, '\n')}</div>`,
+        icon: 'error',
+        confirmButtonText: 'OK',
+        scrollbarPadding: false,
+        width: '900px',
+      });
+    };
+
     if (mode === 'edit') {
       this.communicationService.getAllGames().subscribe((allGames) => {
         const originalGame = allGames.find((currentGame) => currentGame._id === game._id);
-        if (!originalGame) {
-          mode = 'create';
-        }
+        const finalMode = originalGame ? 'edit' : 'create';
 
-        const saveOperation = mode === 'create'
+        const saveOperation = finalMode === 'create'
           ? this.communicationService.createGame(game)
           : this.communicationService.modifyGame(game);
 
         saveOperation.subscribe({
-          next: () => {
-            swal.fire({
-              title: 'Succès',
-              text: `Jeu ${mode === 'create' ? 'créé' : 'sauvegardé'} avec succès !`,
-              icon: 'success',
-              confirmButtonText: 'OK',
-            });
-            this.router.navigate(['/admin']);
-          },
-          error: (err: HttpErrorResponse) => {
-            swal.fire({
-              title: 'Jeu invalide !',
-              html: `<div style="text-align:left; white-space:pre-line">${err.error.replace(/\\n/g, '\n')}</div>`,
-              icon: 'error',
-              confirmButtonText: 'OK',
-              scrollbarPadding: false,
-            });
-          },
+          next: () => handleSuccess(finalMode),
+          error: handleError,
         });
       });
     } else {
-      const saveOperation = this.communicationService.createGame(game);
-
-      saveOperation.subscribe({
-        next: () => {
-          swal.fire({
-            title: 'Succès',
-            text: `Jeu créé avec succès`,
-            icon: 'success',
-            confirmButtonText: 'OK',
-          });
-          this.router.navigate(['/admin']);
-        },
-        error: (err: HttpErrorResponse) => {
-          alert(`Une erreur s'est produite en enregistrant un nouveau jeu : ${err.error}`);
-        },
+      this.communicationService.createGame(game).subscribe({
+        next: () => handleSuccess('create'),
+        error: handleError,
       });
     }
   }
