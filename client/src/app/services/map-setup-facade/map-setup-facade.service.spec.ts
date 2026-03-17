@@ -313,25 +313,25 @@ describe('MapSetupFacadeService', () => {
 
     // Test successful thumbnail capture
     it('captures a thumbnail when the DOM element exists', async () => {
-        const el = document.createElement('div');
-        el.style.width = `${THUMBNAIL_SIZE_PX}px`;
-        el.style.height = `${THUMBNAIL_SIZE_PX}px`;
-        document.body.appendChild(el);
+        const element = document.createElement('div');
+        element.style.width = `${THUMBNAIL_SIZE_PX}px`;
+        element.style.height = `${THUMBNAIL_SIZE_PX}px`;
+        document.body.appendChild(element);
 
-        const dataUrl = await (service as unknown as CaptureThumbnailApi).captureThumbnail(el);
+        const dataUrl = await (service as unknown as CaptureThumbnailApi).captureThumbnail(element);
 
         expect(typeof dataUrl).toBe('string');
         expect(dataUrl.startsWith('data:')).toBeTrue();
 
-        el.remove();
+        element.remove();
     });
 
     // Test thumbnail capture with invalid element
     it('throws if the thumbnail element cannot be captured', async () => {
-        const el = {} as HTMLElement;
+        const element = {} as HTMLElement;
 
         await expectAsync(
-            (service as unknown as CaptureThumbnailApi).captureThumbnail(el),
+            (service as unknown as CaptureThumbnailApi).captureThumbnail(element),
         ).toBeRejected();
     });
 });
