@@ -170,7 +170,6 @@ export class MapSetupService {
         }
 
         if (event.button === MouseEventType.RightClick) {
-            event.preventDefault();
             if (activeTileTexture) {
                 this.deleteTile({ game, rowIndex, colIndex, tileAttribute: activeTileTexture, event, counts });
             } else if (activeTileItem) {
