@@ -17,6 +17,7 @@ export interface ActiveGame {
 }
 
 export interface TurnCallbacks {
+    onBetweenTurnCountdown: (lobbyId: string, secondsLeft: number) => void;
     onTurnCountdown: (lobbyId: string, secondsLeft: number) => void;
     onTurnStarted: (lobbyId: string, playerSocketId: string) => void;
     onTurnEnded: (lobbyId: string, playerSocketId: string) => void;

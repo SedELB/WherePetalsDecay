@@ -8,6 +8,7 @@ export enum JoinGameEvents {
     PlayerLeft = 'playerLeft',
     DebugToggled = 'debugToogled',
     PlayerTeleported = 'playerTeleported',
+    BetweenTurnCountdown = 'betweenTurnCountDown',
 
     // Request events
     CreateLobby = 'createLobby',

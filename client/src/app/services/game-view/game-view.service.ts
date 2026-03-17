@@ -9,6 +9,8 @@ import { Lobby } from '@common/lobby';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
 
+const ONE_SECOND_DELAY = 1000;
+
 export interface PlayerMovedData {
     socketId: string;
     position: Vec2;
@@ -34,6 +36,7 @@ export class GameViewService {
     private readonly namespace = SocketNamespace.Join;
 
     readonly isDebugModeActive = signal<boolean>(false);
+    readonly disableEndTurn = signal<boolean>(false);
     readonly gameLobby = signal<Lobby | null>(null);
     readonly playerPositions = signal<Record<string, Vec2>>({});
     readonly turnOrder = signal<string[]>([]);
@@ -66,6 +69,16 @@ export class GameViewService {
 
         this.webSocketService.onNamespace<string>(this.namespace, JoinGameEvents.TurnStarted, (playerSocketId) => {
             this.activePlayerSocketId.set(playerSocketId);
+        });
+
+        this.webSocketService.onNamespace<number>(this.namespace, JoinGameEvents.BetweenTurnCountdown, (secondsLeft) => {
+            this.disableEndTurn.set(true);
+            this.turnCountdown.set(secondsLeft);
+            if (secondsLeft <= 1) {
+                setTimeout(() => {
+                    this.disableEndTurn.set(false);
+                }, ONE_SECOND_DELAY);
+            }
         });
 
         this.webSocketService.onNamespace<number>(this.namespace, JoinGameEvents.TurnCountdown, (secondsLeft) => {
@@ -189,6 +202,7 @@ export class GameViewService {
         this.gameOver.set(null);
         this.activePlayerSocketId.set(null);
         this.turnCountdown.set(0);
+        this.disableEndTurn.set(false);
         this.reachableTiles.set([]);
         this.movementPoints.set(0);
         this.tileInfo.set(null);
