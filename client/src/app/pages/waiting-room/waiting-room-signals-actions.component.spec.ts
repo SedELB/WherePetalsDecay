@@ -1,23 +1,9 @@
 /**
- * WaitingRoomComponent Test Suite — Part 2: Computed Signals, Host Actions & Cleanup
- *
- * This file continues the WaitingRoomComponent tests and covers:
- *
- * 1. Computed Signals - Tests the four computed signals (currentPlayer, isOrganizer,
- *    canStartGame, players) which derive UI state from the currentLobby signal. Each
- *    computed is tested for its normal case and edge cases (empty lobby, missing player).
- *
- * 2. Host Actions - Tests organizer-only actions: kickPlayer, startGame, toggleLock.
- *    Verifies that non-organizers cannot trigger these actions and that the correct
- *    WebSocket events are emitted with proper payloads.
- *
- * 3. Cleanup - Verifies ngOnDestroy removes sessionStorage keys and unsubscribes
- *    from all five WebSocket listeners to prevent memory leaks.
- *
- * WebSocket Mocking Strategy:
- * We mock WebSocketService with jasmine spies that use callFake to capture event
- * callbacks by event name. The getSocketId spy returns a fixed socket ID to enable
- * computed signal testing.
+ * Test suite for the WaitingRoomComponent (Part 2: Computed Signals, Host Actions & Cleanup).
+ * This continuation of the test suite validates the complex reactive state and permissions of the waiting room.
+ * It thoroughly tests computed signals (current player identification, organizer privileges, game start validation) under both optimal conditions and edge cases like missing lobby data.
+ * Furthermore, it verifies that host-exclusive actions (kicking players, starting the match, locking the room) are strictly protected against unauthorized access by standard players.
+ * Finally, the suite ensures robust component teardown by confirming all WebSocket listeners and session storage keys are properly cleaned up upon destruction.
  */
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -96,7 +82,6 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
         ...overrides,
     });
 
-    // Helper: Capture WebSocket event callbacks by event name
     const capturedCallbacks = new Map<string, (...args: unknown[]) => void>();
     const createWebSocketMock = () => {
         const mock = jasmine.createSpyObj('WebSocketService', [
@@ -140,33 +125,21 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
         sessionStorage.clear();
     });
 
-    // Computed Signal Tests
-    //
-    // The waiting room uses four computed signals that derive UI state from
-    // currentLobby. Each computed must handle undefined lobby gracefully.
-
     describe('computed signals', () => {
-        // currentPlayer Tests
-        //
-        // currentPlayer finds the player in the lobby whose socketId matches
-        // the WebSocket service's socket ID. Returns undefined if no match.
-
         describe('currentPlayer', () => {
+            /** Gracefully handles initialization states by returning undefined if the lobby data has not yet been fetched from the server. */
             it('should return undefined when lobby is not set', () => {
                 expect(component.currentPlayer()).toBeUndefined();
             });
 
+            /** Successfully isolates and identifies the local player object by matching the underlying socket ID with the roster. */
             it('should return the current player based on socket ID', () => {
                 component.currentLobby.set(createMockLobby());
                 const player = component.currentPlayer();
                 expect(player?.socketId).toBe(HOST_SOCKET_ID);
             });
 
-            // Edge Case: Socket ID not found in players list
-            //
-            // Can happen if the player was kicked but the component hasn't
-            // navigated away yet.
-
+            /** Protects against runtime errors by safely returning undefined if the player's socket unexpectedly goes missing from the lobby roster, such as immediately after being kicked. */
             it('should return undefined when socket ID is not in players list', () => {
                 webSocketService.getSocketId.and.returnValue('unknown-socket');
                 component.currentLobby.set(createMockLobby());
@@ -174,80 +147,59 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
             });
         });
 
-        // isOrganizer Tests
-        //
-        // isOrganizer checks if currentPlayer's socketId matches the lobby's
-        // hostSocketId. Only the organizer can kick, lock, and start the game.
-
         describe('isOrganizer', () => {
+            /** Accurately grants organizational UI privileges when the local player's socket matches the designated host ID in the lobby state. */
             it('should return true when current player is the host', () => {
                 component.currentLobby.set(createMockLobby());
                 expect(component.isOrganizer()).toBeTrue();
             });
 
+            /** Strictly denies organizational privileges to standard connected players to secure administrative actions like kicking or locking the room. */
             it('should return false when current player is not the host', () => {
                 webSocketService.getSocketId.and.returnValue(PLAYER_SOCKET_ID);
                 component.currentLobby.set(createMockLobby());
                 expect(component.isOrganizer()).toBeFalse();
             });
 
-            // Edge Case: Lobby not loaded yet
-            //
-            // When lobby is undefined, both hostSocketId and currentPlayer socketId
-            // are undefined, so undefined === undefined evaluates to true. This is
-            // safe because canStartGame still returns false (playerCount is 0).
-
+            /** Resolves to a true fallback safely when the lobby is undefined during initialization, relying on secondary guards to prevent premature administrative actions. */
             it('should return true when lobby is not set due to undefined equality', () => {
                 expect(component.isOrganizer()).toBeTrue();
             });
         });
 
-        // canStartGame Tests
-        //
-        // Game can only start when the current player is the organizer AND
-        // there are at least 2 players in the lobby.
-
         describe('canStartGame', () => {
+            /** Authorizes the game start sequence strictly when the requesting player is the host and the lobby meets the minimum capacity threshold. */
             it('should return true when organizer and enough players', () => {
                 component.currentLobby.set(createMockLobby({ playerCount: MIN_PLAYERS_TO_START }));
                 expect(component.canStartGame()).toBeTrue();
             });
 
-            // Edge Case: Only 1 player (host alone)
-            //
-            // A game cannot start with fewer than 2 players, even if
-            // the host wants to start.
-
+            /** Enforces the minimum player constraints to prevent the host from launching a solitary, invalid game session. */
             it('should return false when only 1 player in lobby', () => {
                 component.currentLobby.set(createMockLobby({ playerCount: 1 }));
                 expect(component.canStartGame()).toBeFalse();
             });
 
+            /** Blocks standard players from launching the match even if the lobby is fully populated and ready. */
             it('should return false when not the organizer even with enough players', () => {
                 webSocketService.getSocketId.and.returnValue(PLAYER_SOCKET_ID);
                 component.currentLobby.set(createMockLobby({ playerCount: MIN_PLAYERS_TO_START }));
                 expect(component.canStartGame()).toBeFalse();
             });
 
-            // Edge Case: Lobby undefined
-            //
-            // Before lobby data loads, canStartGame must be false.
-
+            /** Acts as a strict initialization guard, defaulting the start capability to false before the lobby state is resolved. */
             it('should return false when lobby is undefined', () => {
                 expect(component.canStartGame()).toBeFalse();
             });
         });
 
-        // players Tests
-        //
-        // Returns the player list with the organizer always first.
-        // This ensures the host is visually distinguished at the top.
-
         describe('players', () => {
+            /** Defaults to an empty rendering array to prevent template errors if the lobby state is currently unavailable. */
             it('should return empty array when lobby is not set', () => {
                 expect(component.players()).toEqual([]);
             });
 
+            /** Manipulates the player list order to ensure the session host is visually prioritized at the very top of the UI roster. */
             it('should return organizer first in the list', () => {
                 component.currentLobby.set(createMockLobby());
                 const playerList = component.players();
@@ -255,6 +207,7 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
                 expect(playerList[0].socketId).toBe(HOST_SOCKET_ID);
             });
 
+            /** Appends standard participants directly beneath the host in the UI list flow. */
             it('should place non-host players after organizer', () => {
                 component.currentLobby.set(createMockLobby());
                 const playerList = component.players();
@@ -264,22 +217,14 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
         });
     });
 
-    // Host Action Tests
-    //
-    // These tests verify the three organizer-only actions: kick, start, lock.
-    // Each action emits a WebSocket event only when the caller is authorized.
-
     describe('host actions', () => {
         beforeEach(() => {
             component.currentLobby.set(createMockLobby());
             component.lobbyId.set(LOBBY_ID);
         });
 
-        // onKickPlayer Tests
-        //
-        // Only the organizer can kick players, and they cannot kick themselves.
-
         describe('onKickPlayer', () => {
+            /** Allows the recognized organizer to successfully dispatch a socket request to remove a specific opponent from the waiting room. */
             it('should emit KickPlayer event when organizer kicks another player', () => {
                 component.onKickPlayer(PLAYER_SOCKET_ID);
 
@@ -290,20 +235,13 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
                 );
             });
 
-            // Edge Case: Organizer tries to kick themselves
-            //
-            // The onKickPlayer method checks targetSocketId !== currentPlayer.socketId
-            // so the host cannot remove themselves.
-
+            /** Protects the session stability by intercepting and ignoring any accidental requests from the host attempting to kick themselves. */
             it('should not emit KickPlayer when organizer tries to kick themselves', () => {
                 component.onKickPlayer(HOST_SOCKET_ID);
                 expect(webSocketService.emitNamespace).not.toHaveBeenCalled();
             });
 
-            // Edge Case: Non-organizer tries to kick
-            //
-            // Regular players should not be able to kick anyone.
-
+            /** Secures the administrative kick feature by strictly ignoring execution attempts originating from standard players. */
             it('should not emit KickPlayer when non-organizer tries to kick', () => {
                 webSocketService.getSocketId.and.returnValue(PLAYER_SOCKET_ID);
                 component.currentLobby.set(createMockLobby());
@@ -313,9 +251,8 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
             });
         });
 
-        // onStartGame Tests
-
         describe('onStartGame', () => {
+            /** Transmits the definitive game start command to the server when initiated by the host under valid lobby conditions. */
             it('should emit StartGame event when organizer starts with enough players', () => {
                 component.onStartGame();
 
@@ -326,11 +263,7 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
                 );
             });
 
-            // Edge Case: Not enough players to start
-            //
-            // canStartGame returns false with < 2 players, so onStartGame
-            // should not emit the event.
-
+            /** Intercepts and blocks the server broadcast if the host clicks the start button before the required player threshold is met. */
             it('should not emit StartGame when not enough players', () => {
                 component.currentLobby.set(createMockLobby({ playerCount: 1 }));
                 component.onStartGame();
@@ -338,9 +271,8 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
             });
         });
 
-        // onToggleLock Tests
-
         describe('onToggleLock', () => {
+            /** Allows the host to successfully request the server to lock or unlock the lobby, preventing or allowing new connections. */
             it('should emit ToggleLock event when organizer toggles lock', () => {
                 component.onToggleLock();
 
@@ -351,10 +283,7 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
                 );
             });
 
-            // Edge Case: Non-organizer tries to toggle lock
-            //
-            // Only the host should be able to lock/unlock the lobby.
-
+            /** Secures the lobby state by ignoring unauthorized attempts from standard players to modify the room's lock status. */
             it('should not emit ToggleLock when non-organizer tries', () => {
                 webSocketService.getSocketId.and.returnValue(PLAYER_SOCKET_ID);
                 component.currentLobby.set(createMockLobby());
@@ -364,9 +293,8 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
             });
         });
 
-        // leaveLobby Tests
-
         describe('leaveLobby', () => {
+            /** Properly notifies the backend socket architecture when the local player decides to exit the staging area. */
             it('should emit LeaveLobby event', () => {
                 component.leaveLobby();
 
@@ -378,11 +306,6 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
         });
     });
 
-    // Cleanup Tests
-    //
-    // ngOnDestroy must clean up sessionStorage and unsubscribe from all
-    // five WebSocket listeners to prevent memory leaks.
-
     describe('ngOnDestroy', () => {
         const EXPECTED_OFF_COUNT = 5;
 
@@ -391,20 +314,17 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
             sessionStorage.setItem('waitingRoom_' + LOBBY_ID, 'true');
         });
 
+        /** Cleans up the local browser session flags to ensure the user does not get incorrectly routed upon returning to the application later. */
         it('should remove sessionStorage key on destroy', () => {
             component.ngOnDestroy();
             expect(sessionStorage.getItem('waitingRoom_' + LOBBY_ID)).toBeNull();
         });
 
+        /** Guarantees a comprehensive teardown of all socket event handlers to secure memory allocation and prevent ghost executions. */
         it(`should call offNamespace ${EXPECTED_OFF_COUNT} times for all listeners`, () => {
             component.ngOnDestroy();
             expect(webSocketService.offNamespace).toHaveBeenCalledTimes(EXPECTED_OFF_COUNT);
         });
-
-        // Parameterized cleanup verification
-        //
-        // Each of the five events must be unsubscribed to prevent stale
-        // handlers from firing after navigation away.
 
         const cleanupEvents = [
             JoinGameEvents.LobbyUpdated,
@@ -414,6 +334,7 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
             JoinGameEvents.GameDeleted,
         ];
 
+        /** Iterates through the core network events to strictly detach each listener, preventing stale callbacks after the component has unmounted. */
         cleanupEvents.forEach((event) => {
             it(`should unsubscribe from ${event}`, () => {
                 component.ngOnDestroy();
