@@ -86,6 +86,12 @@
         </div>
     </section>
 
+    @if (turnNotification(); as notification) {
+        <div class="turn-notification-toast">
+            <span>{{ notification }}</span>
+        </div>
+    }
+
     @if (gameOver(); as over) {
         <div class="game-over-overlay">
             <div class="game-over-message">
