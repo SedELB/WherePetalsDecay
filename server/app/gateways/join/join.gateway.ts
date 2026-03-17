@@ -96,7 +96,9 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         if (updatedLobby) {
             socket.join(updatedLobby.lobbyId);
             socket.emit(JoinGameEvents.LobbyJoined, updatedLobby);
-            this.server.to(updatedLobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby); // For the waiting room, to add new player's info
+            this.server.to(updatedLobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby);
+            socket.broadcast.to(updatedLobby.lobbyId).emit(JoinGameEvents.PlayerJoined, payload.player);
+
             this.handleGetLobbies();
         }
     }
@@ -193,12 +195,14 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             socket.to(lobby.lobbyId).emit(JoinGameEvents.GameDeleted);
             this.lobbyService.deleteLobby(lobby.lobbyId);
         } else {
-            this.logger.log(`Player left lobby: ${lobby.lobbyId}`);
+            const leavingPlayer = lobby.players.find(player => player.socketId === socket.id);
+            this.logger.log(`${leavingPlayer.character.name} left lobby: ${lobby.lobbyId}`);
             this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
 
             const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
             this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
             this.server.to(lobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, lobby);
+            socket.broadcast.to(lobby.lobbyId).emit(JoinGameEvents.PlayerLeft, leavingPlayer);
         }
 
         this.handleGetLobbies();
