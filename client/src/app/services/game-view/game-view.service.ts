@@ -159,7 +159,7 @@ export class GameViewService {
     }
 
     // Utils
-    resetGameState(): void {
+    private resetGameState(): void {
         this.gameOver.set(null);
         this.activePlayerSocketId.set(null);
         this.turnCountdown.set(0);

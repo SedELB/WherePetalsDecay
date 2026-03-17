@@ -60,11 +60,11 @@ export class ChatComponent implements OnInit, OnDestroy, OnChanges, AfterViewChe
         this.messagesSub?.unsubscribe();
     }
 
-    get displayName(): string {
+    private get displayName(): string {
         return this.playerName?.trim() || 'Joueur';
     }
 
-    get canSend(): boolean {
+    protected get canSend(): boolean {
         return Boolean(!this.hasAbandoned && this.lobbyId.trim() && this.draftMessage.trim().length > 0);
     }
 
