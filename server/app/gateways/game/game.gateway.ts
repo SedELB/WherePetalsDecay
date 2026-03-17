@@ -155,7 +155,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     }
 
     private handleGameOver(lobbyId: string, winnerSocketId: string | null): void {
-        this.server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId });
+        this.server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId, isForfeit: false });
         this.gameLogicService.endGame(lobbyId);
         this.lobbyService.deleteLobby(lobbyId);
         this.server.in(lobbyId).socketsLeave(lobbyId);
