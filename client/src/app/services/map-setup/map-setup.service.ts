@@ -64,7 +64,7 @@ export class MapSetupService {
         return path;
     }
 
-    applyTile(params: TileParams): void {
+    private applyTile(params: TileParams): void {
         const { game, rowIndex, colIndex, tileAttribute, event, counts } = params;
         const currentTile = game.grid[rowIndex]?.[colIndex];
 
@@ -84,7 +84,7 @@ export class MapSetupService {
         }
     }
 
-    deleteTile(params: TileParams): void {
+    private deleteTile(params: TileParams): void {
         const { game, rowIndex, colIndex, tileAttribute, event, counts } = params;
         const currentTile = game.grid[rowIndex]?.[colIndex];
         const currItem = currentTile.item;
@@ -102,7 +102,7 @@ export class MapSetupService {
         }
     }
 
-    removeBlockingItemIfNeeded(gameTile: Tile, activeTileTexture: TileTexture, counts: TileItemCounts): void {
+    private removeBlockingItemIfNeeded(gameTile: Tile, activeTileTexture: TileTexture, counts: TileItemCounts): void {
         if ([TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed].includes(activeTileTexture) && gameTile.item) {
             const removedItem = gameTile.item;
             gameTile.item = null;
@@ -192,11 +192,11 @@ export class MapSetupService {
         return { isPaintingTiles, isErasingTiles };
     }
 
-    private handleErasePath(params: { 
-        game: Game; 
-        path: { row: number; col: number }[]; 
-        event: MouseEvent; 
-        counts: TileItemCounts 
+    private handleErasePath(params: {
+        game: Game;
+        path: { row: number; col: number }[];
+        event: MouseEvent;
+        counts: TileItemCounts
     }): void {
         const { game, path, event, counts } = params;
         for (const cell of path) {
@@ -300,11 +300,11 @@ export class MapSetupService {
         return { itemCounts: this.tileItemCountService.createRequiredCounts(game), selection: this.resetSelection() };
     }
 
-    extractGridTypes(game: Game): TileTexture[][] {
+    private extractGridTypes(game: Game): TileTexture[][] {
         return game.grid.map((row) => row.map((tile) => tile.type));
     }
 
-    extractPlacedObjects(game: Game): PlacedObject[] {
+    private extractPlacedObjects(game: Game): PlacedObject[] {
         const placedObjects: PlacedObject[] = [];
         game.grid.forEach((row, y) => {
             row.forEach((tile, x) => {
