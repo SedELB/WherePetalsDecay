@@ -109,7 +109,10 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             return;
         }
 
-        this.gameLogicService.endTurn(lobbyId);
+        const isLoserTurn = this.gameLogicService.isPlayerTurn(lobbyId, combatResult.loserId);
+        if (isLoserTurn) {
+            this.gameLogicService.endTurn(lobbyId);
+        }
     }
 
     @SubscribeMessage(JoinGameEvents.RequestTileInfo)
@@ -144,7 +147,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (!activeGame) return;
 
         const isGameOver = this.gameLogicService.executePlayerAbandon(
-            activeGame.lobby.lobbyId, 
+            activeGame.lobby.lobbyId,
             socket,
             this.server,
         );

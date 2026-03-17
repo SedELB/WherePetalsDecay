@@ -68,7 +68,7 @@
                                 [attr.data-tile]="cell.type"
                                 [class.cell--reachable]="isReachable(colIndex, rowIndex)"
                                 [class.cell--has-player]="getPlayerAtPosition(colIndex, rowIndex)"
-                                (contextmenu)="$event.preventDefault(); onRightClick({ x: colIndex, y: rowIndex })"
+                                (contextmenu)="onRightClick($event, { x: colIndex, y: rowIndex })"
                             >
                                 @if (cell.item; as obj) {
                                     <span class="cell-object" [attr.data-object]="obj">
@@ -100,7 +100,9 @@
                     <p>{{ getPlayerName(over.winnerSocketId) }} a atteint 3 victoires et remporte la partie.</p>
 
                 } @else {
-                    <p>La partie a été annulée.</p>
+                    <h2>Partie terminée</h2>
+                    <p>La partie s'est terminée sans gagnant.</p>
+                    <p>Tous les joueurs ont abandonné.</p>
                 }
             </div>
         </div>
