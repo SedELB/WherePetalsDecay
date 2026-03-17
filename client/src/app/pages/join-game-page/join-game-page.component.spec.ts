@@ -37,7 +37,10 @@ describe('JoinGamePageComponent', () => {
 
     const mockLobbies: Lobby[] = [
         createMockLobby({ lobbyId: 'lobby-1', hostSocketId: 'socket-1', playerCount: 2 }),
-        createMockLobby({ lobbyId: 'lobby-2', hostSocketId: 'socket-2', playerCount: 3, game: createMockGame({ gameMode: GameMode.Ctf, name: 'CTF Game' }) }),
+        createMockLobby({ 
+            lobbyId: 'lobby-2', hostSocketId: 'socket-2', playerCount: 3, 
+            game: createMockGame({ gameMode: GameMode.Ctf, name: 'CTF Game' }),
+        }),
     ];
 
     const randomNetworkLatency = (): number => Math.random() * LATENCY_RANGE + LATENCY_BASE;
@@ -45,7 +48,9 @@ describe('JoinGamePageComponent', () => {
     const capturedCallbacks = new Map<string, (...args: unknown[]) => void>();
     const createWebSocketMock = () => {
         const mock = jasmine.createSpyObj('WebSocketService', ['onNamespace', 'offNamespace', 'emitNamespace']);
-        mock.onNamespace.and.callFake((_ns: string, event: string, cb: (...args: unknown[]) => void) => { capturedCallbacks.set(event, cb); });
+        mock.onNamespace.and.callFake((_ns: string, event: string, cb: (...args: unknown[]) => void) => {
+            capturedCallbacks.set(event, cb);
+        });
         return mock;
     };
 
@@ -63,7 +68,9 @@ describe('JoinGamePageComponent', () => {
     });
 
     /** Ensures the component successfully instantiates without throwing any errors. */
-    it('should create', () => { expect(component).toBeTruthy(); });
+    it('should create', () => {
+        expect(component).toBeTruthy();
+    });
 
     describe('ngOnInit', () => {
         /** Confirms that the component safely hooks into the necessary real-time socket channels during its initialization phase. */
@@ -80,7 +87,7 @@ describe('JoinGamePageComponent', () => {
             expect(webSocketService.onNamespace).toHaveBeenCalledTimes(EXPECTED_LISTENER_COUNT);
         });
 
-        /** Prompts the component to instantly request the most up-to-date lobby state from the server rather than waiting for an eventual broadcast. */
+        /** Prompts the component to instantly request the most up-to-date lobby state from the server. */
         it('should ask the server for the lobby list right away', () => {
             fixture.detectChanges();
             expect(webSocketService.emitNamespace).toHaveBeenCalledWith(SocketNamespace.Join, JoinGameEvents.GetLobbies);
@@ -88,87 +95,140 @@ describe('JoinGamePageComponent', () => {
     });
 
     describe('activeLobbies', () => {
-        beforeEach(() => { fixture.detectChanges(); });
+        beforeEach(() => {
+            fixture.detectChanges();
+        });
 
         /** Ensures the internal list state initializes cleanly before any server communication takes place. */
-        it('should start empty', () => { expect(component.activeLobbies).toEqual([]); });
+        it('should start empty', () => {
+            expect(component.activeLobbies).toEqual([]);
+        });
 
         /** Validates that the local state synchronizes perfectly when the server successfully dispatches a populated list of lobbies. */
         it('should update when the server sends a lobby list', (done) => {
-            setTimeout(() => { capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(mockLobbies); expect(component.activeLobbies).toEqual(mockLobbies); done(); }, randomNetworkLatency());
+            setTimeout(() => {
+                capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(mockLobbies);
+                expect(component.activeLobbies).toEqual(mockLobbies);
+                done();
+            }, randomNetworkLatency());
         });
 
         /** Gracefully clears the local UI if the server indicates that all active sessions have been closed or completed. */
         it('should handle an empty list gracefully', (done) => {
-            setTimeout(() => { capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([]); expect(component.activeLobbies).toEqual([]); done(); }, randomNetworkLatency());
+            setTimeout(() => {
+                capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([]);
+                expect(component.activeLobbies).toEqual([]);
+                done();
+            }, randomNetworkLatency());
         });
 
-        /** Checks that the state handles a single active session properly without relying on array structures that require multiple elements. */
+        /** Checks that the state handles a single active session properly without relying on array structures. */
         it('should handle a single lobby', (done) => {
-            setTimeout(() => { capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([createMockLobby()]); expect(component.activeLobbies.length).toBe(1); done(); }, randomNetworkLatency());
+            setTimeout(() => {
+                capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([createMockLobby()]);
+                expect(component.activeLobbies.length).toBe(1);
+                done();
+            }, randomNetworkLatency());
         });
 
-        /** Enforces a complete replacement of the local lobby list on updates to prevent the UI from duplicating cards or showing ghost sessions. */
+        /** Enforces a complete replacement of the local lobby list on updates to prevent duplicating cards. */
         it('should replace the previous list on new updates', (done) => {
             capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(mockLobbies);
             const updated = [createMockLobby({ lobbyId: 'lobby-3', playerCount: 1 })];
-            setTimeout(() => { capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(updated); expect(component.activeLobbies.length).toBe(1); expect(component.activeLobbies[0].lobbyId).toBe('lobby-3'); done(); }, randomNetworkLatency());
+            
+            setTimeout(() => {
+                capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(updated);
+                expect(component.activeLobbies.length).toBe(1);
+                expect(component.activeLobbies[0].lobbyId).toBe('lobby-3');
+                done();
+            }, randomNetworkLatency());
         });
 
-        /** Verifies stability by ensuring the component retains only the very last state pushed by the server during rapid, consecutive broadcasts. */
+        /** Verifies stability by ensuring the component retains only the very last state pushed by the server. */
         it('should keep the latest data after rapid successive updates', () => {
             capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([createMockLobby({ lobbyId: 'batch-1' })]);
-            capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([createMockLobby({ lobbyId: 'batch-2' }), createMockLobby({ lobbyId: 'batch-3' })]);
+            capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([
+                createMockLobby({ lobbyId: 'batch-2' }), 
+                createMockLobby({ lobbyId: 'batch-3' }),
+            ]);
             capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([createMockLobby({ lobbyId: 'batch-4' })]);
+            
             expect(component.activeLobbies.length).toBe(1);
             expect(component.activeLobbies[0].lobbyId).toBe('batch-4');
         });
 
-        /** Validates that the list view supports displaying a heterogeneous mix of both Classic and Capture The Flag game modes without unintentionally filtering them out. */
+        /** Validates that the list view supports displaying a heterogeneous mix of both Classic and Capture The Flag game modes. */
         it('should preserve different game modes without filtering', (done) => {
             const mixed = [
                 createMockLobby({ lobbyId: 'classic', game: createMockGame({ gameMode: GameMode.Classic }) }),
                 createMockLobby({ lobbyId: 'ctf', game: createMockGame({ gameMode: GameMode.Ctf }) }),
             ];
-            setTimeout(() => { capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(mixed); expect(component.activeLobbies[0].game.gameMode).toBe(GameMode.Classic); expect(component.activeLobbies[1].game.gameMode).toBe(GameMode.Ctf); done(); }, randomNetworkLatency());
+            
+            setTimeout(() => {
+                capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(mixed);
+                expect(component.activeLobbies[0].game.gameMode).toBe(GameMode.Classic);
+                expect(component.activeLobbies[1].game.gameMode).toBe(GameMode.Ctf);
+                done();
+            }, randomNetworkLatency());
         });
     });
 
     describe('LobbyJoined event', () => {
-        beforeEach(() => { spyOn(router, 'navigate'); fixture.detectChanges(); });
-
-        /** Automatically transitions the user's view to the waiting room immediately upon receiving confirmation from the server that their join request was successful. */
-        it('should navigate to the waiting room with the lobby data', (done) => {
-            const joined = mockLobbies[0];
-            setTimeout(() => { capturedCallbacks.get(JoinGameEvents.LobbyJoined)?.(joined); expect(router.navigate).toHaveBeenCalledWith([component.routes.waitingRoom, joined.lobbyId], { state: { lobby: joined } }); done(); }, randomNetworkLatency());
+        beforeEach(() => {
+            spyOn(router, 'navigate');
+            fixture.detectChanges();
         });
 
-        /** Passes the exact lobby object retrieved from the server into the angular router state, ensuring the destination component has all necessary contextual data. */
+        /** Automatically transitions the user's view to the waiting room immediately upon receiving confirmation from the server. */
+        it('should navigate to the waiting room with the lobby data', (done) => {
+            const joined = mockLobbies[0];
+            setTimeout(() => {
+                capturedCallbacks.get(JoinGameEvents.LobbyJoined)?.(joined);
+                expect(router.navigate).toHaveBeenCalledWith(
+                    [component.routes.waitingRoom, joined.lobbyId], 
+                    { state: { lobby: joined } },
+                );
+                done();
+            }, randomNetworkLatency());
+        });
+
+        /** Passes the exact lobby object retrieved from the server into the angular router state. */
         it('should pass the actual received lobby in router state', (done) => {
             const joined = createMockLobby({ lobbyId: 'custom-id', playerCount: 4 });
-            setTimeout(() => { capturedCallbacks.get(JoinGameEvents.LobbyJoined)?.(joined); const args = (router.navigate as jasmine.Spy).calls.mostRecent().args; expect(args[1]?.state?.lobby).toEqual(joined); done(); }, randomNetworkLatency());
+            setTimeout(() => {
+                capturedCallbacks.get(JoinGameEvents.LobbyJoined)?.(joined);
+                const args = (router.navigate as jasmine.Spy).calls.mostRecent().args;
+                expect(args[1]?.state?.lobby).toEqual(joined);
+                done();
+            }, randomNetworkLatency());
         });
     });
 
     describe('selectLobby', () => {
-        beforeEach(() => { spyOn(router, 'navigate'); fixture.detectChanges(); });
+        beforeEach(() => {
+            spyOn(router, 'navigate');
+            fixture.detectChanges();
+        });
 
-        /** Routes the player to the character creation flow when they actively select a specific lobby from the interface list. */
+        /** Routes the player to the character creation flow when they actively select a specific lobby. */
         mockLobbies.forEach((lobby, i) => {
             it(`should navigate to character-selection for lobby #${i}`, () => {
                 component.selectLobby(lobby);
-                expect(router.navigate).toHaveBeenCalledWith(['/character-selection', lobby.lobbyId], { state: { game: lobby.game } });
+                expect(router.navigate).toHaveBeenCalledWith(
+                    ['/character-selection', lobby.lobbyId], 
+                    { state: { game: lobby.game } },
+                );
             });
         });
 
-        /** Injects the underlying game configuration into the router state so the character creation screen knows the constraints (like grid size or max players) of the chosen game. */
+        /** Injects the underlying game configuration into the router state. */
         it('should include the game object in the router state', () => {
             component.selectLobby(mockLobbies[1]);
             const args = (router.navigate as jasmine.Spy).calls.mostRecent().args;
             expect(args[1]?.state?.game).toEqual(mockLobbies[1].game);
         });
 
-        /** Confirms that the navigation and state passing behavior works flawlessly when the selected lobby is specifically running a Capture The Flag game mode. */
+        /** Confirms that the navigation and state passing behavior works flawlessly when the selected lobby is running CTF. */
         it('should work for CTF lobbies too', () => {
             const ctf = createMockLobby({ lobbyId: 'ctf-1', game: createMockGame({ gameMode: GameMode.Ctf, name: 'CTF Game' }) });
             component.selectLobby(ctf);
@@ -178,9 +238,11 @@ describe('JoinGamePageComponent', () => {
     });
 
     describe('ngOnDestroy', () => {
-        beforeEach(() => { fixture.detectChanges(); });
+        beforeEach(() => {
+            fixture.detectChanges();
+        });
 
-        /** Protects the application from memory leaks and ghost updates by strictly removing socket listeners when the component is unmounted. */
+        /** Protects the application from memory leaks and ghost updates by strictly removing socket listeners when unmounted. */
         [JoinGameEvents.UpdatedLobbiesList, JoinGameEvents.LobbyJoined].forEach((event) => {
             it(`should unsubscribe from ${event}`, () => {
                 fixture.destroy();
@@ -222,6 +284,7 @@ describe('JoinGamePageComponent', () => {
             fixture.detectChanges();
             capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(mockLobbies);
             expect(component.activeLobbies.length).toBe(2);
+            
             capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([]);
             expect(component.activeLobbies.length).toBe(0);
         });

@@ -1,7 +1,7 @@
 /**
  * Test suite for the LobbyCardComponent.
  * This is a pure presentation component designed to display a unified snapshot of a game session based on an injected Lobby object.
- * The tests heavily validate template rendering logic, ensuring game names, grid sizes, modes, and player capacities are displayed correctly across various configurations.
+ * The tests heavily validate template rendering logic, ensuring game names, grid sizes, modes, and player capacities are displayed correctly.
  * Additionally, it verifies that content projection via <ng-content> successfully renders external action buttons inside the card framework.
  */
 
@@ -17,7 +17,9 @@ import { LobbyCardComponent } from './lobby-card.component';
     template: `<app-lobby-card [lobby]="lobby"><button class="projected-btn">Join</button></app-lobby-card>`,
     imports: [LobbyCardComponent],
 })
-class TestHostComponent { lobby!: Lobby; }
+class TestHostComponent {
+    lobby!: Lobby;
+}
 
 describe('LobbyCardComponent', () => {
     let component: LobbyCardComponent;
@@ -26,6 +28,7 @@ describe('LobbyCardComponent', () => {
     const SMALL_MAX = 2;
     const MEDIUM_MAX = 4;
     const LARGE_MAX = 6;
+    const EXPECTED_LIST_ITEMS = 4;
 
     const createMockGame = (overrides: Partial<Game> = {}): Game => ({
         _id: 'game-1', name: 'Test Game', description: 'A test game', size: { rows: 10, cols: 10 },
@@ -40,7 +43,9 @@ describe('LobbyCardComponent', () => {
     });
 
     beforeEach(async () => {
-        await TestBed.configureTestingModule({ imports: [LobbyCardComponent] }).compileComponents();
+        await TestBed.configureTestingModule({ 
+            imports: [LobbyCardComponent], 
+        }).compileComponents();
         fixture = TestBed.createComponent(LobbyCardComponent);
         component = fixture.componentInstance;
     });
@@ -122,7 +127,7 @@ describe('LobbyCardComponent', () => {
         });
     });
 
-    /** Validates that the occupancy indicator accurately reflects completely filled lobbies across different size configurations without breaking. */
+    /** Validates that the occupancy indicator accurately reflects completely filled lobbies across different size configurations. */
     [{ max: SMALL_MAX, label: 'small' }, { max: MEDIUM_MAX, label: 'medium' }, { max: LARGE_MAX, label: 'large' }].forEach(({ max, label }) => {
         it(`should show "${max}/${max}" when a ${label} lobby is full`, () => {
             component.lobby = createMockLobby({ playerCount: max, game: createMockGame({ maxPlayers: max }) });
@@ -138,9 +143,12 @@ describe('LobbyCardComponent', () => {
         expect((fixture.nativeElement as HTMLElement).textContent).toContain(`1/${LARGE_MAX}`);
     });
 
-    /** Proves the component remains strictly reactive to its inputs, updating entirely when swapped with fresh data rather than caching old values. */
+    /** Proves the component remains strictly reactive to its inputs, updating entirely when swapped with fresh data rather than caching. */
     it('should update when the lobby input changes', () => {
-        component.lobby = createMockLobby({ game: createMockGame({ name: 'New Game', size: { rows: 20, cols: 20 }, gameMode: GameMode.Ctf }), playerCount: 3 });
+        component.lobby = createMockLobby({ 
+            game: createMockGame({ name: 'New Game', size: { rows: 20, cols: 20 }, gameMode: GameMode.Ctf }), 
+            playerCount: 3,
+        });
         fixture.detectChanges();
         const text = (fixture.nativeElement as HTMLElement).textContent;
         expect(text).toContain('New Game');
@@ -148,7 +156,7 @@ describe('LobbyCardComponent', () => {
         expect(text).toContain('CTF');
     });
 
-    /** Verifies that the CSS and template structures are robust enough to display exceptionally long game names without crashing or truncating unexpectedly. */
+    /** Verifies that the CSS and template structures are robust enough to display exceptionally long game names without crashing. */
     it('should render a very long game name without truncation', () => {
         const longName = 'Un Nom De Jeu Très Long Pour Tester Les Limites';
         component.lobby = createMockLobby({ game: createMockGame({ name: longName }) });
@@ -166,7 +174,13 @@ describe('LobbyCardComponent', () => {
 
     /** A comprehensive integration check ensuring all customized data fields render perfectly together in a single cohesive CTF lobby card. */
     it('should render all fields correctly for a CTF lobby', () => {
-        component.lobby = createMockLobby({ playerCount: 2, game: createMockGame({ name: 'Capture The Flag', size: { rows: 15, cols: 15 }, gameMode: GameMode.Ctf, maxPlayers: MEDIUM_MAX, thumbnail: 'ctf.png' }) });
+        component.lobby = createMockLobby({ 
+            playerCount: 2, 
+            game: createMockGame({ 
+                name: 'Capture The Flag', size: { rows: 15, cols: 15 }, 
+                gameMode: GameMode.Ctf, maxPlayers: MEDIUM_MAX, thumbnail: 'ctf.png',
+            }),
+        });
         fixture.detectChanges();
         const el = fixture.nativeElement as HTMLElement;
         expect(el.textContent).toContain('Capture The Flag');
@@ -187,15 +201,21 @@ describe('LobbyCardComponent', () => {
     it('should have four list items in the info section', () => {
         component.lobby = createMockLobby();
         fixture.detectChanges();
-        expect((fixture.nativeElement as HTMLElement).querySelectorAll('li').length).toBe(4);
+        expect((fixture.nativeElement as HTMLElement).querySelectorAll('li').length).toBe(EXPECTED_LIST_ITEMS);
     });
 });
 
 describe('LobbyCardComponent (content projection)', () => {
+    const DEFAULT_MAX_PLAYERS = 4;
+    
     const createMockLobby = (): Lobby => ({
         lobbyId: 'ABCDE', gameId: 'game-1', hostSocketId: 'socket-1', playerCount: 1,
         isLocked: false, pendingAvatars: {}, players: [],
-        game: { _id: 'game-1', name: 'Test', description: '', size: { rows: 10, cols: 10 }, gameMode: GameMode.Classic, thumbnail: 'thumb.png', maxPlayers: 4, grid: [], createdAt: new Date(), updatedAt: new Date(), isVisible: true },
+        game: { 
+            _id: 'game-1', name: 'Test', description: '', size: { rows: 10, cols: 10 }, 
+            gameMode: GameMode.Classic, thumbnail: 'thumb.png', maxPlayers: DEFAULT_MAX_PLAYERS, 
+            grid: [], createdAt: new Date(), updatedAt: new Date(), isVisible: true,
+        },
         chatHistory: [],
     });
 
@@ -203,7 +223,7 @@ describe('LobbyCardComponent (content projection)', () => {
         await TestBed.configureTestingModule({ imports: [TestHostComponent] }).compileComponents();
     });
 
-    /** Confirms that external interactive elements, such as a custom Join button passed via content projection (<ng-content>), are successfully integrated and rendered within the card's structure. */
+    /** Confirms that external interactive elements passed via content projection are successfully integrated. */
     it('should render projected content in the button slot', () => {
         const hostFixture = TestBed.createComponent(TestHostComponent);
         hostFixture.componentInstance.lobby = createMockLobby();

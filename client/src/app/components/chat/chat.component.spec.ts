@@ -40,7 +40,9 @@ describe('ChatComponent', () => {
     });
 
     /** Ensures the component successfully instantiates without throwing any errors. */
-    it('should create', () => { expect(component).toBeTruthy(); });
+    it('should create', () => {
+ expect(component).toBeTruthy(); 
+});
 
     describe('ngOnInit', () => {
         /** Confirms the component establishes a connection to the correct chat stream based on the provided lobby ID upon initialization. */
@@ -170,7 +172,9 @@ describe('ChatComponent', () => {
 
     describe('scroll behavior', () => {
         /** Verifies the default initialization state assumes the view is scrolled to the latest messages. */
-        it('should start near the bottom', () => { expect(component.isNearBottom).toBe(true); });
+        it('should start near the bottom', () => {
+ expect(component.isNearBottom).toBe(true); 
+});
 
         /** Ensures the component flags itself to remain snapped to the bottom of the feed immediately after the user sends a new message. */
         it('should flag for auto-scroll after sending', () => {
@@ -189,7 +193,9 @@ describe('ChatComponent', () => {
 
     describe('ngOnDestroy', () => {
         /** Verifies standard component destruction completes cleanly without memory leaks or syntax errors. */
-        it('should not throw', () => { expect(() => component.ngOnDestroy()).not.toThrow(); });
+        it('should not throw', () => {
+ expect(() => component.ngOnDestroy()).not.toThrow(); 
+});
 
         /** Ensures the teardown process is robust enough to survive being destroyed even if an active chat subscription was never fully established. */
         it('should survive being destroyed with no active subscription', () => {

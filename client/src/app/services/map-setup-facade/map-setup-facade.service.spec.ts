@@ -298,7 +298,7 @@ describe('MapSetupFacadeService', () => {
 
     expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ 
         title: 'Erreur',
-        text: "Une erreur s'est produite en enregistrant un nouveau jeu : creation failed"
+        text: "Une erreur s'est produite en enregistrant un nouveau jeu : creation failed",
     }));
 });
 

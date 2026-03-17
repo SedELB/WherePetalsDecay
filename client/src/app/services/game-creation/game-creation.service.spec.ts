@@ -2,7 +2,7 @@
  * Test suite for the GameCreationService.
  * This service manages a reactive, dynamically updated list of visible games by intercepting HTTP loads and synchronizing via WebSocket events.
  * The tests use HttpTestingController to intercept the initial API load and verify that the data correctly populates the BehaviorSubject.
- * Furthermore, it simulates real-time events (GameCreated, GameDeleted, GameVisibilityChanged) to guarantee the list appends, purges, and updates games reactively as the admin alters them.
+ * Furthermore, it simulates real-time events to guarantee the list appends, purges, and updates games reactively.
  */
 
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
@@ -37,9 +37,13 @@ describe('GameCreationService', () => {
     beforeEach(() => {
         webSocketService = jasmine.createSpyObj('WebSocketService', ['onNamespace']);
         webSocketService.onNamespace.and.callFake(<T>(_ns: string, event: string, cb: (data: T) => void) => {
-            if (event === GameCreationEvents.GameCreated) gameCreatedCallback = cb as (game: Game) => void;
-            else if (event === GameCreationEvents.GameDeleted) gameDeletedCallback = cb as (gameId: string) => void;
-            else if (event === GameCreationEvents.GameVisibilityChanged) visibilityChangedCallback = cb as (d: { gameId: string; isVisible: boolean }) => void;
+            if (event === GameCreationEvents.GameCreated) {
+                gameCreatedCallback = cb as unknown as (game: Game) => void;
+            } else if (event === GameCreationEvents.GameDeleted) {
+                gameDeletedCallback = cb as unknown as (gameId: string) => void;
+            } else if (event === GameCreationEvents.GameVisibilityChanged) {
+                visibilityChangedCallback = cb as unknown as (d: { gameId: string; isVisible: boolean }) => void;
+            }
         });
 
         TestBed.configureTestingModule({
@@ -50,43 +54,63 @@ describe('GameCreationService', () => {
         httpMock = TestBed.inject(HttpTestingController);
     });
 
-    afterEach(() => { httpMock.verify(); });
+    afterEach(() => {
+        httpMock.verify();
+    });
 
     /** Ensures the service successfully instantiates without throwing any dependency injection errors. */
-    it('should create the service', () => { expect(service).toBeTruthy(); });
+    it('should create the service', () => {
+        expect(service).toBeTruthy();
+    });
 
-    /** Verifies that the service immediately binds all three critical administrative listeners to maintain perfect synchronization with the server database. */
+    /** Verifies that the service immediately binds all three critical administrative listeners to maintain perfect synchronization. */
     it('should set up all three WebSocket listeners on construction', () => {
-        const EXPECTED = 3;
-        expect(webSocketService.onNamespace).toHaveBeenCalledTimes(EXPECTED);
-        expect(webSocketService.onNamespace).toHaveBeenCalledWith(SocketNamespace.Games, GameCreationEvents.GameCreated, jasmine.any(Function));
-        expect(webSocketService.onNamespace).toHaveBeenCalledWith(SocketNamespace.Games, GameCreationEvents.GameDeleted, jasmine.any(Function));
-        expect(webSocketService.onNamespace).toHaveBeenCalledWith(SocketNamespace.Games, GameCreationEvents.GameVisibilityChanged, jasmine.any(Function));
+        const EXPECTED_LISTENERS = 3;
+        expect(webSocketService.onNamespace).toHaveBeenCalledTimes(EXPECTED_LISTENERS);
+        expect(webSocketService.onNamespace).toHaveBeenCalledWith(
+            SocketNamespace.Games, GameCreationEvents.GameCreated, jasmine.any(Function),
+        );
+        expect(webSocketService.onNamespace).toHaveBeenCalledWith(
+            SocketNamespace.Games, GameCreationEvents.GameDeleted, jasmine.any(Function),
+        );
+        expect(webSocketService.onNamespace).toHaveBeenCalledWith(
+            SocketNamespace.Games, GameCreationEvents.GameVisibilityChanged, jasmine.any(Function),
+        );
     });
 
     /** Confirms the internal observable stream safely defaults to an empty array before any HTTP fetching or socket events populate it. */
     it('should start with an empty games list', (done) => {
-        service.visibleGames$.subscribe((g) => { expect(g).toEqual([]); done(); });
+        service.visibleGames$.subscribe((g) => {
+            expect(g).toEqual([]);
+            done();
+        });
     });
 
     /** Verifies that manually pushing a dataset via the setter directly cascades down through the observable stream to all listeners. */
     it('should expose games set via setGames', (done) => {
         service.setGames([MOCK_GAME, MOCK_GAME_2]);
-        service.visibleGames$.subscribe((g) => { expect(g).toEqual([MOCK_GAME, MOCK_GAME_2]); done(); });
+        service.visibleGames$.subscribe((g) => {
+            expect(g).toEqual([MOCK_GAME, MOCK_GAME_2]);
+            done();
+        });
     });
 
     describe('HTTP', () => {
         /** Instantiates an outgoing HTTP GET request to pull the authoritative baseline list of visible games from the backend. */
         it('should fetch visible games via GET', () => {
-            service.fetchVisibleGames().subscribe((g) => { expect(g).toEqual([MOCK_GAME, MOCK_GAME_2]); });
+            service.fetchVisibleGames().subscribe((g) => {
+                expect(g).toEqual([MOCK_GAME, MOCK_GAME_2]);
+            });
             const req = httpMock.expectOne(`${environment.serverUrl}/game/visibleGames`);
             expect(req.request.method).toBe('GET');
             req.flush([MOCK_GAME, MOCK_GAME_2]);
         });
 
-        /** Gracefully parses and handles situations where the backend database legitimately returns an empty payload indicating no active games exist. */
+        /** Gracefully parses and handles situations where the backend database legitimately returns an empty payload. */
         it('should handle an empty response from the API', () => {
-            service.fetchVisibleGames().subscribe((g) => { expect(g).toEqual([]); });
+            service.fetchVisibleGames().subscribe((g) => {
+                expect(g).toEqual([]);
+            });
             httpMock.expectOne(`${environment.serverUrl}/game/visibleGames`).flush([]);
         });
     });
@@ -96,13 +120,19 @@ describe('GameCreationService', () => {
         it('should add the new game to the list', (done) => {
             service.setGames([MOCK_GAME]);
             gameCreatedCallback(MOCK_GAME_2);
-            service.visibleGames$.subscribe((g) => { expect(g.length).toBe(2); done(); });
+            service.visibleGames$.subscribe((g) => {
+                expect(g.length).toBe(2);
+                done();
+            });
         });
 
         /** Ensures the append logic functions flawlessly even when seeding the very first game into a previously empty list. */
         it('should work on an empty list too', (done) => {
             gameCreatedCallback(MOCK_GAME);
-            service.visibleGames$.subscribe((g) => { expect(g.length).toBe(1); done(); });
+            service.visibleGames$.subscribe((g) => {
+                expect(g.length).toBe(1);
+                done();
+            });
         });
     });
 
@@ -111,20 +141,30 @@ describe('GameCreationService', () => {
         it('should remove the deleted game from the list', (done) => {
             service.setGames([MOCK_GAME, MOCK_GAME_2]);
             gameDeletedCallback('1');
-            service.visibleGames$.subscribe((g) => { expect(g.length).toBe(1); expect(g[0]._id).toBe('2'); done(); });
+            service.visibleGames$.subscribe((g) => {
+                expect(g.length).toBe(1);
+                expect(g[0]._id).toBe('2');
+                done();
+            });
         });
 
         /** Avoids undefined behavior or crashes by failing silently if instructed to delete an ID that doesn't exist locally. */
         it('should not crash when deleting a game that is not in the list', (done) => {
             service.setGames([MOCK_GAME]);
             gameDeletedCallback('999');
-            service.visibleGames$.subscribe((g) => { expect(g.length).toBe(1); done(); });
+            service.visibleGames$.subscribe((g) => {
+                expect(g.length).toBe(1);
+                done();
+            });
         });
 
         /** Allows the deletion routine to pass without throwing errors even if the local list is completely empty. */
         it('should handle deletion on an empty list', (done) => {
             gameDeletedCallback('1');
-            service.visibleGames$.subscribe((g) => { expect(g.length).toBe(0); done(); });
+            service.visibleGames$.subscribe((g) => {
+                expect(g.length).toBe(0);
+                done();
+            });
         });
     });
 
@@ -133,7 +173,10 @@ describe('GameCreationService', () => {
         it('should remove the game when it becomes hidden', (done) => {
             service.setGames([MOCK_GAME, MOCK_GAME_2]);
             visibilityChangedCallback({ gameId: '1', isVisible: false });
-            service.visibleGames$.subscribe((g) => { expect(g.find((x) => x._id === '1')).toBeUndefined(); done(); });
+            service.visibleGames$.subscribe((g) => {
+                expect(g.find((x) => x._id === '1')).toBeUndefined();
+                done();
+            });
         });
 
         /** Triggers a robust self-healing process by executing a full HTTP re-fetch of the database if a game is suddenly made visible again. */
@@ -149,7 +192,10 @@ describe('GameCreationService', () => {
         it('should not break when hiding a game that is not in the list', (done) => {
             service.setGames([MOCK_GAME]);
             visibilityChangedCallback({ gameId: '999', isVisible: false });
-            service.visibleGames$.subscribe((g) => { expect(g.length).toBe(1); done(); });
+            service.visibleGames$.subscribe((g) => {
+                expect(g.length).toBe(1);
+                done();
+            });
         });
 
         /** Verifies the BehaviorSubject's multicast capability, confirming that multiple independent components will all receive identical updates. */

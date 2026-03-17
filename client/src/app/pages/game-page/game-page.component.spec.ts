@@ -23,11 +23,19 @@ describe('GamePageComponent', () => {
 
     const LOCAL_SOCKET = 'local-socket';
     const OTHER_SOCKET = 'other-socket';
+    
+    const DEFAULT_LIFE = 6;
+    const BONUS_LIFE = 8;
+    const TIMER_SHORT = 5;
+    const TIMER_LONG = 25;
+    const TIMER_DELAY = 3;
+    const TILE_X = 3;
+    const TILE_Y = 5;
 
     const createPlayer = (socketId: string, overrides: Partial<Player> = {}): Player => ({
         socketId, isHost: false, winsCount: 0, hasAbandonned: false,
         character: {
-            name: `Player-${socketId}`, avatar: 'avatar.png', life: 6, speed: 4,
+            name: `Player-${socketId}`, avatar: 'avatar.png', life: DEFAULT_LIFE, speed: 4,
             attack: 4, defense: 4, lifeBonus: false, attackDice: 'D6', defenseDice: 'D4',
         },
         ...overrides,
@@ -53,7 +61,7 @@ describe('GamePageComponent', () => {
         turnCountdown: signal<number>(0),
         reachableTiles: signal<{ x: number; y: number }[]>([]),
         movementPoints: signal<number>(0),
-        tileInfo: signal<any>(null),
+        tileInfo: signal<unknown>(null),
         gameOver: signal<{ winnerSocketId: string | null; isForfeit?: boolean } | null>(null),
         getLocalSocketId: jasmine.createSpy('getLocalSocketId').and.returnValue(LOCAL_SOCKET),
         sendMove: jasmine.createSpy('sendMove'),
@@ -96,7 +104,9 @@ describe('GamePageComponent', () => {
     });
 
     /** Ensures the component successfully instantiates without throwing any errors. */
-    it('should create', () => { expect(component).toBeTruthy(); });
+    it('should create', () => {
+        expect(component).toBeTruthy();
+    });
 
     describe('ngOnInit', () => {
         /** Protects the game view by immediately redirecting users back to the homepage if they attempt to access the route without an active lobby loaded. */
@@ -149,25 +159,28 @@ describe('GamePageComponent', () => {
     });
 
     describe('maxLife', () => {
-        /** Validates that standard player characters accurately reflect the default maximum health pool of 6 hit points. */
-        it('should be 6 for a regular player (no life bonus)', () => {
+        /** Validates that standard player characters accurately reflect the default maximum health pool. */
+        it('should be DEFAULT_LIFE for a regular player (no life bonus)', () => {
             mockGameViewService.gameLobby.set(createLobby());
-            expect(component.maxLife()).toBe(6);
+            expect(component.maxLife()).toBe(DEFAULT_LIFE);
         });
 
-        /** Ensures that players who selected the specific life bonus trait during character creation correctly receive a higher maximum health pool of 8 hit points. */
-        it('should be 8 for a player with the life bonus', () => {
+        /** Ensures that players who selected the specific life bonus trait during character creation correctly receive a higher maximum health pool. */
+        it('should be BONUS_LIFE for a player with the life bonus', () => {
             const lobby = createLobby({
                 players: [
                     createPlayer(LOCAL_SOCKET, {
                         isHost: true,
-                        character: { name: 'Tank', avatar: '', life: 8, speed: 4, attack: 4, defense: 4, lifeBonus: true, attackDice: 'D6', defenseDice: 'D4' },
+                        character: { 
+                            name: 'Tank', avatar: '', life: BONUS_LIFE, speed: 4, 
+                            attack: 4, defense: 4, lifeBonus: true, attackDice: 'D6', defenseDice: 'D4', 
+                        },
                     }),
                     createPlayer(OTHER_SOCKET),
                 ],
             });
             mockGameViewService.gameLobby.set(lobby);
-            expect(component.maxLife()).toBe(8);
+            expect(component.maxLife()).toBe(BONUS_LIFE);
         });
     });
 
@@ -216,7 +229,9 @@ describe('GamePageComponent', () => {
 
         /** Ensures that players who have already quit the session are completely ignored and cannot be targeted for combat. */
         it('should exclude players who abandoned', () => {
-            const lobby = createLobby({ players: [createPlayer(LOCAL_SOCKET, { isHost: true }), createPlayer(OTHER_SOCKET, { hasAbandonned: true })] });
+            const lobby = createLobby({ 
+                players: [createPlayer(LOCAL_SOCKET, { isHost: true }), createPlayer(OTHER_SOCKET, { hasAbandonned: true })], 
+            });
             mockGameViewService.gameLobby.set(lobby);
             mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
             mockGameViewService.playerPositions.set({ [LOCAL_SOCKET]: { x: 2, y: 2 }, [OTHER_SOCKET]: { x: 3, y: 2 } });
@@ -289,9 +304,9 @@ describe('GamePageComponent', () => {
             mockGameViewService.gameLobby.set(createLobby());
             const event = new MouseEvent('contextmenu');
             spyOn(event, 'preventDefault');
-            component.onRightClick(event, { x: 3, y: 5 });
+            component.onRightClick(event, { x: TILE_X, y: TILE_Y });
             expect(event.preventDefault).toHaveBeenCalled();
-            expect(mockGameViewService.sendTileInfoRequest).toHaveBeenCalledWith('lobby-1', { x: 3, y: 5 });
+            expect(mockGameViewService.sendTileInfoRequest).toHaveBeenCalledWith('lobby-1', { x: TILE_X, y: TILE_Y });
         });
     });
 
@@ -308,13 +323,13 @@ describe('GamePageComponent', () => {
     describe('isReachable', () => {
         /** Evaluates to true when the requested tile coordinates are present within the server-validated set of reachable positions. */
         it('should return true for tiles in the reachable set', () => {
-            mockGameViewService.reachableTiles.set([{ x: 3, y: 2 }]);
-            expect(component.isReachable(3, 2)).toBe(true);
+            mockGameViewService.reachableTiles.set([{ x: TILE_X, y: 2 }]);
+            expect(component.isReachable(TILE_X, 2)).toBe(true);
         });
 
         /** Evaluates to false when checking a tile that is outside the character's current movement capabilities. */
         it('should return false for tiles not in the set', () => {
-            mockGameViewService.reachableTiles.set([{ x: 3, y: 2 }]);
+            mockGameViewService.reachableTiles.set([{ x: TILE_X, y: 2 }]);
             expect(component.isReachable(0, 0)).toBe(false);
         });
     });
@@ -322,13 +337,13 @@ describe('GamePageComponent', () => {
     describe('getPlayerAtPosition', () => {
         /** Correctly identifies and returns the unique socket ID of the player currently occupying the specified coordinates. */
         it('should return the socket ID of whoever is standing there', () => {
-            mockGameViewService.playerPositions.set({ [LOCAL_SOCKET]: { x: 2, y: 3 } });
-            expect(component.getPlayerAtPosition(2, 3)).toBe(LOCAL_SOCKET);
+            mockGameViewService.playerPositions.set({ [LOCAL_SOCKET]: { x: 2, y: TILE_X } });
+            expect(component.getPlayerAtPosition(2, TILE_X)).toBe(LOCAL_SOCKET);
         });
 
         /** Returns a null value gracefully when querying a set of coordinates that currently contain no player. */
         it('should return null for an empty tile', () => {
-            mockGameViewService.playerPositions.set({ [LOCAL_SOCKET]: { x: 2, y: 3 } });
+            mockGameViewService.playerPositions.set({ [LOCAL_SOCKET]: { x: 2, y: TILE_X } });
             expect(component.getPlayerAtPosition(0, 0)).toBeNull();
         });
     });
@@ -373,21 +388,21 @@ describe('GamePageComponent', () => {
         /** Ensures aesthetic consistency by padding single-digit seconds with a leading zero to maintain a strict MM:SS format. */
         it('should pad single-digit seconds with a leading zero', () => {
             mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
-            mockGameViewService.turnCountdown.set(5);
+            mockGameViewService.turnCountdown.set(TIMER_SHORT);
             expect(component.getTimerDisplay()).toBe('00:05');
         });
 
         /** Displays standard double-digit countdowns correctly without inadvertently modifying or corrupting the number string. */
         it('should not pad double-digit seconds', () => {
             mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
-            mockGameViewService.turnCountdown.set(25);
+            mockGameViewService.turnCountdown.set(TIMER_LONG);
             expect(component.getTimerDisplay()).toBe('00:25');
         });
 
         /** Confirms that the formatting logic also applies correctly to the short countdown bridging two turns. */
         it('should format the 3-second delay countdown', () => {
             mockGameViewService.activePlayerSocketId.set(null);
-            mockGameViewService.turnCountdown.set(3);
+            mockGameViewService.turnCountdown.set(TIMER_DELAY);
             expect(component.getTimerDisplay()).toBe('00:03');
         });
     });

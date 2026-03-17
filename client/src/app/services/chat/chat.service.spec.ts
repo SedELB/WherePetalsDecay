@@ -1,7 +1,7 @@
 /**
  * Test suite for the ChatService.
  * This service manages real-time messaging over WebSockets, appending single incoming messages and fully replacing histories when requested.
- * The tests validate message formatting constraints on the outgoing side (such as maximum character limits and whitespace trimming) and ensure that empty strings are blocked from being transmitted to the server.
+ * The tests validate message formatting constraints on the outgoing side (such as maximum character limits and whitespace trimming).
  */
 
 import { TestBed } from '@angular/core/testing';
@@ -16,9 +16,15 @@ describe('ChatService', () => {
     let webSocketService: jasmine.SpyObj<WebSocketService>;
     const capturedCallbacks = new Map<string, (...args: unknown[]) => void>();
 
+    const EXPECTED_MESSAGES = 3;
+    const OVER_LIMIT_LENGTH = 250;
+    const MAX_MESSAGE_LENGTH = 200;
+
     const createWebSocketMock = () => {
         const mock = jasmine.createSpyObj('WebSocketService', ['onNamespace', 'offNamespace', 'emitNamespace', 'getSocketId']);
-        mock.onNamespace.and.callFake((_ns: string, event: string, cb: (...args: unknown[]) => void) => { capturedCallbacks.set(event, cb); });
+        mock.onNamespace.and.callFake((_ns: string, event: string, cb: (...args: unknown[]) => void) => {
+            capturedCallbacks.set(event, cb);
+        });
         return mock;
     };
 
@@ -36,10 +42,12 @@ describe('ChatService', () => {
     });
 
     /** Ensures the service successfully instantiates without throwing any dependency injection errors. */
-    it('should be created', () => { expect(service).toBeTruthy(); });
+    it('should be created', () => {
+        expect(service).toBeTruthy();
+    });
 
     describe('constructor', () => {
-        /** Verifies that the service immediately binds listeners for both individual chat updates and bulk history payloads upon initialization. */
+        /** Verifies that the service immediately binds listeners for both individual chat updates and bulk history payloads. */
         [JoinGameEvents.ReceivedChatMessage, JoinGameEvents.ChatHistorySent].forEach((event) => {
             it(`should listen for ${event}`, () => {
                 expect(webSocketService.onNamespace).toHaveBeenCalledWith(SocketNamespace.Join, event, jasmine.any(Function));
@@ -51,7 +59,10 @@ describe('ChatService', () => {
         /** Confirms that a newly broadcasted message from the server is correctly appended to the reactive message feed. */
         it('should append a message to the history', (done) => {
             capturedCallbacks.get(JoinGameEvents.ReceivedChatMessage)?.(createMessage());
-            service.chatHistory$.subscribe((msgs) => { expect(msgs.length).toBe(1); done(); });
+            service.chatHistory$.subscribe((msgs) => {
+                expect(msgs.length).toBe(1);
+                done();
+            });
         });
 
         /** Asserts that messages strictly maintain their chronological order of arrival within the internal history array. */
@@ -60,7 +71,7 @@ describe('ChatService', () => {
             capturedCallbacks.get(JoinGameEvents.ReceivedChatMessage)?.(createMessage({ message: 'Second' }));
             capturedCallbacks.get(JoinGameEvents.ReceivedChatMessage)?.(createMessage({ message: 'Third' }));
             service.chatHistory$.subscribe((msgs) => {
-                expect(msgs.length).toBe(3);
+                expect(msgs.length).toBe(EXPECTED_MESSAGES);
                 expect(msgs[0].message).toBe('First');
                 expect(msgs[2].message).toBe('Third');
                 done();
@@ -69,17 +80,24 @@ describe('ChatService', () => {
     });
 
     describe('ChatHistorySent', () => {
-        /** Ensures the service completely wipes its existing cache and replaces it with the bulk payload when reconnecting or joining a new lobby. */
+        /** Ensures the service completely wipes its existing cache and replaces it with the bulk payload when reconnecting. */
         it('should replace the full history (not append)', (done) => {
             capturedCallbacks.get(JoinGameEvents.ReceivedChatMessage)?.(createMessage({ message: 'Old' }));
             capturedCallbacks.get(JoinGameEvents.ChatHistorySent)?.([createMessage({ message: 'Msg1' }), createMessage({ message: 'Msg2' })]);
-            service.chatHistory$.subscribe((msgs) => { expect(msgs.length).toBe(2); expect(msgs[0].message).toBe('Msg1'); done(); });
+            service.chatHistory$.subscribe((msgs) => {
+                expect(msgs.length).toBe(2);
+                expect(msgs[0].message).toBe('Msg1');
+                done();
+            });
         });
 
         /** Gracefully accepts an empty array payload if the server indicates that no chat history currently exists for the specified room. */
         it('should handle an empty history from the server', (done) => {
             capturedCallbacks.get(JoinGameEvents.ChatHistorySent)?.([]);
-            service.chatHistory$.subscribe((msgs) => { expect(msgs.length).toBe(0); done(); });
+            service.chatHistory$.subscribe((msgs) => {
+                expect(msgs.length).toBe(0);
+                done();
+            });
         });
     });
 
@@ -107,16 +125,16 @@ describe('ChatService', () => {
 
         /** Enforces a strict server-side constraint by automatically truncating any string exceeding the maximum limit of 200 characters. */
         it('should truncate messages longer than 200 characters', () => {
-            service.sendMessage('lobby-1', 'Alice', 'A'.repeat(250));
-            const payload = webSocketService.emitNamespace.calls.mostRecent().args[2] as any;
-            expect(payload.message.length).toBe(200);
+            service.sendMessage('lobby-1', 'Alice', 'A'.repeat(OVER_LIMIT_LENGTH));
+            const payload = webSocketService.emitNamespace.calls.mostRecent().args[2] as unknown;
+            expect((payload as { message: string }).message.length).toBe(MAX_MESSAGE_LENGTH);
         });
 
         /** Formats the user's display name alongside the message content to ensure a clean visual presentation for all clients. */
         it('should trim the sender name too', () => {
             service.sendMessage('lobby-1', '  Bob  ', 'Hi');
-            const payload = webSocketService.emitNamespace.calls.mostRecent().args[2] as any;
-            expect(payload.senderName).toBe('Bob');
+            const payload = webSocketService.emitNamespace.calls.mostRecent().args[2] as unknown;
+            expect((payload as { senderName: string }).senderName).toBe('Bob');
         });
     });
 
@@ -138,7 +156,10 @@ describe('ChatService', () => {
         /** Exposes a cleanly formatted observable stream of the chat feed for UI components to safely subscribe to. */
         it('should return an observable of the chat history', (done) => {
             capturedCallbacks.get(JoinGameEvents.ChatHistorySent)?.([createMessage({ message: 'Test' })]);
-            service.roomMessages$('lobby-1').subscribe((msgs) => { expect(msgs.length).toBe(1); done(); });
+            service.roomMessages$('lobby-1').subscribe((msgs) => {
+                expect(msgs.length).toBe(1);
+                done();
+            });
         });
 
         /** Automatically triggers a background request to fetch existing history from the server the moment a component subscribes to the stream. */
