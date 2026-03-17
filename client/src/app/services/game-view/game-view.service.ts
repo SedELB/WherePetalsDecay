@@ -117,8 +117,8 @@ export class GameViewService {
                 }
             });
 
-        this.webSocketService.onNamespace<{socketId: string, updatedLobby: Lobby}>(this.namespace, JoinGameEvents.PlayerAbandoned, (payload) => {
-            const {socketId, updatedLobby} = payload;
+        this.webSocketService.onNamespace<{ socketId: string, updatedLobby: Lobby }>(this.namespace, JoinGameEvents.PlayerAbandoned, (payload) => {
+            const { socketId, updatedLobby } = payload;
             this.playerPositions.update((positions) => {
                 const updated = { ...positions };
                 delete updated[socketId];

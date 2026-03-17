@@ -27,6 +27,8 @@ export class GamePageComponent implements OnInit {
     readonly routes = ROUTES;
     readonly costInfinity = Infinity;
 
+    isChatFocused = false;
+
     protected gameMode = GameMode;
 
     readonly lobby = computed(() => this.gameViewService.gameLobby());
@@ -123,8 +125,6 @@ export class GamePageComponent implements OnInit {
         }
     }
 
-    isChatFocused = false;
-
     @HostListener('window:keyup', ['$event'])
     onKeyUp(event: KeyboardEvent): void {
         if (!this.isMyTurn() || this.isChatFocused) return;
@@ -171,7 +171,8 @@ export class GamePageComponent implements OnInit {
         if (lobbyId) this.gameViewService.sendCombat(lobbyId, targetSocketId);
     }
 
-    onRightClick(position: Vec2): void {
+    onRightClick(event: MouseEvent, position: Vec2): void {
+        event.preventDefault();
         const lobbyId = this.lobby()?.lobbyId;
         if (lobbyId) this.gameViewService.sendTileInfoRequest(lobbyId, position);
     }
