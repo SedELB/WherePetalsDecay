@@ -19,7 +19,8 @@ export class ButtonComponent {
     @Input() backgroundPath?: string;
     @Input() route?: string;
     @Input() selected: boolean = false;
-    @Input() variant: 'default' | 'back' | 'save' | 'delete-game' = 'default';
+    @Input() variant: 'default' | 'back' | 'save' | 'delete-game' | 'edit' | 'toggle-visibility' = 'default';
+    @Input() isVisible: boolean = false;
 
     @Output() clicked = new EventEmitter<void>();
 

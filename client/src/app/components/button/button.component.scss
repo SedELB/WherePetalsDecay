@@ -93,7 +93,6 @@
     font-weight: 900;
     letter-spacing: 0.8px;
 }
-// etat presse, mais uniquement si cliquable donc disabled == faux.
 
 .btn--save:active:not(:disabled) {
     transform: translateY(2px);
@@ -101,15 +100,32 @@
 }
 
 .btn--default {
-    padding: 12px 24px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 50px;
+    border: none;
+    padding: 0px 20px;
+    background-color: $rose-button;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
     border-radius: 10px;
-    background: #95698d;
-    box-shadow: 0 8px 0 rgba(0, 0, 0, 0.18);
-}
-// etat presse, mais uniquement si cliquable donc disabled == faux.
-.btn--default:active:not(:disabled) {
-    transform: translateY(2px);
-    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18);
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.25);
+    transition: all 0.3s ease;
+
+    &:hover:not(:disabled) {
+        box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25);
+        transform: scale(1.05);
+    }
+
+    &:active:not(:disabled) {
+        transform: translateY(3px) scale(0.98);
+        box-shadow: 0px 0px 0px rgb(110, 74, 104);
+        transition-duration: 0.3s;
+    }
 }
 
 .btn--delete-game {
@@ -165,6 +181,94 @@
 
     &:active:not(:disabled) {
         transform: scale(0.95);
+    }
+}
+
+.btn--edit {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 120px;
+    height: 50px;
+    border: none;
+    padding: 0px 20px;
+    background-color: $rose-button;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 10px;
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.25);
+    transition: all 0.3s ease;
+
+    .pencil {
+        width: 25px;
+        position: absolute;
+        right: 12px;
+        fill: white;
+        filter: invert(1);
+        transition: right 0.3s ease;
+    }
+
+    &:hover:not(:disabled) {
+        color: transparent;
+        box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25);
+
+        .pencil {
+            right: 50%;
+            transform: translateX(50%);
+            transition: right 0.3s ease;
+        }
+    }
+
+    &:active:not(:disabled) {
+        transform: translateY(3px);
+        box-shadow: 0px 0px 0px rgb(110, 74, 104);
+        transition-duration: 0.3s;
+    }
+}
+
+.btn--toggle-visibility {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 120px;
+    height: 50px;
+    border: none;
+    padding: 0px 40px 0px 20px;
+    background-color: $rose-button;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 10px;
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.25);
+    transition: all 0.3s ease;
+
+    .eye-icon {
+        width: 25px;
+        position: absolute;
+        right: 12px;
+        fill: white;
+        filter: invert(1);
+        transition: right 0.3s ease;
+    }
+
+    &:hover:not(:disabled) {
+        color: transparent;
+        box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25);
+
+        .eye-icon {
+            right: 50%;
+            transform: translateX(50%);
+            transition: right 0.3s ease;
+        }
+    }
+
+    &:active:not(:disabled) {
+        transform: translateY(3px);
+        box-shadow: 0px 0px 0px rgb(110, 74, 104);
+        transition-duration: 0.3s;
     }
 }
 
