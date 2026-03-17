@@ -68,6 +68,8 @@
                                 [attr.data-tile]="cell.type"
                                 [class.cell--reachable]="isReachable(colIndex, rowIndex)"
                                 [class.cell--has-player]="getPlayerAtPosition(colIndex, rowIndex)"
+                                [class.cell--combat-target]="isCombatMode && isAdjacentPlayer(colIndex, rowIndex)"
+                                (click)="onTileClick(colIndex, rowIndex)"
                                 (contextmenu)="onRightClick($event, { x: colIndex, y: rowIndex })"
                             >
                                 @if (cell.item; as obj) {
@@ -117,7 +119,7 @@
     @if (tileInfo(); as info) {
         <div class="tile-info-popup" (click)="gameViewService.tileInfo.set(null)">
             <div class="tile-info-content">
-                <p>Type : <span>{{ info.tile.type }}</span></p>
+                <p>Type : <span>{{ tileNames[info.tile.type] || info.tile.type }}</span></p>
                 <p>Coût : <span>{{ info.cost === null || info.cost === costInfinity ? 'N/A' : info.cost }}</span></p>
                 @if (info.player) {
                     <p>Joueur : <span>{{ info.player.name }}</span></p>
@@ -129,12 +131,23 @@
 
     <aside class="side-panel right">
         <section class="chat-box">
-            <h3 class="section-title">Chat</h3>
-            <app-chat
-                [lobbyId]="lobby()?.lobbyId ?? ''"
-                [playerName]="localPlayer()?.character?.name ?? ''"
-                (chatFocusChange)="onChatFocusChange($event)"
-            ></app-chat>
+            <div class="tab-bar">
+                <button class="tab-btn" [class.active]="!isJournalOpen" (click)="isJournalOpen = false">Clavardage</button>
+                <button class="tab-btn" [class.active]="isJournalOpen" (click)="isJournalOpen = true">Journal</button>
+            </div>
+            @if (isJournalOpen) {
+                <div class="journal-container">
+                    <div class="journal-messages">
+                        <div class="chat-empty">Aucun événement pour l'instant.</div>
+                    </div>
+                </div>
+            } @else {
+                <app-chat
+                    [lobbyId]="lobby()?.lobbyId ?? ''"
+                    [playerName]="localPlayer()?.character?.name ?? ''"
+                    (chatFocusChange)="onChatFocusChange($event)"
+                ></app-chat>
+            }
         </section>
 
         <section class="character-sheet">
@@ -155,12 +168,9 @@
 
         <nav class="action-bar">
             @if (adjacentPlayers().length > 0 && isMyTurn()) {
-                <div class="combat-actions">
-                    <h4>Combattre</h4>
-                    @for (target of adjacentPlayers(); track target.socketId) {
-                        <app-button (click)="onCombat(target.socketId)">⚔️ {{ target.character.name }}</app-button>
-                    }
-                </div>
+                <app-button (click)="toggleCombatMode()" [class.combat-active]="isCombatMode">
+                    {{ isCombatMode ? 'Annuler action' : 'Action' }}
+                </app-button>
             }
             <app-button (click)="onEndTurn()" [disabled]="!isMyTurn()">Finir Tour</app-button>
         </nav>
