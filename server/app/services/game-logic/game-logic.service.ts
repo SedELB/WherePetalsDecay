@@ -2,16 +2,16 @@ import { BASE_STATS } from '@common/character';
 import { Direction } from '@common/direction';
 import { TileItem } from '@common/enums';
 import { Game } from '@common/game';
+import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
+import { Server, Socket } from 'socket.io';
 import { ActiveGame, TurnCallbacks } from './active-game.interface';
 import { CombatService } from './combat.service';
 import { MovementService } from './movement.service';
 import { TurnService } from './turn.service';
-import { Server, Socket } from 'socket.io';
-import { JoinGameEvents } from '@common/join.gateway.events';
 
 const RANDOM_THRESHOLD = 0.5;
 
@@ -177,10 +177,11 @@ export class GameLogicService {
 
 
         const activePlayers = this.getActivePlayers(lobbyId);
-        
+
         if (activePlayers.length <= 1) {
-            server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: null });
-            
+            const winnerId = activePlayers.length === 1 ? activePlayers[0].socketId : null;
+            server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId, isForfeit: true });
+
             this.endGame(lobbyId);
             server.in(lobbyId).socketsLeave(lobbyId);
             return true;

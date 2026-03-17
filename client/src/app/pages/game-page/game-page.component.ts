@@ -27,6 +27,8 @@ export class GamePageComponent implements OnInit {
     readonly routes = ROUTES;
     readonly costInfinity = Infinity;
 
+    isChatFocused = false;
+
     protected gameMode = GameMode;
 
     readonly lobby = computed(() => this.gameViewService.gameLobby());
@@ -125,12 +127,16 @@ export class GamePageComponent implements OnInit {
 
     @HostListener('window:keyup', ['$event'])
     onKeyUp(event: KeyboardEvent): void {
-        if (!this.isMyTurn()) return;
+        if (!this.isMyTurn() || this.isChatFocused) return;
         const direction = KEY_TO_DIRECTION[event.key];
         if (!direction) return;
 
         const lobbyId = this.lobby()?.lobbyId;
         if (lobbyId) this.gameViewService.sendMove(lobbyId, direction);
+    }
+
+    onChatFocusChange(focused: boolean): void {
+        this.isChatFocused = focused;
     }
 
     @HostListener('window:beforeunload')
