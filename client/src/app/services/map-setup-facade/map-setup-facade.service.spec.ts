@@ -276,27 +276,31 @@ describe('MapSetupFacadeService', () => {
 
     // Test API error handling in create mode
     it('reports API errors on save in create mode', async () => {
-        const game = gameFactory(SIZE_SMALL, SIZE_SMALL, GameMode.Classic);
-        const validationPayload = {
-            name: game.name,
-            description: game.description,
-            mode: game.gameMode,
-            size: game.size,
-            grid: [[TileTexture.Floor]],
-            placedObjects: [],
-        };
+    const game = gameFactory(SIZE_SMALL, SIZE_SMALL, GameMode.Classic);
+    const validationPayload = {
+        name: game.name,
+        description: game.description,
+        mode: game.gameMode,
+        size: game.size,
+        grid: [[TileTexture.Floor]],
+        placedObjects: [],
+    };
 
-        spyOn(service as unknown as CaptureThumbnailApi, 'captureThumbnail').and.resolveTo('thumb');
-        mapSetup.buildValidationPayload.and.returnValue(validationPayload);
-        validator.validate.and.returnValue({ isValid: true, errors: [] });
-        communication.createGame.and.returnValue(throwError(() => ({ error: 'creation failed' })));
+    spyOn(service as unknown as CaptureThumbnailApi, 'captureThumbnail').and.resolveTo('thumb');
+    mapSetup.buildValidationPayload.and.returnValue(validationPayload);
+    validator.validate.and.returnValue({ isValid: true, errors: [] });
+    
+    communication.createGame.and.returnValue(throwError(() => ({ error: 'creation failed' })));
 
-        const alertSpy = spyOn(window, 'alert');
+    const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
 
-        await service.saveGame(game, 'create', mockElement);
+    await service.saveGame(game, 'create', mockElement);
 
-        expect(alertSpy).toHaveBeenCalledWith("Une erreur s'est produite en enregistrant un nouveau jeu : creation failed");
-    });
+    expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ 
+        title: 'Erreur',
+        text: "Une erreur s'est produite en enregistrant un nouveau jeu : creation failed",
+    }));
+});
 
     // Test default mode behavior
     it('defaults mode to edit when not specified in navigation state', async () => {
