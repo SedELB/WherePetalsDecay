@@ -1,5 +1,5 @@
-import { Game } from '@common/game';
 import { SocketNamespace } from '@common/enums';
+import { Game } from '@common/game';
 import { Injectable, Logger } from '@nestjs/common';
 import {
     ConnectedSocket,
@@ -14,10 +14,10 @@ import {
 
 import { GameLogicService } from '@app/services/game-logic/game-logic.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
-import { Server, Socket } from 'socket.io';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { Player } from '@common/player';
 import { Lobby } from '@common/lobby';
+import { Player } from '@common/player';
+import { Server, Socket } from 'socket.io';
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
 export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
@@ -170,7 +170,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     private getOccupiedAvatars(lobby: Lobby): string[] {
         const confirmedAvatars = lobby.players
             .map((player) => player.character?.avatar)
-            .filter((avat): avat is string => !!avat);
+            .filter((avat) => avat !== undefined && avat !== null && avat !== '');
 
         const pendingAvatars = Object.values(lobby.pendingAvatars || {});
         return [...confirmedAvatars, ...pendingAvatars];
