@@ -41,7 +41,7 @@ export class GameViewService {
     readonly reachableTiles = signal<Vec2[]>([]);
     readonly movementPoints = signal<number>(0);
     readonly tileInfo = signal<TileInfoData | null>(null);
-    readonly gameOver = signal<{ winnerSocketId: string | null } | null>(null);
+    readonly gameOver = signal<{ winnerSocketId: string | null; isForfeit?: boolean } | null>(null);
 
     constructor(
         private readonly webSocketService: WebSocketService,
@@ -128,7 +128,7 @@ export class GameViewService {
             this.setLobby(updatedLobby);
         });
 
-        this.webSocketService.onNamespace<{ winnerSocketId: string | null }>(this.namespace, JoinGameEvents.GameOver, (data) => {
+        this.webSocketService.onNamespace<{ winnerSocketId: string | null; isForfeit?: boolean }>(this.namespace, JoinGameEvents.GameOver, (data) => {
             this.gameOver.set(data);
         });
 
