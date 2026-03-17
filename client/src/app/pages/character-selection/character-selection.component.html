@@ -110,11 +110,17 @@
             </app-button>
             <div class="navigation-group">
                 <app-button (click)="goBack()">Annuler</app-button>
-                <app-button
-                    [disabled]="!isFormValid() || isSubmitting"
-                    (click)="confirmCharacter()"
-                >Confirmer</app-button>
+                    <app-button
+                        [disabled]="!isFormValid() || isSubmitting || isLobbyLocked"
+                        (click)="confirmCharacter()"
+                    >Confirmer</app-button>
             </div>
         </div>
     </section>
+
+    @if (lockNotification) {
+        <div class="lock-notification-toast" [class.locked]="isLobbyLocked">
+            <span>{{ lockNotification }}</span>
+        </div>
+    }
 </div>

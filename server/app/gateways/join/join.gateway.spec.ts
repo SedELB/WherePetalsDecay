@@ -199,7 +199,7 @@ describe('JoinGateway', () => {
             jest.spyOn(lobbyService, 'getLobby').mockReturnValue({ ...fakeLobby, playerCount: 4 });
 
             gateway.handleJoinLobby(mockSocket, { lobbyId: 'lobby-1', player: makeMockPlayer() });
-            expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyError, 'Ce salon est plein !');
+            expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyError, 'Ce salon est verrouillé ou plein !');
         });
 
         it('should join lobby and emit LobbyJoined on success', () => {
