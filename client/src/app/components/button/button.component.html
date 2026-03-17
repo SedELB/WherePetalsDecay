@@ -22,5 +22,15 @@
     @if (variant === 'delete-game') {
         <img src="./assets/icons/delete-trash.svg" class="trash" alt="delete button"/>
     }
+    @if (variant === 'edit') {
+        <img src="./assets/icons/pencil.svg" class="pencil" alt="edit button"/>
+    }
+    @if (variant === 'toggle-visibility') {
+        @if (isVisible) {
+            <img src="./assets/icons/eye.svg" class="eye-icon" alt="hide button"/>
+        } @else {
+            <img src="./assets/icons/eye-off.svg" class="eye-icon" alt="show button"/>
+        }
+    }
     <ng-content></ng-content>
 </button>

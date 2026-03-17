@@ -44,6 +44,12 @@ body > app-button {
     flex-direction: column;
 }
 
+.choice-card > div {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
 .small-adjust {
     transform: translateX(-3px);
 }

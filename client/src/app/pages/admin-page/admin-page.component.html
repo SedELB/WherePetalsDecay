@@ -8,8 +8,8 @@
     <div class="list-container">
         @for(game of gameCards; track game.name){
             <app-game-card [game]="game">
-                <app-button [height]="50" (clicked)="navigateToGameEditor(game.name)">Modifier</app-button>
-                <app-button [height]="50" (clicked)="changeVisibility(game.name)">{{ game.isVisible ? 'Cacher' : 'Afficher' }}</app-button>
+                <app-button variant="edit" (clicked)="navigateToGameEditor(game.name)">Modifier</app-button>
+                <app-button variant="toggle-visibility" [isVisible]="game.isVisible" (clicked)="changeVisibility(game.name)">{{ game.isVisible ? 'Cacher' : 'Afficher' }}</app-button>
                 <app-button variant="delete-game" [height]="50" (clicked)="removeGame(game.name)"></app-button>
             </app-game-card>
         }
