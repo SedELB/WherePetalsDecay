@@ -1,15 +1,14 @@
 /**
  * Test suite for the GameViewService.
- * This service acts as the central state manager for the active game view, listening to numerous WebSocket events and keeping Angular signals synchronized for the UI components.
- * The tests heavily utilize a callback-capture pattern for the WebSocketService, allowing manual simulation of server events without requiring a real socket connection.
- * It thoroughly validates how local state (like movement points, reachable tiles, and player positions) updates in response to both local player actions and opponent actions.
+ * This service acts as the central state manager for the active game view, listening to numerous WebSocket events.
+ * The tests heavily utilize a callback-capture pattern for the WebSocketService, allowing manual simulation of server events.
+ * It thoroughly validates how local state updates in response to both local player actions and opponent actions.
  */
 
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
-import { GameMode, SocketNamespace } from '@common/enums';
+import { GameMode, SocketNamespace, TileTexture } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
@@ -22,6 +21,15 @@ describe('GameViewService', () => {
 
     const LOCAL_SOCKET_ID = 'local-socket';
     const OTHER_SOCKET_ID = 'other-socket';
+    
+    const COUNTDOWN_TIME = 25;
+    const SPAWN_X = 4;
+    const SPAWN_Y = 4;
+    const COMBAT_DAMAGE = 6;
+    const MP_USED = 3;
+    const MP_LEFT = 4;
+    const DEFAULT_COUNTDOWN = 15;
+    const DEFAULT_MP = 5;
 
     const capturedCallbacks = new Map<string, (...args: unknown[]) => void>();
 
@@ -99,12 +107,12 @@ describe('GameViewService', () => {
     });
 
     describe('GameStarted event', () => {
-        /** Validates that the service correctly unpacks and applies the initial board state, player positions, and turn order when a match begins. */
+        /** Validates that the service correctly unpacks and applies the initial board state when a match begins. */
         it('should populate lobby, turn order, and positions', () => {
             const lobby = createMockLobby();
             const data: GameStartedData = {
                 lobby, turnOrder: [LOCAL_SOCKET_ID, OTHER_SOCKET_ID],
-                playerPositions: { [LOCAL_SOCKET_ID]: { x: 0, y: 0 }, [OTHER_SOCKET_ID]: { x: 4, y: 4 } },
+                playerPositions: { [LOCAL_SOCKET_ID]: { x: 0, y: 0 }, [OTHER_SOCKET_ID]: { x: SPAWN_X, y: SPAWN_Y } },
             };
             capturedCallbacks.get(JoinGameEvents.GameStarted)?.(data);
             expect(service.gameLobby()).toEqual(lobby);
@@ -112,7 +120,7 @@ describe('GameViewService', () => {
             expect(service.playerPositions()).toEqual(data.playerPositions);
         });
 
-        /** Ensures that starting a new game cleanly wipes out any leftover UI states (such as victory overlays) from a previous match in the same session. */
+        /** Ensures that starting a new game cleanly wipes out any leftover UI states from a previous match. */
         it('should wipe leftover gameOver from a previous match', () => {
             service.gameOver.set({ winnerSocketId: 'old', isForfeit: false });
             capturedCallbacks.get(JoinGameEvents.GameStarted)?.({ lobby: createMockLobby(), turnOrder: [], playerPositions: {} });
@@ -131,13 +139,13 @@ describe('GameViewService', () => {
     describe('TurnCountdown event', () => {
         /** Synchronizes the local timer signal with the exact seconds remaining as broadcasted by the server. */
         it('should store the seconds left', () => {
-            capturedCallbacks.get(JoinGameEvents.TurnCountdown)?.(25);
-            expect(service.turnCountdown()).toBe(25);
+            capturedCallbacks.get(JoinGameEvents.TurnCountdown)?.(COUNTDOWN_TIME);
+            expect(service.turnCountdown()).toBe(COUNTDOWN_TIME);
         });
     });
 
     describe('TurnEnded event', () => {
-        /** Ensures the game view properly clears out active states, such as movement previews and active player flags, during the transition between turns. */
+        /** Ensures the game view properly clears out active states during the transition between turns. */
         it('should go back to idle state (no active player, no reachable tiles)', () => {
             service.activePlayerSocketId.set(LOCAL_SOCKET_ID);
             service.reachableTiles.set([{ x: 1, y: 1 }]);
@@ -151,21 +159,27 @@ describe('GameViewService', () => {
         /** Updates the internal coordinate tracking specifically for the player who executed the movement. */
         it('should update position for the player who moved', () => {
             service.playerPositions.set({ [LOCAL_SOCKET_ID]: { x: 0, y: 0 } });
-            capturedCallbacks.get(JoinGameEvents.PlayerMoved)?.({ socketId: LOCAL_SOCKET_ID, position: { x: 1, y: 0 }, movementPoints: 3 });
+            capturedCallbacks.get(JoinGameEvents.PlayerMoved)?.({ 
+                socketId: LOCAL_SOCKET_ID, position: { x: 1, y: 0 }, movementPoints: MP_USED, 
+            });
             expect(service.playerPositions()[LOCAL_SOCKET_ID]).toEqual({ x: 1, y: 0 });
         });
 
         /** Adjusts the local UI movement point counter strictly when the local player completes a valid move. */
         it('should update local MP when the local player moves', () => {
-            capturedCallbacks.get(JoinGameEvents.PlayerMoved)?.({ socketId: LOCAL_SOCKET_ID, position: { x: 1, y: 0 }, movementPoints: 2 });
+            capturedCallbacks.get(JoinGameEvents.PlayerMoved)?.({ 
+                socketId: LOCAL_SOCKET_ID, position: { x: 1, y: 0 }, movementPoints: 2, 
+            });
             expect(service.movementPoints()).toBe(2);
         });
 
         /** Protects the local player's UI from incorrectly displaying an opponent's movement points when the opponent moves. */
         it('should leave local MP untouched when someone else moves', () => {
-            service.movementPoints.set(4);
-            capturedCallbacks.get(JoinGameEvents.PlayerMoved)?.({ socketId: OTHER_SOCKET_ID, position: { x: 3, y: 3 }, movementPoints: 1 });
-            expect(service.movementPoints()).toBe(4);
+            service.movementPoints.set(MP_LEFT);
+            capturedCallbacks.get(JoinGameEvents.PlayerMoved)?.({ 
+                socketId: OTHER_SOCKET_ID, position: { x: 3, y: 3 }, movementPoints: 1, 
+            });
+            expect(service.movementPoints()).toBe(MP_LEFT);
         });
     });
 
@@ -188,15 +202,15 @@ describe('GameViewService', () => {
     describe('MovementPoints event', () => {
         /** Keeps the local player's movement points perfectly synced with the server's authoritative calculations. */
         it('should update MP for the local player', () => {
-            capturedCallbacks.get(JoinGameEvents.MovementPoints)?.({ socketId: LOCAL_SOCKET_ID, movementPoints: 6 });
-            expect(service.movementPoints()).toBe(6);
+            capturedCallbacks.get(JoinGameEvents.MovementPoints)?.({ socketId: LOCAL_SOCKET_ID, movementPoints: COMBAT_DAMAGE });
+            expect(service.movementPoints()).toBe(COMBAT_DAMAGE);
         });
 
         /** Safely ignores movement point broadcasts belonging to opponents. */
         it('should ignore MP for other players', () => {
-            service.movementPoints.set(3);
-            capturedCallbacks.get(JoinGameEvents.MovementPoints)?.({ socketId: OTHER_SOCKET_ID, movementPoints: 6 });
-            expect(service.movementPoints()).toBe(3);
+            service.movementPoints.set(MP_USED);
+            capturedCallbacks.get(JoinGameEvents.MovementPoints)?.({ socketId: OTHER_SOCKET_ID, movementPoints: COMBAT_DAMAGE });
+            expect(service.movementPoints()).toBe(MP_USED);
         });
     });
 
@@ -208,20 +222,29 @@ describe('GameViewService', () => {
 
         /** Modifies the lobby data in-place to accurately increment the victory tracker for the player who won the engagement. */
         it('should bump the winner winsCount', () => {
-            capturedCallbacks.get(JoinGameEvents.CombatResult)?.({ winnerId: LOCAL_SOCKET_ID, loserId: OTHER_SOCKET_ID, damage: 6, loserHpLeft: 6, killed: true, loserNewPosition: { x: 0, y: 0 } });
+            capturedCallbacks.get(JoinGameEvents.CombatResult)?.({ 
+                winnerId: LOCAL_SOCKET_ID, loserId: OTHER_SOCKET_ID, 
+                damage: COMBAT_DAMAGE, loserHpLeft: COMBAT_DAMAGE, killed: true, loserNewPosition: { x: 0, y: 0 }, 
+            });
             const winner = service.gameLobby()?.players.find((p) => p.socketId === LOCAL_SOCKET_ID);
             expect(winner?.winsCount).toBe(1);
         });
 
         /** Handles the death penalty by instantly updating the defeated player's coordinates to their designated spawn point. */
         it('should teleport the loser to their new spawn', () => {
-            capturedCallbacks.get(JoinGameEvents.CombatResult)?.({ winnerId: LOCAL_SOCKET_ID, loserId: OTHER_SOCKET_ID, damage: 6, loserHpLeft: 6, killed: true, loserNewPosition: { x: 4, y: 4 } });
-            expect(service.playerPositions()[OTHER_SOCKET_ID]).toEqual({ x: 4, y: 4 });
+            capturedCallbacks.get(JoinGameEvents.CombatResult)?.({ 
+                winnerId: LOCAL_SOCKET_ID, loserId: OTHER_SOCKET_ID, damage: COMBAT_DAMAGE, 
+                loserHpLeft: COMBAT_DAMAGE, killed: true, loserNewPosition: { x: SPAWN_X, y: SPAWN_Y }, 
+            });
+            expect(service.playerPositions()[OTHER_SOCKET_ID]).toEqual({ x: SPAWN_X, y: SPAWN_Y });
         });
 
-        /** Gracefully handles rare edge cases where the server cannot provide a valid spawn point, leaving the player at their current position to avoid breaking the UI. */
+        /** Gracefully handles rare edge cases where the server cannot provide a valid spawn point, leaving the player at their current position. */
         it('should not move the loser if the server sends null position', () => {
-            capturedCallbacks.get(JoinGameEvents.CombatResult)?.({ winnerId: LOCAL_SOCKET_ID, loserId: OTHER_SOCKET_ID, damage: 6, loserHpLeft: 6, killed: true, loserNewPosition: null });
+            capturedCallbacks.get(JoinGameEvents.CombatResult)?.({ 
+                winnerId: LOCAL_SOCKET_ID, loserId: OTHER_SOCKET_ID, damage: COMBAT_DAMAGE, 
+                loserHpLeft: COMBAT_DAMAGE, killed: true, loserNewPosition: null, 
+            });
             expect(service.playerPositions()[OTHER_SOCKET_ID]).toEqual({ x: 3, y: 2 });
         });
     });
@@ -229,7 +252,7 @@ describe('GameViewService', () => {
     describe('PlayerAbandoned event', () => {
         beforeEach(() => {
             service.setLobby(createMockLobby());
-            service.playerPositions.set({ [LOCAL_SOCKET_ID]: { x: 0, y: 0 }, [OTHER_SOCKET_ID]: { x: 4, y: 4 } });
+            service.playerPositions.set({ [LOCAL_SOCKET_ID]: { x: 0, y: 0 }, [OTHER_SOCKET_ID]: { x: SPAWN_X, y: SPAWN_Y } });
         });
 
         /** Instantly purges the abandoning player from the local coordinate tracking to remove their avatar from the game board. */
@@ -266,16 +289,20 @@ describe('GameViewService', () => {
     });
 
     describe('TileInfo event', () => {
-        /** Saves the detailed contextual information about a specific tile (including occupying players) so the UI can display it in a popup. */
+        /** Saves the detailed contextual information about a specific tile so the UI can display it in a popup. */
         it('should store tile info including player on it', () => {
-            const info: TileInfoData = { tile: { type: 'floor' as any, item: null }, cost: 1, player: { name: 'Bob', avatar: 'a.png' } };
+            const info: TileInfoData = { 
+                tile: { type: TileTexture.Floor, item: null },
+                cost: 1, 
+                player: { name: 'Bob', avatar: 'a.png' }, 
+            };
             capturedCallbacks.get(JoinGameEvents.TileInfo)?.(info);
             expect(service.tileInfo()).toEqual(info);
         });
 
         /** Verifies that the service safely processes tile data even when the designated space is completely unoccupied. */
         it('should handle empty tiles (no player standing there)', () => {
-            const info: TileInfoData = { tile: { type: 'water' as any, item: null }, cost: 2, player: null };
+            const info: TileInfoData = { tile: { type: TileTexture.Water, item: null }, cost: 2, player: null };
             capturedCallbacks.get(JoinGameEvents.TileInfo)?.(info);
             expect(service.tileInfo()?.player).toBeNull();
         });
@@ -298,7 +325,9 @@ describe('GameViewService', () => {
         /** Confirms the movement request payload is structured correctly before being dispatched over the socket. */
         it('should emit RequestMove', () => {
             service.sendMove(LOBBY_ID, 'W');
-            expect(webSocketService.emitNamespace).toHaveBeenCalledWith(SocketNamespace.Join, JoinGameEvents.RequestMove, { lobbyId: LOBBY_ID, direction: 'W' });
+            expect(webSocketService.emitNamespace).toHaveBeenCalledWith(
+                SocketNamespace.Join, JoinGameEvents.RequestMove, { lobbyId: LOBBY_ID, direction: 'W' },
+            );
         });
 
         /** Verifies the end-turn signal is sent directly with the lobby identifier. */
@@ -316,13 +345,17 @@ describe('GameViewService', () => {
         /** Checks that the combat request accurately bundles both the local lobby context and the targeted opponent's socket ID. */
         it('should emit RequestCombat', () => {
             service.sendCombat(LOBBY_ID, OTHER_SOCKET_ID);
-            expect(webSocketService.emitNamespace).toHaveBeenCalledWith(SocketNamespace.Join, JoinGameEvents.RequestCombat, { lobbyId: LOBBY_ID, targetSocketId: OTHER_SOCKET_ID });
+            expect(webSocketService.emitNamespace).toHaveBeenCalledWith(
+                SocketNamespace.Join, JoinGameEvents.RequestCombat, { lobbyId: LOBBY_ID, targetSocketId: OTHER_SOCKET_ID },
+            );
         });
 
         /** Validates the format of the payload dispatched when requesting detailed environmental data for a specific board coordinate. */
         it('should emit RequestTileInfo', () => {
             service.sendTileInfoRequest(LOBBY_ID, { x: 3, y: 5 });
-            expect(webSocketService.emitNamespace).toHaveBeenCalledWith(SocketNamespace.Join, JoinGameEvents.RequestTileInfo, { lobbyId: LOBBY_ID, position: { x: 3, y: 5 } });
+            expect(webSocketService.emitNamespace).toHaveBeenCalledWith(
+                SocketNamespace.Join, JoinGameEvents.RequestTileInfo, { lobbyId: LOBBY_ID, position: { x: 3, y: 5 } },
+            );
         });
     });
 
@@ -331,10 +364,10 @@ describe('GameViewService', () => {
         it('should bring every signal back to defaults', () => {
             service.gameOver.set({ winnerSocketId: 'x', isForfeit: false });
             service.activePlayerSocketId.set('x');
-            service.turnCountdown.set(15);
+            service.turnCountdown.set(DEFAULT_COUNTDOWN);
             service.reachableTiles.set([{ x: 1, y: 1 }]);
-            service.movementPoints.set(5);
-            service.tileInfo.set({ tile: { type: 'floor' as any, item: null }, cost: 1, player: null });
+            service.movementPoints.set(DEFAULT_MP);
+            service.tileInfo.set({ tile: { type: TileTexture.Floor, item: null }, cost: 1, player: null });
             service.playerPositions.set({ x: { x: 0, y: 0 } });
             service.turnOrder.set(['x']);
 
@@ -353,14 +386,23 @@ describe('GameViewService', () => {
 
     describe('setLobby', () => {
         /** Saves the provided lobby configuration into the primary reactive signal. */
-        it('should store the lobby', () => { service.setLobby(createMockLobby()); expect(service.gameLobby()).toBeTruthy(); });
+        it('should store the lobby', () => {
+            service.setLobby(createMockLobby());
+            expect(service.gameLobby()).toBeTruthy();
+        });
 
         /** Allows dependent components to manually wipe the lobby state by passing a null value. */
-        it('should accept null to clear it', () => { service.setLobby(createMockLobby()); service.setLobby(null); expect(service.gameLobby()).toBeNull(); });
+        it('should accept null to clear it', () => {
+            service.setLobby(createMockLobby());
+            service.setLobby(null);
+            expect(service.gameLobby()).toBeNull();
+        });
     });
 
     describe('getLocalSocketId', () => {
         /** Serves as a reliable proxy to fetch the current active connection ID from the underlying WebSocket service. */
-        it('should delegate to WebSocketService', () => { expect(service.getLocalSocketId()).toBe(LOCAL_SOCKET_ID); });
+        it('should delegate to WebSocketService', () => {
+            expect(service.getLocalSocketId()).toBe(LOCAL_SOCKET_ID);
+        });
     });
 });
