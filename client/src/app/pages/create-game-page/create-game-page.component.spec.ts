@@ -10,8 +10,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
-import { GameMode, MaxPlayers } from '@common/enums';
-import { CreateGamePageComponent } from './create-game-page.component';
+import { GameMode, GridSizes, MaxPlayers } from '@common/enums';
+import { CreateGamePageComponent, MapSizeKey } from './create-game-page.component';
 
 describe('CreateGamePageComponent', () => {
   let component: CreateGamePageComponent;
@@ -56,18 +56,18 @@ describe('CreateGamePageComponent', () => {
 
   // Test map size selection
   it('should select small map size', () => {
-    component.mapSizeSelected('small');
-    expect(component.mapSize).toBe('small');
+    component.mapSizeSelected(MapSizeKey.Small);
+    expect(component.mapSize).toBe(MapSizeKey.Small);
   });
 
   it('should select medium map size', () => {
-    component.mapSizeSelected('medium');
-    expect(component.mapSize).toBe('medium');
+    component.mapSizeSelected(MapSizeKey.Medium);
+    expect(component.mapSize).toBe(MapSizeKey.Medium);
   });
 
   it('should select large map size', () => {
-    component.mapSizeSelected('large');
-    expect(component.mapSize).toBe('large');
+    component.mapSizeSelected(MapSizeKey.Large);
+    expect(component.mapSize).toBe(MapSizeKey.Large);
   });
 
   // Test canCreateGame getter
@@ -85,20 +85,20 @@ describe('CreateGamePageComponent', () => {
 
   it('should not allow game creation when only map size is selected', () => {
     component.gameMode = null;
-    component.mapSize = 'small';
+    component.mapSize = MapSizeKey.Small;
     expect(component.canCreateGame).toBe(false);
   });
 
   it('should allow game creation when both game mode and map size are selected', () => {
     component.gameMode = GameMode.Classic;
-    component.mapSize = 'small';
+    component.mapSize = MapSizeKey.Small;
     expect(component.canCreateGame).toBe(true);
   });
 
   // Test game creation with small map
   it('should create game with small map and navigate to editor', () => {
     component.gameMode = GameMode.Classic;
-    component.mapSize = 'small';
+    component.mapSize = MapSizeKey.Small;
 
     const navigateSpy = spyOn(router, 'navigate');
     component.createAndNavigateToGameEditor();
@@ -121,7 +121,7 @@ describe('CreateGamePageComponent', () => {
   // Test game creation with medium map
   it('should create game with medium map and navigate to editor', () => {
     component.gameMode = GameMode.Ctf;
-    component.mapSize = 'medium';
+    component.mapSize = MapSizeKey.Medium;
 
     const navigateSpy = spyOn(router, 'navigate');
     component.createAndNavigateToGameEditor();
@@ -144,7 +144,7 @@ describe('CreateGamePageComponent', () => {
   // Test game creation with large map
   it('should create game with large map and navigate to editor', () => {
     component.gameMode = GameMode.Classic;
-    component.mapSize = 'large';
+    component.mapSize = MapSizeKey.Large;
 
     const navigateSpy = spyOn(router, 'navigate');
     component.createAndNavigateToGameEditor();
@@ -167,7 +167,7 @@ describe('CreateGamePageComponent', () => {
   // Test that created game has required fields
   it('should create game with all required fields', () => {
     component.gameMode = GameMode.Classic;
-    component.mapSize = 'medium';
+    component.mapSize = MapSizeKey.Medium;
 
     const navigateSpy = spyOn(router, 'navigate');
     component.createAndNavigateToGameEditor();
@@ -193,7 +193,7 @@ describe('CreateGamePageComponent', () => {
   // Test that created game has dates
   it('should create game with createdAt and updatedAt dates', () => {
     component.gameMode = GameMode.Classic;
-    component.mapSize = 'small';
+    component.mapSize = MapSizeKey.Small;
 
     const navigateSpy = spyOn(router, 'navigate');
     component.createAndNavigateToGameEditor();
@@ -206,11 +206,28 @@ describe('CreateGamePageComponent', () => {
     expect(game.updatedAt).toBeInstanceOf(Date);
   });
 
-  // Test sizes record
-  it('should have correct size configurations', () => {
-    expect(component.sizes.small).toEqual({ rows: 10, cols: 10 });
-    expect(component.sizes.medium).toEqual({ rows: 15, cols: 15 });
-    expect(component.sizes.large).toEqual({ rows: 20, cols: 20 });
+  // Test size configurations via game creation
+  it('should use correct grid sizes from configuration', () => {
+    const navigateSpy = spyOn(router, 'navigate');
+
+    component.gameMode = GameMode.Classic;
+    component.mapSize = MapSizeKey.Small;
+    component.createAndNavigateToGameEditor();
+    expect(navigateSpy).toHaveBeenCalledWith(jasmine.anything(), jasmine.objectContaining({
+      state: jasmine.objectContaining({ game: jasmine.objectContaining({ size: { rows: GridSizes.Small, cols: GridSizes.Small } }) }),
+    }));
+
+    component.mapSize = MapSizeKey.Medium;
+    component.createAndNavigateToGameEditor();
+    expect(navigateSpy).toHaveBeenCalledWith(jasmine.anything(), jasmine.objectContaining({
+      state: jasmine.objectContaining({ game: jasmine.objectContaining({ size: { rows: GridSizes.Medium, cols: GridSizes.Medium } }) }),
+    }));
+
+    component.mapSize = MapSizeKey.Large;
+    component.createAndNavigateToGameEditor();
+    expect(navigateSpy).toHaveBeenCalledWith(jasmine.anything(), jasmine.objectContaining({
+      state: jasmine.objectContaining({ game: jasmine.objectContaining({ size: { rows: GridSizes.Large, cols: GridSizes.Large } }) }),
+    }));
   });
 
   // Test return button appears
@@ -257,7 +274,7 @@ describe('CreateGamePageComponent', () => {
   // Test button selection for map size
   it('should mark selected map size button', () => {
     fixture.detectChanges();
-    component.mapSize = 'large';
+    component.mapSize = MapSizeKey.Large;
 
     const compiled = fixture.nativeElement as HTMLElement;
     const buttons = compiled.querySelectorAll('app-button');

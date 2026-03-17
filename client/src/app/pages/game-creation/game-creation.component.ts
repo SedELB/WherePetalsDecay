@@ -6,11 +6,10 @@ import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { ROUTES } from '@app/constants/routes.constants';
-import { Game } from '@common/game';
 import { GameCreationService } from '@app/services/game-creation/game-creation.service';
+import { Game } from '@common/game';
 import { Subscription } from 'rxjs';
 
-// The page after clicking "Creer une partie"
 @Component({
     selector: 'app-game-creation',
     standalone: true,
@@ -52,10 +51,10 @@ export class GameCreationComponent implements OnInit, OnDestroy {
         });
     }
 
-        selectGame(game: Game): void {
-            this.router.navigate(['/character-selection'], { state: { game } });
-        }
-    
+    selectGame(game: Game): void {
+        this.router.navigate(['/character-selection'], { state: { game } });
+    }
+
     getGameSizeLabel(game: Game): { rows: number, cols: number } {
         return game.size;
     }

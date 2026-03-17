@@ -1,7 +1,7 @@
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { Game, GameDocument, gameSchema } from '@app/model/schema/game.schema';
 import { BASE_10, CUSTOM_GRID_CLASSIC_SMALL, CUSTOM_GRID_CLASSIC_SMALL_INVALID } from '@app/utils/game.constants';
-import { GameMode, NbPlayersSmall } from '@app/utils/game.enum';
+import { GameMode, MaxPlayers } from '@common/enums';
 import { GAME_NOT_FOUND, NO_GAMES_FOUND, NO_VISIBLE_GAMES_FOUND } from '@common/error-messages';
 import { Logger } from '@nestjs/common';
 import { getConnectionToken, getModelToken, MongooseModule } from '@nestjs/mongoose';
@@ -55,7 +55,7 @@ describe('GameServiceE2E', () => {
             size: { rows: BASE_10, cols: BASE_10 },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
-            maxPlayers: NbPlayersSmall.MaxPLayers,
+            maxPlayers: MaxPlayers.Small,
             grid: CUSTOM_GRID_CLASSIC_SMALL,
             isVisible: true,
         };
@@ -66,7 +66,7 @@ describe('GameServiceE2E', () => {
             size: { rows: BASE_10, cols: BASE_10 },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
-            maxPlayers: NbPlayersSmall.MaxPLayers,
+            maxPlayers: MaxPlayers.Small,
             grid: CUSTOM_GRID_CLASSIC_SMALL_INVALID,
             isVisible: true,
         };

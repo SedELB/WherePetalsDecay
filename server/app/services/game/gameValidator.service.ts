@@ -1,7 +1,7 @@
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { Tile } from '@app/model/schema/game.schema';
 import { DESC_MAX_LENGTH, NAME_MAX_LENGTH, TEXT_MIN_LENGTH } from '@app/utils/game.constants';
-import { TileTexture } from '@app/utils/game.enum';
+import { GameMode, TileTexture } from '@common/enums';
 import {
     DESCRIPTION_FIELD_EMPTY,
     DESCRIPTION_FIELD_TOO_LONG,
@@ -199,7 +199,7 @@ export class GameValidatorService {
     }
 
     isFlagPlaced(game: CreateGameDto): boolean {
-        if (game.gameMode === 'ctf') {
+        if (game.gameMode === GameMode.Ctf) {
             const nbFlag = this.countByProperty(game, 'item').flag || 0;
             if (nbFlag === 0) {
                 throw new Error(FLAG_NOT_PLACED);
