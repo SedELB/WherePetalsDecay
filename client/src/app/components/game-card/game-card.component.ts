@@ -29,6 +29,7 @@ export class GameCardComponent implements OnInit {
   show = false;
   gameMode = GameMode;
   tooltipVerticalPos: number = 0;
+  tooltipHorizontalPos: number = 0;
   tooltipTopPadding: number = 140;
   private windowHeight: number = 0;
 
@@ -62,18 +63,18 @@ export class GameCardComponent implements OnInit {
 
   onMouseLeave(): void {
     this.show = false;
-    this.tooltipVerticalPos = 0;
   }
 
   updateTooltipPosition(): void {
     const rect = this.thumbnailRef.nativeElement.getBoundingClientRect();
     const tooltipHeight = this.tooltipRef.nativeElement.offsetHeight;
-    const tooltipPadding = 10;
+    const tooltipPadding = 50;
 
     const centerOfThumbnail = rect.top + rect.height / 2;
     const maxTop = this.windowHeight - tooltipHeight - tooltipPadding;
 
     this.tooltipVerticalPos = Math.min(Math.max(centerOfThumbnail - tooltipHeight / 2, this.tooltipTopPadding), maxTop);
+    this.tooltipHorizontalPos = rect.left - this.tooltipRef.nativeElement.offsetWidth - tooltipPadding;
   }
 
 }

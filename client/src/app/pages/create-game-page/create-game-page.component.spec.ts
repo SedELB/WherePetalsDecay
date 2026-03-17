@@ -216,10 +216,7 @@ describe('CreateGamePageComponent', () => {
   // Test return button appears
   it('should render return button on the page', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    const buttons = compiled.querySelectorAll<HTMLElement>('app-button');
-    const returnButton = Array.from(buttons).find((btn) =>
-      btn.textContent?.includes('Retour'),
-    );
+    const returnButton = compiled.querySelector('app-button[variant="back"]');
 
     expect(returnButton).toBeTruthy();
   });

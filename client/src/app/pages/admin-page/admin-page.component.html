@@ -1,16 +1,16 @@
 
 <main>
 
-    <app-button id="back-button" [width]="100" [route]="'/home'">Retour</app-button>
+    <app-button id="back-button" variant="back" [route]="'/home'"></app-button>
 
     <h2>Administrer les jeux</h2>
     <p>Créez, modifiez ou supprimez un jeu</p>
     <div class="list-container">
         @for(game of gameCards; track game.name){
             <app-game-card [game]="game">
-                <app-button [height]="50" (clicked)="navigateToGameEditor(game.name)">Modifier</app-button>
-                <app-button [height]="50" (clicked)="changeVisibility(game.name)">{{ game.isVisible ? 'Cacher' : 'Afficher' }}</app-button>
-                <app-button [height]="50" (clicked)="removeGame(game.name)">Supprimer</app-button>
+                <app-button variant="edit" (clicked)="navigateToGameEditor(game.name)">Modifier</app-button>
+                <app-button variant="toggle-visibility" [isVisible]="game.isVisible" (clicked)="changeVisibility(game.name)">{{ game.isVisible ? 'Cacher' : 'Afficher' }}</app-button>
+                <app-button variant="delete-game" [height]="50" (clicked)="removeGame(game.name)"></app-button>
             </app-game-card>
         }
     </div>

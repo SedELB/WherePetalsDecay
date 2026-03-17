@@ -14,12 +14,13 @@
 .btn {
     appearance: none;
     border: 0;
-    cursor: pointer; // pour l'instant on garde ca mais sa va probablement changer au cours de la session
+    border-radius: 10px;
+    cursor: pointer;
     user-select: none;
     font-weight: 800;
     letter-spacing: 0.5px;
     color: #fff;
-    background-color: #63b85d;
+    background-color: $rose-button;
 }
 
 .btn:disabled {
@@ -28,15 +29,60 @@
 }
 
 .btn--back {
-    padding: 14px 22px;
-    border-radius: 18px;
-    background: #7e6a96;
-    box-shadow: 0 8px 0 rgba(0, 0, 0, 0.25);
-}
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: $rose-button;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0px 0px 0px 4px rgba(255, 255, 255, 0.253);
+    cursor: pointer;
+    transition: width 0.3s ease, border-radius 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    overflow: hidden;
+    position: relative;
+    padding: 0;
 
-.btn--back:active:not(:disabled) {
-    transform: translateY(2px);
-    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.25);
+    .arrow {
+        width: 24px;
+        height: 24px;
+        filter: invert(1);
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    &::before {
+        content: 'Retour';
+        position: absolute;
+        color: white;
+        font-size: 13px;
+        opacity: 0;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        transform: translateX(20px);
+    }
+
+    &:hover:not(:disabled) {
+        width: 140px;
+        border-radius: 50px;
+
+        .arrow {
+            transform: translate(-150px, -50%);
+            opacity: 0;
+        }
+
+        &::before {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    &:active:not(:disabled) {
+        transform: scale(0.95);
+    }
 }
 
 /* Variant: Sauvegarder (maquette) */
@@ -48,7 +94,6 @@
     font-weight: 900;
     letter-spacing: 0.8px;
 }
-// etat presse, mais uniquement si cliquable donc disabled == faux.
 
 .btn--save:active:not(:disabled) {
     transform: translateY(2px);
@@ -56,15 +101,176 @@
 }
 
 .btn--default {
-    padding: 12px 24px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 50px;
+    border: none;
+    padding: 0px 20px;
+    background-color: $rose-button;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
     border-radius: 10px;
-    background: #95698d;
-    box-shadow: 0 8px 0 rgba(0, 0, 0, 0.18);
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.25);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+    &:hover:not(:disabled) {
+        box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25);
+        transform: scale(1.05);
+    }
+
+    &:active:not(:disabled) {
+        transform: translateY(3px) scale(0.98);
+        box-shadow: 0px 0px 0px rgb(110, 74, 104);
+        transition-duration: 0.3s;
+    }
 }
-// etat presse, mais uniquement si cliquable donc disabled == faux.
-.btn--default:active:not(:disabled) {
-    transform: translateY(2px);
-    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18);
+
+.btn--delete-game {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: $rose-button;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.164);
+    cursor: pointer;
+    transition: width 0.3s ease, border-radius 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    overflow: hidden;
+    position: relative;
+    padding: 0;
+
+    .trash {
+        width: 18px;
+        filter: invert(1);
+        transition: width 0.3s ease, transform 0.3s ease;
+        // z-index: 2;
+    }
+
+    &::before {
+        content: 'Supprimer';
+        position: absolute;
+        top: -20px;
+        color: white;
+        font-size: 13px;
+        transition: opacity 0.3s ease, top 0.3s ease, transform 0.3s ease;
+        opacity: 0;
+    }
+
+    &:hover:not(:disabled) {
+        width: 130px;
+        border-radius: 50px;
+        background-color: rgb(255, 69, 69);
+
+        .trash {
+            width: 50px;
+            transform: translateY(65%);
+            transition-duration: 0.3s;
+        }
+
+        &::before {
+            top: 10px; 
+            opacity: 1;
+            transform: translateY(3px);
+        }
+    }
+
+    &:active:not(:disabled) {
+        transform: scale(0.95);
+    }
+}
+
+.btn--edit {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 120px;
+    height: 50px;
+    border: none;
+    padding: 0px 20px;
+    background-color: $rose-button;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 10px;
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.25);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+
+    .pencil {
+        width: 25px;
+        position: absolute;
+        right: 12px;
+        fill: white;
+        filter: invert(1);
+        transition: right 0.3s ease;
+    }
+
+    &:hover:not(:disabled) {
+        color: transparent;
+        box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25);
+
+        .pencil {
+            right: 50%;
+            transform: translateX(50%);
+            transition: right 0.3s ease;
+        }
+    }
+
+    &:active:not(:disabled) {
+        transform: translateY(3px);
+        box-shadow: 0px 0px 0px rgb(110, 74, 104);
+        transition-duration: 0.3s;
+    }
+}
+
+.btn--toggle-visibility {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 120px;
+    height: 50px;
+    border: none;
+    padding: 0px 40px 0px 20px;
+    background-color: $rose-button;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 10px;
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.25);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+
+    .eye-icon {
+        width: 25px;
+        position: absolute;
+        right: 12px;
+        fill: white;
+        filter: invert(1);
+        transition: right 0.3s ease;
+    }
+
+    &:hover:not(:disabled) {
+        color: transparent;
+        box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25);
+
+        .eye-icon {
+            right: 50%;
+            transform: translateX(50%);
+            transition: right 0.3s ease;
+        }
+    }
+
+    &:active:not(:disabled) {
+        transform: translateY(3px);
+        box-shadow: 0px 0px 0px rgb(110, 74, 104);
+        transition-duration: 0.3s;
+    }
 }
 
 .btn.selected {
