@@ -338,6 +338,34 @@
     z-index: 1;
 }
 
+.turn-notification-toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 80;
+    background: rgba(12, 14, 34, 0.9);
+    border: 1px solid rgba(0, 255, 255, 0.4);
+    border-radius: 10px;
+    padding: 14px 28px;
+    color: aqua;
+    font-weight: 700;
+    font-size: 1.1em;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    animation: toast-slide-in 0.3s ease-out;
+}
+
+@keyframes toast-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
 .game-over-overlay {
     position: fixed;
     inset: 0;
