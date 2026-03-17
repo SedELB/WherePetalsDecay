@@ -113,6 +113,18 @@ export class GameLogicService {
         return this.movementService.movePlayer(game, socketId, direction);
     }
 
+    teleportPlayer(lobbyId: string, socketId: string, targetPos: Vec2) {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return null;
+        return this.movementService.teleportPlayer(game, socketId, targetPos);
+    }
+
+    getReachableTilesForTeleport(lobbyId: string, socketId: string){
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return [];
+        return this.movementService.getReachableTilesForTeleport(game, socketId);
+    }
+
     getReachableTiles(lobbyId: string, socketId: string) {
         const game = this.activeGames.get(lobbyId);
         if (!game) return [];

@@ -42,7 +42,7 @@ export class GameCreationService {
                     this.fetchVisibleGames().subscribe({
                         next: (games) => this.setGames(games),
                         error: () => {
-                            // Silently handle error
+                            // do nothing
                         },
                     });
                 } else {
