@@ -1,27 +1,8 @@
 /**
- * WaitingRoomComponent Test Suite — Part 1: Initialization & WebSocket Listeners
- *
- * Testing Strategy:
- * This test suite validates the waiting room page where players wait before a game starts.
- * Part 1 covers:
- *
- * 1. Initialization and Navigation Guards - Verifies that ngOnInit correctly reads the
- *    lobbyId from the route, checks sessionStorage for F5 protection, and redirects to
- *    home when required data is missing.
- *
- * 2. WebSocket Event Listeners - Tests that setupUpdateListeners registers handlers for
- *    five events: LobbyUpdated, LobbyStatusReceived, GameStarting, PlayerKicked,
- *    and GameDeleted. Each listener updates component state or triggers navigation.
- *
- * WebSocket Mocking Strategy:
- * We mock WebSocketService with jasmine spies that use callFake to capture event
- * callbacks by event name. This allows tests to manually invoke specific callbacks
- * to simulate server events while maintaining test isolation. The getSocketId spy
- * returns a fixed socket ID to enable computed signal testing.
- *
- * Network Latency Simulation:
- * Async tests use setTimeout with randomized delays (500-5000ms) to simulate
- * realistic network conditions when testing WebSocket event handling.
+ * Test suite for the WaitingRoomComponent.
+ * This component manages the staging area where players gather before a match begins.
+ * The tests focus heavily on initialization safety (preventing access without a valid lobby) and real-time synchronization via WebSocket listeners.
+ * It ensures the component reacts appropriately to incoming events such as lobby updates, game start signals, or session terminations (kicks/deletions).
  */
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -104,12 +85,10 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
         ...overrides,
     });
 
-    // Helper: Simulate random network latency between 500ms-5000ms for realistic async testing
     const randomNetworkLatency = (): number => {
         return Math.random() * BASE_4500 + BASE_500;
     };
 
-    // Helper: Capture WebSocket event callbacks by event name
     const capturedCallbacks = new Map<string, (...args: unknown[]) => void>();
     const createWebSocketMock = () => {
         const mock = jasmine.createSpyObj('WebSocketService', [
@@ -157,22 +136,13 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
         sessionStorage.clear();
     });
 
+    /** Ensures the component successfully instantiates without throwing any errors. */
     it('should create', () => {
         expect(component).toBeTruthy();
     });
 
-    // Initialization Tests
-    //
-    // These tests verify that ngOnInit correctly reads route params, checks
-    // sessionStorage for F5 protection, and sets up the lobby from navigation state.
-
     describe('ngOnInit', () => {
-        // Edge Case: Missing lobbyId in route
-        //
-        // When the URL has no lobbyId parameter, the component must redirect
-        // to the home page immediately since the waiting room is meaningless
-        // without a lobby to display.
-
+        /** Protects the application state by forcefully redirecting users to the homepage if they manage to land on the waiting room route without a target lobby ID. */
         it('should redirect to home when lobbyId is missing from route', async () => {
             const noIdRoute = { snapshot: { paramMap: { get: () => null } } };
             TestBed.resetTestingModule();
@@ -195,17 +165,13 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
             expect(localRouter.navigate).toHaveBeenCalledWith(['/home']);
         });
 
+        /** Confirms the component accurately extracts and assigns the requested lobby ID directly from the active route parameters. */
         it('should set lobbyId from route parameter', () => {
             fixture.detectChanges();
             expect(component.lobbyId()).toBe(LOBBY_ID);
         });
 
-        // Edge Case: F5 refresh without sessionStorage flag
-        //
-        // When a user refreshes the page, sessionStorage won't have the
-        // navigation flag. If history.state also has no lobby, the component
-        // redirects to home to prevent showing an empty waiting room.
-
+        /** Acts as a strict state guard, booting the user back to the homepage if they perform a hard refresh (F5) that clears the necessary session storage and routing state. */
         it('should redirect to home on F5 refresh without session flag and no state', () => {
             spyOn(router, 'navigate');
             fixture.detectChanges();
@@ -213,11 +179,7 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
             expect(router.navigate).toHaveBeenCalled();
         });
 
-        // Edge Case: Lobby data from setupUpdateListeners
-        //
-        // When the component initializes with proper lobby data,
-        // setupUpdateListeners should be callable and register events.
-
+        /** Verifies that a properly initialized component immediately proceeds to bind all required real-time event listeners. */
         it('should allow setupUpdateListeners to register all event handlers', () => {
             component.lobbyId.set(LOBBY_ID);
             component.setupUpdateListeners();
@@ -227,12 +189,6 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
         });
     });
 
-    // WebSocket Event Listener Tests
-    //
-    // These tests verify that setupUpdateListeners registers handlers for
-    // all five critical events. Each handler either updates component state
-    // or triggers navigation.
-
     describe('setupUpdateListeners', () => {
         beforeEach(() => {
             component.setupUpdateListeners();
@@ -240,14 +196,10 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
 
         const EXPECTED_LISTENER_COUNT = 5;
 
+        /** Confirms that exactly five specific WebSocket events are actively monitored to keep the waiting room perfectly synchronized with the server. */
         it(`should register ${EXPECTED_LISTENER_COUNT} WebSocket event listeners`, () => {
             expect(webSocketService.onNamespace).toHaveBeenCalledTimes(EXPECTED_LISTENER_COUNT);
         });
-
-        // Parameterized listener registration tests
-        //
-        // Each event listener must be registered with the correct namespace
-        // and event name. We verify all five in a single parameterized block.
 
         const expectedEvents = [
             JoinGameEvents.LobbyUpdated,
@@ -257,6 +209,7 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
             JoinGameEvents.GameDeleted,
         ];
 
+        /** Iterates through the core real-time events to guarantee each one is correctly bound to the Join namespace with an executable callback. */
         expectedEvents.forEach((event) => {
             it(`should register listener for ${event}`, () => {
                 expect(webSocketService.onNamespace).toHaveBeenCalledWith(
@@ -267,6 +220,7 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
             });
         });
 
+        /** Ensures the local lobby state is dynamically replaced whenever the server broadcasts an update, such as a new player joining the room. */
         it('should update currentLobby when LobbyUpdated event is received', (done) => {
             const updatedLobby = createMockLobby({ playerCount: 3 });
 
@@ -279,6 +233,7 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
             }, randomNetworkLatency());
         });
 
+        /** Verifies that the initial status synchronization both populates the current lobby state and triggers a parallel request to fetch the existing chat history. */
         it('should update currentLobby and request chat history on LobbyStatusReceived', (done) => {
             const statusLobby = createMockLobby();
 
@@ -292,6 +247,7 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
             }, randomNetworkLatency());
         });
 
+        /** Seamlessly transitions the application state to the active game board when the server announces the match is officially beginning. */
         it('should set lobby in gameViewService and navigate to game on GameStarting', (done) => {
             const finalLobby = createMockLobby();
             spyOn(router, 'navigate');
@@ -306,6 +262,7 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
             }, randomNetworkLatency());
         });
 
+        /** Gracefully handles a player being forcefully removed by the host, immediately returning them to the homepage to exit the session safely. */
         it('should navigate to home when PlayerKicked event is received', (done) => {
             spyOn(router, 'navigate');
 
@@ -318,6 +275,7 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
             }, randomNetworkLatency());
         });
 
+        /** Protects the client from remaining in a dead lobby by redirecting them to the homepage if the host decides to delete the session entirely. */
         it('should navigate to home when GameDeleted event is received', (done) => {
             spyOn(router, 'navigate');
 
