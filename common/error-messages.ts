@@ -3,8 +3,6 @@ export const GAME_NAME_NOT_UNIQUE = "Le nom du jeu n'est pas unique !";
 export const NO_GAMES_FOUND = 'Aucun jeu trouvé dans la base de données';
 export const GAME_NOT_FOUND = 'Aucun jeu trouvé avec cet identifiant';
 export const NO_VISIBLE_GAMES_FOUND = 'Aucun jeu visible trouvé dans la base de données';
-export const GAME_CREATION_FAILED = 'Echec lors de la création de jeu';
-export const GAME_UPDATE_FAILED = 'Echec lors de la mise à jour du jeu';
 export const GAME_DELETION_FAILED = 'Erreur lors de la suppression du jeu';
 export const GAME_VISIBILITY_UPDATE_FAILED = 'Echec lors de la mise à jour de la visibilité du jeu';
 
@@ -21,4 +19,3 @@ export const DOOR_ON_GRID_BORDER = 'ne peut pas être sur le bord de la carte !'
 export const INVALID_DOOR_PLACEMENT = 'Placement de porte invalide à la position';
 export const DESC_INVALID_DOOR_PLACEMENT = 'Une porte ne doit pas être bloquée par un obstacle (porte ou mur)';
 export const FLAG_NOT_PLACED = "Le drapeau n'est pas placé !";
-export const VALIDATION_ERRORS_PREFIX = 'Erreurs de validation';

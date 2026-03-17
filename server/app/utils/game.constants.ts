@@ -1,4 +1,4 @@
-import { TileItem, TileTexture } from './game.enum';
+import { TileItem, TileTexture } from '@common/enums';
 
 export const NAME_MAX_LENGTH = 20;
 export const DESC_MAX_LENGTH = 500;

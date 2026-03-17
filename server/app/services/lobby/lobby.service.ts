@@ -53,7 +53,7 @@ export class LobbyService {
 
     getAvailableLobbies(): Lobby[] {
         const availableLobbies = Array.from(this.lobbies.values()).filter(
-            (lobby) => lobby.isLocked === false && lobby.playerCount < lobby.game.maxPlayers,
+            (lobby) => !lobby.isLocked && lobby.playerCount < lobby.game.maxPlayers,
         );
 
         return availableLobbies;
@@ -62,7 +62,7 @@ export class LobbyService {
     joinLobby(lobbyId: string, player: Player): Lobby {
         const lobby = this.lobbies.get(lobbyId);
         if (!lobby) throw new Error('There is no lobby associated with the provided ID');
-        if (lobby.isLocked === true) throw new Error('The lobby is locked');
+        if (lobby.isLocked) throw new Error('The lobby is locked');
 
         lobby.players.push(player);
         lobby.playerCount = lobby.players.length;
@@ -70,7 +70,7 @@ export class LobbyService {
         return lobby;
     }
 
-    deleteLobby(lobbyId): void {
+    deleteLobby(lobbyId: string): void {
         this.lobbies.delete(lobbyId);
     }
 

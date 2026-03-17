@@ -18,6 +18,10 @@ import { Server, Socket } from 'socket.io';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Player } from '@common/player';
 import { Lobby } from '@common/lobby';
+
+const INITIAL_WINS_COUNT = 0;
+const DUPLICATE_NAME_SUFFIX_START = 2;
+
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
 export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
@@ -53,7 +57,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         this.logger.log(`Payload (Lobby Created) by ${socket.id}`);
         payload.player.socketId = socket.id;
         payload.player.isHost = true;
-        payload.player.winsCount = 0;
+        payload.player.winsCount = INITIAL_WINS_COUNT;
         const createdLobby = this.lobbyService.createLobby(payload.game, socket.id, payload.player);
 
         if (createdLobby) {
@@ -89,7 +93,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         payload.player.character.name = finalPlayerName;
         payload.player.socketId = socket.id;
         payload.player.isHost = false;
-        payload.player.winsCount = 0;
+        payload.player.winsCount = INITIAL_WINS_COUNT;
 
         const updatedLobby = this.lobbyService.joinLobby(payload.lobbyId, payload.player);
 
@@ -170,7 +174,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     private getOccupiedAvatars(lobby: Lobby): string[] {
         const confirmedAvatars = lobby.players
             .map((player) => player.character?.avatar)
-            .filter((avat) => avat !== undefined && avat !== null && avat !== '');
+            .filter((avat): avat is string => !!avat);
 
         const pendingAvatars = Object.values(lobby.pendingAvatars || {});
         return [...confirmedAvatars, ...pendingAvatars];
@@ -178,7 +182,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
     private getValidName(name: string, lobby: Lobby): string {
         let finalName = name;
-        let counter = 2;
+        let counter = DUPLICATE_NAME_SUFFIX_START;
         while (lobby.players.some((player) => player.character.name === finalName)) {
             finalName = `${name}-${counter}`;
             counter++;

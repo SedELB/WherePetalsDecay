@@ -42,9 +42,3 @@ export enum SocketNamespace {
     Games = '/game',
     Join = '/join',
 }
-
-export enum GameStatus {
-    Waiting = 'waiting',
-    Playing = 'playing',
-    Finished = 'finished',
-}

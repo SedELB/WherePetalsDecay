@@ -14,6 +14,7 @@ import { MovementService } from './movement.service';
 import { TurnService } from './turn.service';
 
 const RANDOM_THRESHOLD = 0.5;
+const INITIAL_WINS_COUNT = 0;
 
 @Injectable()
 export class GameLogicService {
@@ -43,7 +44,7 @@ export class GameLogicService {
         const hasCombatted = new Map<string, boolean>();
 
         for (const player of lobby.players) {
-            player.winsCount = 0;
+            player.winsCount = INITIAL_WINS_COUNT;
             player.hasAbandonned = false;
             player.character.life = player.character.lifeBonus ? BASE_STATS.life + BASE_STATS.bonus : BASE_STATS.life;
         }

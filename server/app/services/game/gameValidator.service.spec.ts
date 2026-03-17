@@ -1,7 +1,7 @@
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { GameValidatorService } from '@app/services/game/gameValidator.service';
 import { BASE_10, BASE_15, CUSTOM_GRID_CLASSIC_SMALL, CUSTOM_GRID_CLASSIC_SMALL_INVALID, DESC_MAX_LENGTH } from '@app/utils/game.constants';
-import { GameMode, NbPlayersMedium, NbPlayersSmall, TileItem, TileTexture } from '@app/utils/game.enum';
+import { GameMode, MaxPlayers, TileItem, TileTexture } from '@common/enums';
 import {
     DESCRIPTION_FIELD_EMPTY,
     DESCRIPTION_FIELD_TOO_LONG,
@@ -34,7 +34,7 @@ describe('GameValidator', () => {
             size: { rows: BASE_10, cols: BASE_10 },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
-            maxPlayers: NbPlayersSmall.MaxPLayers,
+            maxPlayers: MaxPlayers.Small,
             grid: CUSTOM_GRID_CLASSIC_SMALL_INVALID,
             isVisible: true,
         };
@@ -373,7 +373,7 @@ const getValidGame = (): CreateGameDto => ({
     size: { rows: BASE_10, cols: BASE_10 },
     gameMode: GameMode.Classic,
     thumbnail: 'N/A',
-    maxPlayers: NbPlayersSmall.MaxPLayers,
+    maxPlayers: MaxPlayers.Small,
     grid: CUSTOM_GRID_CLASSIC_SMALL,
     isVisible: true,
 });
@@ -385,7 +385,7 @@ const getCleanGame = (): CreateGameDto => ({
     size: { rows: BASE_15, cols: BASE_15 },
     gameMode: GameMode.Classic,
     thumbnail: 'N/A',
-    maxPlayers: NbPlayersMedium.MaxPLayers,
+    maxPlayers: MaxPlayers.Medium,
     isVisible: true,
     grid: Array(BASE_15).fill(null).map(() =>
         Array(BASE_15).fill(null).map(() => ({ type: TileTexture.Floor, item: null })),

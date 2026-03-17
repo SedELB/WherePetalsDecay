@@ -1,5 +1,5 @@
 import { DESC_MAX_LENGTH, MAX_PLAYERS_DTO, MIN_PLAYERS_DTO, NAME_MAX_LENGTH, TEXT_MIN_LENGTH } from '@app/utils/game.constants';
-import { GameMode, TileItem, TileTexture } from '@app/utils/game.enum';
+import { GameMode, TileItem, TileTexture } from '@common/enums';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
@@ -15,7 +15,7 @@ export class Tile {
     item: TileItem | null;
 }
 
-export const tileSchema = SchemaFactory.createForClass(Tile); // si on separe dans un nouveau fichier
+const tileSchema = SchemaFactory.createForClass(Tile); // si on separe dans un nouveau fichier
 
 // GAME — schéma principal
 

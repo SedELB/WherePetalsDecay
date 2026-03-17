@@ -12,7 +12,7 @@ import swal from 'sweetalert2';
 
 const THUMBNAIL_QUALITY = 0.85;
 const THUMBNAIL_MAX_SIZE = 256;
-export interface MapSetupInitResult {
+interface MapSetupInitResult {
   game: Game;
   mode: 'create' | 'edit';
   itemCounts: TileItemCounts;
@@ -143,7 +143,12 @@ export class MapSetupFacadeService {
           this.router.navigate(['/admin']);
         },
         error: (err: HttpErrorResponse) => {
-          alert(`Une erreur s'est produite en enregistrant un nouveau jeu : ${err.error}`);
+          swal.fire({
+            title: 'Erreur',
+            text: `Une erreur s'est produite en enregistrant un nouveau jeu : ${err.error}`,
+            icon: 'error',
+            confirmButtonText: 'OK',
+          });
         },
       });
     }

@@ -8,7 +8,7 @@ const TEXT_MIN_LENGTH = 1;
 const FLAG_REQUIRED = 1;
 const FLAG_NONE = 0;
 
-export interface GameValidationResult {
+interface GameValidationResult {
     isValid: boolean;
     errors: string[];
 }
