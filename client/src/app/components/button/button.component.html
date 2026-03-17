@@ -1,4 +1,5 @@
 <button 
+    class="btn"
     [ngStyle]="{
         'background-image': backgroundImage,
         'width': width ? width + 'px' : null,
@@ -7,7 +8,6 @@
     [routerLink]="route"
     [disabled]="disabled"
     [ngClass]="[
-        'btn',
         'btn--' + variant,
         disabled ? 'disabled' : '',
         selected ? 'selected' : ''

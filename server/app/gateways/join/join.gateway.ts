@@ -1,5 +1,5 @@
-import { Game } from '@common/game';
 import { SocketNamespace } from '@common/enums';
+import { Game } from '@common/game';
 import { Injectable, Logger } from '@nestjs/common';
 import {
     ConnectedSocket,
@@ -14,10 +14,10 @@ import {
 
 import { GameLogicService } from '@app/services/game-logic/game-logic.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
-import { Server, Socket } from 'socket.io';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { Player } from '@common/player';
 import { Lobby } from '@common/lobby';
+import { Player } from '@common/player';
+import { Server, Socket } from 'socket.io';
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
 export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
@@ -79,8 +79,8 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             return;
         }
 
-        if (lobby.playerCount >= lobby.game.maxPlayers) {
-            socket.emit(JoinGameEvents.LobbyError, 'Ce salon est plein !');
+        if (lobby.isLocked || lobby.playerCount >= lobby.game.maxPlayers) {
+            socket.emit(JoinGameEvents.LobbyError, 'Ce salon est verrouillé ou plein !');
             return;
         }
 
@@ -196,9 +196,16 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             this.lobbyService.deleteLobby(lobby.lobbyId);
         } else {
             const leavingPlayer = lobby.players.find(player => player.socketId === socket.id);
-            this.logger.log(`${leavingPlayer.character.name} left lobby: ${lobby.lobbyId}`);
-            this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
 
+            if (leavingPlayer){
+                this.logger.log(`${leavingPlayer.character.name} left lobby: ${lobby.lobbyId}`);
+                this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
+
+            } else {
+                this.logger.log(`Pending player ${socket.id} left lobby: ${lobby.lobbyId}`);
+                this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
+            }
+            
             const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
             this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
             this.server.to(lobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, lobby);

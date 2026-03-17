@@ -86,18 +86,28 @@
         </div>
     </section>
 
+    @if (turnNotification(); as notification) {
+        <div class="turn-notification-toast">
+            <span>{{ notification }}</span>
+        </div>
+    }
+
     @if (gameOver(); as over) {
         <div class="game-over-overlay">
             <div class="game-over-message">
-                @if (over.winnerSocketId) {
-                    <h2>Partie terminée !</h2>
-                    @if (over.winnerSocketId === localPlayer()?.socketId) {
-                        <p>Vous avez gagné avec 3 victoires !</p>
+                @if (over.winnerSocketId === localPlayer()?.socketId) {
+                    @if (over.isForfeit) {
+                        <p>Vous avez gagné car tous les autres joueurs ont quitté !</p>
                     } @else {
-                        <p>{{ getPlayerName(over.winnerSocketId) }} a remporté la partie avec 3 victoires.</p>
+                        <p>Vous avez gagné la partie avec 3 victoires !</p>
                     }
+
+                } @else if (over.winnerSocketId) {
+                    <p>{{ getPlayerName(over.winnerSocketId) }} a atteint 3 victoires et remporte la partie.</p>
+
                 } @else {
                     <h2>Partie terminée</h2>
+                    <p>La partie s'est terminée sans gagnant.</p>
                     <p>Tous les joueurs ont abandonné.</p>
                 }
             </div>
@@ -120,9 +130,10 @@
     <aside class="side-panel right">
         <section class="chat-box">
             <h3 class="section-title">Chat</h3>
-            <app-chat 
+            <app-chat
                 [lobbyId]="lobby()?.lobbyId ?? ''"
                 [playerName]="localPlayer()?.character?.name ?? ''"
+                (chatFocusChange)="onChatFocusChange($event)"
             ></app-chat>
         </section>
 

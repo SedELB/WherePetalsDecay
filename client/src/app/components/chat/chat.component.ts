@@ -1,5 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewChecked, Component, ElementRef, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, ViewChild } from '@angular/core';
+import {
+    AfterViewChecked, Component, ElementRef, EventEmitter,
+    Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ChatService } from '@app/services/chat/chat.service';
 import { ChatMessage } from '@common/chat-message';
@@ -18,6 +21,8 @@ export class ChatComponent implements OnInit, OnDestroy, OnChanges, AfterViewChe
     @Input() lobbyId: string = 'lobby';
     @Input() playerName: string = '';
     @Input() hasAbandoned: boolean = false;
+
+    @Output() chatFocusChange = new EventEmitter<boolean>();
 
     @ViewChild('messagesContainer') private messagesContainer!: ElementRef<HTMLDivElement>;
 

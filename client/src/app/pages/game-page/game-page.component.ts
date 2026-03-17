@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { ChatComponent } from '@app/components/chat/chat.component';
 import { SakuraComponent } from '@app/components/sakura/sakura.component';
-import { OBJECT_PLACEMENT_TOOL, TILE_TOOLS } from '@app/constants/map-setup-page-constant';
+import { OBJECT_PLACEMENT_TOOL } from '@app/constants/map-setup-page-constant';
 import { ROUTES } from '@app/constants/routes.constants';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { BASE_STATS } from '@common/character';
@@ -23,9 +23,10 @@ const GAME_OVER_REDIRECT_DELAY = 3000;
 })
 export class GamePageComponent implements OnInit {
     readonly items = OBJECT_PLACEMENT_TOOL;
-    readonly tiles = TILE_TOOLS;
     readonly routes = ROUTES;
     readonly costInfinity = Infinity;
+
+    isChatFocused = false;
 
     protected gameMode = GameMode;
 
@@ -38,6 +39,7 @@ export class GamePageComponent implements OnInit {
     readonly activePlayerSocketId = computed(() => this.gameViewService.activePlayerSocketId());
     readonly tileInfo = computed(() => this.gameViewService.tileInfo());
     readonly gameOver = computed(() => this.gameViewService.gameOver());
+    readonly turnNotification = computed(() => this.gameViewService.turnNotification());
 
     readonly orderedPlayers = computed(() => {
         const order = this.gameViewService.turnOrder();
@@ -125,12 +127,16 @@ export class GamePageComponent implements OnInit {
 
     @HostListener('window:keyup', ['$event'])
     onKeyUp(event: KeyboardEvent): void {
-        if (!this.isMyTurn()) return;
+        if (!this.isMyTurn() || this.isChatFocused) return;
         const direction = KEY_TO_DIRECTION[event.key];
         if (!direction) return;
 
         const lobbyId = this.lobby()?.lobbyId;
         if (lobbyId) this.gameViewService.sendMove(lobbyId, direction);
+    }
+
+    onChatFocusChange(focused: boolean): void {
+        this.isChatFocused = focused;
     }
 
     @HostListener('window:beforeunload')

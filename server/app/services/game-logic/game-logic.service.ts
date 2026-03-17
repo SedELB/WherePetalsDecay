@@ -2,16 +2,16 @@ import { BASE_STATS } from '@common/character';
 import { Direction } from '@common/direction';
 import { TileItem } from '@common/enums';
 import { Game } from '@common/game';
+import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
+import { Server, Socket } from 'socket.io';
 import { ActiveGame, TurnCallbacks } from './active-game.interface';
 import { CombatService } from './combat.service';
 import { MovementService } from './movement.service';
 import { TurnService } from './turn.service';
-import { Server, Socket } from 'socket.io';
-import { JoinGameEvents } from '@common/join.gateway.events';
 
 const RANDOM_THRESHOLD = 0.5;
 
@@ -55,6 +55,8 @@ export class GameLogicService {
             movementPoints.set(player.socketId, player.character.speed);
             hasCombatted.set(player.socketId, false);
         });
+
+        this.removeUnusedSpawns(lobby.game, shuffledSpawns, activePlayers.length);
 
         const turnOrder = this.computeTurnOrder(activePlayers);
 
@@ -175,11 +177,11 @@ export class GameLogicService {
 
 
         const activePlayers = this.getActivePlayers(lobbyId);
-        
+
         if (activePlayers.length <= 1) {
             const winnerId = activePlayers.length === 1 ? activePlayers[0].socketId : null;
-            server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId });
-            
+            server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId, isForfeit: true });
+
             this.endGame(lobbyId);
             server.in(lobbyId).socketsLeave(lobbyId);
             return true;
@@ -212,6 +214,17 @@ export class GameLogicService {
             positions[socketId] = pos;
         });
         return positions;
+    }
+
+    private removeUnusedSpawns(game: Game, shuffledSpawns: Vec2[], playerCount: number): void {
+        const usedSpawns = new Set(shuffledSpawns.slice(0, playerCount).map((s) => `${s.x},${s.y}`));
+        for (let row = 0; row < game.grid.length; row++) {
+            for (let col = 0; col < game.grid[row].length; col++) {
+                if (game.grid[row][col].item === TileItem.Spawn && !usedSpawns.has(`${col},${row}`)) {
+                    game.grid[row][col].item = null;
+                }
+            }
+        }
     }
 
     private extractSpawnPositions(game: Game): Vec2[] {
