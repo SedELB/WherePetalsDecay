@@ -89,16 +89,18 @@
     @if (gameOver(); as over) {
         <div class="game-over-overlay">
             <div class="game-over-message">
-                @if (over.winnerSocketId) {
-                    <h2>Partie terminée !</h2>
-                    @if (over.winnerSocketId === localPlayer()?.socketId) {
-                        <p>Vous avez gagné avec 3 victoires !</p>
+                @if (over.winnerSocketId === localPlayer()?.socketId) {
+                    @if (over.isForfeit) {
+                        <p>Vous avez gagné car tous les autres joueurs ont quitté !</p>
                     } @else {
-                        <p>{{ getPlayerName(over.winnerSocketId) }} a remporté la partie avec 3 victoires.</p>
+                        <p>Vous avez gagné la partie avec 3 victoires !</p>
                     }
+
+                } @else if (over.winnerSocketId) {
+                    <p>{{ getPlayerName(over.winnerSocketId) }} a atteint 3 victoires et remporte la partie.</p>
+
                 } @else {
-                    <h2>Partie terminée</h2>
-                    <p>Tous les joueurs ont abandonné.</p>
+                    <p>La partie a été annulée.</p>
                 }
             </div>
         </div>
