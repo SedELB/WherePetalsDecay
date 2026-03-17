@@ -109,7 +109,10 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             return;
         }
 
-        this.gameLogicService.endTurn(lobbyId);
+        const isLoserTurn = this.gameLogicService.isPlayerTurn(lobbyId, combatResult.loserId);
+        if (isLoserTurn) {
+            this.gameLogicService.endTurn(lobbyId);
+        }
     }
 
     @SubscribeMessage(JoinGameEvents.RequestTileInfo)
@@ -144,7 +147,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (!activeGame) return;
 
         const isGameOver = this.gameLogicService.executePlayerAbandon(
-            activeGame.lobby.lobbyId, 
+            activeGame.lobby.lobbyId,
             socket,
             this.server,
         );
@@ -155,7 +158,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     }
 
     private handleGameOver(lobbyId: string, winnerSocketId: string | null): void {
-        this.server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId });
+        this.server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId, isForfeit: false });
         this.gameLogicService.endGame(lobbyId);
         this.lobbyService.deleteLobby(lobbyId);
         this.server.in(lobbyId).socketsLeave(lobbyId);

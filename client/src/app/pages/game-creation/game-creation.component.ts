@@ -9,8 +9,7 @@ import { ROUTES } from '@app/constants/routes.constants';
 import { Game } from '@common/game';
 import { GameCreationService } from '@app/services/game-creation/game-creation.service';
 import { Subscription } from 'rxjs';
-
-// The page after clicking "Creer une partie"
+import swal from 'sweetalert2';
 @Component({
     selector: 'app-game-creation',
     standalone: true,
@@ -39,7 +38,12 @@ export class GameCreationComponent implements OnInit, OnDestroy {
             next: (games) => this.gameCreationService.setGames(games),
             error: (error: HttpErrorResponse) => {
                 const errorMessage = error.error || 'Erreur lors de la récupération des jeux';
-                alert(`Erreur: ${errorMessage}`);
+                swal.fire({
+                    title: 'Erreur',
+                    text: errorMessage,
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                });
             },
         });
 

@@ -12,7 +12,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import swal from 'sweetalert2';
+import swal, { SweetAlertResult } from 'sweetalert2';
 
 import { CommunicationService } from '@app/services/communication/communication.service';
 import { GameValidatorService } from '@app/services/game-validator/game-validator.service';
@@ -34,10 +34,9 @@ const grid = (rows: number, cols: number): Tile[][] =>
 
 const SIZE_SMALL = 10;
 const THUMBNAIL_SIZE_PX = 10;
-const CAPTURE_TEST_SEED = 'test';
 
 type CaptureThumbnailApi = {
-    captureThumbnail: (seed: string) => Promise<string>;
+    captureThumbnail: (element: HTMLElement) => Promise<string>;
 };
 
 const gameFactory = (rows = 2, cols = 2, mode: GameMode = GameMode.Classic): Game => ({
@@ -54,7 +53,14 @@ const gameFactory = (rows = 2, cols = 2, mode: GameMode = GameMode.Classic): Gam
     updatedAt: new Date(),
 });
 
+const mockSwalResult: SweetAlertResult = {
+    isConfirmed: true,
+    isDenied: false,
+    isDismissed: false,
+};
+
 describe('MapSetupFacadeService', () => {
+    const mockElement = {} as HTMLElement;
     let router: jasmine.SpyObj<Router>;
     let route: ActivatedRoute;
     let communication: jasmine.SpyObj<CommunicationService>;
@@ -145,9 +151,9 @@ describe('MapSetupFacadeService', () => {
         validator.validate.and.returnValue({ isValid: true, errors: [] });
         communication.createGame.and.returnValue(of(undefined));
 
-        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo(mockSwalResult);
 
-        await service.saveGame(game, 'create');
+        await service.saveGame(game, 'create', mockElement);
 
         expect(game.thumbnail).toBe('new-thumb');
         expect(communication.createGame).toHaveBeenCalledWith(game);
@@ -173,9 +179,9 @@ describe('MapSetupFacadeService', () => {
         communication.getAllGames.and.returnValue(of([game]));
         communication.modifyGame.and.returnValue(of(undefined));
 
-        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo(mockSwalResult);
 
-        await service.saveGame(game, 'edit');
+        await service.saveGame(game, 'edit', mockElement);
 
         expect(game.thumbnail).toBe('edit-thumb');
         expect(communication.modifyGame).toHaveBeenCalledWith(game);
@@ -188,9 +194,9 @@ describe('MapSetupFacadeService', () => {
         const game = gameFactory(SIZE_SMALL, SIZE_SMALL, GameMode.Classic);
 
         spyOn(service as unknown as CaptureThumbnailApi, 'captureThumbnail').and.rejectWith(new Error('fail'));
-        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo(mockSwalResult);
 
-        await service.saveGame(game, 'create');
+        await service.saveGame(game, 'create', mockElement);
 
         expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ title: `Problème d'enregistrement` }));
         expect(validator.validate).not.toHaveBeenCalled();
@@ -212,9 +218,9 @@ describe('MapSetupFacadeService', () => {
         mapSetup.buildValidationPayload.and.returnValue(validationPayload);
         validator.validate.and.returnValue({ isValid: false, errors: ['Erreur 1', 'Erreur 2'] });
 
-        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo(mockSwalResult);
 
-        await service.saveGame(game, 'edit');
+        await service.saveGame(game, 'edit', mockElement);
 
         expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Jeu invalide !' }));
         expect(communication.modifyGame).not.toHaveBeenCalled();
@@ -239,9 +245,9 @@ describe('MapSetupFacadeService', () => {
         communication.getAllGames.and.returnValue(of([game]));
         communication.modifyGame.and.returnValue(throwError(() => ({ error: 'bad' })));
 
-        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo(mockSwalResult);
 
-        await service.saveGame(game, 'edit');
+        await service.saveGame(game, 'edit', mockElement);
 
         expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Jeu invalide !' }));
     });
@@ -264,9 +270,9 @@ describe('MapSetupFacadeService', () => {
         communication.getAllGames.and.returnValue(of([]));
         communication.createGame.and.returnValue(of(undefined));
 
-        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo(mockSwalResult);
 
-        await service.saveGame(game, 'edit');
+        await service.saveGame(game, 'edit', mockElement);
 
         expect(communication.createGame).toHaveBeenCalledWith(game);
         expect(communication.modifyGame).not.toHaveBeenCalled();
@@ -291,11 +297,11 @@ describe('MapSetupFacadeService', () => {
         validator.validate.and.returnValue({ isValid: true, errors: [] });
         communication.createGame.and.returnValue(throwError(() => ({ error: 'creation failed' })));
 
-        const alertSpy = spyOn(window, 'alert');
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo(mockSwalResult);
 
-        await service.saveGame(game, 'create');
+        await service.saveGame(game, 'create', mockElement);
 
-        expect(alertSpy).toHaveBeenCalledWith("Une erreur s'est produite en enregistrant un nouveau jeu : creation failed");
+        expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Jeu invalide !' }));
     });
 
     // Test default mode behavior
@@ -313,27 +319,25 @@ describe('MapSetupFacadeService', () => {
 
     // Test successful thumbnail capture
     it('captures a thumbnail when the DOM element exists', async () => {
-        const el = document.createElement('div');
-        el.id = 'thumbnail';
-        el.style.width = `${THUMBNAIL_SIZE_PX}px`;
-        el.style.height = `${THUMBNAIL_SIZE_PX}px`;
-        document.body.appendChild(el);
+        const element = document.createElement('div');
+        element.style.width = `${THUMBNAIL_SIZE_PX}px`;
+        element.style.height = `${THUMBNAIL_SIZE_PX}px`;
+        document.body.appendChild(element);
 
-        const dataUrl = await (service as unknown as CaptureThumbnailApi).captureThumbnail(CAPTURE_TEST_SEED);
+        const dataUrl = await (service as unknown as CaptureThumbnailApi).captureThumbnail(element);
 
         expect(typeof dataUrl).toBe('string');
         expect(dataUrl.startsWith('data:')).toBeTrue();
 
-        el.remove();
+        element.remove();
     });
 
-    // Test thumbnail capture with missing element
-    it('throws if the thumbnail element is missing', async () => {
-        const existing = document.getElementById('thumbnail');
-        existing?.remove();
+    // Test thumbnail capture with invalid element
+    it('throws if the thumbnail element cannot be captured', async () => {
+        const element = {} as HTMLElement;
 
         await expectAsync(
-            (service as unknown as CaptureThumbnailApi).captureThumbnail(CAPTURE_TEST_SEED),
-        ).toBeRejectedWithError('image de prévisualisation est introuvable');
+            (service as unknown as CaptureThumbnailApi).captureThumbnail(element),
+        ).toBeRejected();
     });
 });
