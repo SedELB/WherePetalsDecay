@@ -25,8 +25,18 @@ export class GamePageComponent implements OnInit {
     readonly items = OBJECT_PLACEMENT_TOOL;
     readonly routes = ROUTES;
     readonly costInfinity = Infinity;
+    readonly tileNames: Record<string, string> = {
+        floor: 'Plancher',
+        wall: 'Mur',
+        water: 'Eau',
+        ice: 'Glace',
+        doorOpened: 'Porte ouverte',
+        doorClosed: 'Porte fermée',
+    };
 
     isChatFocused = false;
+    isJournalOpen = false;
+    isCombatMode = false;
 
     protected gameMode = GameMode;
 
@@ -166,15 +176,32 @@ export class GamePageComponent implements OnInit {
         });
     }
 
-    onCombat(targetSocketId: string): void {
+    toggleCombatMode(): void {
+        this.isCombatMode = !this.isCombatMode;
+    }
+
+    onTileClick(col: number, row: number): void {
+        if (!this.isCombatMode) return;
+        const targetSocketId = this.getPlayerAtPosition(col, row);
+        if (!targetSocketId) return;
+        const isAdjacent = this.adjacentPlayers().some((p) => p.socketId === targetSocketId);
+        if (!isAdjacent) return;
+
         const lobbyId = this.lobby()?.lobbyId;
         if (lobbyId) this.gameViewService.sendCombat(lobbyId, targetSocketId);
+        this.isCombatMode = false;
     }
 
     onRightClick(event: MouseEvent, position: Vec2): void {
         event.preventDefault();
         const lobbyId = this.lobby()?.lobbyId;
         if (lobbyId) this.gameViewService.sendTileInfoRequest(lobbyId, position);
+    }
+
+    isAdjacentPlayer(col: number, row: number): boolean {
+        const playerSocketId = this.getPlayerAtPosition(col, row);
+        if (!playerSocketId) return false;
+        return this.adjacentPlayers().some((p) => p.socketId === playerSocketId);
     }
 
     isReachable(col: number, row: number): boolean {
