@@ -26,6 +26,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     afterInit() {
         this.logger.log('GameGateway initialized on /join namespace');
         this.gameLogicService.setCallbacks({
+            onBetweenTurnCountdown: (lobbyId: string, secondsLeft: number) => {
+                this.server.to(lobbyId).emit(JoinGameEvents.BetweenTurnCountdown, secondsLeft);
+            },
             onTurnCountdown: (lobbyId: string, secondsLeft: number) => {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnCountdown, secondsLeft);
             },

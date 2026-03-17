@@ -155,7 +155,7 @@
                     }
                 </div>
             }
-            <app-button (click)="onEndTurn()" [disabled]="isEndTurnDisabled()">Finir Tour</app-button>
+            <app-button (click)="onEndTurn()" [disabled]="this.disableEndTurn() || isEndTurnDisabled()">Finir Tour</app-button>
         </div>
     </aside>
 </main>

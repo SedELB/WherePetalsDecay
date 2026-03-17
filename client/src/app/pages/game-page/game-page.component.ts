@@ -30,6 +30,7 @@ export class GamePageComponent implements OnInit {
 
     protected gameMode = GameMode;
 
+    readonly disableEndTurn = computed(() => this.gameViewService.disableEndTurn());
     readonly isDebugModeActive = computed(() => this.gameViewService.isDebugModeActive());
     readonly lobby = computed(() => this.gameViewService.gameLobby());
     readonly game = computed(() => this.lobby()?.game);
