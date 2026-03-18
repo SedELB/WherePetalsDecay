@@ -40,6 +40,7 @@ export class GameViewService {
     readonly turnCountdown = signal<number>(0);
     readonly reachableTiles = signal<Vec2[]>([]);
     readonly movementPoints = signal<number>(0);
+    readonly actionPoints = signal<number>(0);
     readonly tileInfo = signal<TileInfoData | null>(null);
     readonly gameOver = signal<{ winnerSocketId: string | null; isForfeit?: boolean } | null>(null);
     readonly turnNotification = signal<string | null>(null);
@@ -96,6 +97,12 @@ export class GameViewService {
         this.webSocketService.onNamespace<{ socketId: string; movementPoints: number }>(this.namespace, JoinGameEvents.MovementPoints, (data) => {
             if (data.socketId === this.getLocalSocketId()) {
                 this.movementPoints.set(data.movementPoints);
+            }
+        });
+
+        this.webSocketService.onNamespace<{ socketId: string; actionPoints: number }>(this.namespace, JoinGameEvents.ActionPoints, (data) => {
+            if (data.socketId === this.getLocalSocketId()) {
+                this.actionPoints.set(data.actionPoints);
             }
         });
 
@@ -169,6 +176,7 @@ export class GameViewService {
         this.turnCountdown.set(0);
         this.reachableTiles.set([]);
         this.movementPoints.set(0);
+        this.actionPoints.set(0);
         this.tileInfo.set(null);
         this.playerPositions.set({});
         this.turnOrder.set([]);

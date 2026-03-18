@@ -79,8 +79,13 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             return;
         }
 
-        if (lobby.isLocked || lobby.playerCount >= lobby.game.maxPlayers) {
-            socket.emit(JoinGameEvents.LobbyError, 'Ce salon est verrouillé ou plein !');
+        if (lobby.playerCount >= lobby.game.maxPlayers) {
+            socket.emit(JoinGameEvents.LobbyError, 'Ce salon est plein !');
+            return;
+        }
+
+        if (lobby.isLocked) {
+            socket.emit(JoinGameEvents.LobbyError, 'Ce salon est verrouillé !');
             return;
         }
 

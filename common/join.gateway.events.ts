@@ -51,6 +51,7 @@ export enum JoinGameEvents {
     PlayerMoved = 'playerMoved',
     ReachableTiles = 'reachableTiles',
     MovementPoints = 'movementPoints',
+    ActionPoints = 'actionPoints',
 
     // Combat
     RequestCombat = 'requestCombat',
