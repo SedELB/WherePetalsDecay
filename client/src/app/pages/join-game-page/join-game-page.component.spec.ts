@@ -1,8 +1,29 @@
 /**
- * Test suite for the JoinGamePageComponent.
- * This component handles the lobby browsing experience, allowing players to view available games and select one to join.
- * The tests simulate network latency asynchronously and verify that WebSocket listeners are correctly bound and unbound to prevent memory leaks.
- * They also validate the state of the active lobbies list as real-time updates arrive, and check routing behaviors when selecting lobbies or confirming a join.
+ * JoinGamePageComponent Test Suite
+ *
+ * Testing Strategy:
+ * This component is the page players get to see available games and pick one
+ * to join. It listens for live lobby updates over WebSocket and navigates away when the
+ * player selects or successfully joins a lobby. We test four things:
+ *
+ * 1. Lifecycle Hooks - On init, the component registers two socket listeners and asks the
+ *    server for the current lobby list. On destroy, it unregisters those same listeners
+ *    so we don't leak subscriptions or keep getting updates.
+ *
+ * 2. Lobby List State - The activeLobbies array should reflect whatever the server last sent.
+ *    We cover empty lists, single lobbies, full replacements, successive updates, and
+ *    mixed game modes to make sure nothing gets lost or duplicated.
+ *
+ * 3. Navigation - Selecting a lobby routes to character selection with the game data in state.
+ *    When the server confirms a join, we navigate to the waiting room with the full lobby object.
+ *
+ * 4. Template Rendering - The empty state message, lobby card count, page title, and back
+ *    button all need to show up.
+ *
+ * WebSocket Mocking Strategy:
+ * We spy on WebSocketService and capture the callbacks passed to onNamespace. This lets us
+ * simulate server events by calling those callbacks directly with test data, optionally
+ * wrapped in setTimeout to test network latency (500-5000ms).
  */
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -37,12 +58,13 @@ describe('JoinGamePageComponent', () => {
 
     const mockLobbies: Lobby[] = [
         createMockLobby({ lobbyId: 'lobby-1', hostSocketId: 'socket-1', playerCount: 2 }),
-        createMockLobby({ 
-            lobbyId: 'lobby-2', hostSocketId: 'socket-2', playerCount: 3, 
+        createMockLobby({
+            lobbyId: 'lobby-2', hostSocketId: 'socket-2', playerCount: 3,
             game: createMockGame({ gameMode: GameMode.Ctf, name: 'CTF Game' }),
         }),
     ];
 
+    // Helper: random delay between 500ms-5000ms to simulate network conditions
     const randomNetworkLatency = (): number => Math.random() * LATENCY_RANGE + LATENCY_BASE;
 
     const capturedCallbacks = new Map<string, (...args: unknown[]) => void>();
@@ -67,13 +89,18 @@ describe('JoinGamePageComponent', () => {
         component = fixture.componentInstance;
     });
 
-    /** Ensures the component successfully instantiates without throwing any errors. */
     it('should create', () => {
         expect(component).toBeTruthy();
     });
 
+
+    // Initialization
+    //
+    // On init the component hooks into the Join namespace for two events and immediately
+    // asks the server for the current lobby list. We verify all three things happen.
+
     describe('ngOnInit', () => {
-        /** Confirms that the component safely hooks into the necessary real-time socket channels during its initialization phase. */
+        // Make sure we're listening for both events
         [JoinGameEvents.UpdatedLobbiesList, JoinGameEvents.LobbyJoined].forEach((event) => {
             it(`should register listener for ${event}`, () => {
                 fixture.detectChanges();
@@ -81,30 +108,36 @@ describe('JoinGamePageComponent', () => {
             });
         });
 
-        /** Verifies the exact count of socket listeners applied to guarantee that no extra, unintended events are being tracked. */
+        // No extra listeners - we only want exactly the two we registered
         it(`should register exactly ${EXPECTED_LISTENER_COUNT} listeners`, () => {
             fixture.detectChanges();
             expect(webSocketService.onNamespace).toHaveBeenCalledTimes(EXPECTED_LISTENER_COUNT);
         });
 
-        /** Prompts the component to instantly request the most up-to-date lobby state from the server. */
+        // The component should fetch lobbies right away so the user doesn't stare at an empty page
         it('should ask the server for the lobby list right away', () => {
             fixture.detectChanges();
             expect(webSocketService.emitNamespace).toHaveBeenCalledWith(SocketNamespace.Join, JoinGameEvents.GetLobbies);
         });
     });
 
+
+    // Active Lobbies State
+    //
+    // The lobby list comes from the server via WebSocket. These tests make sure
+    // the component correctly stores what the server sends - including edge
+    // cases like empty lists, single items and mixed game modes.
+
     describe('activeLobbies', () => {
         beforeEach(() => {
             fixture.detectChanges();
         });
 
-        /** Ensures the internal list state initializes cleanly before any server communication takes place. */
         it('should start empty', () => {
             expect(component.activeLobbies).toEqual([]);
         });
 
-        /** Validates that the local state synchronizes perfectly when the server successfully dispatches a populated list of lobbies. */
+        // Normal case: server sends a list, we store it
         it('should update when the server sends a lobby list', (done) => {
             setTimeout(() => {
                 capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(mockLobbies);
@@ -113,7 +146,7 @@ describe('JoinGamePageComponent', () => {
             }, randomNetworkLatency());
         });
 
-        /** Gracefully clears the local UI if the server indicates that all active sessions have been closed or completed. */
+        // Empty array from server shouldn't cause issues
         it('should handle an empty list gracefully', (done) => {
             setTimeout(() => {
                 capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([]);
@@ -122,7 +155,6 @@ describe('JoinGamePageComponent', () => {
             }, randomNetworkLatency());
         });
 
-        /** Checks that the state handles a single active session properly without relying on array structures. */
         it('should handle a single lobby', (done) => {
             setTimeout(() => {
                 capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([createMockLobby()]);
@@ -131,11 +163,11 @@ describe('JoinGamePageComponent', () => {
             }, randomNetworkLatency());
         });
 
-        /** Enforces a complete replacement of the local lobby list on updates to prevent duplicating cards. */
+        // Each update should fully replace the old list, not merge or append
         it('should replace the previous list on new updates', (done) => {
             capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(mockLobbies);
             const updated = [createMockLobby({ lobbyId: 'lobby-3', playerCount: 1 })];
-            
+
             setTimeout(() => {
                 capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(updated);
                 expect(component.activeLobbies.length).toBe(1);
@@ -144,26 +176,26 @@ describe('JoinGamePageComponent', () => {
             }, randomNetworkLatency());
         });
 
-        /** Verifies stability by ensuring the component retains only the very last state pushed by the server. */
+        // If multiple updates come in at the same time, we should only keep the last one
         it('should keep the latest data after rapid successive updates', () => {
             capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([createMockLobby({ lobbyId: 'batch-1' })]);
             capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([
-                createMockLobby({ lobbyId: 'batch-2' }), 
+                createMockLobby({ lobbyId: 'batch-2' }),
                 createMockLobby({ lobbyId: 'batch-3' }),
             ]);
             capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([createMockLobby({ lobbyId: 'batch-4' })]);
-            
+
             expect(component.activeLobbies.length).toBe(1);
             expect(component.activeLobbies[0].lobbyId).toBe('batch-4');
         });
 
-        /** Validates that the list view supports displaying a heterogeneous mix of both Classic and Capture The Flag game modes. */
+        // Both Classic and CTF lobbies should exist at the same time
         it('should preserve different game modes without filtering', (done) => {
             const mixed = [
                 createMockLobby({ lobbyId: 'classic', game: createMockGame({ gameMode: GameMode.Classic }) }),
                 createMockLobby({ lobbyId: 'ctf', game: createMockGame({ gameMode: GameMode.Ctf }) }),
             ];
-            
+
             setTimeout(() => {
                 capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(mixed);
                 expect(component.activeLobbies[0].game.gameMode).toBe(GameMode.Classic);
@@ -173,26 +205,31 @@ describe('JoinGamePageComponent', () => {
         });
     });
 
+
+    // LobbyJoined Navigation
+    //
+    // When the server confirms we joined a lobby, the component should navigate
+    // to the waiting room and pass the lobby data through router state.
+
     describe('LobbyJoined event', () => {
         beforeEach(() => {
             spyOn(router, 'navigate');
             fixture.detectChanges();
         });
 
-        /** Automatically transitions the user's view to the waiting room immediately upon receiving confirmation from the server. */
         it('should navigate to the waiting room with the lobby data', (done) => {
             const joined = mockLobbies[0];
             setTimeout(() => {
                 capturedCallbacks.get(JoinGameEvents.LobbyJoined)?.(joined);
                 expect(router.navigate).toHaveBeenCalledWith(
-                    [component.routes.waitingRoom, joined.lobbyId], 
+                    [component.routes.waitingRoom, joined.lobbyId],
                     { state: { lobby: joined } },
                 );
                 done();
             }, randomNetworkLatency());
         });
 
-        /** Passes the exact lobby object retrieved from the server into the angular router state. */
+        // The exact lobby object from the server should end up in router state
         it('should pass the actual received lobby in router state', (done) => {
             const joined = createMockLobby({ lobbyId: 'custom-id', playerCount: 4 });
             setTimeout(() => {
@@ -204,31 +241,37 @@ describe('JoinGamePageComponent', () => {
         });
     });
 
+
+    // Lobby Selection
+    //
+    // Clicking a lobby card routes to character selection so the player can
+    // create their character before actually joining. The game config goes
+    // in router state so the next page knows th data it receive.
+
     describe('selectLobby', () => {
         beforeEach(() => {
             spyOn(router, 'navigate');
             fixture.detectChanges();
         });
 
-        /** Routes the player to the character creation flow when they actively select a specific lobby. */
         mockLobbies.forEach((lobby, i) => {
             it(`should navigate to character-selection for lobby #${i}`, () => {
                 component.selectLobby(lobby);
                 expect(router.navigate).toHaveBeenCalledWith(
-                    ['/character-selection', lobby.lobbyId], 
+                    ['/character-selection', lobby.lobbyId],
                     { state: { game: lobby.game } },
                 );
             });
         });
 
-        /** Injects the underlying game configuration into the router state. */
+        // The game object should be in state so character selection knows the game config
         it('should include the game object in the router state', () => {
             component.selectLobby(mockLobbies[1]);
             const args = (router.navigate as jasmine.Spy).calls.mostRecent().args;
             expect(args[1]?.state?.game).toEqual(mockLobbies[1].game);
         });
 
-        /** Confirms that the navigation and state passing behavior works flawlessly when the selected lobby is running CTF. */
+        // CTF lobbies should work the same way as Classic ones
         it('should work for CTF lobbies too', () => {
             const ctf = createMockLobby({ lobbyId: 'ctf-1', game: createMockGame({ gameMode: GameMode.Ctf, name: 'CTF Game' }) });
             component.selectLobby(ctf);
@@ -237,12 +280,17 @@ describe('JoinGamePageComponent', () => {
         });
     });
 
+
+    // Cleanup
+    //
+    // When the component is destroyed we need to unregister the socket listeners,
+    // otherwise we'd keep getting updates for a page that no longer exists.
+
     describe('ngOnDestroy', () => {
         beforeEach(() => {
             fixture.detectChanges();
         });
 
-        /** Protects the application from memory leaks and ghost updates by strictly removing socket listeners when unmounted. */
         [JoinGameEvents.UpdatedLobbiesList, JoinGameEvents.LobbyJoined].forEach((event) => {
             it(`should unsubscribe from ${event}`, () => {
                 fixture.destroy();
@@ -250,46 +298,52 @@ describe('JoinGamePageComponent', () => {
             });
         });
 
-        /** Verifies that the exact same number of listeners created during initialization are properly targeted for destruction. */
+        // Same number of off calls as on calls
         it(`should call offNamespace exactly ${EXPECTED_LISTENER_COUNT} times`, () => {
             fixture.destroy();
             expect(webSocketService.offNamespace).toHaveBeenCalledTimes(EXPECTED_LISTENER_COUNT);
         });
     });
 
+
+    // Template Rendering
+    //
+    // DOM checks: empty state message, correct number of lobby cards,
+    // page title, and the back button.
+
     describe('template rendering', () => {
-        /** Displays a helpful placeholder text message to inform the player when no online sessions are currently open to join. */
+        // When there are no lobbies, the user should see a message instead of a blank page
         it('should show "Aucun salon disponible" when the list is empty', () => {
             component.activeLobbies = [];
             fixture.detectChanges();
             expect((fixture.nativeElement as HTMLElement).textContent).toContain('Aucun salon disponible');
         });
 
-        /** Instantiates and displays exactly one LobbyCardComponent for each distinct lobby object present in the state array. */
+        // One card per lobby
         it('should render one lobby card per lobby', () => {
             component.activeLobbies = mockLobbies;
             fixture.detectChanges();
             expect((fixture.nativeElement as HTMLElement).querySelectorAll('app-lobby-card').length).toBe(2);
         });
 
-        /** Seamlessly removes the empty placeholder message as soon as active lobbies are loaded into the component state. */
+        // The empty message should disappear once we have actual lobbies to show
         it('should not show the empty message when there are lobbies', () => {
             component.activeLobbies = mockLobbies;
             fixture.detectChanges();
             expect((fixture.nativeElement as HTMLElement).querySelector('.no-games')).toBeNull();
         });
 
-        /** Verifies the dynamic reactive capabilities of the template by transitioning smoothly from a populated state back down to an empty state. */
+        // Going from "has lobbies" back to "empty" should work
         it('should update activeLobbies to empty after receiving an empty list', () => {
             fixture.detectChanges();
             capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(mockLobbies);
             expect(component.activeLobbies.length).toBe(2);
-            
+
             capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([]);
             expect(component.activeLobbies.length).toBe(0);
         });
 
-        /** Restores the empty placeholder text accurately if an update from the server wipes out all previously active lobbies. */
+        // The empty state placeholder should come back if all lobbies disappear
         it('should render the empty message when the list is reset to empty', () => {
             component.activeLobbies = [];
             fixture.detectChanges();
@@ -298,13 +352,11 @@ describe('JoinGamePageComponent', () => {
             expect(el.querySelector('.no-games')).toBeTruthy();
         });
 
-        /** Ensures the primary page header text is correctly rendered in the DOM for user context. */
         it('should render the page title', () => {
             fixture.detectChanges();
             expect((fixture.nativeElement as HTMLElement).textContent).toContain('Joindre une partie');
         });
 
-        /** Confirms the presence of a clearly identifiable back button to allow users to intuitively exit the page. */
         it('should have a return button', () => {
             fixture.detectChanges();
             const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('app-button');
