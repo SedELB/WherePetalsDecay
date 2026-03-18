@@ -103,7 +103,18 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
 
 
     selectAvatar(avatar: string): void {
-        if (this.currentlySelectedAvatars.includes(avatar)) return;
+        if (this.currentlySelectedAvatars.includes(avatar) && this.selectedAvatar !== avatar) return;
+
+        // if user clicks the already selected avatar, deselect it
+        if (this.selectedAvatar === avatar) {
+            this.selectedAvatar = null;
+            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.SelectAvatar, {
+                lobbyId: this.lobbyId,
+                avatar: null,
+            });
+            return;
+        }
+
         this.selectedAvatar = avatar;
 
         const payload = {
