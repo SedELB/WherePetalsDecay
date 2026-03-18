@@ -32,6 +32,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             onTurnStarted: (lobbyId: string, playerSocketId: string) => {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnStarted, playerSocketId);
                 this.sendMovementPoints(lobbyId, playerSocketId);
+                this.sendActionPoints(lobbyId, playerSocketId);
                 this.sendReachableTiles(lobbyId, playerSocketId);
                 this.autoEndTurnIfNoActions(lobbyId, playerSocketId);
             },
@@ -109,10 +110,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             return;
         }
 
-        const isLoserTurn = this.gameLogicService.isPlayerTurn(lobbyId, combatResult.loserId);
-        if (isLoserTurn) {
-            this.gameLogicService.endTurn(lobbyId);
-        }
+        this.gameLogicService.endTurn(lobbyId);
     }
 
     @SubscribeMessage(JoinGameEvents.RequestTileInfo)
@@ -165,9 +163,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     }
 
     private autoEndTurnIfNoActions(lobbyId: string, socketId: string): void {
-        const reachable = this.gameLogicService.getReachableTiles(lobbyId, socketId);
-        const adjacent = this.gameLogicService.getAdjacentPlayers(lobbyId, socketId);
-        if (reachable.length === 0 && adjacent.length === 0) {
+        const movementPoints = this.gameLogicService.getMovementPoints(lobbyId, socketId);
+        const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
+        if (movementPoints <= 0 || actionPoints <= 0) {
             this.gameLogicService.endTurn(lobbyId);
         }
     }
@@ -175,6 +173,11 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     private sendMovementPoints(lobbyId: string, socketId: string): void {
         const mp = this.gameLogicService.getMovementPoints(lobbyId, socketId);
         this.server.to(lobbyId).emit(JoinGameEvents.MovementPoints, { socketId, movementPoints: mp });
+    }
+
+    private sendActionPoints(lobbyId: string, socketId: string): void {
+        const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
+        this.server.to(lobbyId).emit(JoinGameEvents.ActionPoints, { socketId, actionPoints });
     }
 
     private sendReachableTiles(lobbyId: string, socketId: string): void {

@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, HostListener, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
@@ -174,6 +174,11 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
         if (this.isOrganizer()) {
             this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.ToggleLock, this.lobbyId());
         }
+    }
+
+    @HostListener('window:popstate')
+    onBrowserBack(): void {
+        this.leaveLobby();
     }
 
     leaveLobby(): void {
