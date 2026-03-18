@@ -1,7 +1,7 @@
 @use "src/styles.scss" as *;
 
 main {
-    background-image: url('../../../assets/background.png');
+    background-image: var(--bg-image);
     background-size: cover;
     min-height: 100vh;
     display: flex;

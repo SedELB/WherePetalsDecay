@@ -4,7 +4,7 @@
     position: fixed;
     inset: 0;
     z-index: 0;
-    background-image: url('../../../assets/background.png');
+    background-image: var(--bg-image);
     background-size: cover;
     background-position: center;
 }
