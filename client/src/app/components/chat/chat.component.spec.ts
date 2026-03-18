@@ -5,7 +5,7 @@
  * Specific edge cases are covered, including preventing abandoned players from sending messages, blocking whitespace-only submissions, and ensuring smooth auto-scrolling behaviors.
  */
 
-import { SimpleChange} from '@angular/core';
+import { SimpleChange } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ChatService } from '@app/services/chat/chat.service';
 import { ChatMessage } from '@common/chat-message';
@@ -41,8 +41,8 @@ describe('ChatComponent', () => {
 
     /** Ensures the component successfully instantiates without throwing any errors. */
     it('should create', () => {
- expect(component).toBeTruthy(); 
-});
+        expect(component).toBeTruthy();
+    });
 
     describe('ngOnInit', () => {
         /** Confirms the component establishes a connection to the correct chat stream based on the provided lobby ID upon initialization. */
@@ -71,19 +71,19 @@ describe('ChatComponent', () => {
         /** Strips trailing or leading whitespace from the player's name to ensure a clean visual presentation in the chat feed. */
         it('should trim the player name', () => {
             component.playerName = '  Alice  ';
-            expect(component.displayName).toBe('Alice');
+            expect(component['displayName']).toBe('Alice');
         });
 
         /** Provides a safe fallback identity ("Joueur") to prevent rendering blank labels if the player's name string is unexpectedly empty. */
         it('should default to "Joueur" when name is empty', () => {
             component.playerName = '';
-            expect(component.displayName).toBe('Joueur');
+            expect(component['displayName']).toBe('Joueur');
         });
 
         /** Extends the empty-name protection to cover strings consisting entirely of whitespace characters. */
         it('should default to "Joueur" when name is just spaces', () => {
             component.playerName = '   ';
-            expect(component.displayName).toBe('Joueur');
+            expect(component['displayName']).toBe('Joueur');
         });
     });
 
@@ -93,33 +93,33 @@ describe('ChatComponent', () => {
             component.hasAbandoned = false;
             component.lobbyId = 'lobby-1';
             component.draftMessage = 'Hello';
-            expect(component.canSend).toBe(true);
+            expect(component['canSend']).toBe(true);
         });
 
         /** Strictly enforces the spectator rule, allowing players who quit to read the chat history but preventing them from sending new messages. */
         it('should be false for abandoned players', () => {
             component.hasAbandoned = true;
             component.draftMessage = 'Hello';
-            expect(component.canSend).toBe(false);
+            expect(component['canSend']).toBe(false);
         });
 
         /** Blocks the submission of entirely empty message drafts to prevent spamming the server. */
         it('should be false with an empty draft', () => {
             component.draftMessage = '';
-            expect(component.canSend).toBe(false);
+            expect(component['canSend']).toBe(false);
         });
 
         /** Prevents users from sending messages containing only spaces or tabs. */
         it('should be false with a whitespace-only draft', () => {
             component.draftMessage = '   ';
-            expect(component.canSend).toBe(false);
+            expect(component['canSend']).toBe(false);
         });
 
         /** Disables sending capabilities if the component loses context of the current active lobby. */
         it('should be false without a lobbyId', () => {
             component.lobbyId = '';
             component.draftMessage = 'Hello';
-            expect(component.canSend).toBe(false);
+            expect(component['canSend']).toBe(false);
         });
     });
 
@@ -173,8 +173,8 @@ describe('ChatComponent', () => {
     describe('scroll behavior', () => {
         /** Verifies the default initialization state assumes the view is scrolled to the latest messages. */
         it('should start near the bottom', () => {
- expect(component.isNearBottom).toBe(true); 
-});
+            expect(component.isNearBottom).toBe(true);
+        });
 
         /** Ensures the component flags itself to remain snapped to the bottom of the feed immediately after the user sends a new message. */
         it('should flag for auto-scroll after sending', () => {
@@ -194,8 +194,8 @@ describe('ChatComponent', () => {
     describe('ngOnDestroy', () => {
         /** Verifies standard component destruction completes cleanly without memory leaks or syntax errors. */
         it('should not throw', () => {
- expect(() => component.ngOnDestroy()).not.toThrow(); 
-});
+            expect(() => component.ngOnDestroy()).not.toThrow();
+        });
 
         /** Ensures the teardown process is robust enough to survive being destroyed even if an active chat subscription was never fully established. */
         it('should survive being destroyed with no active subscription', () => {
