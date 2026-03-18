@@ -371,7 +371,7 @@ describe('GameViewService', () => {
             service.playerPositions.set({ x: { x: 0, y: 0 } });
             service.turnOrder.set(['x']);
 
-            service.resetGameState();
+            service['resetGameState']();
 
             expect(service.gameOver()).toBeNull();
             expect(service.activePlayerSocketId()).toBeNull();
