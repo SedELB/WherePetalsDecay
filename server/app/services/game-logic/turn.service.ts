@@ -43,7 +43,7 @@ export class TurnService {
         const lobbyId = game.lobby.lobbyId;
         let secondsLeft = TURN_DELAY;
 
-        this.callbacks.onTurnCountdown(lobbyId, secondsLeft);
+        this.callbacks.onBetweenTurnCountdown(lobbyId, secondsLeft);
 
         const delayTimer = setInterval(() => {
             secondsLeft--;
@@ -52,10 +52,10 @@ export class TurnService {
                 this.delayTimers.delete(lobbyId);
                 this.startTurn(game);
             } else {
-                this.callbacks.onTurnCountdown(lobbyId, secondsLeft);
+                this.callbacks.onBetweenTurnCountdown(lobbyId, secondsLeft);
             }
         }, SECOND);
-
+        
         this.delayTimers.set(lobbyId, delayTimer);
     }
 

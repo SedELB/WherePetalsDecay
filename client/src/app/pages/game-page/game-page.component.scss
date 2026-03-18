@@ -1,4 +1,6 @@
 @use 'src/styles.scss' as *;
+@import url('https://fonts.googleapis.com/css2?family=Silkscreen&display=swap');
+
 
 .page-bg {
     position: fixed;
@@ -192,6 +194,34 @@
 .timer-countdown {
     font-weight: 800;
 }
+.grid-container {
+    border-radius: 10px;
+}
+
+.debug-text {
+    font-size: 30px;
+    color: rgb(152, 0, 0);
+    font-family: 'Silkscreen', monospace;
+    text-shadow: 0px 0px 4px rgba(255, 255, 255, 0.7);
+}
+
+.debug-text-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: 70px;
+    left: 16px;
+    width: 500px;
+    height: auto;
+    border-radius: 10px;
+    border-color: white;
+    border-width: 2px;
+}
+
+.debug-background{
+    background-color: rgba(67, 0, 0, 0.611) !important;
+}
 
 .grid {
     border-radius: 8px;
@@ -367,6 +397,12 @@
         color: rgba(255, 255, 255, 0.92);
         text-align: center;
     }
+}
+
+.cell--teleportable {
+    box-shadow: inset 0 0 0 2px rgba(0, 128, 255, 0.6);
+    background-blend-mode: overlay;
+    background-color: rgba(0, 128, 255, 0.15);
 }
 
 .cell--reachable {
