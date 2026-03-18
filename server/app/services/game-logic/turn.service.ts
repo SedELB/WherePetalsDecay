@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ActiveGame, SECOND, TURN_DELAY, TURN_DURATION, TurnCallbacks } from './active-game.interface';
+import { ActiveGame, MAX_ACTION_POINTS, SECOND, TURN_DELAY, TURN_DURATION, TurnCallbacks } from './active-game.interface';
 
 @Injectable()
 export class TurnService {
@@ -66,7 +66,7 @@ export class TurnService {
         if (!player) return;
 
         game.movementPoints.set(currentSocketId, player.character.speed);
-        game.hasCombatted.set(currentSocketId, false);
+        game.actionPoints.set(currentSocketId, MAX_ACTION_POINTS);
 
         this.callbacks.onTurnStarted(lobbyId, currentSocketId);
 
