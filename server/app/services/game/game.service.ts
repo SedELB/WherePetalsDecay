@@ -30,13 +30,13 @@ export class GameService {
         this.start();
     }
 
-    async start() {
+    private async start(): Promise<void> {
         if ((await this.gameModel.countDocuments()) === 0) {
             await this.populateDB();
         }
     }
 
-    async populateDB(): Promise<void> {
+    private async populateDB(): Promise<void> {
         const validGame1: CreateGameDto = {
             name: 'Valid Game 1',
             description: 'Desc. 1 - CLASSIC',

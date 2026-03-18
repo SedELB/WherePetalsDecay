@@ -26,7 +26,7 @@ export class GameValidatorService {
     @param property: string representing the property to count (e.g., 'type' or 'item')
     ex. returns ex. {ice: 3, floor: 40, water: 21} ** only the types/items present in the grid + {item: null} is ignored**
     */
-    countByProperty(game: CreateGameDto, property: string): Record<string, number> {
+    private countByProperty(game: CreateGameDto, property: string): Record<string, number> {
         return game.grid.flat().reduce((acc, tile) => {
             const value = tile[property]; // ex. value = tile['type'] or tile['item'] = 'ice', 'floor', etc.
             if (value) {
@@ -36,7 +36,7 @@ export class GameValidatorService {
         }, {});
     }
 
-    isTextLengthValid(game: CreateGameDto): boolean {
+    private isTextLengthValid(game: CreateGameDto): boolean {
         const errors: string[] = [];
 
         if (game.name.length < TEXT_MIN_LENGTH) {
@@ -56,7 +56,7 @@ export class GameValidatorService {
         return true;
     }
 
-    isGameSurfaceValid(game: CreateGameDto): boolean {
+    private isGameSurfaceValid(game: CreateGameDto): boolean {
         const types = this.countByProperty(game, 'type');
         const terrainTilesNumber = (types.floor || 0) + (types.ice || 0) + (types.water || 0);
         if (terrainTilesNumber > ((game.size.cols * game.size.rows) / 2)) {
@@ -66,7 +66,7 @@ export class GameValidatorService {
         }
     }
 
-    areAllSpawnPointsPlaced(game: CreateGameDto): boolean {
+    private areAllSpawnPointsPlaced(game: CreateGameDto): boolean {
         const items = this.countByProperty(game, 'item');
         if ((items.spawn || 0) === game.maxPlayers) {
             return true;
@@ -76,7 +76,7 @@ export class GameValidatorService {
     }
 
     // For areThereUnreachableTiles()
-    findFirstWalkableTile(grid: Tile[][]): Vec2 | null {
+    private findFirstWalkableTile(grid: Tile[][]): Vec2 | null {
         for (let r = 0; r < grid.length; r++) {
             for (let c = 0; c < grid[r].length; c++) {
                 if (grid[r][c].type !== TileTexture.Wall) return { y: r, x: c };
@@ -86,7 +86,7 @@ export class GameValidatorService {
     }
 
     // For areThereUnreachableTiles()
-    isTileValidForPath(game: CreateGameDto, y: number, x: number, visited: Set<string>): boolean {
+    private isTileValidForPath(game: CreateGameDto, y: number, x: number, visited: Set<string>): boolean {
         const isWithinBounds = y >= 0 && y < game.grid.length && x >= 0 && x < game.grid[0].length;
         if (!isWithinBounds) return false;
 
@@ -96,7 +96,7 @@ export class GameValidatorService {
         return isNotWall && isNotVisited;
     }
 
-    areThereUnreachableTiles(game: CreateGameDto): boolean {
+    private areThereUnreachableTiles(game: CreateGameDto): boolean {
         const startPos = this.findFirstWalkableTile(game.grid);
         if (!startPos) {
             throw new Error(NO_TERRAIN_TILES);
@@ -136,7 +136,7 @@ export class GameValidatorService {
     }
 
     // For isDoorsPlacementValid()
-    isDoorOnGridBorder(grid: Tile[][], y: number, x: number): boolean {
+    private isDoorOnGridBorder(grid: Tile[][], y: number, x: number): boolean {
         const rows = grid.length;
         const cols = grid[0].length;
         const isInside =
@@ -150,7 +150,7 @@ export class GameValidatorService {
     }
 
     // For type and item
-    getObjectsPositions(game: CreateGameDto, wantedObject: string): Vec2[] {
+    private getObjectsPositions(game: CreateGameDto, wantedObject: string): Vec2[] {
         if (game.grid.length === 0) return [];
 
         const objectPositions: Vec2[] = [];
@@ -167,7 +167,7 @@ export class GameValidatorService {
         return objectPositions;
     }
 
-    isDoorsPlacementValid(game: CreateGameDto): boolean {
+    private isDoorsPlacementValid(game: CreateGameDto): boolean {
         const allDoorsPos = this.getObjectsPositions(game, 'door');
         const errors: string[] = [];
         const wall = TileTexture.Wall;
@@ -199,7 +199,7 @@ export class GameValidatorService {
         return true;
     }
 
-    isFlagPlaced(game: CreateGameDto): boolean {
+    private isFlagPlaced(game: CreateGameDto): boolean {
         if (game.gameMode === GameMode.Ctf) {
             const nbFlag = this.countByProperty(game, 'item').flag || 0;
             if (nbFlag === 0) {
