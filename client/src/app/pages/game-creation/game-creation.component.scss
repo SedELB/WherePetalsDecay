@@ -1,8 +1,9 @@
-@use "src/styles.scss" as *;
+@use 'src/styles.scss' as *;
 
 .container {
     background-image: url('../../../assets/background.png');
     background-size: cover;
+    background-position: center bottom;
     min-height: 100vh;
     padding: 2rem;
     box-sizing: border-box;
@@ -18,7 +19,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     height: 600px;
-    width: 800px;
+    width: auto;
     align-items: center;
 }
 
@@ -69,7 +70,7 @@ p {
         margin-bottom: 0.5rem;
     }
 
-    input[type="text"] {
+    input[type='text'] {
         width: 100%;
         padding: 0.75rem;
         font-size: 1rem;
@@ -107,8 +108,6 @@ p {
 .avatar-item:hover:not(.selected) {
     border-color: $rose-button;
 }
-
-
 
 .attributes-container {
     display: grid;

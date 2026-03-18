@@ -1,8 +1,10 @@
+@use 'src/styles.scss' as *;
+
 .editor-bg {
     box-sizing: border-box;
     height: 100vh;
     padding: 24px;
-    background: url('../../../assets/background.png') center / cover no-repeat;
+    background: url('../../../assets/background.png') center bottom / cover no-repeat;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -43,34 +45,78 @@
     align-items: start;
 }
 
-.info-label {
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-size: 14px;
+.input-container,
+.textarea-container {
+    position: relative;
+    width: 100%;
+    margin: 0 auto;
 }
 
-.info-input {
+.input-container {
+    margin-bottom: 40px;
+    margin-top: 20px;
+}
+
+.info-input,
+.info-textarea {
     width: 100%;
-    background: transparent;
-    border: 0;
+    background-color: transparent;
+    border: none;
     outline: none;
     color: #fff;
     font-size: 16px;
-    padding: 6px 0;
-    border-bottom: 2px dashed rgba(255, 255, 255, 0.72);
+    padding: 5px 0;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+    position: relative;
 }
 
 .info-textarea {
-    width: 100%;
-    background: transparent;
-    border: 0;
-    outline: none;
-    color: #fff;
-    font-size: 16px;
-    padding: 6px 0;
     resize: none;
-    border-bottom: 2px dashed rgba(255, 255, 255, 0.72);
+    font-family: inherit;
+}
+
+.label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    letter-spacing: 1px;
+}
+
+.underline {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    width: 100%;
+    background-color: $rose-button;
+    transform: scaleX(0);
+    transition: all 0.3s ease;
+}
+
+.textarea-container .underline {
+    bottom: 4px;
+}
+
+.info-input:focus ~ .label,
+.info-input:valid ~ .label,
+.info-textarea:focus ~ .label,
+.info-textarea:valid ~ .label {
+    top: -20px;
+    font-size: 14px;
+    color: $rose-button;
+}
+
+.info-input:focus ~ .underline,
+.info-input:valid ~ .underline,
+.info-textarea:focus ~ .underline,
+.info-textarea:valid ~ .underline {
+    transform: scaleX(1);
 }
 
 .info-dimensions {
