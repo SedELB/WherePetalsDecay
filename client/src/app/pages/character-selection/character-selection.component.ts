@@ -14,6 +14,7 @@ import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import swal from 'sweetalert2';
 const SMALL_DELAY = 100;
+const TOAST_DELAY = 4000;
 
 @Component({
     selector: 'app-character-selection',
@@ -27,6 +28,7 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
     lifeBonusSelected: boolean = true;
     attackDiceD6: boolean = true;
     isSubmitting = false;
+    private previousLockState = false;
 
     nameMaxLength = NAME_MAX_LENGTH;
     lobbyId: string | null = null;
@@ -163,24 +165,62 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
             this.currentlySelectedAvatars = occupiedAvatars;
         });
 
+        this.webSocketService.onNamespace<Lobby>(SocketNamespace.Join, JoinGameEvents.LobbyUpdated, (lobby) => {
+            if (lobby.isLocked === this.previousLockState) return;
+            this.previousLockState = lobby.isLocked;
+
+            if (lobby.isLocked && lobby.playerCount >= lobby.game.maxPlayers) return;
+
+            const message = lobby.isLocked
+                ? 'La partie a été verrouillée par l\'organisateur'
+                : 'La partie a été déverrouillée';
+            swal.fire({
+                title: lobby.isLocked ? 'Partie verrouillée' : 'Partie déverrouillée',
+                text: message,
+                icon: lobby.isLocked ? 'warning' : 'info',
+                toast: true,
+                position: 'top-end',
+                timer: TOAST_DELAY,
+                timerProgressBar: true,
+                showConfirmButton: false,
+            });
+        });
+
+        this.webSocketService.onNamespace<void>(SocketNamespace.Join, JoinGameEvents.GameDeleted, () => {
+            swal.fire({
+                title: 'Partie annulée',
+                text: "L'organisateur a annulé la partie.",
+                icon: 'info',
+                confirmButtonText: "Retourner à l'accueil",
+                showCancelButton: false,
+            }).then(() => {
+                this.router.navigate([this.routes.home]);
+            });
+        });
+
         this.webSocketService.onNamespace(SocketNamespace.Join, JoinGameEvents.LobbyError, (message) => {
             swal.fire({
                 title: `Erreur`,
                 text: `${message}`,
                 icon: 'error',
                 confirmButtonText: `Retourner à l'accueil`,
-            }).then(() => {
-                if (this.lobbyId) {
-                    this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.SelectAvatar, {
-                        lobbyId: this.lobbyId,
-                        avatar: null,
-                    });
+                showCancelButton: true,
+                cancelButtonText: `Réessayer`,
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (this.lobbyId) {
+                        this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.SelectAvatar, {
+                            lobbyId: this.lobbyId,
+                            avatar: null,
+                        });
+                    }
+                    this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.LeaveLobby);
+                    setTimeout(() => {
+                        this.router.navigate([this.routes.home]);
+                    }, SMALL_DELAY);
+                } else {
+                    this.isSubmitting = false;
                 }
-
-                this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.LeaveLobby);
-                setTimeout(() => {
-                    this.router.navigate([this.routes.home]);
-                }, SMALL_DELAY);
             });
         });
     }
@@ -218,6 +258,8 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
         this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.GameHosted);
         this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.LobbyJoined);
         this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.UpdateOccupiedAvatars);
+        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.LobbyUpdated);
+        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.GameDeleted);
         this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.LobbyError);
     }
 

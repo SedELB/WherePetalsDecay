@@ -11,19 +11,19 @@ import { Vec2 } from '@common/vec2';
 
 const ONE_SECOND_DELAY = 1000;
 
-export interface PlayerMovedData {
+interface PlayerMovedData {
     socketId: string;
     position: Vec2;
     movementPoints: number;
 }
 
-export interface GameStartedData {
+interface GameStartedData {
     lobby: Lobby;
     turnOrder: string[];
     playerPositions: Record<string, Vec2>;
 }
 
-export interface TileInfoData {
+interface TileInfoData {
     tile: Tile;
     cost: number;
     player: { name: string; avatar: string } | null;
@@ -45,8 +45,10 @@ export class GameViewService {
     readonly reachableTiles = signal<Vec2[]>([]);
     readonly reachableTilesForTeleport = signal<Vec2[]>([]);
     readonly movementPoints = signal<number>(0);
+    readonly actionPoints = signal<number>(0);
     readonly tileInfo = signal<TileInfoData | null>(null);
-    readonly gameOver = signal<{ winnerSocketId: string | null } | null>(null);
+    readonly gameOver = signal<{ winnerSocketId: string | null; isForfeit?: boolean } | null>(null);
+    readonly turnNotification = signal<string | null>(null);
 
     constructor(
         private readonly webSocketService: WebSocketService,
@@ -66,10 +68,22 @@ export class GameViewService {
             this.setLobby(data.lobby);
             this.turnOrder.set(data.turnOrder);
             this.playerPositions.set(data.playerPositions);
+            this.showFirstTurnNotification(data.turnOrder, data.lobby);
         });
 
         this.webSocketService.onNamespace<string>(this.namespace, JoinGameEvents.TurnStarted, (playerSocketId) => {
             this.activePlayerSocketId.set(playerSocketId);
+            this.turnNotification.set(null);
+        });
+        
+        this.webSocketService.onNamespace<number>(this.namespace, JoinGameEvents.BetweenTurnCountdown, (secondsLeft) => {
+            this.disableEndTurn.set(true);
+            this.turnCountdown.set(secondsLeft);
+            if (secondsLeft <= 1) {
+                setTimeout(() => {
+                    this.disableEndTurn.set(false);
+                }, ONE_SECOND_DELAY);
+            }
         });
 
         this.webSocketService.onNamespace<number>(this.namespace, JoinGameEvents.BetweenTurnCountdown, (secondsLeft) => {
@@ -86,10 +100,11 @@ export class GameViewService {
             this.turnCountdown.set(secondsLeft);
         });
 
-        this.webSocketService.onNamespace<string>(this.namespace, JoinGameEvents.TurnEnded, () => {
+        this.webSocketService.onNamespace<string>(this.namespace, JoinGameEvents.TurnEnded, (endedPlayerSocketId) => {
             this.activePlayerSocketId.set(null);
             this.reachableTiles.set([]);
             this.reachableTilesForTeleport.set([]);
+            this.showNextTurnNotification(endedPlayerSocketId);
         });
 
         this.webSocketService.onNamespace<PlayerMovedData>(this.namespace, JoinGameEvents.PlayerMoved, (data) => {
@@ -126,6 +141,12 @@ export class GameViewService {
             }
         });
 
+        this.webSocketService.onNamespace<{ socketId: string; actionPoints: number }>(this.namespace, JoinGameEvents.ActionPoints, (data) => {
+            if (data.socketId === this.getLocalSocketId()) {
+                this.actionPoints.set(data.actionPoints);
+            }
+        });
+
         this.webSocketService.onNamespace
             <{ winnerId: string; loserId: string; damage: number; loserHpLeft: number; killed: boolean; loserNewPosition: Vec2 | null }>
             (this.namespace, JoinGameEvents.CombatResult, (data) => {
@@ -159,7 +180,7 @@ export class GameViewService {
             this.setLobby(updatedLobby);
         });
 
-        this.webSocketService.onNamespace<{ winnerSocketId: string | null }>(this.namespace, JoinGameEvents.GameOver, (data) => {
+        this.webSocketService.onNamespace<{ winnerSocketId: string | null; isForfeit?: boolean }>(this.namespace, JoinGameEvents.GameOver, (data) => {
             this.gameOver.set(data);
         });
 
@@ -213,9 +234,44 @@ export class GameViewService {
         this.disableEndTurn.set(false);
         this.reachableTiles.set([]);
         this.movementPoints.set(0);
+        this.actionPoints.set(0);
         this.tileInfo.set(null);
         this.playerPositions.set({});
         this.turnOrder.set([]);
+        this.turnNotification.set(null);
+    }
+
+    private showNextTurnNotification(endedPlayerSocketId: string): void {
+        const order = this.turnOrder();
+        const lobby = this.gameLobby();
+        if (!lobby || order.length === 0) return;
+
+        const activePlayers = lobby.players.filter((p) => !p.hasAbandonned);
+        const endedIndex = order.indexOf(endedPlayerSocketId);
+        if (endedIndex === -1) return;
+
+        for (let i = 1; i <= order.length; i++) {
+            const candidateId = order[(endedIndex + i) % order.length];
+            const candidate = activePlayers.find((p) => p.socketId === candidateId);
+            if (candidate) {
+                this.setTurnNotificationMessage(candidateId, candidate.character.name);
+                return;
+            }
+        }
+    }
+
+    private showFirstTurnNotification(order: string[], lobby: Lobby): void {
+        if (order.length === 0 || !lobby.players.length) return;
+        const firstPlayer = lobby.players.find((p) => p.socketId === order[0]);
+        if (firstPlayer) {
+            this.setTurnNotificationMessage(order[0], firstPlayer.character.name);
+        }
+    }
+
+    private setTurnNotificationMessage(socketId: string, playerName: string): void {
+        const isLocal = socketId === this.getLocalSocketId();
+        const message = isLocal ? 'C\'est bientôt votre tour !' : `C'est bientôt le tour de ${playerName}`;
+        this.turnNotification.set(message);
     }
 
     setLobby(gameLobby: Lobby | null): void {

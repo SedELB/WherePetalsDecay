@@ -43,6 +43,8 @@
                 placeholder="Écris un message (max 200 caractères)…"
                 title="Écris un message (max 200 caractères)…"
                 (keyup.enter)="sendMessage()"
+                (focus)="chatFocusChange.emit(true)"
+                (blur)="chatFocusChange.emit(false)"
             />
             <div class="footer-right">
                 <div class="text-counter">{{ draftMessage.length }}/200</div>

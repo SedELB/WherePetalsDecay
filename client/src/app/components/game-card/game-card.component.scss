@@ -1,16 +1,19 @@
 @use "src/styles.scss" as *;
 
 .gameCard {
-    background-color: $frame-color;
+    background-color: $card-background;
     display: flex;
     flex-direction: row;
     justify-content: space-around;
     align-items: center;
-    border: 1px solid black;
+    border: $card-border;
+    box-shadow: $card-shadow;
     border-radius: 15px;
     height: 250px;
     width: 800px;
     color: $text-color;
+    transform: scale(1);
+    transition: transform 0.3s ease-out;
 }
 
 .gameCard:hover{
@@ -81,11 +84,10 @@
 
 .tooltip{
     position: fixed;
-    transform: translateX(-350px);
-    transition: opacity 0.3s ease, top 0.2s ease;
+    transition: opacity 0.3s ease;
     padding: 6px 10px;
     border-radius: 6px;
-    opacity: 1;
+    opacity: 0;
     font-size: 20px;
     pointer-events: none;
     background: rgba(0,0,0,0.85);

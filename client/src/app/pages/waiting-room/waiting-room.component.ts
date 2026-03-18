@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, HostListener, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
@@ -11,7 +11,9 @@ import { JoinGameEvents } from '@common/join.gateway.events';
 import { ROUTES } from '@app/constants/routes.constants';
 import swal from 'sweetalert2';
 import { GameViewService } from '@app/services/game-view/game-view.service';
+import { Player } from '@common/player';
 const SMALL_DELAY = 100;
+const TOAST_DELAY = 4000;
 
 @Component({
     selector: 'app-waiting-room',
@@ -61,39 +63,72 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
             this.currentLobby.set(updatedLobby);
         });
 
-        // Listener for getting Lobby status after a refresh
+
         this.webSocketService.onNamespace<Lobby>(SocketNamespace.Join, JoinGameEvents.LobbyStatusReceived, (updatedLobby) => {
             this.currentLobby.set(updatedLobby);
             this.chatService.requestHistory(updatedLobby.lobbyId);
         });
 
-        // Listener for redirecting after game start.
         this.webSocketService.onNamespace<Lobby>(SocketNamespace.Join, JoinGameEvents.GameStarting, (finalLobby) => {
             this.gameViewService.setLobby(finalLobby);
             this.router.navigate(['/game', finalLobby.lobbyId]);
         });
 
-        // Listener for player kick
         this.webSocketService.onNamespace<string>(SocketNamespace.Join, JoinGameEvents.PlayerKicked, (msg) => {
             this.router.navigate([this.routes.home]);
             swal.fire('Oh oh!', msg, 'warning');
         });
 
-        // Listener for host leaving
         this.webSocketService.onNamespace<void>(SocketNamespace.Join, JoinGameEvents.GameDeleted, () => {
             this.router.navigate([ROUTES.home]);
             swal.fire('Partie annulée', "L'organisateur a quitté le salon.", 'info');
         });
+
+        this.webSocketService.onNamespace<Player>(SocketNamespace.Join, JoinGameEvents.PlayerJoined, (player) => {
+            swal.fire({
+                title: 'Nouveau joueur',
+                text: `${player.character.name} a rejoint le salon.`,
+                toast: true,
+                position: 'top-start',
+                timer: TOAST_DELAY,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                customClass: {
+                    popup: 'swal2-toast',
+                },
+            });
+        });
+
+        this.webSocketService.onNamespace<Player>(SocketNamespace.Join, JoinGameEvents.PlayerLeft, (player) => {
+            swal.fire({
+                title: 'Joueur parti',
+                text: `${player.character.name} a quitté le salon.`,
+                toast: true,
+                position: 'top-start',
+                timer: TOAST_DELAY,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                customClass: {
+                    popup: 'swal2-toast',
+                },
+            });
+        });
+
     }
 
     ngOnDestroy(): void {
         const id = this.lobbyId();
         if (id) sessionStorage.removeItem('waitingRoom_' + id);
-        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.LobbyUpdated);
-        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.LobbyStatusReceived);
-        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.GameStarting);
-        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.PlayerKicked);
-        this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.GameDeleted);
+
+        this.webSocketService.offMultiple(SocketNamespace.Join, [
+            JoinGameEvents.LobbyUpdated,
+            JoinGameEvents.LobbyStatusReceived,
+            JoinGameEvents.GameStarting,
+            JoinGameEvents.PlayerKicked,
+            JoinGameEvents.GameDeleted,
+            JoinGameEvents.PlayerJoined,
+            JoinGameEvents.PlayerLeft,
+        ]);
     }
 
     currentPlayer = computed(() => {
@@ -139,6 +174,11 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
         if (this.isOrganizer()) {
             this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.ToggleLock, this.lobbyId());
         }
+    }
+
+    @HostListener('window:popstate')
+    onBrowserBack(): void {
+        this.leaveLobby();
     }
 
     leaveLobby(): void {

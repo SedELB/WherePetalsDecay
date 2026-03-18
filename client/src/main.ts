@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { enableProdMode, enableProfiling, provideZoneChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { Routes, provideRouter, withHashLocation } from '@angular/router';
+import { Routes, provideRouter, withHashLocation, withViewTransitions } from '@angular/router';
 import { AdminPageComponent } from '@app/pages/admin-page/admin-page.component';
 import { CreateGamePageComponent } from '@app/pages/create-game-page/create-game-page.component';
 import { GameCreationComponent } from '@app/pages/game-creation/game-creation.component';
@@ -37,5 +37,5 @@ const routes: Routes = [
 
 enableProfiling();
 bootstrapApplication(AppComponent, {
-    providers: [provideZoneChangeDetection(), provideHttpClient(), provideRouter(routes, withHashLocation())],
+    providers: [provideZoneChangeDetection(), provideHttpClient(), provideRouter(routes, withHashLocation(), withViewTransitions())],
 });

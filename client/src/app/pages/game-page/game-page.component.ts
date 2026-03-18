@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { ChatComponent } from '@app/components/chat/chat.component';
 import { SakuraComponent } from '@app/components/sakura/sakura.component';
-import { OBJECT_PLACEMENT_TOOL, TILE_TOOLS } from '@app/constants/map-setup-page-constant';
+import { OBJECT_PLACEMENT_TOOL } from '@app/constants/map-setup-page-constant';
 import { ROUTES } from '@app/constants/routes.constants';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { BASE_STATS } from '@common/character';
@@ -24,9 +24,20 @@ const GAME_OVER_REDIRECT_DELAY = 3000;
 export class GamePageComponent implements OnInit {
 
     readonly items = OBJECT_PLACEMENT_TOOL;
-    readonly tiles = TILE_TOOLS;
     readonly routes = ROUTES;
     readonly costInfinity = Infinity;
+    readonly tileNames: Record<string, string> = {
+        floor: 'Sol',
+        wall: 'Mur',
+        water: 'Eau',
+        ice: 'Glace',
+        doorOpened: 'Porte ouverte',
+        doorClosed: 'Porte fermée',
+    };
+
+    isChatFocused = false;
+    isJournalOpen = false;
+    isCombatMode = false;
 
     protected gameMode = GameMode;
 
@@ -38,10 +49,12 @@ export class GamePageComponent implements OnInit {
     readonly reachableTiles = computed(() => this.gameViewService.reachableTiles());
     readonly reachableTilesForTeleport = computed(() => this.gameViewService.reachableTilesForTeleport());
     readonly movementPoints = computed(() => this.gameViewService.movementPoints());
+    readonly actionPoints = computed(() => this.gameViewService.actionPoints());
     readonly turnCountdown = computed(() => this.gameViewService.turnCountdown());
     readonly activePlayerSocketId = computed(() => this.gameViewService.activePlayerSocketId());
     readonly tileInfo = computed(() => this.gameViewService.tileInfo());
     readonly gameOver = computed(() => this.gameViewService.gameOver());
+    readonly turnNotification = computed(() => this.gameViewService.turnNotification());
 
     readonly orderedPlayers = computed(() => {
         const order = this.gameViewService.turnOrder();
@@ -136,13 +149,15 @@ export class GamePageComponent implements OnInit {
             return;
         }
 
-        if (event.key === '')
-
-        if (!this.isMyTurn()) return;
+        if (!this.isMyTurn() || this.isChatFocused) return;
         const direction = KEY_TO_DIRECTION[event.key];
         if (!direction) return;
 
         if (lobbyId) this.gameViewService.sendMove(lobbyId, direction);
+    }
+
+    onChatFocusChange(focused: boolean): void {
+        this.isChatFocused = focused;
     }
 
     @HostListener('window:beforeunload')
@@ -182,9 +197,20 @@ export class GamePageComponent implements OnInit {
         });
     }
 
-    onCombat(targetSocketId: string): void {
+    toggleCombatMode(): void {
+        this.isCombatMode = !this.isCombatMode;
+    }
+
+    onTileClick(col: number, row: number): void {
+        if (!this.isCombatMode) return;
+        const targetSocketId = this.getPlayerAtPosition(col, row);
+        if (!targetSocketId) return;
+        const isAdjacent = this.adjacentPlayers().some((p) => p.socketId === targetSocketId);
+        if (!isAdjacent) return;
+
         const lobbyId = this.lobby()?.lobbyId;
         if (lobbyId) this.gameViewService.sendCombat(lobbyId, targetSocketId);
+        this.isCombatMode = false;
     }
 
     onRightClick(event: MouseEvent, position: Vec2): void {
@@ -196,6 +222,12 @@ export class GamePageComponent implements OnInit {
             return;
         }
         if (lobbyId) this.gameViewService.sendTileInfoRequest(lobbyId, position);
+    }
+
+    isAdjacentPlayer(col: number, row: number): boolean {
+        const playerSocketId = this.getPlayerAtPosition(col, row);
+        if (!playerSocketId) return false;
+        return this.adjacentPlayers().some((p) => p.socketId === playerSocketId);
     }
 
     isReachable(col: number, row: number): boolean {

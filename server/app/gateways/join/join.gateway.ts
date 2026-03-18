@@ -1,5 +1,5 @@
-import { Game } from '@common/game';
 import { SocketNamespace } from '@common/enums';
+import { Game } from '@common/game';
 import { Injectable, Logger } from '@nestjs/common';
 import {
     ConnectedSocket,
@@ -14,10 +14,10 @@ import {
 
 import { GameLogicService } from '@app/services/game-logic/game-logic.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
-import { Server, Socket } from 'socket.io';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { Player } from '@common/player';
 import { Lobby } from '@common/lobby';
+import { Player } from '@common/player';
+import { Server, Socket } from 'socket.io';
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
 export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
@@ -84,6 +84,11 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             return;
         }
 
+        if (lobby.isLocked) {
+            socket.emit(JoinGameEvents.LobbyError, 'Ce salon est verrouillé !');
+            return;
+        }
+
         const finalPlayerName = this.getValidName(payload.player.character.name, lobby);
 
         payload.player.character.name = finalPlayerName;
@@ -96,7 +101,9 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         if (updatedLobby) {
             socket.join(updatedLobby.lobbyId);
             socket.emit(JoinGameEvents.LobbyJoined, updatedLobby);
-            this.server.to(updatedLobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby); // For the waiting room, to add new player's info
+            this.server.to(updatedLobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby);
+            socket.broadcast.to(updatedLobby.lobbyId).emit(JoinGameEvents.PlayerJoined, payload.player);
+
             this.handleGetLobbies();
         }
     }
@@ -193,9 +200,17 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             socket.to(lobby.lobbyId).emit(JoinGameEvents.GameDeleted);
             this.lobbyService.deleteLobby(lobby.lobbyId);
         } else {
-            this.logger.log(`Player left lobby: ${lobby.lobbyId}`);
-            this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
+            const leavingPlayer = lobby.players.find(player => player.socketId === socket.id);
 
+            if (leavingPlayer){
+                this.logger.log(`${leavingPlayer.character.name} left lobby: ${lobby.lobbyId}`);
+                this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
+                socket.broadcast.to(lobby.lobbyId).emit(JoinGameEvents.PlayerLeft, leavingPlayer);
+            } else {
+                this.logger.log(`Pending player ${socket.id} left lobby: ${lobby.lobbyId}`);
+                this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
+            }
+            
             const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
             this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
             this.server.to(lobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, lobby);

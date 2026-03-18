@@ -8,7 +8,7 @@
     z-index: 0;
     background-image: url('../../../assets/background.png');
     background-size: cover;
-    background-position: center;
+    background-position: center bottom;
 }
 
 .sakura-layer {
@@ -317,6 +317,58 @@
     }
 }
 
+.tab-bar {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 6px 0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 600;
+    transition: all 0.2s ease;
+
+    &.active {
+        background: rgba(255, 255, 255, 0.1);
+        color: aqua;
+        border-color: aqua;
+    }
+
+    &:hover:not(.active) {
+        background: rgba(255, 255, 255, 0.06);
+    }
+}
+
+.journal-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.journal-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.85em;
+    color: rgba(255, 255, 255, 0.85);
+}
+
 .character-sheet {
     flex: 0 0 auto;
     min-height: 0;
@@ -363,6 +415,19 @@
     cursor: pointer;
 }
 
+.cell--combat-target {
+    box-shadow: inset 0 0 0 2px rgba(255, 50, 50, 0.7);
+    background-blend-mode: overlay;
+    background-color: rgba(255, 50, 50, 0.2);
+    cursor: crosshair;
+    animation: combat-pulse 1s ease-in-out infinite;
+}
+
+@keyframes combat-pulse {
+    0%, 100% { box-shadow: inset 0 0 0 2px rgba(255, 50, 50, 0.7); }
+    50% { box-shadow: inset 0 0 0 3px rgba(255, 50, 50, 1); }
+}
+
 .player-icon {
     position: absolute;
     inset: 0;
@@ -372,6 +437,34 @@
     object-fit: contain;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
     z-index: 1;
+}
+
+.turn-notification-toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 80;
+    background: rgba(12, 14, 34, 0.9);
+    border: 1px solid rgba(0, 255, 255, 0.4);
+    border-radius: 10px;
+    padding: 14px 28px;
+    color: aqua;
+    font-weight: 700;
+    font-size: 1.1em;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    animation: toast-slide-in 0.3s ease-out;
+}
+
+@keyframes toast-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
 }
 
 .game-over-overlay {

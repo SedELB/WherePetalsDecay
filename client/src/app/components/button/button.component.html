@@ -1,20 +1,34 @@
 <button 
+    class="btn"
     [ngStyle]="{
         'background-image': backgroundImage,
-        'color': backgroundImage,
-        'background-color': backgroundImage,
-        'width': width + 'px',
-        'height': height + 'px',
+        'width': width ? width + 'px' : null,
+        'height': height ? height + 'px' : null,
     }"
     [routerLink]="route"
     [disabled]="disabled"
     [ngClass]="[
-    'btn',
-    'btn--' + variant,
-    disabled ? 'disabled' : '',
-    selected ? 'selected' : ''
+        'btn--' + variant,
+        disabled ? 'disabled' : '',
+        selected ? 'selected' : ''
     ]"
     (click)="onClick()"
     >
-        <ng-content></ng-content>
+    @if (variant === 'back') {
+        <img src="./assets/icons/back-arrow.svg" class="arrow" alt="back arrow"/>
+    }
+    @if (variant === 'delete-game') {
+        <img src="./assets/icons/delete-trash.svg" class="trash" alt="delete button"/>
+    }
+    @if (variant === 'edit') {
+        <img src="./assets/icons/pencil.svg" class="pencil" alt="edit button"/>
+    }
+    @if (variant === 'toggle-visibility') {
+        @if (isVisible) {
+            <img src="./assets/icons/eye.svg" class="eye-icon" alt="hide button"/>
+        } @else {
+            <img src="./assets/icons/eye-off.svg" class="eye-icon" alt="show button"/>
+        }
+    }
+    <ng-content></ng-content>
 </button>

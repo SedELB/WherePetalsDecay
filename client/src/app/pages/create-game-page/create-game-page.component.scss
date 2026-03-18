@@ -1,8 +1,9 @@
-@use "src/styles.scss" as *;
+@use 'src/styles.scss' as *;
 
 body {
     background-image: url('../../../assets/background.png');
     background-size: cover;
+    background-position: center bottom;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -32,30 +33,36 @@ body > app-button {
     left: 60px;
 }
 
-.size-card{
+.size-card {
     display: flex;
     flex-direction: row;
     justify-content: space-around;
 }
 
-.choice-card{
+.choice-card {
     display: flex;
     flex-direction: column;
 }
 
-.small-adjust{
+.choice-card > div {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.small-adjust {
     transform: translateX(-3px);
 }
 
-#translate-left-button{
+#translate-left-button {
     transform: translateX(-1px);
 }
 
-#translate-left-1{
+#translate-left-1 {
     transform: translateX(-5px);
 }
 
-#translate-left-2{
+#translate-left-2 {
     transform: translateX(-8px);
 }
 
@@ -65,26 +72,28 @@ body > app-button {
     justify-content: space-around;
 }
 
-.gamemode-choice{
+.gamemode-choice {
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
 }
 
-.save-button-container{
+.save-button-container {
     height: auto;
     display: flex;
     justify-content: center;
     border-top: solid rgb(255, 255, 255);
-    app-button{
+    app-button {
         margin-top: 25px;
     }
 }
 
-.selected{
+.selected {
     background-color: $green-button !important;
 }
 
-h1, h2, p {
-    color: white ;
+h1,
+h2,
+p {
+    color: white;
 }
