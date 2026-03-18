@@ -1,10 +1,10 @@
 <div class="page-bg"></div>
 <app-sakura class="sakura-layer"></app-sakura>
 
-<main class="container">
+<main class="container" (contextmenu)="$event.preventDefault()">
     <app-button id="back-button" [width]="100" (click)="onAbandon()">Quitter</app-button>
 
-    <aside class="side-panel left">
+    <aside class="side-panel left" [class.debug-background]="this.isDebugModeActive()">
         <section class="game-stats">
             <h3 class="section-title">Informations de partie</h3>
             <div class="game-info">
@@ -42,14 +42,19 @@
 
     <section class="game-board-wrapper">
         <div class="grid-container">
-            <div class="map-frame" aria-label="Grille de carte">
+            <div class="map-frame" aria-label="Grille de carte" [class.debug-background]="this.isDebugModeActive()">
                 <div class="controls-panel">
                     <span class="controls-title">Commandes</span>
                     <span class="control"><span class="key">W</span> Haut</span>
                     <span class="control"><span class="key">A</span> Gauche</span>
                     <span class="control"><span class="key">S</span> Bas</span>
                     <span class="control"><span class="key">D</span> Droite</span>
-                    <span class="control"><span class="key">Clic droit</span> Info tuile</span>
+                    @if (this.isDebugModeActive()){
+                        <span class="control"><span class="key">Clic droit</span> Téléportation</span>
+                    }
+                    @else {
+                        <span class="control"><span class="key">Clic droit</span> Info tuile</span>
+                    }
                 </div>
                 <div class="timer-display">
                     <span class="timer-label">{{ getTimerLabel() }}</span>
@@ -66,6 +71,7 @@
                             <div
                                 class="cell"
                                 [attr.data-tile]="cell.type"
+                                [class.cell--teleportable]="isTeleportable(colIndex, rowIndex)"
                                 [class.cell--reachable]="isReachable(colIndex, rowIndex)"
                                 [class.cell--has-player]="getPlayerAtPosition(colIndex, rowIndex)"
                                 (contextmenu)="onRightClick($event, { x: colIndex, y: rowIndex })"
@@ -118,10 +124,12 @@
     }
 
     @if (isDebugModeActive()){
-        <h2 class="debug-text">DEBUG</h2>
+        <div class="debug-text-frame" [class.debug-background]="this.isDebugModeActive()">
+            <h1 class="debug-text">MODE DE DÉBOGAGE ACTIVÉ</h1>
+        </div>
     }
 
-    <aside class="side-panel right">
+    <aside class="side-panel right" [class.debug-background]="this.isDebugModeActive()">
         <section class="chat-box">
             <h3 class="section-title">Chat</h3>
             <app-chat 
