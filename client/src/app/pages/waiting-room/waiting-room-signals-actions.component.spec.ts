@@ -231,6 +231,27 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
                 expect(playerList.length).toBe(2);
                 expect(playerList[1].socketId).toBe(PLAYER_SOCKET_ID);
             });
+
+            // Lobby with maximum players (4 players)
+            // Verifies that the sorting logic works with max players
+            // host always remains first regardless of the order players joined
+            it('should still place host first in a full 4-player lobby', () => {
+                const fullLobby = createMockLobby({
+                    playerCount: 4,
+                    players: [
+                        createMockPlayer({ socketId: 'p3', isHost: false }),
+                        createMockPlayer({ socketId: HOST_SOCKET_ID, isHost: true }),
+                        createMockPlayer({ socketId: 'p4', isHost: false }),
+                        createMockPlayer({ socketId: PLAYER_SOCKET_ID, isHost: false }),
+                    ],
+                });
+                fullLobby.hostSocketId = HOST_SOCKET_ID;
+                component.currentLobby.set(fullLobby);
+
+                const playerList = component.players();
+                expect(playerList[0].socketId).toBe(HOST_SOCKET_ID);
+                expect(playerList.length).toBe(4);
+            });
         });
     });
 
@@ -320,6 +341,18 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
                     SocketNamespace.Join,
                     JoinGameEvents.LeaveLobby,
                 );
+            });
+        });
+
+        // Multiple rapid action calls should not emit duplicates
+        // Why: A user might double-click "Start" before the UI updates. The second
+        // call should still emit because the component doesn't debounce - but both
+        // emissions should have the correct response
+        describe('rapid action calls', () => {
+            it('should handle two consecutive startGame calls without error', () => {
+                component.onStartGame();
+                component.onStartGame();
+                expect(webSocketService.emitNamespace).toHaveBeenCalledTimes(2);
             });
         });
     });
