@@ -22,6 +22,7 @@ const GAME_OVER_REDIRECT_DELAY = 3000;
     styleUrl: './game-page.component.scss',
 })
 export class GamePageComponent implements OnInit {
+
     readonly items = OBJECT_PLACEMENT_TOOL;
     readonly routes = ROUTES;
     readonly costInfinity = Infinity;
@@ -40,10 +41,13 @@ export class GamePageComponent implements OnInit {
 
     protected gameMode = GameMode;
 
+    readonly disableEndTurn = computed(() => this.gameViewService.disableEndTurn());
+    readonly isDebugModeActive = computed(() => this.gameViewService.isDebugModeActive());
     readonly lobby = computed(() => this.gameViewService.gameLobby());
     readonly game = computed(() => this.lobby()?.game);
     readonly playerPositions = computed(() => this.gameViewService.playerPositions());
     readonly reachableTiles = computed(() => this.gameViewService.reachableTiles());
+    readonly reachableTilesForTeleport = computed(() => this.gameViewService.reachableTilesForTeleport());
     readonly movementPoints = computed(() => this.gameViewService.movementPoints());
     readonly actionPoints = computed(() => this.gameViewService.actionPoints());
     readonly turnCountdown = computed(() => this.gameViewService.turnCountdown());
@@ -138,11 +142,17 @@ export class GamePageComponent implements OnInit {
 
     @HostListener('window:keyup', ['$event'])
     onKeyUp(event: KeyboardEvent): void {
+
+        const lobbyId = this.lobby()?.lobbyId;
+        if (event.key === 'm' || event.key === 'M') {
+            if (lobbyId) this.gameViewService.toggleDebugMode(lobbyId);
+            return;
+        }
+
         if (!this.isMyTurn() || this.isChatFocused) return;
         const direction = KEY_TO_DIRECTION[event.key];
         if (!direction) return;
 
-        const lobbyId = this.lobby()?.lobbyId;
         if (lobbyId) this.gameViewService.sendMove(lobbyId, direction);
     }
 
@@ -152,7 +162,17 @@ export class GamePageComponent implements OnInit {
 
     @HostListener('window:beforeunload')
     onBeforeUnload(): void {
-        this.onAbandon();
+        const lobbyId = this.lobby()?.lobbyId;
+        if (lobbyId) {
+            if (this.gameViewService.isHost() && this.isDebugModeActive()) {
+                this.gameViewService.toggleDebugMode(lobbyId);
+            }
+            this.gameViewService.sendAbandonWithoutPrompt(lobbyId);
+        }
+    }
+
+    isEndTurnDisabled(){
+        return !(this.isMyTurn() || (this.isDebugModeActive() && this.gameViewService.isHost()));
     }
 
     onEndTurn(): void {
@@ -196,6 +216,11 @@ export class GamePageComponent implements OnInit {
     onRightClick(event: MouseEvent, position: Vec2): void {
         event.preventDefault();
         const lobbyId = this.lobby()?.lobbyId;
+        if (!lobbyId) return;
+        if (this.isDebugModeActive()){
+            this.gameViewService.teleportMove(lobbyId, position);
+            return;
+        }
         if (lobbyId) this.gameViewService.sendTileInfoRequest(lobbyId, position);
     }
 
@@ -207,6 +232,11 @@ export class GamePageComponent implements OnInit {
 
     isReachable(col: number, row: number): boolean {
         return this.reachableTiles().some((t) => t.x === col && t.y === row);
+    }
+
+    isTeleportable(col: number, row: number): boolean {
+        if (!this.isDebugModeActive()) return false;
+        return this.reachableTilesForTeleport().some((t) => t.x === col && t.y === row);
     }
 
     getPlayerAtPosition(col: number, row: number): string | null {

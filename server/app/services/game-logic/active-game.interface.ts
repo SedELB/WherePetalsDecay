@@ -15,9 +15,11 @@ export interface ActiveGame {
     playerStartPositions: Map<string, Vec2>;
     movementPoints: Map<string, number>;
     actionPoints: Map<string, number>;
+    isDebugMode?: boolean;
 }
 
 export interface TurnCallbacks {
+    onBetweenTurnCountdown: (lobbyId: string, secondsLeft: number) => void;
     onTurnCountdown: (lobbyId: string, secondsLeft: number) => void;
     onTurnStarted: (lobbyId: string, playerSocketId: string) => void;
     onTurnEnded: (lobbyId: string, playerSocketId: string) => void;

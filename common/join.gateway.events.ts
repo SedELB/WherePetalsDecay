@@ -6,6 +6,9 @@ export enum JoinGameEvents {
     GameDeleted = 'gameDeleted',
     PlayerJoined = 'playerJoined',
     PlayerLeft = 'playerLeft',
+    DebugToggled = 'debugToogled',
+    PlayerTeleported = 'playerTeleported',
+    BetweenTurnCountdown = 'betweenTurnCountDown',
 
     // Request events
     CreateLobby = 'createLobby',
@@ -21,6 +24,8 @@ export enum JoinGameEvents {
     KickPlayer = 'kickPlayer',
     ChatSendMessage = 'chatSendMessage',
     ChatHistoryRequest = "chatHistoryRequest",
+    Teleport = 'teleport',
+    ToggleDebugMode = 'toogleDebugMode',
 
     // Response events (confirmations)
     GameHosted = 'gameHosted',
@@ -29,12 +34,12 @@ export enum JoinGameEvents {
     DeletedLobby = 'deletedLobby',
     LobbyStatusReceived = 'lobbyStatusReceived',
     LeftLobby = 'leftLobby',
-
     UpdateOccupiedAvatars = 'updatedOccupiedAvatars',
     LobbyUpdated = 'lobbyUpdated',
     GameStarting = 'gameStarting',
     PlayerKicked = 'playerKicked',
     ReceivedChatMessage = 'receivedChatMessage',
+    ReachableTilesForTeleport = 'reachableTilesForTeleport',
 
     //--------Game-View-Events--------
     GameStarted = 'gameStarted',

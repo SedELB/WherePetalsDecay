@@ -3,15 +3,17 @@
     <section class="game-selection">
         <h2>Joindre une partie</h2>
         <p>Sélectionnez une partie à rejoindre</p>
-
-        <div class="list-container">
-            @for(lobby of activeLobbies; track lobby.lobbyId) {
-                <app-lobby-card [lobby]="lobby">
-                    <app-button [height]="50" (clicked)="selectLobby(lobby)">Sélectionner</app-button>
-                </app-lobby-card>
-            } @empty {
-                <p class="no-games">Aucun salon disponible</p>
-            }
-        </div>
+        @if (activeLobbies.length > 0) {
+            <div class="list-container">
+                @for(lobby of activeLobbies; track lobby.lobbyId) {
+                    <app-lobby-card [lobby]="lobby">
+                        <app-button [height]="50" (clicked)="selectLobby(lobby)">Sélectionner</app-button>
+                    </app-lobby-card>
+                }
+            </div>
+        }
+        @else {
+            <p class="no-games">Aucun salon disponible</p>
+        }
     </section>
 </div>
