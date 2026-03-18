@@ -45,6 +45,7 @@ export class GamePageComponent implements OnInit {
     readonly playerPositions = computed(() => this.gameViewService.playerPositions());
     readonly reachableTiles = computed(() => this.gameViewService.reachableTiles());
     readonly movementPoints = computed(() => this.gameViewService.movementPoints());
+    readonly actionPoints = computed(() => this.gameViewService.actionPoints());
     readonly turnCountdown = computed(() => this.gameViewService.turnCountdown());
     readonly activePlayerSocketId = computed(() => this.gameViewService.activePlayerSocketId());
     readonly tileInfo = computed(() => this.gameViewService.tileInfo());
