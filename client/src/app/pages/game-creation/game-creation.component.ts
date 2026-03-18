@@ -39,9 +39,9 @@ export class GameCreationComponent implements OnInit, OnDestroy {
             error: (error: HttpErrorResponse) => {
                 const errorMessage = error.error || 'Erreur lors de la récupération des jeux';
                 swal.fire({
-                    title: 'Erreur',
+                    title: 'Information',
                     text: errorMessage,
-                    icon: 'error',
+                    icon: 'info',
                     confirmButtonText: 'OK',
                 });
             },
