@@ -1,8 +1,30 @@
 /**
- * Test suite for the ChatComponent.
- * This component acts as the reusable chat interface utilized in both the waiting room and the active game view.
- * The tests validate message subscription handling, user display name formatting, and the strict rules governing when a message can be sent.
- * Specific edge cases are covered, including preventing abandoned players from sending messages, blocking whitespace-only submissions, and ensuring smooth auto-scrolling behaviors.
+ * ChatComponent Test Suite
+ *
+ * Testing Strategy:
+ * This test suite covers the chat component used in the waiting room and during a game.
+ * We check four main things:
+ *
+ * 1. Message Subscriptions - Makes sure we listen to the right lobby's messages on init
+ *    and switch to the new stream when the lobbyId changes mid-lifecycle.
+ *
+ * 2. Display Name - Checks trimming, empty names, whitespace-only input, and the
+ *    "Joueur" fallback so we never show a blank name in the chat.
+ *
+ * 3. Send Guards - Covers all the cases where sending should be blocked: abandoned
+ *    players, empty or whitespace drafts, missing lobby. Makes sure bad messages
+ *    don't get through to the service.
+ *
+ * 4. Scroll Behavior - Tests that the chat stays pinned to the bottom after sending,
+ *    and that clicking "scroll to bottom" works when the user scrolled up.
+ *
+ * Mocking:
+ * We mock ChatService with jasmine.createSpyObj and use a BehaviorSubject to fake the
+ * message stream. This lets us push messages in tests without real WebSocket stuff.
+ *
+ * Network Latency Simulation:
+ * Some tests use setTimeout with random delays (500-5000ms) to simulate slow message
+ * delivery and test that things still work under lag.
  */
 
 import { SimpleChange } from '@angular/core';
@@ -15,107 +37,141 @@ import { ChatComponent } from './chat.component';
 describe('ChatComponent', () => {
     let component: ChatComponent;
     let fixture: ComponentFixture<ChatComponent>;
-    let chatService: jasmine.SpyObj<ChatService>;
+    let chatServiceSpy: jasmine.SpyObj<ChatService>;
     let messagesSubject: BehaviorSubject<ChatMessage[]>;
 
+    const TEST_LOBBY_ID = 'lobby-1';
+    const TEST_PLAYER_NAME = 'TestPlayer';
+    const BASE_4500 = 4500;
+    const BASE_500 = 500;
+
+    // Helper: Create a ChatMessage with optional overrides
     const createMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
-        lobbyId: 'lobby-1', senderName: 'Alice', message: 'Hello!', sentAt: new Date(), ...overrides,
+        lobbyId: TEST_LOBBY_ID, senderName: 'Cristiano', message: 'Hello!', sentAt: new Date(), ...overrides,
     });
+
+    // Helper: Simulate network latency between 500ms-5000ms for async testing
+    const randomNetworkLatency = (): number => {
+        return Math.random() * BASE_4500 + BASE_500;
+    };
 
     beforeEach(async () => {
         messagesSubject = new BehaviorSubject<ChatMessage[]>([]);
-        chatService = jasmine.createSpyObj('ChatService', ['sendMessage', 'requestHistory', 'roomMessages$']);
-        chatService.roomMessages$.and.returnValue(messagesSubject.asObservable());
+        chatServiceSpy = jasmine.createSpyObj('ChatService', ['sendMessage', 'requestHistory', 'roomMessages$']);
+        chatServiceSpy.roomMessages$.and.returnValue(messagesSubject.asObservable());
 
         await TestBed.configureTestingModule({
             imports: [ChatComponent],
-            providers: [{ provide: ChatService, useValue: chatService }],
+            providers: [{ provide: ChatService, useValue: chatServiceSpy }],
         }).compileComponents();
 
         fixture = TestBed.createComponent(ChatComponent);
         component = fixture.componentInstance;
-        component.lobbyId = 'lobby-1';
-        component.playerName = 'TestPlayer';
+        component.lobbyId = TEST_LOBBY_ID;
+        component.playerName = TEST_PLAYER_NAME;
         fixture.detectChanges();
     });
 
-    /** Ensures the component successfully instantiates without throwing any errors. */
     it('should create', () => {
         expect(component).toBeTruthy();
     });
 
-    describe('ngOnInit', () => {
-        /** Confirms the component establishes a connection to the correct chat stream based on the provided lobby ID upon initialization. */
+
+    // Message Subscription Tests
+
+    // These tests validate that the component correctly establishes and manages
+    // its connection to the chat message stream. We verify initial subscription
+    // setup and dynamic resubscription when the lobby context changes.
+
+    describe('Message Subscription (ngOnInit)', () => {
         it('should subscribe to messages for the current lobby', () => {
-            expect(chatService.roomMessages$).toHaveBeenCalledWith('lobby-1');
+            expect(chatServiceSpy.roomMessages$).toHaveBeenCalledWith(TEST_LOBBY_ID);
         });
 
-        /** Verifies that the local array of messages updates reactively whenever the underlying service pushes new data. */
         it('should update the messages array when the service pushes new data', () => {
             messagesSubject.next([createMessage(), createMessage({ message: 'World' })]);
             expect(component.messages.length).toBe(2);
         });
+
+        it('should handle delayed message delivery with network latency', (done) => {
+            const delayedMessages = [createMessage({ message: 'Delayed msg' })];
+
+            setTimeout(() => {
+                messagesSubject.next(delayedMessages);
+                expect(component.messages.length).toBe(1);
+                expect(component.messages[0].message).toBe('Delayed msg');
+                done();
+            }, randomNetworkLatency());
+        });
     });
 
-    describe('ngOnChanges', () => {
-        /** Ensures the chat dynamically drops the old subscription and connects to the new message stream if the active lobby changes during the component's lifecycle. */
+    describe('Lobby Change (ngOnChanges)', () => {
         it('should resubscribe when lobbyId changes', () => {
-            chatService.roomMessages$.calls.reset();
+            chatServiceSpy.roomMessages$.calls.reset();
             component.lobbyId = 'lobby-2';
-            component.ngOnChanges({ lobbyId: new SimpleChange('lobby-1', 'lobby-2', false) });
-            expect(chatService.roomMessages$).toHaveBeenCalledWith('lobby-2');
+            component.ngOnChanges({ lobbyId: new SimpleChange(TEST_LOBBY_ID, 'lobby-2', false) });
+            expect(chatServiceSpy.roomMessages$).toHaveBeenCalledWith('lobby-2');
         });
     });
 
-    describe('displayName', () => {
-        /** Strips trailing or leading whitespace from the player's name to ensure a clean visual presentation in the chat feed. */
+
+    // Display Name Tests
+
+    // These tests validate the display name formatting logic. The component must
+    // trim whitespace from player names and provide a safe fallback when the name
+    // is empty or whitespace-only, preventing blank labels in the chat feed.
+
+    describe('Display Name Formatting', () => {
         it('should trim the player name', () => {
-            component.playerName = '  Alice  ';
-            expect(component['displayName']).toBe('Alice');
+            component.playerName = '  Cristiano  ';
+            expect(component['displayName']).toBe('Cristiano');
         });
 
-        /** Provides a safe fallback identity ("Joueur") to prevent rendering blank labels if the player's name string is unexpectedly empty. */
         it('should default to "Joueur" when name is empty', () => {
             component.playerName = '';
             expect(component['displayName']).toBe('Joueur');
         });
 
-        /** Extends the empty-name protection to cover strings consisting entirely of whitespace characters. */
-        it('should default to "Joueur" when name is just spaces', () => {
+        it('should default to "Joueur" when name is only whitespace', () => {
             component.playerName = '   ';
             expect(component['displayName']).toBe('Joueur');
         });
     });
 
-    describe('canSend', () => {
-        /** Evaluates to true when the player is active, the lobby is set, and a valid message has been drafted. */
+
+    // Send Guard Validation Tests
+
+    // Comprehensive validation tests covering critical edge cases for the canSend gate:
+    // 1. Valid state - active player, lobby set, non-empty draft
+    // 2. Abandoned player - spectator rule enforcement
+    // 3. Empty/whitespace draft - prevents spam
+    // 4. Missing lobby - prevents unwanted messages
+    // These tests ensure the guard prevents unwanted messages combinations from reaching the service.
+
+    describe('Send Guard (canSend)', () => {
         it('should be true when everything is valid', () => {
             component.hasAbandoned = false;
-            component.lobbyId = 'lobby-1';
+            component.lobbyId = TEST_LOBBY_ID;
             component.draftMessage = 'Hello';
             expect(component['canSend']).toBe(true);
         });
 
-        /** Strictly enforces the spectator rule, allowing players who quit to read the chat history but preventing them from sending new messages. */
         it('should be false for abandoned players', () => {
             component.hasAbandoned = true;
             component.draftMessage = 'Hello';
             expect(component['canSend']).toBe(false);
         });
 
-        /** Blocks the submission of entirely empty message drafts to prevent spamming the server. */
         it('should be false with an empty draft', () => {
             component.draftMessage = '';
             expect(component['canSend']).toBe(false);
         });
 
-        /** Prevents users from sending messages containing only spaces or tabs. */
         it('should be false with a whitespace-only draft', () => {
             component.draftMessage = '   ';
             expect(component['canSend']).toBe(false);
         });
 
-        /** Disables sending capabilities if the component loses context of the current active lobby. */
         it('should be false without a lobbyId', () => {
             component.lobbyId = '';
             component.draftMessage = 'Hello';
@@ -123,46 +179,54 @@ describe('ChatComponent', () => {
         });
     });
 
-    describe('sendMessage', () => {
-        /** Confirms the component delegates the actual sending logic to the service, ensuring the content is trimmed before transmission. */
+
+    // Message Sending Tests
+
+    // These tests verify the sendMessage flow: delegation to ChatService with trimmed
+    // content, draft clearing after dispatch, and guard enforcement at the method level
+    // to prevent bypassing UI programmatically.
+
+    describe('Message Sending', () => {
         it('should delegate to ChatService with trimmed content', () => {
             component.draftMessage = '  Hello world  ';
             component.sendMessage();
-            expect(chatService.sendMessage).toHaveBeenCalledWith('lobby-1', 'TestPlayer', 'Hello world');
+            expect(chatServiceSpy.sendMessage).toHaveBeenCalledWith(TEST_LOBBY_ID, TEST_PLAYER_NAME, 'Hello world');
         });
 
-        /** Automatically clears the input field immediately after a message is dispatched to prepare for the next draft. */
         it('should clear the draft after sending', () => {
             component.draftMessage = 'Hello';
             component.sendMessage();
             expect(component.draftMessage).toBe('');
         });
 
-        /** Acts as a secondary guard to guarantee that the service is never called if the send conditions (like an empty draft) are not met. */
         it('should not send if canSend is false (empty draft)', () => {
             component.draftMessage = '';
             component.sendMessage();
-            expect(chatService.sendMessage).not.toHaveBeenCalled();
+            expect(chatServiceSpy.sendMessage).not.toHaveBeenCalled();
         });
 
-        /** Ensures abandoned players cannot bypass the UI restrictions to trigger a network request. */
         it('should not send if the player abandoned', () => {
             component.hasAbandoned = true;
             component.draftMessage = 'Hello';
             component.sendMessage();
-            expect(chatService.sendMessage).not.toHaveBeenCalled();
+            expect(chatServiceSpy.sendMessage).not.toHaveBeenCalled();
         });
     });
 
-    describe('chatFocusChange', () => {
-        /** Emits a true boolean flag to parent components when the input is focused, enabling them to safely disable global keyboard shortcuts (like WASD movement). */
+
+    // Chat Focus Events Tests
+
+    // These tests validate that focus/blur events are properly emitted to parent
+    // components, enabling them to safely disable global keyboard shortcuts
+    // (like WASD movement) when the chat input is active.
+
+    describe('Chat Focus Events', () => {
         it('should emit true on focus', () => {
             spyOn(component.chatFocusChange, 'emit');
             component.chatFocusChange.emit(true);
             expect(component.chatFocusChange.emit).toHaveBeenCalledWith(true);
         });
 
-        /** Emits a false boolean flag when the input loses focus, signaling to the parent component that normal keyboard shortcuts can resume. */
         it('should emit false on blur', () => {
             spyOn(component.chatFocusChange, 'emit');
             component.chatFocusChange.emit(false);
@@ -170,20 +234,24 @@ describe('ChatComponent', () => {
         });
     });
 
-    describe('scroll behavior', () => {
-        /** Verifies the default initialization state assumes the view is scrolled to the latest messages. */
+
+    // Scroll Behavior Tests
+
+    // These tests verify auto-scroll tracking: the component starts anchored to
+    // the bottom, stays anchored after sending, and supports manual scroll-to-bottom
+    // triggers for when the user has scrolled up to read history.
+
+    describe('Scroll Behavior', () => {
         it('should start near the bottom', () => {
             expect(component.isNearBottom).toBe(true);
         });
 
-        /** Ensures the component flags itself to remain snapped to the bottom of the feed immediately after the user sends a new message. */
         it('should flag for auto-scroll after sending', () => {
             component.draftMessage = 'Test';
             component.sendMessage();
             expect(component.isNearBottom).toBe(true);
         });
 
-        /** Confirms the manual UI trigger accurately resets the scroll tracking state to force a jump to the bottom of the message list. */
         it('scrollToBottomClicked should jump to bottom', () => {
             component.isNearBottom = false;
             component.scrollToBottomClicked();
@@ -191,13 +259,17 @@ describe('ChatComponent', () => {
         });
     });
 
-    describe('ngOnDestroy', () => {
-        /** Verifies standard component destruction completes cleanly without memory leaks or syntax errors. */
+
+    // Component Lifecycle Tests
+
+    // These tests verify that the component tears down cleanly without memory leaks,
+    // including edge cases where subscriptions may not have been fully established.
+
+    describe('Component Teardown (ngOnDestroy)', () => {
         it('should not throw', () => {
             expect(() => component.ngOnDestroy()).not.toThrow();
         });
 
-        /** Ensures the teardown process is robust enough to survive being destroyed even if an active chat subscription was never fully established. */
         it('should survive being destroyed with no active subscription', () => {
             const fresh = TestBed.createComponent(ChatComponent);
             fresh.componentInstance.lobbyId = '';
