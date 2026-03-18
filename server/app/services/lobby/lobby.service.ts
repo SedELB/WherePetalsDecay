@@ -1,14 +1,14 @@
+import { HISTORY_MAX_MESSAGE } from '@common/constants/validation.constants';
 import { Game } from '@common/game';
 import { Lobby } from '@common/lobby';
 import { Injectable } from '@nestjs/common';
 import { Player } from '@common/player';
 import { ChatMessage } from '@common/chat-message';
 
-const HISTORY_MAX_MESSAGE = 100;
-const BASE_36 = 36;
-const BASE_2 = 2;
-const BASE_7 = 7;
-const BASE_5 = 5;
+const ALPHANUMERIC_BASE = 36;
+const ID_SUBSTRING_START = 2;
+const ID_SUBSTRING_END = 7;
+const ID_PADDING_LENGTH = 5;
 
 @Injectable()
 export class LobbyService {
@@ -21,7 +21,11 @@ export class LobbyService {
     private generateLobbyId(): string {
         let newLobbyId: string;
         do {
-            newLobbyId = Math.random().toString(BASE_36).substring(BASE_2, BASE_7).padEnd(BASE_5, 'X').toUpperCase();
+            newLobbyId = Math.random()
+                .toString(ALPHANUMERIC_BASE)
+                .substring(ID_SUBSTRING_START, ID_SUBSTRING_END)
+                .padEnd(ID_PADDING_LENGTH, 'X')
+                .toUpperCase();
         } while (this.lobbies.has(newLobbyId));
 
         return newLobbyId;
@@ -40,7 +44,7 @@ export class LobbyService {
             isLocked: false,
             players: [player],
             pendingAvatars: {},
-            chatHistory : [],
+            chatHistory: [],
         };
 
         this.lobbies.set(lobbyId, lobby);
@@ -124,11 +128,13 @@ export class LobbyService {
         return undefined;
     }
 
-    saveMessage(lobbyId: string, message: ChatMessage) {
+    saveMessage(lobbyId: string, message: ChatMessage): void {
         const lobby = this.getLobby(lobbyId);
+        if (!lobby) return;
+
         lobby.chatHistory.push(message);
-        
-        if(lobby.chatHistory.length > HISTORY_MAX_MESSAGE){
+
+        if (lobby.chatHistory.length > HISTORY_MAX_MESSAGE) {
             lobby.chatHistory.shift();
         }
     }

@@ -1,11 +1,10 @@
 import { Injectable } from '@angular/core';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { ChatMessage } from '@common/chat-message';
+import { MAX_MESSAGE_LENGTH } from '@common/constants/validation.constants';
 import { SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { BehaviorSubject, Observable } from 'rxjs';
-
-const MAX_LENGHT_MESSAGE = 200;
 
 @Injectable({
     providedIn: 'root',
@@ -14,7 +13,7 @@ export class ChatService {
     private readonly namespace = SocketNamespace.Join;
 
     private readonly chatHistorySubject = new BehaviorSubject<ChatMessage[]>([]);
-    chatHistory$ = this.chatHistorySubject.asObservable();
+    readonly chatHistory$ = this.chatHistorySubject.asObservable();
 
     constructor(private readonly webSocketService: WebSocketService) {
         this.webSocketService.onNamespace<ChatMessage>(this.namespace, JoinGameEvents.ReceivedChatMessage, (msg) => {
@@ -39,7 +38,7 @@ export class ChatService {
     sendMessage(lobbyId: string, playerName: string | undefined, message: string): void {
         if (!lobbyId) return;
 
-        const trimmed = (message ?? '').trim().slice(0, MAX_LENGHT_MESSAGE);
+        const trimmed = (message ?? '').trim().slice(0, MAX_MESSAGE_LENGTH);
         if (!trimmed) return;
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.ChatSendMessage, {
             lobbyId,

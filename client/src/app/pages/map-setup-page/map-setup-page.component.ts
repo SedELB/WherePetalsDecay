@@ -9,7 +9,7 @@ import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-
 import { TileItemCounts } from '@app/services/map-setup.types';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
-import { GameMode, TileItem, TileTexture } from '@common/enums';
+import { GameMode, MapSetupMode, TileItem, TileTexture } from '@common/enums';
 import { Tile } from '@common/tile';
 import { Subscription } from 'rxjs';
 import { skip } from 'rxjs/operators';
@@ -40,7 +40,7 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
     descMaxLength = DESC_MAX_LENGTH;
 
     game: Game = { grid: [] } as unknown as Game;
-    mode: 'create' | 'edit' = 'edit';
+    private mode: MapSetupMode = MapSetupMode.Edit;
     private initialGameState: Game | null = null;
 
     activeTileTexture: TileTexture | null = null;
@@ -75,7 +75,7 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
         this.initialGameState = JSON.parse(JSON.stringify(this.game));
         this.isGameLoaded = true;
 
-        if (this.mode === 'edit' && this.game?._id) {
+        if (this.mode === MapSetupMode.Edit && this.game?._id) {
             this.adminGameService.fetchAllGames().subscribe({
                 next: (games: Game[]) => this.adminGameService.setGames(games),
             });
@@ -94,7 +94,7 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
                             confirmButtonText: 'OK',
                         });
                     }
-                    this.mode = 'create';
+                    this.mode = MapSetupMode.Create;
                 } else if (currentGame.updatedAt !== this.game.updatedAt) {
                     if (this.isSaving) {
                         this.game = JSON.parse(JSON.stringify(currentGame));

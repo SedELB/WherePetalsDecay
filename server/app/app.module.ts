@@ -4,7 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { GameController } from './controllers/game/game.controller';
 import { Game, gameSchema } from './model/schema/game.schema';
 import { GameService } from './services/game/game.service';
-import { GameValidatorService } from './services/game/gameValidator.service';
+import { GameValidatorService } from './services/game/game-validator.service';
 import { LobbyService } from './services/lobby/lobby.service';
 import { GameLogicService } from './services/game-logic/game-logic.service';
 import { TurnService } from './services/game-logic/turn.service';

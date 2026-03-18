@@ -20,6 +20,7 @@
  * network latency (500-5000ms).
  */
 
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { ChatService } from '@app/services/chat/chat.service';
@@ -33,6 +34,9 @@ import { WaitingRoomComponent } from './waiting-room.component';
 
 const BASE_4500 = 4500;
 const BASE_500 = 500;
+
+@Component({ template: '', standalone: true })
+class DummyRouteComponent {}
 
 describe('WaitingRoomComponent - Initialization & Listeners', () => {
     let component: WaitingRoomComponent;
@@ -128,7 +132,10 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
         await TestBed.configureTestingModule({
             imports: [WaitingRoomComponent],
             providers: [
-                provideRouter([]),
+                provideRouter([
+                    { path: 'home', component: DummyRouteComponent },
+                    { path: 'game/:id', component: DummyRouteComponent },
+                ]),
                 { provide: WebSocketService, useValue: webSocketMock },
                 { provide: ChatService, useValue: chatMock },
                 { provide: GameViewService, useValue: gameViewMock },
@@ -170,7 +177,7 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
             await TestBed.configureTestingModule({
                 imports: [WaitingRoomComponent],
                 providers: [
-                    provideRouter([]),
+                    provideRouter([{ path: 'home', component: DummyRouteComponent }]),
                     { provide: WebSocketService, useValue: createWebSocketMock() },
                     { provide: ChatService, useValue: jasmine.createSpyObj('ChatService', ['requestHistory']) },
                     { provide: GameViewService, useValue: jasmine.createSpyObj('GameViewService', ['setLobby']) },
@@ -201,7 +208,7 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
 
         it('should allow setupUpdateListeners to register all event handlers', () => {
             component.lobbyId.set(LOBBY_ID);
-            component.setupUpdateListeners();
+            component['setupUpdateListeners']();
 
             const EXPECTED_LISTENERS = 5;
             expect(webSocketService.onNamespace).toHaveBeenCalledTimes(EXPECTED_LISTENERS);
@@ -217,7 +224,7 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
 
     describe('setupUpdateListeners', () => {
         beforeEach(() => {
-            component.setupUpdateListeners();
+            component['setupUpdateListeners']();
         });
 
         const EXPECTED_LISTENER_COUNT = 5;

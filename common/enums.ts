@@ -42,3 +42,20 @@ export enum SocketNamespace {
     Games = '/game',
     Join = '/join',
 }
+
+export enum ButtonVariant {
+    Default = 'default',
+    Back = 'back',
+    Save = 'save',
+}
+
+export enum MapSetupMode {
+    Create = 'create',
+    Edit = 'edit',
+}
+
+export enum MapSizeKey {
+    Small = 'small',
+    Medium = 'medium',
+    Large = 'large',
+}

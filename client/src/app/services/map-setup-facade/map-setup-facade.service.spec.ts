@@ -20,7 +20,7 @@ import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 
-import { GameMode, TileTexture } from '@common/enums';
+import { GameMode, MapSetupMode, TileTexture } from '@common/enums';
 import type { Game } from '@common/game';
 import type { Tile } from '@common/tile';
 
@@ -103,14 +103,14 @@ describe('MapSetupFacadeService', () => {
         const game = gameFactory(SIZE_SMALL, SIZE_SMALL, GameMode.Classic);
         const counts = { spawnCount: 2, healingSanctuaryCount: 1, combatSanctuaryCount: 1, flagCount: 0 };
 
-        history.pushState({ game, mode: 'edit' }, '', '');
+        history.pushState({ game, mode: MapSetupMode.Edit }, '', '');
         tileItemCount.createRequiredCounts.and.returnValue(counts);
 
         const result = await service.initializeFromNavigation();
 
         expect(mapSetup.initializeGridIfEmpty).toHaveBeenCalledWith(game);
         expect(tileItemCount.adjustCountsForExistingItems).toHaveBeenCalledWith(game, counts);
-        expect(result).toEqual({ game, mode: 'edit', itemCounts: counts });
+        expect(result).toEqual({ game, mode: MapSetupMode.Edit, itemCounts: counts });
     });
 
     // Test navigation with missing game state
@@ -147,7 +147,7 @@ describe('MapSetupFacadeService', () => {
 
         const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
 
-        await service.saveGame(game, 'create', mockElement);
+        await service.saveGame(game, MapSetupMode.Create, mockElement);
 
         expect(game.thumbnail).toBe('new-thumb');
         expect(communication.createGame).toHaveBeenCalledWith(game);
@@ -175,7 +175,7 @@ describe('MapSetupFacadeService', () => {
 
         const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
 
-        await service.saveGame(game, 'edit', mockElement);
+        await service.saveGame(game, MapSetupMode.Edit, mockElement);
 
         expect(game.thumbnail).toBe('edit-thumb');
         expect(communication.modifyGame).toHaveBeenCalledWith(game);
@@ -190,7 +190,7 @@ describe('MapSetupFacadeService', () => {
         spyOn(service as unknown as CaptureThumbnailApi, 'captureThumbnail').and.rejectWith(new Error('fail'));
         const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
 
-        await service.saveGame(game, 'create', mockElement);
+        await service.saveGame(game, MapSetupMode.Create, mockElement);
 
         expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ title: `Problème d'enregistrement` }));
         expect(validator.validate).not.toHaveBeenCalled();
@@ -214,7 +214,7 @@ describe('MapSetupFacadeService', () => {
 
         const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
 
-        await service.saveGame(game, 'edit', mockElement);
+        await service.saveGame(game, MapSetupMode.Edit, mockElement);
 
         expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Jeu invalide !' }));
         expect(communication.modifyGame).not.toHaveBeenCalled();
@@ -241,7 +241,7 @@ describe('MapSetupFacadeService', () => {
 
         const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
 
-        await service.saveGame(game, 'edit', mockElement);
+        await service.saveGame(game, MapSetupMode.Edit, mockElement);
 
         expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Jeu invalide !' }));
     });
@@ -266,7 +266,7 @@ describe('MapSetupFacadeService', () => {
 
         const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
 
-        await service.saveGame(game, 'edit', mockElement);
+        await service.saveGame(game, MapSetupMode.Edit, mockElement);
 
         expect(communication.createGame).toHaveBeenCalledWith(game);
         expect(communication.modifyGame).not.toHaveBeenCalled();
@@ -276,31 +276,31 @@ describe('MapSetupFacadeService', () => {
 
     // Test API error handling in create mode
     it('reports API errors on save in create mode', async () => {
-    const game = gameFactory(SIZE_SMALL, SIZE_SMALL, GameMode.Classic);
-    const validationPayload = {
-        name: game.name,
-        description: game.description,
-        mode: game.gameMode,
-        size: game.size,
-        grid: [[TileTexture.Floor]],
-        placedObjects: [],
-    };
+        const game = gameFactory(SIZE_SMALL, SIZE_SMALL, GameMode.Classic);
+        const validationPayload = {
+            name: game.name,
+            description: game.description,
+            mode: game.gameMode,
+            size: game.size,
+            grid: [[TileTexture.Floor]],
+            placedObjects: [],
+        };
 
-    spyOn(service as unknown as CaptureThumbnailApi, 'captureThumbnail').and.resolveTo('thumb');
-    mapSetup.buildValidationPayload.and.returnValue(validationPayload);
-    validator.validate.and.returnValue({ isValid: true, errors: [] });
-    
-    communication.createGame.and.returnValue(throwError(() => ({ error: 'creation failed' })));
+        spyOn(service as unknown as CaptureThumbnailApi, 'captureThumbnail').and.resolveTo('thumb');
+        mapSetup.buildValidationPayload.and.returnValue(validationPayload);
+        validator.validate.and.returnValue({ isValid: true, errors: [] });
 
-    const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
+        communication.createGame.and.returnValue(throwError(() => ({ error: 'creation failed' })));
 
-    await service.saveGame(game, 'create', mockElement);
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
 
-    expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ 
-        title: 'Erreur',
-        text: "Une erreur s'est produite en enregistrant un nouveau jeu : creation failed",
-    }));
-});
+        await service.saveGame(game, MapSetupMode.Create, mockElement);
+
+        expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({
+            title: 'Erreur',
+            text: "Une erreur s'est produite en enregistrant un nouveau jeu : creation failed",
+        }));
+    });
 
     // Test default mode behavior
     it('defaults mode to edit when not specified in navigation state', async () => {
@@ -312,7 +312,7 @@ describe('MapSetupFacadeService', () => {
 
         const result = await service.initializeFromNavigation();
 
-        expect(result?.mode).toBe('edit');
+        expect(result?.mode).toBe(MapSetupMode.Edit);
     });
 
     // Test successful thumbnail capture

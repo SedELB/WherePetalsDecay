@@ -266,7 +266,7 @@ describe('AdminGameService', () => {
     it('should apply visibility change via applyVisibilityChange', (done) => {
         service.setGames([MOCK_GAME, MOCK_GAME_2]);
 
-        service.applyVisibilityChange('2', true);
+        service['applyVisibilityChange']('2', true);
 
         service.games$.subscribe((games) => {
             const game = games.find(g => g._id === '2');

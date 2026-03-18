@@ -6,7 +6,7 @@ import { SakuraComponent } from '@app/components/sakura/sakura.component';
 import { OBJECT_PLACEMENT_TOOL, TILE_TOOLS } from '@app/constants/map-setup-page-constant';
 import { ROUTES } from '@app/constants/routes.constants';
 import { GameViewService } from '@app/services/game-view/game-view.service';
-import { BASE_STATS } from '@common/character';
+import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS, KEY_TO_DIRECTION } from '@common/direction';
 import { GameMode } from '@common/enums';
 import { Player } from '@common/player';
@@ -149,7 +149,7 @@ export class GamePageComponent implements OnInit {
         if (lobbyId) this.gameViewService.sendEndTurn(lobbyId);
     }
 
-    onAbandon() {
+    onAbandon(): void {
         const errorMessage = 'Êtes-vous sûr de vouloir abandonner la partie ? Vous ne pourrez pas revenir dans cette partie si vous quittez.';
         swal.fire({
             title: 'Quitter ?',

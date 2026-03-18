@@ -18,7 +18,7 @@ import {
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { GameValidatorService } from './gameValidator.service';
+import { GameValidatorService } from './game-validator.service';
 
 @Injectable()
 export class GameService {

@@ -1,6 +1,6 @@
 import { NgClass } from '@angular/common';
 import { Component, ElementRef, HostListener, Input, OnInit, ViewChild } from '@angular/core';
-import { GameCard } from '@app/interfaces/gameCard';
+import { GameCard } from '@app/interfaces/game-card';
 import { GameMode } from '@common/enums';
 
 @Component({

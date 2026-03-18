@@ -1,12 +1,12 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
+import { LobbyCardComponent } from '@app/components/lobby-card/lobby-card.component';
+import { ROUTES } from '@app/constants/routes.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
-import { ROUTES } from '@app/constants/routes.constants';
-import { LobbyCardComponent } from '@app/components/lobby-card/lobby-card.component';
 
 // The page after clicking "Joindre une partie"
 @Component({
@@ -19,9 +19,9 @@ export class JoinGamePageComponent implements OnInit, OnDestroy {
   private readonly webSocketService = inject(WebSocketService);
   private readonly router = inject(Router);
   readonly routes = ROUTES;
-  
+
   activeLobbies: Lobby[] = [];
-  
+
   ngOnInit(): void {
     // Listener for updating available lobbies
     this.webSocketService.onNamespace<Lobby[]>(
@@ -36,7 +36,7 @@ export class JoinGamePageComponent implements OnInit, OnDestroy {
     this.webSocketService.onNamespace<Lobby>(
       SocketNamespace.Join,
       JoinGameEvents.LobbyJoined,
-      (lobbyData) => this.router.navigate([this.routes.waitingRoom, lobbyData.lobbyId], {state: {lobby: lobbyData}}),
+      (lobbyData) => this.router.navigate([this.routes.waitingRoom, lobbyData.lobbyId], { state: { lobby: lobbyData } }),
     );
 
     // Emit event to get available lobbies on init.
@@ -48,7 +48,7 @@ export class JoinGamePageComponent implements OnInit, OnDestroy {
     this.webSocketService.offNamespace(SocketNamespace.Join, JoinGameEvents.LobbyJoined);
   }
 
-  selectLobby(lobby: Lobby) {
-    this.router.navigate(['/character-selection', lobby.lobbyId], {state: {game: lobby.game}});
+  selectLobby(lobby: Lobby): void {
+    this.router.navigate(['/character-selection', lobby.lobbyId], { state: { game: lobby.game } });
   }
 }

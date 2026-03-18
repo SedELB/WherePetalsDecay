@@ -1,5 +1,5 @@
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
-import { GameValidatorService } from '@app/services/game/gameValidator.service';
+import { GameValidatorService } from '@app/services/game/game-validator.service';
 import { BASE_10, BASE_15, CUSTOM_GRID_CLASSIC_SMALL, CUSTOM_GRID_CLASSIC_SMALL_INVALID, DESC_MAX_LENGTH } from '@app/utils/game.constants';
 import { GameMode, MaxPlayers, TileItem, TileTexture } from '@common/enums';
 import {
@@ -124,7 +124,7 @@ describe('GameValidator', () => {
 
     it('findFirstWalkableTile() should return the first walkable tile', () => {
         // Locates starting position for pathfinding algorithm
-        expect(gameValidatorService.findFirstWalkableTile(getValidGame().grid)).toMatchObject({ row: 0, col: 2 });
+        expect(gameValidatorService.findFirstWalkableTile(getValidGame().grid)).toMatchObject({ y: 0, x: 2 });
     });
 
     it('findFirstWalkableTile() should return null if there is no walkable tile', () => {
@@ -136,8 +136,8 @@ describe('GameValidator', () => {
         // Retrieves coordinates of all doors on map
         const positions = gameValidatorService.getObjectsPositions(getValidGame(), 'door');
         expect(positions.length).toBeGreaterThan(0);
-        expect(positions[0]).toHaveProperty('row');
-        expect(positions[0]).toHaveProperty('col');
+        expect(positions[0]).toHaveProperty('y');
+        expect(positions[0]).toHaveProperty('x');
     });
 
     it('getObjectsPositions() should return spawn positions', () => {
