@@ -1,5 +1,5 @@
 import { NgClass } from '@angular/common';
-import { Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, Input, OnInit, ViewChild } from '@angular/core';
 import { GameCard } from '@app/interfaces/gameCard';
 import { GameMode } from '@common/enums';
 
@@ -36,6 +36,10 @@ export class GameCardComponent implements OnInit {
     this.windowHeight = visualViewport?.height ?? 0;
   }
 
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.windowHeight = visualViewport?.height ?? 0;
+  }
 
   protected displayTime(): string {
     const rawDate = this.game.updatedAt;
