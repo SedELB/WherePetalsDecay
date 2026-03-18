@@ -43,6 +43,7 @@ export class GameViewService {
     readonly activePlayerSocketId = signal<string | null>(null);
     readonly turnCountdown = signal<number>(0);
     readonly reachableTiles = signal<Vec2[]>([]);
+    readonly reachableTilesForTeleport = signal<Vec2[]>([]);
     readonly movementPoints = signal<number>(0);
     readonly tileInfo = signal<TileInfoData | null>(null);
     readonly gameOver = signal<{ winnerSocketId: string | null } | null>(null);
@@ -88,6 +89,7 @@ export class GameViewService {
         this.webSocketService.onNamespace<string>(this.namespace, JoinGameEvents.TurnEnded, () => {
             this.activePlayerSocketId.set(null);
             this.reachableTiles.set([]);
+            this.reachableTilesForTeleport.set([]);
         });
 
         this.webSocketService.onNamespace<PlayerMovedData>(this.namespace, JoinGameEvents.PlayerMoved, (data) => {
@@ -98,7 +100,7 @@ export class GameViewService {
         });
 
         this.webSocketService.onNamespace<PlayerMovedData>(this.namespace, JoinGameEvents.PlayerTeleported, (data) => {
-            if (!this.isDebugModeActive) return;
+            if (!this.isDebugModeActive()) return;
             this.playerPositions.update((positions) => ({ ...positions, [data.socketId]: data.position }));
         });
 
@@ -109,6 +111,12 @@ export class GameViewService {
         this.webSocketService.onNamespace<{ socketId: string; tiles: Vec2[] }>(this.namespace, JoinGameEvents.ReachableTiles, (data) => {
             if (data.socketId === this.getLocalSocketId()) {
                 this.reachableTiles.set(data.tiles);
+            }
+        });
+
+        this.webSocketService.onNamespace<{ socketId: string; tiles: Vec2[] }>(this.namespace, JoinGameEvents.ReachableTilesForTeleport, (data) => {
+            if (data.socketId === this.getLocalSocketId()) {
+                this.reachableTilesForTeleport.set(data.tiles);
             }
         });
 
@@ -178,7 +186,7 @@ export class GameViewService {
     }
 
     sendAbandon(lobbyId: string): void {
-        if (this.isHost() && this.isDebugModeActive()){
+        if (this.isHost() && this.isDebugModeActive()) {
             this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.ToggleDebugMode, { lobbyId, state: this.isDebugModeActive() });
         }
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.PlayerAbandon, lobbyId);

@@ -39,6 +39,7 @@ export enum JoinGameEvents {
     GameStarting = 'gameStarting',
     PlayerKicked = 'playerKicked',
     ReceivedChatMessage = 'receivedChatMessage',
+    ReachableTilesForTeleport = 'reachableTilesForTeleport',
 
     //--------Game-View-Events--------
     GameStarted = 'gameStarted',

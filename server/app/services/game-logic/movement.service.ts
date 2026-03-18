@@ -52,13 +52,16 @@ export class MovementService {
 
             for (const offset of Object.values(DIRECTION_OFFSETS)) {
                 const nextPos: Vec2 = { x: current.pos.x + offset.x, y: current.pos.y + offset.y };
+                const key = this.posKey(nextPos);
 
                 if (!this.isWithinBounds(game.lobby.game, nextPos)) continue;
-                if (this.isTileOccupied(game, nextPos)) continue;
+                if (visited.has(key)) continue;
+                visited.set(key, 0);
 
                 const tile = game.lobby.game.grid[nextPos.y][nextPos.x];
                 const tileCost = TILE_COSTS[tile.type];
                 if (tileCost === Infinity) continue;
+                if (this.isTileOccupied(game, nextPos)) continue;
 
                 reachable.push(nextPos);
                 queue.push({ pos: nextPos, cost: 0 });

@@ -36,6 +36,7 @@ export class GamePageComponent implements OnInit {
     readonly game = computed(() => this.lobby()?.game);
     readonly playerPositions = computed(() => this.gameViewService.playerPositions());
     readonly reachableTiles = computed(() => this.gameViewService.reachableTiles());
+    readonly reachableTilesForTeleport = computed(() => this.gameViewService.reachableTilesForTeleport());
     readonly movementPoints = computed(() => this.gameViewService.movementPoints());
     readonly turnCountdown = computed(() => this.gameViewService.turnCountdown());
     readonly activePlayerSocketId = computed(() => this.gameViewService.activePlayerSocketId());
@@ -199,6 +200,11 @@ export class GamePageComponent implements OnInit {
 
     isReachable(col: number, row: number): boolean {
         return this.reachableTiles().some((t) => t.x === col && t.y === row);
+    }
+
+    isTeleportable(col: number, row: number): boolean {
+        if (!this.isDebugModeActive()) return false;
+        return this.reachableTilesForTeleport().some((t) => t.x === col && t.y === row);
     }
 
     getPlayerAtPosition(col: number, row: number): string | null {

@@ -36,6 +36,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnStarted, playerSocketId);
                 this.sendMovementPoints(lobbyId, playerSocketId);
                 this.sendReachableTiles(lobbyId, playerSocketId);
+                this.sendReachableTilesForTeleport(lobbyId, playerSocketId);
                 this.autoEndTurnIfNoActions(lobbyId, playerSocketId);
             },
             onTurnEnded: (lobbyId: string, playerSocketId: string) => {
@@ -86,6 +87,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         });
 
         this.sendReachableTiles(lobbyId, socket.id);
+        this.sendReachableTilesForTeleport(lobbyId, socket.id);
         this.autoEndTurnIfNoActions(lobbyId, socket.id);
     }
 
@@ -102,6 +104,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             position: newPosition,
         });
 
+        this.sendReachableTiles(lobbyId, socket.id);
         this.sendReachableTilesForTeleport(lobbyId, socket.id);
         this.autoEndTurnIfNoActions(lobbyId, socket.id);
     }
@@ -110,7 +113,15 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     handleDebugToggle(@ConnectedSocket() socket: Socket, @MessageBody() { lobbyId, state }) {
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
         if (!activeGame || activeGame.lobby.hostSocketId !== socket.id) return;
+        activeGame.isDebugMode = !state;
         this.server.to(lobbyId).emit(JoinGameEvents.DebugToggled, !state);
+
+        if (!activeGame.isDebugMode) {
+            const currentSocketId = activeGame.turnOrder[activeGame.currentTurnIndex];
+            if (currentSocketId) {
+                this.autoEndTurnIfNoActions(lobbyId, currentSocketId);
+            }
+        }
     }
 
     @SubscribeMessage(JoinGameEvents.EndTurn)
@@ -190,6 +201,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     }
 
     private autoEndTurnIfNoActions(lobbyId: string, socketId: string): void {
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        if (activeGame?.isDebugMode) return;
+
         const reachable = this.gameLogicService.getReachableTiles(lobbyId, socketId);
         const adjacent = this.gameLogicService.getAdjacentPlayers(lobbyId, socketId);
         if (reachable.length === 0 && adjacent.length === 0) {
@@ -212,7 +226,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
     private sendReachableTilesForTeleport(lobbyId: string, socketId: string): void {
         const reachableTiles = this.gameLogicService.getReachableTilesForTeleport(lobbyId, socketId);
-        this.server.to(lobbyId).emit(JoinGameEvents.ReachableTiles, {
+        this.server.to(lobbyId).emit(JoinGameEvents.ReachableTilesForTeleport, {
             socketId,
             tiles: reachableTiles,
         });

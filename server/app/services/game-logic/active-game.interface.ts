@@ -14,6 +14,7 @@ export interface ActiveGame {
     playerStartPositions: Map<string, Vec2>;
     movementPoints: Map<string, number>;
     hasCombatted: Map<string, boolean>;
+    isDebugMode?: boolean;
 }
 
 export interface TurnCallbacks {
