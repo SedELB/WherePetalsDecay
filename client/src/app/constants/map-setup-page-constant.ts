@@ -21,6 +21,9 @@ export enum MouseEventType {
     RightDrag = 2,
 }
 
+export const THUMBNAIL_QUALITY = 0.85;
+export const THUMBNAIL_MAX_SIZE = 256;
+
 export const OBJECT_PLACEMENT_TOOL: Record<TileItem, ObjectPlacementTool> = {
     [TileItem.Spawn]: {
         type: TileItem.Spawn,

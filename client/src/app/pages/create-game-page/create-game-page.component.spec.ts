@@ -10,8 +10,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
-import { GameMode, GridSizes, MaxPlayers } from '@common/enums';
-import { CreateGamePageComponent, MapSizeKey } from './create-game-page.component';
+import { GameMode, GridSizes, MapSizeKey, MaxPlayers } from '@common/enums';
+import { CreateGamePageComponent } from './create-game-page.component';
 
 describe('CreateGamePageComponent', () => {
   let component: CreateGamePageComponent;

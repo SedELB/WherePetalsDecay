@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { GameCard } from '@app/interfaces/gameCard';
+import { GameCard } from '@app/interfaces/game-card';
 import { GameMode } from '@common/enums';
 import { GameCardComponent } from './game-card.component';
 

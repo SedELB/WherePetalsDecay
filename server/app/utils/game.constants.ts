@@ -1,8 +1,7 @@
+import { NAME_MAX_LENGTH, DESC_MAX_LENGTH, TEXT_MIN_LENGTH } from '@common/constants/validation.constants';
 import { TileItem, TileTexture } from '@common/enums';
 
-export const NAME_MAX_LENGTH = 20;
-export const DESC_MAX_LENGTH = 500;
-export const TEXT_MIN_LENGTH = 1;
+export { NAME_MAX_LENGTH, DESC_MAX_LENGTH, TEXT_MIN_LENGTH };
 export const MIN_PLAYERS_DTO = 2;
 export const MAX_PLAYERS_DTO = 6;
 export const BASE_10 = 10;

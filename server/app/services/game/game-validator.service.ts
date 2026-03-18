@@ -2,6 +2,7 @@ import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { Tile } from '@app/model/schema/game.schema';
 import { DESC_MAX_LENGTH, NAME_MAX_LENGTH, TEXT_MIN_LENGTH } from '@app/utils/game.constants';
 import { GameMode, TileTexture } from '@common/enums';
+import { Vec2 } from '@common/vec2';
 import {
     DESCRIPTION_FIELD_EMPTY,
     DESCRIPTION_FIELD_TOO_LONG,
@@ -75,22 +76,22 @@ export class GameValidatorService {
     }
 
     // For areThereUnreachableTiles()
-    findFirstWalkableTile(grid: Tile[][]): { row: number; col: number } | null {
+    findFirstWalkableTile(grid: Tile[][]): Vec2 | null {
         for (let r = 0; r < grid.length; r++) {
             for (let c = 0; c < grid[r].length; c++) {
-                if (grid[r][c].type !== TileTexture.Wall) return { row: r, col: c };
+                if (grid[r][c].type !== TileTexture.Wall) return { y: r, x: c };
             }
         }
         return null;
     }
 
     // For areThereUnreachableTiles()
-    isTileValidForPath(game: CreateGameDto, row: number, col: number, visited: Set<string>): boolean {
-        const isWithinBounds = row >= 0 && row < game.grid.length && col >= 0 && col < game.grid[0].length;
+    isTileValidForPath(game: CreateGameDto, y: number, x: number, visited: Set<string>): boolean {
+        const isWithinBounds = y >= 0 && y < game.grid.length && x >= 0 && x < game.grid[0].length;
         if (!isWithinBounds) return false;
 
-        const isNotWall = game.grid[row][col].type !== TileTexture.Wall;
-        const isNotVisited = !visited.has(`${row}, ${col}`);
+        const isNotWall = game.grid[y][x].type !== TileTexture.Wall;
+        const isNotVisited = !visited.has(`${y}, ${x}`);
 
         return isNotWall && isNotVisited;
     }
@@ -107,20 +108,20 @@ export class GameValidatorService {
 
         const queue = [startPos];
         const visited = new Set<string>();
-        visited.add(`${startPos.row}, ${startPos.col}`);
+        visited.add(`${startPos.y}, ${startPos.x}`);
 
         while (queue.length > 0) {
             const currentTile = queue.shift();
             const neighbours = [
-                { row: currentTile.row - 1, col: currentTile.col }, // Up
-                { row: currentTile.row + 1, col: currentTile.col }, // Down
-                { row: currentTile.row, col: currentTile.col - 1 }, // Left
-                { row: currentTile.row, col: currentTile.col + 1 },  // Right
+                { y: currentTile.y - 1, x: currentTile.x }, // Up
+                { y: currentTile.y + 1, x: currentTile.x }, // Down
+                { y: currentTile.y, x: currentTile.x - 1 }, // Left
+                { y: currentTile.y, x: currentTile.x + 1 },  // Right
             ];
 
             for (const next of neighbours) {
-                const key = `${next.row}, ${next.col}`; // text name of current tile
-                if (this.isTileValidForPath(game, next.row, next.col, visited)) {
+                const key = `${next.y}, ${next.x}`; // text name of current tile
+                if (this.isTileValidForPath(game, next.y, next.x, visited)) {
                     visited.add(key);
                     queue.push(next);
                 }
@@ -135,31 +136,31 @@ export class GameValidatorService {
     }
 
     // For isDoorsPlacementValid()
-    isDoorOnGridBorder(grid: Tile[][], row: number, col: number): boolean {
+    isDoorOnGridBorder(grid: Tile[][], y: number, x: number): boolean {
         const rows = grid.length;
         const cols = grid[0].length;
         const isInside =
-            row > 0 &&
-            row < rows - 1 &&
-            col > 0 &&
-            col < cols - 1;
+            y > 0 &&
+            y < rows - 1 &&
+            x > 0 &&
+            x < cols - 1;
 
         if (isInside) return true;
         return false;
     }
 
     // For type and item
-    getObjectsPositions(game: CreateGameDto, wantedObject: string): { row: number; col: number }[] {
+    getObjectsPositions(game: CreateGameDto, wantedObject: string): Vec2[] {
         if (game.grid.length === 0) return [];
 
-        const objectPositions: { row: number; col: number }[] = [];
+        const objectPositions: Vec2[] = [];
 
         for (let i = 0; i < game.grid.length; i++) {
             for (let j = 0; j < game.grid[0].length; j++) {
                 const currentTile = game.grid[i][j];
                 // includes to cover both type of doors
                 if (currentTile.type.includes(wantedObject) || currentTile.item === wantedObject) {
-                    objectPositions.push({ row: i, col: j });
+                    objectPositions.push({ y: i, x: j });
                 }
             }
         }
@@ -172,7 +173,7 @@ export class GameValidatorService {
         const wall = TileTexture.Wall;
         const obstacles = [wall, TileTexture.DoorOpened, TileTexture.DoorClosed];
 
-        for (const { row, col } of allDoorsPos) {
+        for (const { y: row, x: col } of allDoorsPos) {
             // Grid border is excluded
             if (!this.isDoorOnGridBorder(game.grid, row, col)) {
                 errors.push(`La porte à la position (${row}, ${col}) ${DOOR_ON_GRID_BORDER}`);

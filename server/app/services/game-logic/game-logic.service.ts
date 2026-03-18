@@ -1,4 +1,4 @@
-import { BASE_STATS } from '@common/character';
+import { BASE_STATS } from '@common/constants/character.constants';
 import { Direction } from '@common/direction';
 import { TileItem } from '@common/enums';
 import { Game } from '@common/game';

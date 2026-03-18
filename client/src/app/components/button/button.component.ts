@@ -1,6 +1,7 @@
 import { NgClass, NgStyle } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { ButtonVariant } from '@common/enums';
 
 @Component({
     selector: 'app-button',
@@ -19,19 +20,17 @@ export class ButtonComponent {
     @Input() backgroundPath?: string;
     @Input() route?: string;
     @Input() selected: boolean = false;
-    @Input() variant: 'default' | 'back' | 'save' = 'default';
+    @Input() variant: ButtonVariant = ButtonVariant.Default;
 
     @Output() clicked = new EventEmitter<void>();
 
-    onClick() {
+    onClick(): void {
         if (!this.disabled) {
             this.clicked.emit();
         }
     }
 
-    // here is what we call a getter in Angular, it acts as an attribute that returns the return value in question
-    // For example : this.backgroundImage = "url(random/path)" if i define background path as "random/path"
-    get backgroundImage() {
+    get backgroundImage(): string | null {
         return this.backgroundPath ? `url(${this.backgroundPath})` : null;
     }
 }

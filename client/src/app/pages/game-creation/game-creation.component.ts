@@ -9,6 +9,7 @@ import { ROUTES } from '@app/constants/routes.constants';
 import { GameCreationService } from '@app/services/game-creation/game-creation.service';
 import { Game } from '@common/game';
 import { Subscription } from 'rxjs';
+import swal from 'sweetalert2';
 
 @Component({
     selector: 'app-game-creation',
@@ -24,7 +25,7 @@ import { Subscription } from 'rxjs';
 })
 
 export class GameCreationComponent implements OnInit, OnDestroy {
-    games: Game[] = [];
+    protected games: Game[] = [];
     private gamesSubscription: Subscription | null = null;
     readonly routes = ROUTES;
 
@@ -38,7 +39,12 @@ export class GameCreationComponent implements OnInit, OnDestroy {
             next: (games) => this.gameCreationService.setGames(games),
             error: (error: HttpErrorResponse) => {
                 const errorMessage = error.error || 'Erreur lors de la récupération des jeux';
-                alert(`Erreur: ${errorMessage}`);
+                swal.fire({
+                    title: 'Erreur',
+                    text: `${errorMessage}`,
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                });
             },
         });
 

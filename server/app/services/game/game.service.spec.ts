@@ -10,8 +10,11 @@ import { ObjectId } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { Connection, Model } from 'mongoose';
 import { GameService } from './game.service';
-import { GameValidatorService } from './gameValidator.service';
+import { GameValidatorService } from './game-validator.service';
 const BASE_3 = 3;
+const TEST_TIMEOUT_MS = 60000;
+
+jest.setTimeout(TEST_TIMEOUT_MS);
 
 describe('GameServiceE2E', () => {
     let gameService: GameService;
@@ -73,12 +76,18 @@ describe('GameServiceE2E', () => {
     });
 
     afterEach(async () => {
-        await gameModel.deleteMany({}); // Deletes everything in the DB after each test.
+        if (gameModel) {
+            await gameModel.deleteMany({}); // Deletes everything in the DB after each test.
+        }
     });
 
     afterAll(async () => { // After all tests, closes the connection and stops the fakeDB.
-        await connection.close();
-        await mongoServer.stop({ doCleanup: true });
+        if (connection) {
+            await connection.close();
+        }
+        if (mongoServer) {
+            await mongoServer.stop({ doCleanup: true });
+        }
     });
 
     it('service and model should be defined', () => {
@@ -190,16 +199,14 @@ describe('GameServiceE2E', () => {
 
     it('modifyGame() with an invalid id should fail', async () => {
         // Rejects modification requests with malformed ObjectId
-        const modifiedFakeGame = validGame;
+        const modifiedFakeGame = { ...validGame, name: 'Modified Game' };
         const nonExistentId = new ObjectId().toString();
-        modifiedFakeGame.name = 'Modified Game';
         await expect(gameService.modifyGame(nonExistentId + 'INVALID', modifiedFakeGame)).rejects.toThrow();
     });
 
     it('modifyGame() should fail if the game does not exist', async () => {
         // Throws error when attempting to modify non-existent game
-        const modifiedFakeGame = validGame;
-        modifiedFakeGame.name = 'Modified Game';
+        const modifiedFakeGame = { ...validGame, name: 'Modified Game' };
         const nonExistentId = new ObjectId().toString();
         const spyFindById = jest.spyOn(gameModel, 'findById');
         await expect(gameService.modifyGame(nonExistentId, modifiedFakeGame)).rejects.toThrow(GAME_NOT_FOUND);

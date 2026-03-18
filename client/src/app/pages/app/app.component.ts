@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit, Renderer2 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 
 const BACKGROUND_STORAGE_KEY = 'cached-background-url';
@@ -13,6 +14,9 @@ const ONE_DAY_MS = 86400000;
     imports: [RouterOutlet],
 })
 export class AppComponent implements OnInit {
+    private readonly renderer = inject(Renderer2);
+    private readonly document = inject(DOCUMENT);
+
     ngOnInit(): void {
         const expiry = localStorage.getItem(BACKGROUND_EXPIRY_KEY);
         const isExpired = !expiry || Date.now() > Number(expiry);
@@ -22,7 +26,9 @@ export class AppComponent implements OnInit {
             localStorage.setItem(BACKGROUND_EXPIRY_KEY, String(Date.now() + ONE_DAY_MS));
         }
 
-        const backgroundUrl = localStorage.getItem(BACKGROUND_STORAGE_KEY) as string;
-        document.documentElement.style.setProperty('--bg-image', `url('${backgroundUrl}')`);
+        const backgroundUrl = localStorage.getItem(BACKGROUND_STORAGE_KEY);
+        if (!backgroundUrl) return;
+
+        this.renderer.setStyle(this.document.documentElement, '--bg-image', `url('${backgroundUrl}')`);
     }
 }

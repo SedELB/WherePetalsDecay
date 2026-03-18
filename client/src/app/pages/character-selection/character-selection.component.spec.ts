@@ -32,7 +32,7 @@ import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
 import { CharacterService } from '@app/services/character/character.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
-import { AVATARS_PATH, BASE_STATS, RANDOM_NAMES } from '@common/character';
+import { AVATARS_PATH, BASE_STATS, RANDOM_NAMES } from '@common/constants/character.constants';
 import { CharacterSelectionComponent } from './character-selection.component';
 
 describe('CharacterSelectionComponent', () => {

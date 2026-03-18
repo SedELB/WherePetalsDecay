@@ -4,28 +4,10 @@ import { ROUTES } from '@app/constants/routes.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Direction } from '@common/direction';
 import { SocketNamespace } from '@common/enums';
+import { PlayerMovedData, GameStartedData, TileInfoData } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
-import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
-
-export interface PlayerMovedData {
-    socketId: string;
-    position: Vec2;
-    movementPoints: number;
-}
-
-export interface GameStartedData {
-    lobby: Lobby;
-    turnOrder: string[];
-    playerPositions: Record<string, Vec2>;
-}
-
-export interface TileInfoData {
-    tile: Tile;
-    cost: number;
-    player: { name: string; avatar: string } | null;
-}
 
 @Injectable({
     providedIn: 'root',

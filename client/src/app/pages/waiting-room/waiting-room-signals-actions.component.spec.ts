@@ -18,6 +18,7 @@
  *    its session storage key. We check both to prevent memory leaks and stale state.
  */
 
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { ChatService } from '@app/services/chat/chat.service';
@@ -30,6 +31,9 @@ import { Player } from '@common/player';
 import { WaitingRoomComponent } from './waiting-room.component';
 
 const MIN_PLAYERS_TO_START = 2;
+
+@Component({ template: '', standalone: true })
+class DummyRouteComponent {}
 
 describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
     let component: WaitingRoomComponent;
@@ -117,7 +121,7 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
         await TestBed.configureTestingModule({
             imports: [WaitingRoomComponent],
             providers: [
-                provideRouter([]),
+                provideRouter([{ path: 'home', component: DummyRouteComponent }]),
                 { provide: WebSocketService, useValue: webSocketMock },
                 { provide: ChatService, useValue: chatMock },
                 { provide: GameViewService, useValue: gameViewMock },

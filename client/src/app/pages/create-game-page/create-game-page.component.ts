@@ -2,13 +2,8 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { Game } from '@common/game';
-import { GameMode, GridSizes, MaxPlayers } from '@common/enums';
+import { GameMode, GridSizes, MapSetupMode, MapSizeKey, MaxPlayers } from '@common/enums';
 
-export enum MapSizeKey {
-  Small = 'small',
-  Medium = 'medium',
-  Large = 'large',
-}
 
 interface MapSizeConfig {
   rows: number;
@@ -37,15 +32,15 @@ export class CreateGamePageComponent {
   gameMode: GameMode | null = null;
   mapSize: MapSizeKey | null = null;
 
-  gameModeSelected(gameMode: GameMode) {
+  gameModeSelected(gameMode: GameMode): void {
     this.gameMode = gameMode;
   }
 
-  mapSizeSelected(mapSize: MapSizeKey) {
+  mapSizeSelected(mapSize: MapSizeKey): void {
     this.mapSize = mapSize;
   }
 
-  get canCreateGame() {
+  get canCreateGame(): boolean {
     return !!this.gameMode && !!this.mapSize;
   }
 
@@ -73,7 +68,7 @@ export class CreateGamePageComponent {
       updatedAt: new Date(),
     };
 
-    this.router.navigate(['/editor/new'], { state: { game, mode: 'create' } });
+    this.router.navigate(['/editor/new'], { state: { game, mode: MapSetupMode.Create } });
   }
 
 }
