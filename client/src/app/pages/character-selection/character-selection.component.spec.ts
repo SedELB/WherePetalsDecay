@@ -32,6 +32,8 @@ import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
 import { CharacterService } from '@app/services/character/character.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
+import { SocketNamespace } from '@common/enums';
+import { JoinGameEvents } from '@common/join.gateway.events';
 import { AVATARS_PATH, BASE_STATS, RANDOM_NAMES } from '@common/character';
 import { CharacterSelectionComponent } from './character-selection.component';
 
@@ -90,6 +92,38 @@ describe('CharacterSelectionComponent', () => {
     expect(component.selectedAvatar).toBe(TEST_AVATAR_PATH);
   });
 
+  // Avatar Deselection Tests
+  
+  // These tests validate that clicking on an already-selected avatar deselects it.
+  // This is an important UX feature allowing users to undo avatar selection.
+  // Deselection also emits a WebSocket event with null avatar to notify the server.
+
+  it('should deselect avatar when clicking on already-selected avatar', () => {
+    // Select an avatar
+    component.selectAvatar(TEST_AVATAR_PATH);
+    expect(component.selectedAvatar).toBe(TEST_AVATAR_PATH);
+
+    // Click on the same avatar again to deselect
+    component.selectAvatar(TEST_AVATAR_PATH);
+    expect(component.selectedAvatar).toBeNull();
+  });
+
+  it('should emit deselection event with null avatar when deselecting', () => {
+    component.lobbyId = 'test-lobby-id';
+    webSocketServiceSpy.emitNamespace.calls.reset();
+
+    component.selectAvatar(TEST_AVATAR_PATH);
+
+    // Deselect by clicking again
+    webSocketServiceSpy.emitNamespace.calls.reset();
+    component.selectAvatar(TEST_AVATAR_PATH);
+
+    expect(webSocketServiceSpy.emitNamespace).toHaveBeenCalledWith(
+      SocketNamespace.Join,
+      JoinGameEvents.SelectAvatar,
+      jasmine.objectContaining({ lobbyId: 'test-lobby-id', avatar: null }),
+    );
+  });
 
   // WebSocket Avatar Events Tests
 
