@@ -1,11 +1,11 @@
-import { SocketNamespace } from '@common/enums';
+import { LobbyService } from '@app/services/lobby/lobby.service';
+import { ChatMessage } from '@common/chat-message';
 import { MAX_MESSAGE_LENGTH } from '@common/constants/validation.constants';
+import { SocketNamespace } from '@common/enums';
+import { JoinGameEvents } from '@common/join.gateway.events';
 import { Injectable } from '@nestjs/common';
 import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { JoinGameEvents } from '@common/join.gateway.events';
-import { ChatMessage } from '@common/chat-message';
-import { LobbyService } from '@app/services/lobby/lobby.service';
 
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()

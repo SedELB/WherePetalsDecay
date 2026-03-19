@@ -26,7 +26,7 @@ import swal from 'sweetalert2';
 })
 
 export class GameCreationComponent implements OnInit, OnDestroy {
-    protected readonly ButtonVariant = ButtonVariant;
+    protected readonly buttonVariant = ButtonVariant;
     protected games: Game[] = [];
     private gamesSubscription: Subscription | null = null;
     readonly routes = ROUTES;

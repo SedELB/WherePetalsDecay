@@ -31,6 +31,7 @@ import { Player } from '@common/player';
 import { WaitingRoomComponent } from './waiting-room.component';
 
 const MIN_PLAYERS_TO_START = 2;
+const FULL_LOBBY_SIZE = 4;
 
 @Component({ template: '', standalone: true })
 class DummyRouteComponent {}
@@ -101,13 +102,16 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
     const capturedCallbacks = new Map<string, (...args: unknown[]) => void>();
     const createWebSocketMock = () => {
         const mock = jasmine.createSpyObj('WebSocketService', [
-            'onNamespace', 'offNamespace', 'emitNamespace', 'getSocketId',
+            'onNamespace', 'offNamespace', 'offMultiple', 'emitNamespace', 'getSocketId',
         ]);
         mock.onNamespace.and.callFake(
             (_namespace: string, event: string, callback: (...args: unknown[]) => void) => {
                 capturedCallbacks.set(event, callback);
             },
         );
+        mock.offMultiple.and.callFake((namespace: string, events: string[]) => {
+            events.forEach((e: string) => mock.offNamespace(namespace, e));
+        });
         mock.getSocketId.and.returnValue(HOST_SOCKET_ID);
         return mock;
     };
@@ -115,7 +119,8 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
     beforeEach(async () => {
         capturedCallbacks.clear();
         const webSocketMock = createWebSocketMock();
-        const chatMock = jasmine.createSpyObj('ChatService', ['requestHistory']);
+        const chatMock = jasmine.createSpyObj('ChatService', ['requestHistory', 'roomMessages$', 'sendMessage']);
+        chatMock['roomMessages$'].and.returnValue({ subscribe: () => ({ unsubscribe: () => undefined }) });
         const gameViewMock = jasmine.createSpyObj('GameViewService', ['setLobby']);
 
         await TestBed.configureTestingModule({
@@ -250,7 +255,7 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
 
                 const playerList = component.players();
                 expect(playerList[0].socketId).toBe(HOST_SOCKET_ID);
-                expect(playerList.length).toBe(4);
+                expect(playerList.length).toBe(FULL_LOBBY_SIZE);
             });
         });
     });
@@ -364,7 +369,7 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
     // storage flag so the user doesn't get wrongly routed if they come back later.
 
     describe('ngOnDestroy', () => {
-        const EXPECTED_OFF_COUNT = 5;
+        const EXPECTED_OFF_COUNT = 7;
 
         beforeEach(() => {
             component.lobbyId.set(LOBBY_ID);
@@ -388,6 +393,8 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
             JoinGameEvents.GameStarting,
             JoinGameEvents.PlayerKicked,
             JoinGameEvents.GameDeleted,
+            JoinGameEvents.PlayerJoined,
+            JoinGameEvents.PlayerLeft,
         ];
 
         cleanupEvents.forEach((event) => {

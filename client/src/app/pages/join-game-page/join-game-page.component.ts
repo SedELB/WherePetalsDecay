@@ -16,7 +16,7 @@ import { Lobby } from '@common/lobby';
   styleUrl: './join-game-page.component.scss',
 })
 export class JoinGamePageComponent implements OnInit, OnDestroy {
-  protected readonly ButtonVariant = ButtonVariant;
+  protected readonly buttonVariant = ButtonVariant;
   private readonly webSocketService = inject(WebSocketService);
   private readonly router = inject(Router);
   readonly routes = ROUTES;

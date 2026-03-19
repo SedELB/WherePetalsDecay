@@ -18,7 +18,7 @@ import swal from 'sweetalert2';
     styleUrl: './admin-page.component.scss',
 })
 export class AdminPageComponent implements OnInit, OnDestroy {
-    protected readonly ButtonVariant = ButtonVariant;
+    protected readonly buttonVariant = ButtonVariant;
     private games: Game[] = [];
     gameCards: GameCard[] = [];
 

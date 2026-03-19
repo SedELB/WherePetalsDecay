@@ -97,6 +97,27 @@ export class MapSetupFacadeService {
       return;
     }
 
+    const handleSuccess = (finalMode: MapSetupMode) => {
+      swal.fire({
+        title: 'Succès',
+        text: `Jeu ${finalMode === MapSetupMode.Create ? 'créé' : 'sauvegardé'} avec succès !`,
+        icon: 'success',
+        confirmButtonText: 'OK',
+      });
+      this.router.navigate(['/admin']);
+    };
+
+    const handleError = (err: HttpErrorResponse) => {
+      swal.fire({
+        title: 'Jeu invalide !',
+        html: `<div style="text-align:left; white-space:pre-line">${err.error.replace(/\\n/g, '\n')}</div>`,
+        icon: 'error',
+        confirmButtonText: 'OK',
+        scrollbarPadding: false,
+        width: '900px',
+      });
+    };
+
     if (mode === MapSetupMode.Edit) {
       this.communicationService.getAllGames().subscribe((allGames) => {
         const originalGame = allGames.find((currentGame) => currentGame._id === game._id);
@@ -109,47 +130,14 @@ export class MapSetupFacadeService {
           : this.communicationService.modifyGame(game);
 
         saveOperation.subscribe({
-          next: () => {
-            swal.fire({
-              title: 'Succès',
-              text: `Jeu ${mode === MapSetupMode.Create ? 'créé' : 'sauvegardé'} avec succès !`,
-              icon: 'success',
-              confirmButtonText: 'OK',
-            });
-            this.router.navigate(['/admin']);
-          },
-          error: (err: HttpErrorResponse) => {
-            swal.fire({
-              title: 'Jeu invalide !',
-              html: `<div style="text-align:left; white-space:pre-line">${err.error.replace(/\\n/g, '\n')}</div>`,
-              icon: 'error',
-              confirmButtonText: 'OK',
-              scrollbarPadding: false,
-            });
-          },
+          next: () => handleSuccess(mode),
+          error: handleError,
         });
       });
     } else {
-      const saveOperation = this.communicationService.createGame(game);
-
-      saveOperation.subscribe({
-        next: () => {
-          swal.fire({
-            title: 'Succès',
-            text: `Jeu créé avec succès`,
-            icon: 'success',
-            confirmButtonText: 'OK',
-          });
-          this.router.navigate(['/admin']);
-        },
-        error: (err: HttpErrorResponse) => {
-          swal.fire({
-            title: 'Erreur',
-            text: `Une erreur s'est produite en enregistrant un nouveau jeu : ${err.error}`,
-            icon: 'error',
-            confirmButtonText: 'OK',
-          });
-        },
+      this.communicationService.createGame(game).subscribe({
+        next: () => handleSuccess(MapSetupMode.Create),
+        error: handleError,
       });
     }
   }

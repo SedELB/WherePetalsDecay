@@ -112,13 +112,16 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
     const capturedCallbacks = new Map<string, (...args: unknown[]) => void>();
     const createWebSocketMock = () => {
         const mock = jasmine.createSpyObj('WebSocketService', [
-            'onNamespace', 'offNamespace', 'emitNamespace', 'getSocketId',
+            'onNamespace', 'offNamespace', 'offMultiple', 'emitNamespace', 'getSocketId',
         ]);
         mock.onNamespace.and.callFake(
             (_namespace: string, event: string, callback: (...args: unknown[]) => void) => {
                 capturedCallbacks.set(event, callback);
             },
         );
+        mock.offMultiple.and.callFake((namespace: string, events: string[]) => {
+            events.forEach((e: string) => mock.offNamespace(namespace, e));
+        });
         mock.getSocketId.and.returnValue(HOST_SOCKET_ID);
         return mock;
     };
@@ -126,7 +129,8 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
     beforeEach(async () => {
         capturedCallbacks.clear();
         const webSocketMock = createWebSocketMock();
-        const chatMock = jasmine.createSpyObj('ChatService', ['requestHistory']);
+        const chatMock = jasmine.createSpyObj('ChatService', ['requestHistory', 'roomMessages$', 'sendMessage']);
+        chatMock['roomMessages$'].and.returnValue({ subscribe: () => ({ unsubscribe: () => undefined }) });
         const gameViewMock = jasmine.createSpyObj('GameViewService', ['setLobby']);
 
         await TestBed.configureTestingModule({
@@ -179,7 +183,11 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
                 providers: [
                     provideRouter([{ path: 'home', component: DummyRouteComponent }]),
                     { provide: WebSocketService, useValue: createWebSocketMock() },
-                    { provide: ChatService, useValue: jasmine.createSpyObj('ChatService', ['requestHistory']) },
+                    { provide: ChatService, useValue: (() => {
+                        const m = jasmine.createSpyObj('ChatService', ['requestHistory', 'roomMessages$', 'sendMessage']);
+                        m['roomMessages$'].and.returnValue({ subscribe: () => ({ unsubscribe: () => undefined }) });
+                        return m;
+                    })() },
                     { provide: GameViewService, useValue: jasmine.createSpyObj('GameViewService', ['setLobby']) },
                     { provide: ActivatedRoute, useValue: noIdRoute },
                 ],
@@ -210,7 +218,7 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
             component.lobbyId.set(LOBBY_ID);
             component['setupUpdateListeners']();
 
-            const EXPECTED_LISTENERS = 5;
+            const EXPECTED_LISTENERS = 7;
             expect(webSocketService.onNamespace).toHaveBeenCalledTimes(EXPECTED_LISTENERS);
         });
     });
@@ -227,7 +235,7 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
             component['setupUpdateListeners']();
         });
 
-        const EXPECTED_LISTENER_COUNT = 5;
+        const EXPECTED_LISTENER_COUNT = 7;
 
         it(`should register ${EXPECTED_LISTENER_COUNT} WebSocket event listeners`, () => {
             expect(webSocketService.onNamespace).toHaveBeenCalledTimes(EXPECTED_LISTENER_COUNT);

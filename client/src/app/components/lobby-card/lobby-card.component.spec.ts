@@ -46,7 +46,7 @@ describe('LobbyCardComponent', () => {
     const SMALL_MAX = 2;
     const MEDIUM_MAX = 4;
     const LARGE_MAX = 6;
-    const EXPECTED_LIST_ITEMS = 4;
+    const EXPECTED_LIST_ITEMS = 5;
 
     const createMockGame = (overrides: Partial<Game> = {}): Game => ({
         _id: 'game-1', name: 'Test Game', description: 'A test game', size: { rows: 10, cols: 10 },
@@ -111,7 +111,7 @@ describe('LobbyCardComponent', () => {
     it('should show player count as current/max', () => {
         component.lobby = createMockLobby();
         fixture.detectChanges();
-        expect((fixture.nativeElement as HTMLElement).textContent).toContain('1/4');
+        expect((fixture.nativeElement as HTMLElement).textContent).toContain('1 /4');
     });
 
     it('should show the thumbnail image', () => {
@@ -169,14 +169,14 @@ describe('LobbyCardComponent', () => {
             it(`should show "${max}/${max}" when a ${label} lobby is full`, () => {
                 component.lobby = createMockLobby({ playerCount: max, game: createMockGame({ maxPlayers: max }) });
                 fixture.detectChanges();
-                expect((fixture.nativeElement as HTMLElement).textContent).toContain(`${max}/${max}`);
+                expect((fixture.nativeElement as HTMLElement).textContent).toContain(`${max} /${max}`);
             });
         });
 
         it('should show "1/N" for a single-player lobby', () => {
             component.lobby = createMockLobby({ playerCount: 1, game: createMockGame({ maxPlayers: LARGE_MAX }) });
             fixture.detectChanges();
-            expect((fixture.nativeElement as HTMLElement).textContent).toContain(`1/${LARGE_MAX}`);
+            expect((fixture.nativeElement as HTMLElement).textContent).toContain(`1 /${LARGE_MAX}`);
         });
     });
 
@@ -234,7 +234,7 @@ describe('LobbyCardComponent', () => {
         expect(el.textContent).toContain('Capture The Flag');
         expect(el.textContent).toContain('15X15');
         expect(el.textContent).toContain('CTF');
-        expect(el.textContent).toContain(`2/${MEDIUM_MAX}`);
+        expect(el.textContent).toContain(`2 /${MEDIUM_MAX}`);
         expect((el.querySelector('img.thumbnail') as HTMLImageElement).src).toContain('ctf.png');
     });
 

@@ -14,16 +14,16 @@
     ]"
     (click)="onClick()"
     >
-    @if (variant === ButtonVariant.Back) {
+    @if (variant === buttonVariant.Back) {
         <img src="./assets/icons/back-arrow.svg" class="arrow" alt="back arrow"/>
     }
-    @if (variant === ButtonVariant.DeleteGame) {
+    @if (variant === buttonVariant.DeleteGame) {
         <img src="./assets/icons/delete-trash.svg" class="trash" alt="delete button"/>
     }
-    @if (variant === ButtonVariant.Edit) {
+    @if (variant === buttonVariant.Edit) {
         <img src="./assets/icons/pencil.svg" class="pencil" alt="edit button"/>
     }
-    @if (variant === ButtonVariant.ToggleVisibility) {
+    @if (variant === buttonVariant.ToggleVisibility) {
         @if (isVisible) {
             <img src="./assets/icons/eye.svg" class="eye-icon" alt="hide button"/>
         } @else {
