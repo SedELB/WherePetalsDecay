@@ -180,11 +180,9 @@
         </section>
 
         <div class="action-bar">
-            @if (adjacentPlayers().length > 0 && isMyTurn()) {
-                <app-button (click)="toggleCombatMode()" [class.combat-active]="isCombatMode">
-                    {{ isCombatMode ? 'Annuler action' : 'Action' }}
-                </app-button>
-            }
+            <app-button (click)="toggleCombatMode()" [class.combat-active]="isCombatMode" [disabled]="adjacentPlayers().length === 0 || !isMyTurn()">
+                {{ isCombatMode ? 'Annuler action' : 'Action' }}
+            </app-button>
             <app-button (click)="onEndTurn()" [disabled]="this.disableEndTurn() || isEndTurnDisabled()">Finir Tour</app-button>
         </div>
     </aside>
