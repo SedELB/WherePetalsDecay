@@ -3,7 +3,7 @@
 .editor-bg {
     box-sizing: border-box;
     height: 100vh;
-    padding: 24px;
+    padding: 1.5rem;
     background: url('../../../assets/background.png') center bottom / cover no-repeat;
     display: flex;
     justify-content: center;
@@ -20,25 +20,25 @@
 
 .pos-back {
     position: absolute;
-    top: 75px;
-    left: 60px;
+    top: 4.6875rem;
+    left: 3.75rem;
 }
 
 .info-card {
-    border-radius: 14px;
+    border-radius: 0.875rem;
     background: rgba(12, 14, 34, 0.72);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
-    padding: 16px 18px;
+    box-shadow: 0 0.75rem 1.75rem rgba(0, 0, 0, 0.35);
+    padding: 1rem 1.125rem;
     color: rgba(255, 255, 255, 0.92);
 }
 
 .info-row {
     display: grid;
-    grid-template-columns: 120px 1fr;
+    grid-template-columns: 7.5rem 1fr;
     align-items: center;
-    column-gap: 12px;
-    margin-bottom: 14px;
+    column-gap: 0.75rem;
+    margin-bottom: 0.875rem;
 }
 
 .info-row--top {
@@ -53,8 +53,8 @@
 }
 
 .input-container {
-    margin-bottom: 40px;
-    margin-top: 20px;
+    margin-bottom: 2.5rem;
+    margin-top: 1.25rem;
 }
 
 .info-input,
@@ -64,9 +64,9 @@
     border: none;
     outline: none;
     color: #fff;
-    font-size: 16px;
-    padding: 5px 0;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+    font-size: 1rem;
+    padding: 0.3125rem 0;
+    border-bottom: 0.125rem solid rgba(255, 255, 255, 0.3);
     transition: all 0.3s ease;
     position: relative;
 }
@@ -81,7 +81,7 @@
     top: 0;
     left: 0;
     color: rgba(255, 255, 255, 0.6);
-    font-size: 16px;
+    font-size: 1rem;
     font-weight: 600;
     transition: all 0.3s ease;
     pointer-events: none;
@@ -92,7 +92,7 @@
     position: absolute;
     bottom: 0;
     left: 0;
-    height: 2px;
+    height: 0.125rem;
     width: 100%;
     background-color: $rose-button;
     transform: scaleX(0);
@@ -100,15 +100,15 @@
 }
 
 .textarea-container .underline {
-    bottom: 4px;
+    bottom: 0.25rem;
 }
 
 .info-input:focus ~ .label,
 .info-input:valid ~ .label,
 .info-textarea:focus ~ .label,
 .info-textarea:valid ~ .label {
-    top: -20px;
-    font-size: 14px;
+    top: -1.25rem;
+    font-size: 0.875rem;
     color: $rose-button;
 }
 
@@ -122,19 +122,19 @@
 .info-dimensions {
     display: flex;
     align-items: flex-end;
-    gap: 8px;
+    gap: 0.5rem;
 }
 
 .info-dimensions-label {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0.25rem;
 }
 
 .info-dimensions-hint {
-    font-size: 11px;
+    font-size: 0.6875rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.0313rem;
     color: rgba(255, 255, 255, 0.65);
 }
 
@@ -147,17 +147,17 @@
     color: rgba(255, 255, 255, 0.6);
     font-weight: 700;
     align-self: center;
-    margin-bottom: 2px;
+    margin-bottom: 0.125rem;
 }
 
 .btn-apply-dimensions {
     align-self: flex-end;
-    padding: 4px 10px;
+    padding: 0.25rem 0.625rem;
     border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 6px;
+    border-radius: 0.375rem;
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
-    font-size: 12px;
+    font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
     transition: background 0.2s;
@@ -171,39 +171,39 @@
     width: 100%;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
+    border-radius: 0.375rem;
     color: #fff;
-    font-size: 16px;
-    padding: 8px 12px;
+    font-size: 1rem;
+    padding: 0.5rem 0.75rem;
     outline: none;
     cursor: pointer;
 }
 
 .pos-reset {
     position: absolute;
-    left: 75px;
-    bottom: 200px;
+    left: 4.6875rem;
+    bottom: 12.5rem;
     display: inline-block;
 }
 
 .pos-save {
     position: absolute;
-    left: 325px;
-    bottom: 200px;
+    left: 20.3125rem;
+    bottom: 12.5rem;
     display: inline-block;
 }
 
 .map-frame {
-    width: min(560px, 65vw);
-    height: min(620px, 72vh);
-    border-radius: 12px;
+    width: min(35rem, 65vw);
+    height: min(38.75rem, 72vh);
+    border-radius: 0.75rem;
     background: rgba(10, 12, 34, 0.62);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.4);
-    padding: 16px;
+    box-shadow: 0 1rem 2.125rem rgba(0, 0, 0, 0.4);
+    padding: 1rem;
     display: grid;
-    grid-template-rows: 34px 1fr;
-    gap: 12px;
+    grid-template-rows: 2.125rem 1fr;
+    gap: 0.75rem;
     transform: scale(1);
 }
 
@@ -218,7 +218,7 @@
 }
 
 .grid {
-    border-radius: 8px;
+    border-radius: 0.5rem;
     overflow: hidden;
     display: grid;
     gap: 0px;
@@ -274,7 +274,7 @@
 .aside-panel {
     display: flex;
     flex-direction: row;
-    gap: 7px;
+    gap: 0.4375rem;
 }
 
 .tools-panel {
@@ -282,27 +282,27 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    gap: 10px;
-    padding: 14px;
-    border-radius: 14px;
+    gap: 0.625rem;
+    padding: 0.875rem;
+    border-radius: 0.875rem;
     background: rgba(12, 14, 34, 0.72);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 0.75rem 1.75rem rgba(0, 0, 0, 0.35);
     flex: 1;
 }
 
 .tool {
-    width: 125px;
-    height: 110px;
+    width: 7.8125rem;
+    height: 6.875rem;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 4px;
-    padding-top: 5px;
-    padding-bottom: 5px;
-    border-radius: 10px;
-    border: 2px solid transparent;
+    gap: 0.25rem;
+    padding-top: 0.3125rem;
+    padding-bottom: 0.3125rem;
+    border-radius: 0.625rem;
+    border: 0.125rem solid transparent;
     background: rgba(255, 255, 255, 0.06);
     color: rgba(255, 255, 255, 0.92);
     cursor: pointer;
@@ -328,13 +328,13 @@
 
 .tool__label {
     font-weight: 700;
-    font-size: 12px;
+    font-size: 0.75rem;
 }
 
 .tool__desc {
-    font-size: 12px;
+    font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.75);
-    max-width: 120px;
+    max-width: 7.5rem;
     visibility: hidden;
     opacity: 0;
     display: none;
@@ -365,13 +365,13 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    padding: 14px;
-    border-radius: 14px;
+    gap: 0.625rem;
+    padding: 0.875rem;
+    border-radius: 0.875rem;
     background: rgba(12, 14, 34, 0.72);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
-    width: 140px;
+    box-shadow: 0 0.75rem 1.75rem rgba(0, 0, 0, 0.35);
+    width: 8.75rem;
     flex: 1;
 }
 
@@ -379,7 +379,7 @@
     color: white;
     font-family: Arial, Helvetica, sans-serif;
     border-bottom: solid rgba(255, 255, 255, 0.26);
-    padding-bottom: 20px;
+    padding-bottom: 1.25rem;
     width: 90%;
     text-align: center;
 }
@@ -389,12 +389,12 @@
     flex-direction: column;
     align-items: center;
     justify-content: space-around;
-    width: 110px;
-    height: 110px;
-    gap: 6px;
-    padding: 12px 10px;
-    border-radius: 10px;
-    border: 2px solid transparent;
+    width: 6.875rem;
+    height: 6.875rem;
+    gap: 0.375rem;
+    padding: 0.75rem 0.625rem;
+    border-radius: 0.625rem;
+    border: 0.125rem solid transparent;
     background: rgba(255, 255, 255, 0.06);
     color: rgba(255, 255, 255, 0.92);
     cursor: pointer;
@@ -425,16 +425,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 2.5rem;
+    height: 2.5rem;
     flex-shrink: 0;
-    border-radius: 8px;
+    border-radius: 0.5rem;
     background: rgba(0, 0, 0, 0.2);
 }
 
 .object-tool__img {
-    width: 24px;
-    height: 24px;
+    width: 1.5rem;
+    height: 1.5rem;
     object-fit: contain;
     filter: invert(1);
     display: block;
@@ -442,14 +442,14 @@
 
 .object-tool__label {
     font-weight: 700;
-    font-size: 12px;
+    font-size: 0.75rem;
     line-height: 1.2;
     word-break: break-word;
     max-width: 100%;
 }
 
 .object-tool__count {
-    font-size: 11px;
+    font-size: 0.6875rem;
     line-height: 1.2;
     color: rgba(255, 255, 255, 0.8);
     font-variant-numeric: tabular-nums;
@@ -468,5 +468,5 @@
     width: 80%;
     height: 80%;
     object-fit: contain;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+    filter: drop-shadow(0 1px 0.125rem rgba(0, 0, 0, 0.5));
 }

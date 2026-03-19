@@ -18,8 +18,8 @@
     margin-bottom: 3rem;
 
     .game-logo {
-        width: 300px;
-        height: 300px;
+        width: 18.75rem;
+        height: 18.75rem;
         object-fit: contain;
         margin-bottom: 1rem;
     }
@@ -38,7 +38,7 @@
 }
 
 .team-info {
-    margin-top: 60px;
+    margin-top: 3.75rem;
     border-top: 1px solid #eee;
 
     h3 {
@@ -48,6 +48,6 @@
 
     p {
         color: $text-color;
-        margin-bottom: 50px;
+        margin-bottom: 3.125rem;
     }
 }

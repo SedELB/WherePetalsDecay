@@ -23,7 +23,6 @@
  * WebSocket Mocking Strategy:
  * We spy on WebSocketService and capture the callbacks passed to onNamespace. This lets us
  * simulate server events by calling those callbacks directly with test data, optionally
- * wrapped in setTimeout to test network latency (500-5000ms).
  */
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -41,8 +40,7 @@ describe('JoinGamePageComponent', () => {
     let webSocketService: jasmine.SpyObj<WebSocketService>;
     let router: Router;
 
-    const LATENCY_BASE = 500;
-    const LATENCY_RANGE = 4500;
+
     const EXPECTED_LISTENER_COUNT = 2;
 
     const createMockGame = (overrides: Partial<Game> = {}): Game => ({
@@ -63,9 +61,6 @@ describe('JoinGamePageComponent', () => {
             game: createMockGame({ gameMode: GameMode.Ctf, name: 'CTF Game' }),
         }),
     ];
-
-    // Helper: random delay between 500ms-5000ms to simulate network conditions
-    const randomNetworkLatency = (): number => Math.random() * LATENCY_RANGE + LATENCY_BASE;
 
     const capturedCallbacks = new Map<string, (...args: unknown[]) => void>();
     const createWebSocketMock = () => {
@@ -138,42 +133,30 @@ describe('JoinGamePageComponent', () => {
         });
 
         // Normal case: server sends a list, we store it
-        it('should update when the server sends a lobby list', (done) => {
-            setTimeout(() => {
-                capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(mockLobbies);
-                expect(component.activeLobbies).toEqual(mockLobbies);
-                done();
-            }, randomNetworkLatency());
+        it('should update when the server sends a lobby list', () => {
+            capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(mockLobbies);
+            expect(component.activeLobbies).toEqual(mockLobbies);
         });
 
         // Empty array from server shouldn't cause issues
-        it('should handle an empty list gracefully', (done) => {
-            setTimeout(() => {
-                capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([]);
-                expect(component.activeLobbies).toEqual([]);
-                done();
-            }, randomNetworkLatency());
+        it('should handle an empty list gracefully', () => {
+            capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([]);
+            expect(component.activeLobbies).toEqual([]);
         });
 
-        it('should handle a single lobby', (done) => {
-            setTimeout(() => {
-                capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([createMockLobby()]);
-                expect(component.activeLobbies.length).toBe(1);
-                done();
-            }, randomNetworkLatency());
+        it('should handle a single lobby', () => {
+            capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.([createMockLobby()]);
+            expect(component.activeLobbies.length).toBe(1);
         });
 
         // Each update should fully replace the old list, not merge or append
-        it('should replace the previous list on new updates', (done) => {
+        it('should replace the previous list on new updates', () => {
             capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(mockLobbies);
             const updated = [createMockLobby({ lobbyId: 'lobby-3', playerCount: 1 })];
 
-            setTimeout(() => {
-                capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(updated);
-                expect(component.activeLobbies.length).toBe(1);
-                expect(component.activeLobbies[0].lobbyId).toBe('lobby-3');
-                done();
-            }, randomNetworkLatency());
+            capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(updated);
+            expect(component.activeLobbies.length).toBe(1);
+            expect(component.activeLobbies[0].lobbyId).toBe('lobby-3');
         });
 
         // If multiple updates come in at the same time, we should only keep the last one
@@ -190,18 +173,15 @@ describe('JoinGamePageComponent', () => {
         });
 
         // Both Classic and CTF lobbies should exist at the same time
-        it('should preserve different game modes without filtering', (done) => {
+        it('should preserve different game modes without filtering', () => {
             const mixed = [
                 createMockLobby({ lobbyId: 'classic', game: createMockGame({ gameMode: GameMode.Classic }) }),
                 createMockLobby({ lobbyId: 'ctf', game: createMockGame({ gameMode: GameMode.Ctf }) }),
             ];
 
-            setTimeout(() => {
-                capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(mixed);
-                expect(component.activeLobbies[0].game.gameMode).toBe(GameMode.Classic);
-                expect(component.activeLobbies[1].game.gameMode).toBe(GameMode.Ctf);
-                done();
-            }, randomNetworkLatency());
+            capturedCallbacks.get(JoinGameEvents.UpdatedLobbiesList)?.(mixed);
+            expect(component.activeLobbies[0].game.gameMode).toBe(GameMode.Classic);
+            expect(component.activeLobbies[1].game.gameMode).toBe(GameMode.Ctf);
         });
     });
 
@@ -217,27 +197,21 @@ describe('JoinGamePageComponent', () => {
             fixture.detectChanges();
         });
 
-        it('should navigate to the waiting room with the lobby data', (done) => {
+        it('should navigate to the waiting room with the lobby data', () => {
             const joined = mockLobbies[0];
-            setTimeout(() => {
-                capturedCallbacks.get(JoinGameEvents.LobbyJoined)?.(joined);
-                expect(router.navigate).toHaveBeenCalledWith(
-                    [component.routes.waitingRoom, joined.lobbyId],
-                    { state: { lobby: joined } },
-                );
-                done();
-            }, randomNetworkLatency());
+            capturedCallbacks.get(JoinGameEvents.LobbyJoined)?.(joined);
+            expect(router.navigate).toHaveBeenCalledWith(
+                [component.routes.waitingRoom, joined.lobbyId],
+                { state: { lobby: joined } },
+            );
         });
 
         // The exact lobby object from the server should end up in router state
-        it('should pass the actual received lobby in router state', (done) => {
+        it('should pass the actual received lobby in router state', () => {
             const joined = createMockLobby({ lobbyId: 'custom-id', playerCount: 4 });
-            setTimeout(() => {
-                capturedCallbacks.get(JoinGameEvents.LobbyJoined)?.(joined);
-                const args = (router.navigate as jasmine.Spy).calls.mostRecent().args;
-                expect(args[1]?.state?.lobby).toEqual(joined);
-                done();
-            }, randomNetworkLatency());
+            capturedCallbacks.get(JoinGameEvents.LobbyJoined)?.(joined);
+            const args = (router.navigate as jasmine.Spy).calls.mostRecent().args;
+            expect(args[1]?.state?.lobby).toEqual(joined);
         });
     });
 
