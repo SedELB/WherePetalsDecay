@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { MouseEventType } from '@app/constants/map-setup-page-constant';
 import type { GameDraftForValidation } from '@common/interfaces/game-validation';
 import {
+    CellInteractionParams,
     MapSetupInteractionState,
     MapSetupResetResult,
     MapSetupSelection,
@@ -129,17 +130,7 @@ export class MapSetupService {
         if (params.tileAttribute) this.applyTile(params);
     }
 
-    handleCellMouseDown(params: {
-        game: Game;
-        rowIndex: number;
-        colIndex: number;
-        event: MouseEvent;
-        activeTileTexture: TileTexture | null;
-        activeTileItem: TileItem | null;
-        counts: TileItemCounts;
-        isPaintingTiles: boolean;
-        isErasingTiles: boolean;
-    }): MapSetupInteractionState {
+    handleCellMouseDown(params: CellInteractionParams): MapSetupInteractionState {
         const {
             rowIndex,
             colIndex,
@@ -161,17 +152,7 @@ export class MapSetupService {
         return { isPaintingTiles, isErasingTiles };
     }
 
-    private handleLeftClick(params: {
-        game: Game;
-        rowIndex: number;
-        colIndex: number;
-        event: MouseEvent;
-        activeTileTexture: TileTexture | null;
-        activeTileItem: TileItem | null;
-        counts: TileItemCounts;
-        isPaintingTiles: boolean;
-        isErasingTiles: boolean;
-    }): MapSetupInteractionState {
+    private handleLeftClick(params: CellInteractionParams): MapSetupInteractionState {
         const { game, rowIndex, colIndex, event, activeTileTexture, activeTileItem, counts, isErasingTiles } = params;
         event.preventDefault();
         if (activeTileTexture) {
@@ -188,17 +169,7 @@ export class MapSetupService {
         return { isPaintingTiles: false, isErasingTiles };
     }
 
-    private handleRightClick(params: {
-        game: Game;
-        rowIndex: number;
-        colIndex: number;
-        event: MouseEvent;
-        activeTileTexture: TileTexture | null;
-        activeTileItem: TileItem | null;
-        counts: TileItemCounts;
-        isPaintingTiles: boolean;
-        isErasingTiles: boolean;
-    }): MapSetupInteractionState {
+    private handleRightClick(params: CellInteractionParams): MapSetupInteractionState {
         const { game, rowIndex, colIndex, event, activeTileTexture, activeTileItem, counts, isPaintingTiles } = params;
         if (activeTileTexture) {
             this.deleteTile({ game, rowIndex, colIndex, tileAttribute: activeTileTexture, event, counts });
@@ -272,17 +243,7 @@ export class MapSetupService {
         }
     }
 
-    handleCellMouseEnter(params: {
-        game: Game;
-        rowIndex: number;
-        colIndex: number;
-        event: MouseEvent;
-        activeTileTexture: TileTexture | null;
-        activeTileItem: TileItem | null;
-        counts: TileItemCounts;
-        isPaintingTiles: boolean;
-        isErasingTiles: boolean;
-    }): MapSetupInteractionState {
+    handleCellMouseEnter(params: CellInteractionParams): MapSetupInteractionState {
         const { game, rowIndex, colIndex, event, activeTileTexture, activeTileItem, counts, isPaintingTiles, isErasingTiles } = params;
 
         const path = this.lastDragPosition
