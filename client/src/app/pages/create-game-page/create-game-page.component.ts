@@ -25,7 +25,7 @@ const MAP_SIZE_CONFIG: Record<MapSizeKey, MapSizeConfig> = {
 })
 
 export class CreateGamePageComponent {
-  protected readonly ButtonVariant = ButtonVariant;
+  protected readonly buttonVariant = ButtonVariant;
   constructor(private readonly router: Router) {}
 
   gameModeEnum = GameMode;

@@ -23,7 +23,7 @@ const TOAST_DELAY = 4000;
     styleUrl: './character-selection.component.scss',
 })
 export class CharacterSelectionComponent implements OnInit, OnDestroy {
-    protected readonly ButtonVariant = ButtonVariant;
+    protected readonly buttonVariant = ButtonVariant;
     characterName: string = '';
     selectedAvatar: string | null = null;
     lifeBonusSelected: boolean = true;

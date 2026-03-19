@@ -23,7 +23,7 @@ import swal from 'sweetalert2';
 })
 
 export class MapSetupPageComponent implements OnInit, OnDestroy {
-    protected readonly ButtonVariant = ButtonVariant;
+    protected readonly buttonVariant = ButtonVariant;
     constructor(
         private readonly mapSetupFacade: MapSetupFacadeService,
         private readonly mapSetupService: MapSetupService,

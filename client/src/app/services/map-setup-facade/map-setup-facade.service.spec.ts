@@ -303,8 +303,8 @@ describe('MapSetupFacadeService', () => {
         await service.saveGame(game, MapSetupMode.Create, mockElement);
 
         expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({
-            title: 'Erreur',
-            text: "Une erreur s'est produite en enregistrant un nouveau jeu : creation failed",
+            title: 'Jeu invalide !',
+            html: '<div style="text-align:left; white-space:pre-line">creation failed</div>',
         }));
     });
 

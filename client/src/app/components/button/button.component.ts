@@ -12,7 +12,7 @@ import { ButtonVariant } from '@common/enums';
 })
 
 export class ButtonComponent {
-    protected readonly ButtonVariant = ButtonVariant;
+    protected readonly buttonVariant = ButtonVariant;
     @Input() color: string = 'white';
     @Input() backgroundColor: string | null = null;
     @Input() width?: number;

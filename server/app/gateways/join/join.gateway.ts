@@ -181,7 +181,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     private getOccupiedAvatars(lobby: Lobby): string[] {
         const confirmedAvatars = lobby.players
             .map((player) => player.character?.avatar)
-            .filter((avat): avat is string => !!avat);
+            .filter((avat) => avat !== undefined && avat !== null && avat !== '');
 
         const pendingAvatars = Object.values(lobby.pendingAvatars || {});
         return [...confirmedAvatars, ...pendingAvatars];

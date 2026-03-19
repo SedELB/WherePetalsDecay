@@ -293,7 +293,7 @@ describe('AdminPageComponent', () => {
   it('should render return button on the page', () => {
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    const returnButton = compiled.querySelector('app-button[variant="back"]');
+    const returnButton = compiled.querySelector('#back-button');
 
     expect(returnButton).toBeTruthy();
   });

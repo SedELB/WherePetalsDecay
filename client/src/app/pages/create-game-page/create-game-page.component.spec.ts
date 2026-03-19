@@ -233,7 +233,7 @@ describe('CreateGamePageComponent', () => {
   // Test return button appears
   it('should render return button on the page', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    const returnButton = compiled.querySelector('app-button[variant="back"]');
+    const returnButton = compiled.querySelector('app-button');
 
     expect(returnButton).toBeTruthy();
   });

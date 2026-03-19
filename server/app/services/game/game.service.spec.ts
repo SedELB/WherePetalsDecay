@@ -9,12 +9,10 @@ import { Test } from '@nestjs/testing';
 import { ObjectId } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { Connection, Model } from 'mongoose';
-import { GameService } from './game.service';
 import { GameValidatorService } from './game-validator.service';
-const BASE_3 = 3;
-const TEST_TIMEOUT_MS = 60000;
+import { GameService } from './game.service';
 
-jest.setTimeout(TEST_TIMEOUT_MS);
+const BASE_3 = 3;
 
 describe('GameServiceE2E', () => {
     let gameService: GameService;
