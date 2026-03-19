@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { ButtonComponent } from '@app/components/button/button.component';
+import { ASSET_PATHS } from '@common/constants/asset-paths.constants';
 
 @Component({
     selector: 'app-main-page',
@@ -8,6 +9,7 @@ import { ButtonComponent } from '@app/components/button/button.component';
     imports: [ButtonComponent],
 })
 export class HomePageComponent {
+    readonly logoPath: string = ASSET_PATHS.logo;
     readonly gameTitle: string = 'GrimStone';
 
     readonly teamNumber: string = '310';

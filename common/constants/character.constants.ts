@@ -6,21 +6,23 @@ export const BASE_STATS = {
     bonus: 2,
 };
 
-const BASE_AVATAR_PATH = './assets/avatars';
+import { ASSET_PATHS } from './asset-paths.constants';
+
+const BASE_AVATAR_PATH = ASSET_PATHS.avatars.basePath;
 
 export const AVATARS_PATH: readonly string[] = [
-    `${BASE_AVATAR_PATH}/archer.png`,
-    `${BASE_AVATAR_PATH}/assassin.png`,
-    `${BASE_AVATAR_PATH}/axe_warrior.png`,
-    `${BASE_AVATAR_PATH}/centaur.png`,
-    `${BASE_AVATAR_PATH}/dark_elf.png`,
-    `${BASE_AVATAR_PATH}/druid.png`,
-    `${BASE_AVATAR_PATH}/elf.png`,
-    `${BASE_AVATAR_PATH}/farmer.png`,
-    `${BASE_AVATAR_PATH}/mage.png`,
-    `${BASE_AVATAR_PATH}/magic_lancer.png`,
-    `${BASE_AVATAR_PATH}/marksman.png`,
-    `${BASE_AVATAR_PATH}/unknown_being.png`,
+    `${BASE_AVATAR_PATH}/archer.webp`,
+    `${BASE_AVATAR_PATH}/assassin.webp`,
+    `${BASE_AVATAR_PATH}/axe_warrior.webp`,
+    `${BASE_AVATAR_PATH}/centaur.webp`,
+    `${BASE_AVATAR_PATH}/dark_elf.webp`,
+    `${BASE_AVATAR_PATH}/druid.webp`,
+    `${BASE_AVATAR_PATH}/elf.webp`,
+    `${BASE_AVATAR_PATH}/farmer.webp`,
+    `${BASE_AVATAR_PATH}/mage.webp`,
+    `${BASE_AVATAR_PATH}/magic_lancer.webp`,
+    `${BASE_AVATAR_PATH}/marksman.webp`,
+    `${BASE_AVATAR_PATH}/unknown_being.webp`,
 ] as const;
 
 export const RANDOM_NAMES: readonly string[] = [
