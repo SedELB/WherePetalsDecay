@@ -181,8 +181,6 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
             if (lobby.isLocked === this.previousLockState) return;
             this.previousLockState = lobby.isLocked;
 
-            if (lobby.isLocked && lobby.playerCount >= lobby.game.maxPlayers) return;
-
             const message = lobby.isLocked
                 ? 'La partie a été verrouillée par l\'organisateur'
                 : 'La partie a été déverrouillée';

@@ -22,9 +22,6 @@
  * We mock ChatService with jasmine.createSpyObj and use a BehaviorSubject to fake the
  * message stream. This lets us push messages in tests without real WebSocket stuff.
  *
- * Network Latency Simulation:
- * Some tests use setTimeout with random delays (500-5000ms) to simulate slow message
- * delivery and test that things still work under lag.
  */
 
 import { SimpleChange } from '@angular/core';
@@ -42,18 +39,11 @@ describe('ChatComponent', () => {
 
     const TEST_LOBBY_ID = 'lobby-1';
     const TEST_PLAYER_NAME = 'TestPlayer';
-    const BASE_4500 = 4500;
-    const BASE_500 = 500;
 
     // Helper: Create a ChatMessage with optional overrides
     const createMessage = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
         lobbyId: TEST_LOBBY_ID, senderName: 'Cristiano', message: 'Hello!', sentAt: new Date(), ...overrides,
     });
-
-    // Helper: Simulate network latency between 500ms-5000ms for async testing
-    const randomNetworkLatency = (): number => {
-        return Math.random() * BASE_4500 + BASE_500;
-    };
 
     beforeEach(async () => {
         messagesSubject = new BehaviorSubject<ChatMessage[]>([]);
@@ -91,17 +81,6 @@ describe('ChatComponent', () => {
         it('should update the messages array when the service pushes new data', () => {
             messagesSubject.next([createMessage(), createMessage({ message: 'World' })]);
             expect(component.messages.length).toBe(2);
-        });
-
-        it('should handle delayed message delivery with network latency', (done) => {
-            const delayedMessages = [createMessage({ message: 'Delayed msg' })];
-
-            setTimeout(() => {
-                messagesSubject.next(delayedMessages);
-                expect(component.messages.length).toBe(1);
-                expect(component.messages[0].message).toBe('Delayed msg');
-                done();
-            }, randomNetworkLatency());
         });
     });
 

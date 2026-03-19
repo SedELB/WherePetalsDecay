@@ -105,7 +105,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         if (updatedLobby) {
             socket.join(updatedLobby.lobbyId);
             socket.emit(JoinGameEvents.LobbyJoined, updatedLobby);
-            this.server.to(updatedLobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby);
+            socket.broadcast.to(updatedLobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby);
             socket.broadcast.to(updatedLobby.lobbyId).emit(JoinGameEvents.PlayerJoined, payload.player);
 
             this.handleGetLobbies();
