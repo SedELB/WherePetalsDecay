@@ -21,8 +21,8 @@ describe('WebSocketService', () => {
 
     /** Ensures the service successfully instantiates without throwing any dependency injection errors. */
     it('should create the service', () => {
- expect(service).toBeTruthy(); 
-});
+        expect(service).toBeTruthy();
+    });
 
     /** Confirms that the critical foundational namespaces required for core application functionality are booted up automatically upon service creation. */
     it('should auto-connect Admin and Games namespaces on construction', () => {
@@ -99,8 +99,8 @@ describe('WebSocketService', () => {
     describe('isConnected', () => {
         /** Accurately reports a disconnected status when queried for a namespace that has not been initialized. */
         it('should return false for a missing namespace', () => {
- expect(service.isConnectedNamespace('/nope')).toBe(false); 
-});
+            expect(service.isConnectedNamespace('/nope')).toBe(false);
+        });
 
         /** Validates that the service correctly mirrors the internal `connected` property of the underlying socket.io client. */
         it('should return false when the socket is not connected', () => {

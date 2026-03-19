@@ -79,6 +79,7 @@ describe('JoinGateway', () => {
             emit: jest.fn(),
             join: jest.fn(),
             to: jest.fn().mockReturnValue(mockTo),
+            broadcast: { to: jest.fn().mockReturnValue(mockTo) },
         } as unknown as Socket;
 
         mockServer = {
@@ -191,6 +192,13 @@ describe('JoinGateway', () => {
 
             gateway.handleJoinLobby(mockSocket, { lobbyId: 'lobby-1', player: makeMockPlayer() });
             expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyError, `Ce salon n'existe plus.`);
+        });
+
+        it('should emit LobbyError if lobby is locked', () => {
+            jest.spyOn(lobbyService, 'getLobby').mockReturnValue({ ...fakeLobby, isLocked: true });
+
+            gateway.handleJoinLobby(mockSocket, { lobbyId: 'lobby-1', player: makeMockPlayer() });
+            expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyError, 'Ce salon est verrouillé !');
         });
 
         // EDGE CASE: Attempting to join a full lobby (playerCount >= maxPlayers)

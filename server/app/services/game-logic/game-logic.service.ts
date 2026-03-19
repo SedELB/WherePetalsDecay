@@ -41,7 +41,7 @@ export class GameLogicService {
         const playerPositions = new Map<string, Vec2>();
         const playerStartPositions = new Map<string, Vec2>();
         const movementPoints = new Map<string, number>();
-        const hasCombatted = new Map<string, boolean>();
+        const actionPoints = new Map<string, number>();
 
         for (const player of lobby.players) {
             player.winsCount = INITIAL_WINS_COUNT;
@@ -54,7 +54,7 @@ export class GameLogicService {
             playerPositions.set(player.socketId, { ...shuffledSpawns[index] });
             playerStartPositions.set(player.socketId, { ...shuffledSpawns[index] });
             movementPoints.set(player.socketId, player.character.speed);
-            hasCombatted.set(player.socketId, false);
+            actionPoints.set(player.socketId, 0);
         });
 
         this.removeUnusedSpawns(lobby.game, shuffledSpawns, activePlayers.length);
@@ -68,7 +68,7 @@ export class GameLogicService {
             playerPositions,
             playerStartPositions,
             movementPoints,
-            hasCombatted,
+            actionPoints,
         };
 
         this.activeGames.set(lobby.lobbyId, activeGame);
@@ -116,6 +116,18 @@ export class GameLogicService {
         return this.movementService.movePlayer(game, socketId, direction);
     }
 
+    teleportPlayer(lobbyId: string, socketId: string, targetPos: Vec2) {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return null;
+        return this.movementService.teleportPlayer(game, socketId, targetPos);
+    }
+
+    getReachableTilesForTeleport(lobbyId: string, socketId: string){
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return [];
+        return this.movementService.getReachableTilesForTeleport(game, socketId);
+    }
+
     getReachableTiles(lobbyId: string, socketId: string) {
         const game = this.activeGames.get(lobbyId);
         if (!game) return [];
@@ -126,6 +138,12 @@ export class GameLogicService {
         const game = this.activeGames.get(lobbyId);
         if (!game) return 0;
         return this.movementService.getMovementPoints(game, socketId);
+    }
+
+    getActionPoints(lobbyId: string, socketId: string): number {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return 0;
+        return game.actionPoints.get(socketId) ?? 0;
     }
 
     // Combat methods

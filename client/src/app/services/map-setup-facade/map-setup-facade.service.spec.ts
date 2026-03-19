@@ -12,7 +12,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
-import swal from 'sweetalert2';
+import swal, { SweetAlertResult } from 'sweetalert2';
 
 import { CommunicationService } from '@app/services/communication/communication.service';
 import { GameValidatorService } from '@app/services/game-validator/game-validator.service';
@@ -52,6 +52,12 @@ const gameFactory = (rows = 2, cols = 2, mode: GameMode = GameMode.Classic): Gam
     createdAt: new Date(),
     updatedAt: new Date(),
 });
+
+const mockSwalResult: SweetAlertResult = {
+    isConfirmed: true,
+    isDenied: false,
+    isDismissed: false,
+};
 
 describe('MapSetupFacadeService', () => {
     const mockElement = {} as HTMLElement;
@@ -145,7 +151,7 @@ describe('MapSetupFacadeService', () => {
         validator.validate.and.returnValue({ isValid: true, errors: [] });
         communication.createGame.and.returnValue(of(undefined));
 
-        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo(mockSwalResult);
 
         await service.saveGame(game, MapSetupMode.Create, mockElement);
 
@@ -173,7 +179,7 @@ describe('MapSetupFacadeService', () => {
         communication.getAllGames.and.returnValue(of([game]));
         communication.modifyGame.and.returnValue(of(undefined));
 
-        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo(mockSwalResult);
 
         await service.saveGame(game, MapSetupMode.Edit, mockElement);
 
@@ -188,7 +194,7 @@ describe('MapSetupFacadeService', () => {
         const game = gameFactory(SIZE_SMALL, SIZE_SMALL, GameMode.Classic);
 
         spyOn(service as unknown as CaptureThumbnailApi, 'captureThumbnail').and.rejectWith(new Error('fail'));
-        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo(mockSwalResult);
 
         await service.saveGame(game, MapSetupMode.Create, mockElement);
 
@@ -212,7 +218,7 @@ describe('MapSetupFacadeService', () => {
         mapSetup.buildValidationPayload.and.returnValue(validationPayload);
         validator.validate.and.returnValue({ isValid: false, errors: ['Erreur 1', 'Erreur 2'] });
 
-        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo(mockSwalResult);
 
         await service.saveGame(game, MapSetupMode.Edit, mockElement);
 
@@ -239,7 +245,7 @@ describe('MapSetupFacadeService', () => {
         communication.getAllGames.and.returnValue(of([game]));
         communication.modifyGame.and.returnValue(throwError(() => ({ error: 'bad' })));
 
-        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo(mockSwalResult);
 
         await service.saveGame(game, MapSetupMode.Edit, mockElement);
 
@@ -264,7 +270,7 @@ describe('MapSetupFacadeService', () => {
         communication.getAllGames.and.returnValue(of([]));
         communication.createGame.and.returnValue(of(undefined));
 
-        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo(mockSwalResult);
 
         await service.saveGame(game, MapSetupMode.Edit, mockElement);
 

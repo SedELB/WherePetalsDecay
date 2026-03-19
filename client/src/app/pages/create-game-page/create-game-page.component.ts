@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { Game } from '@common/game';
-import { GameMode, GridSizes, MapSetupMode, MapSizeKey, MaxPlayers } from '@common/enums';
+import { ButtonVariant, GameMode, GridSizes, MapSetupMode, MapSizeKey, MaxPlayers } from '@common/enums';
 
 
 interface MapSizeConfig {
@@ -25,6 +25,7 @@ const MAP_SIZE_CONFIG: Record<MapSizeKey, MapSizeConfig> = {
 })
 
 export class CreateGamePageComponent {
+  protected readonly ButtonVariant = ButtonVariant;
   constructor(private readonly router: Router) {}
 
   gameModeEnum = GameMode;

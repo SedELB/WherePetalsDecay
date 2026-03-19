@@ -7,6 +7,7 @@ import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { ROUTES } from '@app/constants/routes.constants';
 import { GameCreationService } from '@app/services/game-creation/game-creation.service';
+import { ButtonVariant } from '@common/enums';
 import { Game } from '@common/game';
 import { Subscription } from 'rxjs';
 import swal from 'sweetalert2';
@@ -25,6 +26,7 @@ import swal from 'sweetalert2';
 })
 
 export class GameCreationComponent implements OnInit, OnDestroy {
+    protected readonly ButtonVariant = ButtonVariant;
     protected games: Game[] = [];
     private gamesSubscription: Subscription | null = null;
     readonly routes = ROUTES;

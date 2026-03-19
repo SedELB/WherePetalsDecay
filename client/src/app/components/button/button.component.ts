@@ -12,6 +12,7 @@ import { ButtonVariant } from '@common/enums';
 })
 
 export class ButtonComponent {
+    protected readonly ButtonVariant = ButtonVariant;
     @Input() color: string = 'white';
     @Input() backgroundColor: string | null = null;
     @Input() width?: number;
@@ -21,6 +22,7 @@ export class ButtonComponent {
     @Input() route?: string;
     @Input() selected: boolean = false;
     @Input() variant: ButtonVariant = ButtonVariant.Default;
+    @Input() isVisible: boolean = false;
 
     @Output() clicked = new EventEmitter<void>();
 

@@ -26,13 +26,18 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     afterInit() {
         this.logger.log('GameGateway initialized on /join namespace');
         this.gameLogicService.setCallbacks({
+            onBetweenTurnCountdown: (lobbyId: string, secondsLeft: number) => {
+                this.server.to(lobbyId).emit(JoinGameEvents.BetweenTurnCountdown, secondsLeft);
+            },
             onTurnCountdown: (lobbyId: string, secondsLeft: number) => {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnCountdown, secondsLeft);
             },
             onTurnStarted: (lobbyId: string, playerSocketId: string) => {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnStarted, playerSocketId);
                 this.sendMovementPoints(lobbyId, playerSocketId);
+                this.sendActionPoints(lobbyId, playerSocketId);
                 this.sendReachableTiles(lobbyId, playerSocketId);
+                this.sendReachableTilesForTeleport(lobbyId, playerSocketId);
                 this.autoEndTurnIfNoActions(lobbyId, playerSocketId);
             },
             onTurnEnded: (lobbyId: string, playerSocketId: string) => {
@@ -83,14 +88,49 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         });
 
         this.sendReachableTiles(lobbyId, socket.id);
-
+        this.sendReachableTilesForTeleport(lobbyId, socket.id);
         this.autoEndTurnIfNoActions(lobbyId, socket.id);
+    }
+
+    @SubscribeMessage(JoinGameEvents.Teleport)
+    handleTeleportMove(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; position: Vec2 }) {
+        const { lobbyId, position } = payload;
+        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
+
+        const newPosition = this.gameLogicService.teleportPlayer(lobbyId, socket.id, position);
+        if (!newPosition) return;
+
+        this.server.to(lobbyId).emit(JoinGameEvents.PlayerTeleported, {
+            socketId: socket.id,
+            position: newPosition,
+        });
+
+        this.sendReachableTiles(lobbyId, socket.id);
+        this.sendReachableTilesForTeleport(lobbyId, socket.id);
+        this.autoEndTurnIfNoActions(lobbyId, socket.id);
+    }
+
+    @SubscribeMessage(JoinGameEvents.ToggleDebugMode)
+    handleDebugToggle(@ConnectedSocket() socket: Socket, @MessageBody() { lobbyId, state }) {
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        if (!activeGame || activeGame.lobby.hostSocketId !== socket.id) return;
+        activeGame.isDebugMode = !state;
+        this.server.to(lobbyId).emit(JoinGameEvents.DebugToggled, !state);
+
+        if (!activeGame.isDebugMode) {
+            const currentSocketId = activeGame.turnOrder[activeGame.currentTurnIndex];
+            if (currentSocketId) {
+                this.autoEndTurnIfNoActions(lobbyId, currentSocketId);
+            }
+        }
     }
 
     @SubscribeMessage(JoinGameEvents.EndTurn)
     handleEndTurn(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string) {
-        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
-        this.gameLogicService.endTurn(lobbyId);
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        if (activeGame.lobby.hostSocketId === socket.id || this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) {
+            this.gameLogicService.endTurn(lobbyId);
+        }
     }
 
     @SubscribeMessage(JoinGameEvents.RequestCombat)
@@ -109,10 +149,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             return;
         }
 
-        const isLoserTurn = this.gameLogicService.isPlayerTurn(lobbyId, combatResult.loserId);
-        if (isLoserTurn) {
-            this.gameLogicService.endTurn(lobbyId);
-        }
+        this.gameLogicService.endTurn(lobbyId);
     }
 
     @SubscribeMessage(JoinGameEvents.RequestTileInfo)
@@ -147,7 +184,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (!activeGame) return;
 
         const isGameOver = this.gameLogicService.executePlayerAbandon(
-            activeGame.lobby.lobbyId,
+            activeGame.lobby.lobbyId, 
             socket,
             this.server,
         );
@@ -165,9 +202,12 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     }
 
     private autoEndTurnIfNoActions(lobbyId: string, socketId: string): void {
-        const reachable = this.gameLogicService.getReachableTiles(lobbyId, socketId);
-        const adjacent = this.gameLogicService.getAdjacentPlayers(lobbyId, socketId);
-        if (reachable.length === 0 && adjacent.length === 0) {
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        if (activeGame?.isDebugMode) return;
+
+        const movementPoints = this.gameLogicService.getMovementPoints(lobbyId, socketId);
+        const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
+        if (movementPoints <= 0 || actionPoints <= 0) {
             this.gameLogicService.endTurn(lobbyId);
         }
     }
@@ -177,9 +217,22 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         this.server.to(lobbyId).emit(JoinGameEvents.MovementPoints, { socketId, movementPoints: mp });
     }
 
+    private sendActionPoints(lobbyId: string, socketId: string): void {
+        const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
+        this.server.to(lobbyId).emit(JoinGameEvents.ActionPoints, { socketId, actionPoints });
+    }
+
     private sendReachableTiles(lobbyId: string, socketId: string): void {
         const reachableTiles = this.gameLogicService.getReachableTiles(lobbyId, socketId);
         this.server.to(lobbyId).emit(JoinGameEvents.ReachableTiles, {
+            socketId,
+            tiles: reachableTiles,
+        });
+    }
+
+    private sendReachableTilesForTeleport(lobbyId: string, socketId: string): void {
+        const reachableTiles = this.gameLogicService.getReachableTilesForTeleport(lobbyId, socketId);
+        this.server.to(lobbyId).emit(JoinGameEvents.ReachableTilesForTeleport, {
             socketId,
             tiles: reachableTiles,
         });

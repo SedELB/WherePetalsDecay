@@ -18,7 +18,7 @@ import { GameMode, MapSetupMode, TileItem, TileTexture } from '@common/enums';
 import { Game } from '@common/game';
 import { Tile } from '@common/tile';
 import { BehaviorSubject, of } from 'rxjs';
-import swal from 'sweetalert2';
+import swal, { SweetAlertResult } from 'sweetalert2';
 import { MapSetupPageComponent } from './map-setup-page.component';
 
 const makeGrid = (rows: number, cols: number): Tile[][] =>
@@ -47,6 +47,12 @@ const makeCounts = () => ({
     spawnCount: 2,
     flagCount: 0,
 });
+
+const mockSwalResult: SweetAlertResult = {
+    isConfirmed: true,
+    isDenied: false,
+    isDismissed: false,
+};
 
 describe('MapSetupPageComponent', () => {
     let component: MapSetupPageComponent;
@@ -168,7 +174,7 @@ describe('MapSetupPageComponent', () => {
     it('should switch to create mode when game is deleted by another admin', async () => {
         fixture.detectChanges();
         await fixture.whenStable();
-        const swalSpy = spyOn(swal, 'fire').and.resolveTo({ isConfirmed: true } as never);
+        const swalSpy = spyOn(swal, 'fire').and.resolveTo(mockSwalResult);
 
         gamesSubject.next([]);
 

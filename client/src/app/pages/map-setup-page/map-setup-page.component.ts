@@ -9,7 +9,7 @@ import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-
 import { TileItemCounts } from '@app/services/map-setup.types';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
-import { GameMode, MapSetupMode, TileItem, TileTexture } from '@common/enums';
+import { ButtonVariant, GameMode, MapSetupMode, TileItem, TileTexture } from '@common/enums';
 import { Tile } from '@common/tile';
 import { Subscription } from 'rxjs';
 import { skip } from 'rxjs/operators';
@@ -23,6 +23,7 @@ import swal from 'sweetalert2';
 })
 
 export class MapSetupPageComponent implements OnInit, OnDestroy {
+    protected readonly ButtonVariant = ButtonVariant;
     constructor(
         private readonly mapSetupFacade: MapSetupFacadeService,
         private readonly mapSetupService: MapSetupService,

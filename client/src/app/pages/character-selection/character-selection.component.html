@@ -1,5 +1,5 @@
 <div class="container">
-    <app-button [width]="100" (click)="goBack()">Retour</app-button>
+    <app-button [variant]="ButtonVariant.Back" id="back-button" (click)="goBack()"></app-button>
 
     <section class="character-creation">
         <h2>Création de personnage</h2>
@@ -8,8 +8,9 @@
 
         <div class="list-container">
             <div class="form-container">
+                
                 <div class="form-group">
-                    <label for="characterName">Nom du personnage</label>
+                    <label class="character-name-title" for="characterName">Nom du personnage</label>
                     <input
                         type="text"
                         id="characterName"
@@ -18,67 +19,104 @@
                         [maxlength]="nameMaxLength"
                     />
                 </div>
+                <div class="button-form-group">
+                    <div class="form-group">
+                        <label>Choisissez un avatar</label>
+                        <div class="avatar-grid">
+                            @for (avatar of avatars; track avatar; let i = $index) {
+                            <button
+                                type="button"
+                                class="avatar-item"
+                                [class.selected]="selectedAvatar === avatar"
+                                [class.taken]="currentlySelectedAvatars.includes(avatar) && selectedAvatar !== avatar"
+                                [disabled]="currentlySelectedAvatars.includes(avatar) && selectedAvatar !== avatar"
+                                (click)="selectAvatar(avatar)"
+                            >
+                                <img [src]="avatar" [alt]="'Avatar ' + (i + 1)" />
+                            </button>
+                            }
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label>Choisissez un avatar</label>
-                    <div class="avatar-grid">
-                        @for (avatar of avatars; track avatar; let i = $index) {
-                        <button
-                            type="button"
-                            class="avatar-item"
-                            [class.selected]="selectedAvatar === avatar"
-                            [class.taken]="currentlySelectedAvatars.includes(avatar) && selectedAvatar !== avatar"
-                            [disabled]="currentlySelectedAvatars.includes(avatar) && selectedAvatar !== avatar"
-                            (click)="selectAvatar(avatar)"
-                        >
-                            <img [src]="avatar" [alt]="'Avatar ' + (i + 1)" />
-                        </button>
-                        }
+                    <div class="form-group">
+                        <label class="att-title">Attributs du personnage</label>
+                        
+                        <div class="stats-board">
+                            <div class="stat-card">
+                                <span class="stat-icon">❤️</span>
+                                <div class="stat-info">
+                                    <span class="stat-name">Vie</span>
+                                    <span class="stat-value">{{ lifeValue }}</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-icon">⚡</span>
+                                <div class="stat-info">
+                                    <span class="stat-name">Rapidité</span>
+                                    <span class="stat-value">{{ speedValue }}</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-icon">⚔️</span>
+                                <div class="stat-info">
+                                    <span class="stat-name">Attaque</span>
+                                    <span class="stat-value">{{ attackValue }}</span>
+                                    <span class="stat-dice">{{ attackDice }}</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-icon">🛡️</span>
+                                <div class="stat-info">
+                                    <span class="stat-name">Défense</span>
+                                    <span class="stat-value">{{ defenseValue }}</span>
+                                    <span class="stat-dice">{{ defenseDice }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bonus-selection-container">
+                            <div class="selection-row">
+                                <span class="selection-label">Avantage de base :</span>
+                                <div class="toggle-group">
+                                    <button type="button" [class.selected]="lifeBonusSelected" (click)="selectBonus(true)">
+                                        + Vie
+                                    </button>
+                                    <button type="button" [class.selected]="!lifeBonusSelected" (click)="selectBonus(false)">
+                                        + Rapidité
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="selection-row">
+                                <span class="selection-label">Dé d'action (D6) :</span>
+                                <div class="toggle-group">
+                                    <button type="button" [class.selected]="attackDiceD6" (click)="selectAttackDice(true)">
+                                        Attaque
+                                    </button>
+                                    <button type="button" [class.selected]="!attackDiceD6" (click)="selectAttackDice(false)">
+                                        Défense
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Attributs du personnage</label>
-                    <div class="attributes-container">
-                        <div class="attribute" [class.has-bonus]="lifeBonusSelected" (click)="selectBonus(true)">
-                            <span class="attribute-name">Vie</span>
-                            <span class="attribute-value">{{ lifeValue }}</span>
-                            <span class="attribute-description">Points de vie</span>
-                        </div>
-                        <div class="attribute" [class.has-bonus]="!lifeBonusSelected" (click)="selectBonus(false)">
-                            <span class="attribute-name">Rapidité</span>
-                            <span class="attribute-value">{{ speedValue }}</span>
-                            <span class="attribute-description">Vitesse de déplacement</span>
-                        </div>
-                        <div class="attribute" [class.has-bonus]="attackDiceD6" (click)="selectAttackDice(true)">
-                            <span class="attribute-name">Attaque</span>
-                            <span class="attribute-value">{{ attackValue }}</span>
-                            <span class="attribute-dice">{{ attackDice }}</span>
-                            <span class="attribute-description">Puissance d'attaque</span>
-                        </div>
-                        <div class="attribute" [class.has-bonus]="!attackDiceD6" (click)="selectAttackDice(false)">
-                            <span class="attribute-name">Défense</span>
-                            <span class="attribute-value">{{ defenseValue }}</span>
-                            <span class="attribute-dice">{{ defenseDice }}</span>
-                            <span class="attribute-description">Résistance aux dégâts</span>
-                        </div>
-                    </div>
-                </div>
+            </div>
+        </div>
 
-                <div class="random-button">
-                    <app-button (click)="generateRandomCharacter()">
-                        Générer un personnage aléatoire
-                    </app-button>
-                </div>
-
-                <div class="navigation-buttons">
-                    <app-button (click)="goBack()">Annuler</app-button>
+        <div class="bottom-actions">
+            <app-button [width]="300" (click)="generateRandomCharacter()" class="random-btn">
+                Générer un personnage aléatoire
+            </app-button>
+            <div class="navigation-group">
+                <app-button (click)="goBack()">Annuler</app-button>
                     <app-button
                         [disabled]="!isFormValid() || isSubmitting"
                         (click)="confirmCharacter()"
                     >Confirmer</app-button>
-                </div>
             </div>
         </div>
     </section>
+
 </div>

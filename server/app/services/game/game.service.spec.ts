@@ -98,10 +98,10 @@ describe('GameServiceE2E', () => {
 
     it('start() should populate the database when there is no data', async () => {
         // Verifies that DB initialization triggers population with default games
-        const spyPopulateDB = jest.spyOn(gameService as any, 'populateDB');
+        const spyPopulateDB = jest.spyOn(gameService as object as Record<string, jest.Mock>, 'populateDB');
         const spyCountDocuments = jest.spyOn(gameModel, 'countDocuments');
         await gameModel.deleteMany({});
-        await (gameService as any).start();
+        await gameService['start']();
         expect(spyPopulateDB).toHaveBeenCalled();
         expect(spyCountDocuments).toHaveBeenCalled();
     });
@@ -111,7 +111,7 @@ describe('GameServiceE2E', () => {
         const countsBefore = await gameModel.countDocuments();
         const spyInsertMany = jest.spyOn(gameModel, 'insertMany');
         const spyLog = jest.spyOn(logger, 'log');
-        await (gameService as any).populateDB();
+        await gameService['populateDB']();
         const countsAfter = await gameModel.countDocuments();
         expect(countsAfter).toBeGreaterThan(countsBefore);
         expect(spyInsertMany).toHaveBeenCalled();
@@ -137,7 +137,7 @@ describe('GameServiceE2E', () => {
     it('getAllGames() return all three games in database', async () => {
         // Retrieves all games from database after population
         const spyFind = jest.spyOn(gameModel, 'find');
-        await (gameService as any).populateDB();
+        await gameService['populateDB']();
         const result = await gameService.getAllGames();
         expect(result.length).toBeGreaterThan(2);
         expect(spyFind).toHaveBeenCalled();
