@@ -4,7 +4,7 @@ $primary-color: #8b5cf6;
 $text-color: #ffffff;
 
 .container {
-    background-image: url('../../../assets/background.png');
+    background-image: $background-image;
     background-size: cover;
     background-position: center bottom;
     min-height: 100vh;
