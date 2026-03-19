@@ -29,3 +29,15 @@ export interface TileParams {
   event: MouseEvent;
   counts: TileItemCounts;
 }
+
+export interface CellInteractionParams {
+  game: Game;
+  rowIndex: number;
+  colIndex: number;
+  event: MouseEvent;
+  activeTileTexture: TileTexture | null;
+  activeTileItem: TileItem | null;
+  counts: TileItemCounts;
+  isPaintingTiles: boolean;
+  isErasingTiles: boolean;
+}
