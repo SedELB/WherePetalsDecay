@@ -141,6 +141,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const combatResult = this.gameLogicService.initiateCombat(lobbyId, socket.id, targetSocketId);
         if (!combatResult) return;
 
+        this.sendActionPoints(lobbyId, socket.id);
         this.server.to(lobbyId).emit(JoinGameEvents.CombatResult, combatResult);
 
         const winner = this.gameLogicService.checkWinCondition(lobbyId);
@@ -184,7 +185,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (!activeGame) return;
 
         const isGameOver = this.gameLogicService.executePlayerAbandon(
-            activeGame.lobby.lobbyId, 
+            activeGame.lobby.lobbyId,
             socket,
             this.server,
         );
