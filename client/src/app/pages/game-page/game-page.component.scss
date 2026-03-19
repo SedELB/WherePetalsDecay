@@ -219,7 +219,7 @@
     border-width: 2px;
 }
 
-.debug-background{
+.debug-background {
     background-color: rgba(67, 0, 0, 0.611) !important;
 }
 
@@ -383,7 +383,8 @@
 
 .action-bar {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
+    flex-direction: row;
     gap: 8px;
 }
 
