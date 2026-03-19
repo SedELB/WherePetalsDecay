@@ -213,7 +213,7 @@
     border-width: 0.125rem;
 }
 
-.debug-background{
+.debug-background {
     background-color: rgba(67, 0, 0, 0.611) !important;
 }
 
@@ -377,7 +377,8 @@
 
 .action-bar {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
+    flex-direction: row;
     gap: 0.5rem;
 }
 
