@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { MouseEventType } from '@app/constants/map-setup-page-constant';
-import type { GameDraftForValidation } from '@app/services/game-validator/game-validator.service';
+import type { GameDraftForValidation } from '@common/interfaces/game-validation';
 import {
+    CellInteractionParams,
     MapSetupInteractionState,
     MapSetupResetResult,
     MapSetupSelection,
@@ -12,10 +13,11 @@ import { TileItemCountService } from '@app/services/tile-item-count/tile-item-co
 import { TileItem, TileTexture } from '@common/enums';
 import { type PlacedObject, Game } from '@common/game';
 import { Tile } from '@common/tile';
+import { Vec2 } from '@common/vec2';
 
 @Injectable({ providedIn: 'root' })
 export class MapSetupService {
-    private lastDragPosition: { row: number; col: number } | null = null;
+    private lastDragPosition: Vec2 | null = null;
 
     constructor(private readonly tileItemCountService: TileItemCountService) {}
 
@@ -33,8 +35,8 @@ export class MapSetupService {
         startCol: number,
         endRow: number,
         endCol: number,
-    ): { row: number; col: number }[] {
-        const path: { row: number; col: number }[] = [];
+    ): Vec2[] {
+        const path: Vec2[] = [];
 
         const dx = Math.abs(endCol - startCol);
         const dy = Math.abs(endRow - startRow);
@@ -47,7 +49,7 @@ export class MapSetupService {
         let error = dx - dy;
 
         while (row !== endRow || col !== endCol) {
-            path.push({ row, col });
+            path.push({ y: row, x: col });
 
             const secondError = error * 2;
 
@@ -60,11 +62,11 @@ export class MapSetupService {
                 row += rowDirection;
             }
         }
-        path.push({ row: endRow, col: endCol });
+        path.push({ y: endRow, x: endCol });
         return path;
     }
 
-    applyTile(params: TileParams): void {
+    private applyTile(params: TileParams): void {
         const { game, rowIndex, colIndex, tileAttribute, event, counts } = params;
         const currentTile = game.grid[rowIndex]?.[colIndex];
 
@@ -84,7 +86,7 @@ export class MapSetupService {
         }
     }
 
-    deleteTile(params: TileParams): void {
+    private deleteTile(params: TileParams): void {
         const { game, rowIndex, colIndex, tileAttribute, event, counts } = params;
         const currentTile = game.grid[rowIndex]?.[colIndex];
         const currItem = currentTile.item;
@@ -102,7 +104,7 @@ export class MapSetupService {
         }
     }
 
-    removeBlockingItemIfNeeded(gameTile: Tile, activeTileTexture: TileTexture, counts: TileItemCounts): void {
+    private removeBlockingItemIfNeeded(gameTile: Tile, activeTileTexture: TileTexture, counts: TileItemCounts): void {
         if ([TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed].includes(activeTileTexture) && gameTile.item) {
             const removedItem = gameTile.item;
             gameTile.item = null;
@@ -128,86 +130,82 @@ export class MapSetupService {
         if (params.tileAttribute) this.applyTile(params);
     }
 
-    handleCellMouseDown(params: {
-        game: Game;
-        rowIndex: number;
-        colIndex: number;
-        event: MouseEvent;
-        activeTileTexture: TileTexture | null;
-        activeTileItem: TileItem | null;
-        counts: TileItemCounts;
-        isPaintingTiles: boolean;
-        isErasingTiles: boolean;
-    }): MapSetupInteractionState {
+    handleCellMouseDown(params: CellInteractionParams): MapSetupInteractionState {
         const {
-            game,
             rowIndex,
             colIndex,
             event,
-            activeTileTexture,
-            activeTileItem,
-            counts,
             isPaintingTiles,
             isErasingTiles,
         } = params;
 
-        this.lastDragPosition = { row: rowIndex, col: colIndex };
+        this.lastDragPosition = { y: rowIndex, x: colIndex };
 
         if (event.button === MouseEventType.LeftClick) {
-            event.preventDefault();
-            if (activeTileTexture) {
-                try {
-                    this.applyTile({ game, rowIndex, colIndex, tileAttribute: activeTileTexture, event, counts });
-                    return { isPaintingTiles: true, isErasingTiles };
-                } catch {
-                    return { isPaintingTiles: false, isErasingTiles };
-                }
-            } else if (activeTileItem) {
-                this.applyTile({ game, rowIndex, colIndex, tileAttribute: activeTileItem, event, counts });
-                return { isPaintingTiles: true, isErasingTiles };
-            }
-            return { isPaintingTiles: false, isErasingTiles };
+            return this.handleLeftClick(params);
         }
 
         if (event.button === MouseEventType.RightClick) {
-            if (activeTileTexture) {
-                this.deleteTile({ game, rowIndex, colIndex, tileAttribute: activeTileTexture, event, counts });
-            } else if (activeTileItem) {
-                this.deleteTile({ game, rowIndex, colIndex, tileAttribute: activeTileItem, event, counts });
-            } else {
-                const tile = game.grid[rowIndex][colIndex];
-                if (event.shiftKey && tile.item) {
-                    this.deleteTile({ game, rowIndex, colIndex, tileAttribute: tile.item, event, counts });
-                } else if (!event.shiftKey) {
-                    if (tile.type !== TileTexture.Floor) {
-                        this.deleteTile({ game, rowIndex, colIndex, tileAttribute: TileTexture.Floor, event, counts });
-                    } else if (tile.item) {
-                        this.deleteTile({ game, rowIndex, colIndex, tileAttribute: tile.item, event, counts });
-                    }
-                }
-            }
-            return { isPaintingTiles, isErasingTiles: true };
+            return this.handleRightClick(params);
         }
 
         return { isPaintingTiles, isErasingTiles };
     }
 
-    private handleErasePath(params: { 
-        game: Game; 
-        path: { row: number; col: number }[]; 
-        event: MouseEvent; 
-        counts: TileItemCounts 
+    private handleLeftClick(params: CellInteractionParams): MapSetupInteractionState {
+        const { game, rowIndex, colIndex, event, activeTileTexture, activeTileItem, counts, isErasingTiles } = params;
+        event.preventDefault();
+        if (activeTileTexture) {
+            try {
+                this.applyTile({ game, rowIndex, colIndex, tileAttribute: activeTileTexture, event, counts });
+                return { isPaintingTiles: true, isErasingTiles };
+            } catch {
+                return { isPaintingTiles: false, isErasingTiles };
+            }
+        } else if (activeTileItem) {
+            this.applyTile({ game, rowIndex, colIndex, tileAttribute: activeTileItem, event, counts });
+            return { isPaintingTiles: true, isErasingTiles };
+        }
+        return { isPaintingTiles: false, isErasingTiles };
+    }
+
+    private handleRightClick(params: CellInteractionParams): MapSetupInteractionState {
+        const { game, rowIndex, colIndex, event, activeTileTexture, activeTileItem, counts, isPaintingTiles } = params;
+        if (activeTileTexture) {
+            this.deleteTile({ game, rowIndex, colIndex, tileAttribute: activeTileTexture, event, counts });
+        } else if (activeTileItem) {
+            this.deleteTile({ game, rowIndex, colIndex, tileAttribute: activeTileItem, event, counts });
+        } else {
+            const tile = game.grid[rowIndex][colIndex];
+            if (event.shiftKey && tile.item) {
+                this.deleteTile({ game, rowIndex, colIndex, tileAttribute: tile.item, event, counts });
+            } else if (!event.shiftKey) {
+                if (tile.type !== TileTexture.Floor) {
+                    this.deleteTile({ game, rowIndex, colIndex, tileAttribute: TileTexture.Floor, event, counts });
+                } else if (tile.item) {
+                    this.deleteTile({ game, rowIndex, colIndex, tileAttribute: tile.item, event, counts });
+                }
+            }
+        }
+        return { isPaintingTiles, isErasingTiles: true };
+    }
+
+    private handleErasePath(params: {
+        game: Game;
+        path: Vec2[];
+        event: MouseEvent;
+        counts: TileItemCounts
     }): void {
         const { game, path, event, counts } = params;
         for (const cell of path) {
             try {
                 if (event.shiftKey) {
-                    const tile = game.grid[cell.row]?.[cell.col];
+                    const tile = game.grid[cell.y]?.[cell.x];
                     if (tile?.item) {
-                        this.deleteTile({ game, rowIndex: cell.row, colIndex: cell.col, tileAttribute: tile.item, event, counts });
+                        this.deleteTile({ game, rowIndex: cell.y, colIndex: cell.x, tileAttribute: tile.item, event, counts });
                     }
                 } else {
-                    this.deleteTile({ game, rowIndex: cell.row, colIndex: cell.col, tileAttribute: TileTexture.Floor, event, counts });
+                    this.deleteTile({ game, rowIndex: cell.y, colIndex: cell.x, tileAttribute: TileTexture.Floor, event, counts });
                 }
             } catch {
                 throw new Error(`Erreur avec l'évènement (mouseenter) quand on supprime en appuyant`);
@@ -217,7 +215,7 @@ export class MapSetupService {
 
     private handlePaintPath(params: {
         game: Game;
-        path: { row: number; col: number }[];
+        path: Vec2[];
         event: MouseEvent;
         activeTileTexture: TileTexture | null;
         activeTileItem: TileItem | null;
@@ -225,19 +223,19 @@ export class MapSetupService {
     }): void {
         const { game, path, event, activeTileTexture, activeTileItem, counts } = params;
         for (const cell of path) {
-            const gameTile = game.grid[cell.row]?.[cell.col];
+            const gameTile = game.grid[cell.y]?.[cell.x];
             if (!gameTile) continue;
 
             if (activeTileTexture) {
                 this.removeBlockingItemIfNeeded(gameTile, activeTileTexture, counts);
                 try {
-                    this.applyTile({ game, rowIndex: cell.row, colIndex: cell.col, tileAttribute: activeTileTexture, event, counts });
+                    this.applyTile({ game, rowIndex: cell.y, colIndex: cell.x, tileAttribute: activeTileTexture, event, counts });
                 } catch {
                     throw new Error(`Erreur avec l'évènement (mouseenter) quand les tuiles sont activées`);
                 }
             } else if (activeTileItem) {
                 try {
-                    this.applyTile({ game, rowIndex: cell.row, colIndex: cell.col, tileAttribute: activeTileItem, event, counts });
+                    this.applyTile({ game, rowIndex: cell.y, colIndex: cell.x, tileAttribute: activeTileItem, event, counts });
                 } catch {
                     throw new Error(`Erreur avec l'évènement (mouseenter) quand les objects sont activés`);
                 }
@@ -245,24 +243,14 @@ export class MapSetupService {
         }
     }
 
-    handleCellMouseEnter(params: {
-        game: Game;
-        rowIndex: number;
-        colIndex: number;
-        event: MouseEvent;
-        activeTileTexture: TileTexture | null;
-        activeTileItem: TileItem | null;
-        counts: TileItemCounts;
-        isPaintingTiles: boolean;
-        isErasingTiles: boolean;
-    }): MapSetupInteractionState {
+    handleCellMouseEnter(params: CellInteractionParams): MapSetupInteractionState {
         const { game, rowIndex, colIndex, event, activeTileTexture, activeTileItem, counts, isPaintingTiles, isErasingTiles } = params;
 
         const path = this.lastDragPosition
-            ? this.drawStraightLine(this.lastDragPosition.row, this.lastDragPosition.col, rowIndex, colIndex)
-            : [{ row: rowIndex, col: colIndex }];
+            ? this.drawStraightLine(this.lastDragPosition.y, this.lastDragPosition.x, rowIndex, colIndex)
+            : [{ y: rowIndex, x: colIndex }];
 
-        this.lastDragPosition = { row: rowIndex, col: colIndex };
+        this.lastDragPosition = { y: rowIndex, x: colIndex };
 
         if (isErasingTiles) {
             if (event.buttons !== MouseEventType.RightDrag) return { isPaintingTiles, isErasingTiles: false };
@@ -300,11 +288,11 @@ export class MapSetupService {
         return { itemCounts: this.tileItemCountService.createRequiredCounts(game), selection: this.resetSelection() };
     }
 
-    extractGridTypes(game: Game): TileTexture[][] {
+    private extractGridTypes(game: Game): TileTexture[][] {
         return game.grid.map((row) => row.map((tile) => tile.type));
     }
 
-    extractPlacedObjects(game: Game): PlacedObject[] {
+    private extractPlacedObjects(game: Game): PlacedObject[] {
         const placedObjects: PlacedObject[] = [];
         game.grid.forEach((row, y) => {
             row.forEach((tile, x) => {

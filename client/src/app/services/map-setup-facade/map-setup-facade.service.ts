@@ -6,15 +6,16 @@ import { GameValidatorService } from '@app/services/game-validator/game-validato
 import { TileItemCounts } from '@app/services/map-setup.types';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
+import { MapSetupMode } from '@common/enums';
 import { Game } from '@common/game';
 import html2canvas from 'html2canvas';
+import { firstValueFrom } from 'rxjs';
 import swal from 'sweetalert2';
 
-const THUMBNAIL_QUALITY = 0.85;
-const THUMBNAIL_MAX_SIZE = 256;
-export interface MapSetupInitResult {
+import { THUMBNAIL_MAX_SIZE, THUMBNAIL_QUALITY } from '@app/constants/map-setup-page-constant';
+interface MapSetupInitResult {
   game: Game;
-  mode: 'create' | 'edit';
+  mode: MapSetupMode;
   itemCounts: TileItemCounts;
 }
 
@@ -33,11 +34,11 @@ export class MapSetupFacadeService {
   private readonly communicationService = inject(CommunicationService);
 
   async initializeFromNavigation(): Promise<MapSetupInitResult | null> {
-    const state = history.state as { game?: Game; mode?: 'create' | 'edit' };
+    const state = history.state as { game?: Game; mode?: MapSetupMode };
 
     if (state?.game) {
       const stateGame = state.game;
-      const stateMode = state.mode ?? 'edit';
+      const stateMode = state.mode ?? MapSetupMode.Edit;
       this.mapSetupService.initializeGridIfEmpty(stateGame);
       const stateItemCounts = this.tileItemCountService.createRequiredCounts(stateGame);
       this.tileItemCountService.adjustCountsForExistingItems(stateGame, stateItemCounts);
@@ -50,7 +51,7 @@ export class MapSetupFacadeService {
       return null;
     }
 
-    const fetchedGame = await this.communicationService.getGameById(id).toPromise();
+    const fetchedGame = await firstValueFrom(this.communicationService.getGameById(id));
     if (!fetchedGame) {
       this.router.navigate(['/admin']);
       return null;
@@ -59,15 +60,16 @@ export class MapSetupFacadeService {
     this.mapSetupService.initializeGridIfEmpty(fetchedGame);
     const fetchedItemCounts = this.tileItemCountService.createRequiredCounts(fetchedGame);
     this.tileItemCountService.adjustCountsForExistingItems(fetchedGame, fetchedItemCounts);
-    return { game: fetchedGame, mode: 'edit', itemCounts: fetchedItemCounts };
+    return { game: fetchedGame, mode: MapSetupMode.Edit, itemCounts: fetchedItemCounts };
   }
 
   navigateToAdmin(): void {
     this.router.navigate(['/admin']);
   }
 
-  async saveGame(game: Game, initialMode: 'create' | 'edit', thumbnailElement: HTMLElement): Promise<void> {
-    const mode = initialMode;
+  async saveGame(game: Game, initialMode: MapSetupMode, thumbnailElement: HTMLElement): Promise<void> {
+    let mode = initialMode;
+
     try {
       const thumbnail = await this.captureThumbnail(thumbnailElement);
       game.thumbnail = thumbnail;
@@ -95,10 +97,10 @@ export class MapSetupFacadeService {
       return;
     }
 
-    const handleSuccess = (finalMode: 'create' | 'edit') => {
+    const handleSuccess = (finalMode: MapSetupMode) => {
       swal.fire({
         title: 'Succès',
-        text: `Jeu ${finalMode === 'create' ? 'créé' : 'sauvegardé'} avec succès !`,
+        text: `Jeu ${finalMode === MapSetupMode.Create ? 'créé' : 'sauvegardé'} avec succès !`,
         icon: 'success',
         confirmButtonText: 'OK',
       });
@@ -116,23 +118,25 @@ export class MapSetupFacadeService {
       });
     };
 
-    if (mode === 'edit') {
+    if (mode === MapSetupMode.Edit) {
       this.communicationService.getAllGames().subscribe((allGames) => {
         const originalGame = allGames.find((currentGame) => currentGame._id === game._id);
-        const finalMode = originalGame ? 'edit' : 'create';
+        if (!originalGame) {
+          mode = MapSetupMode.Create;
+        }
 
-        const saveOperation = finalMode === 'create'
+        const saveOperation = mode === MapSetupMode.Create
           ? this.communicationService.createGame(game)
           : this.communicationService.modifyGame(game);
 
         saveOperation.subscribe({
-          next: () => handleSuccess(finalMode),
+          next: () => handleSuccess(mode),
           error: handleError,
         });
       });
     } else {
       this.communicationService.createGame(game).subscribe({
-        next: () => handleSuccess('create'),
+        next: () => handleSuccess(MapSetupMode.Create),
         error: handleError,
       });
     }

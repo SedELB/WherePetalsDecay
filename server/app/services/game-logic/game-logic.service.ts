@@ -1,4 +1,4 @@
-import { BASE_STATS } from '@common/character';
+import { BASE_STATS } from '@common/constants/character.constants';
 import { Direction } from '@common/direction';
 import { TileItem } from '@common/enums';
 import { Game } from '@common/game';
@@ -14,6 +14,7 @@ import { MovementService } from './movement.service';
 import { TurnService } from './turn.service';
 
 const RANDOM_THRESHOLD = 0.5;
+const INITIAL_WINS_COUNT = 0;
 
 @Injectable()
 export class GameLogicService {
@@ -43,7 +44,7 @@ export class GameLogicService {
         const actionPoints = new Map<string, number>();
 
         for (const player of lobby.players) {
-            player.winsCount = 0;
+            player.winsCount = INITIAL_WINS_COUNT;
             player.hasAbandonned = false;
             player.character.life = player.character.lifeBonus ? BASE_STATS.life + BASE_STATS.bonus : BASE_STATS.life;
         }

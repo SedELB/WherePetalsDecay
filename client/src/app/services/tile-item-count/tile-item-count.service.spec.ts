@@ -89,45 +89,45 @@ describe('TileItemCountService', () => {
     // Test getRequiredHealingSanctuaryCount for all map sizes
     it('should return correct healing sanctuary count for small map', () => {
         const game = gameFactory(GridSizes.Small, GridSizes.Small);
-        expect(service.getRequiredHealingSanctuaryCount(game)).toBe(SanctuaryCount.Small);
+        expect(service['getRequiredHealingSanctuaryCount'](game)).toBe(SanctuaryCount.Small);
     });
 
     it('should return correct healing sanctuary count for medium map', () => {
         const game = gameFactory(GridSizes.Medium, GridSizes.Medium);
-        expect(service.getRequiredHealingSanctuaryCount(game)).toBe(SanctuaryCount.Medium);
+        expect(service['getRequiredHealingSanctuaryCount'](game)).toBe(SanctuaryCount.Medium);
     });
 
     it('should return correct healing sanctuary count for large map', () => {
         const game = gameFactory(GridSizes.Large, GridSizes.Large);
-        expect(service.getRequiredHealingSanctuaryCount(game)).toBe(SanctuaryCount.Large);
+        expect(service['getRequiredHealingSanctuaryCount'](game)).toBe(SanctuaryCount.Large);
     });
 
     // Invalid map size for healing sanctuary
     it('should throw error for unsupported map size for healing sanctuary', () => {
         const game = gameFactory(SIZE_INVALID_TWELVE, SIZE_INVALID_TWELVE);
-        expect(() => service.getRequiredHealingSanctuaryCount(game)).toThrowError(/HealingSanctuary/);
+        expect(() => service['getRequiredHealingSanctuaryCount'](game)).toThrowError(/HealingSanctuary/);
     });
 
     // Test getRequiredCombatSanctuaryCount for all map sizes
     it('should return correct combat sanctuary count for small map', () => {
         const game = gameFactory(GridSizes.Small, GridSizes.Small);
-        expect(service.getRequiredCombatSanctuaryCount(game)).toBe(SanctuaryCount.Small);
+        expect(service['getRequiredCombatSanctuaryCount'](game)).toBe(SanctuaryCount.Small);
     });
 
     it('should return correct combat sanctuary count for medium map', () => {
         const game = gameFactory(GridSizes.Medium, GridSizes.Medium);
-        expect(service.getRequiredCombatSanctuaryCount(game)).toBe(SanctuaryCount.Medium);
+        expect(service['getRequiredCombatSanctuaryCount'](game)).toBe(SanctuaryCount.Medium);
     });
 
     it('should return correct combat sanctuary count for large map', () => {
         const game = gameFactory(GridSizes.Large, GridSizes.Large);
-        expect(service.getRequiredCombatSanctuaryCount(game)).toBe(SanctuaryCount.Large);
+        expect(service['getRequiredCombatSanctuaryCount'](game)).toBe(SanctuaryCount.Large);
     });
 
     // Invalid map size for combat sanctuary
     it('should throw error for unsupported map size for combat sanctuary', () => {
         const game = gameFactory(SIZE_INVALID_TWELVE, SIZE_INVALID_TWELVE);
-        expect(() => service.getRequiredCombatSanctuaryCount(game)).toThrowError(/CombatSanctuary/);
+        expect(() => service['getRequiredCombatSanctuaryCount'](game)).toThrowError(/CombatSanctuary/);
     });
 
     // Test createRequiredCounts
@@ -231,7 +231,7 @@ describe('TileItemCountService', () => {
         const game = gameFactory(GridSizes.Small, GridSizes.Small);
         game.grid[0][0].item = TileItem.HealingSanctuary;
 
-        expect(service.getPlacedHealingSanctuaryCount(game)).toBe(1);
+        expect(service['getPlacedHealingSanctuaryCount'](game)).toBe(1);
     });
 
     // Test getPlacedCombatSanctuaryCount
@@ -239,7 +239,7 @@ describe('TileItemCountService', () => {
         const game = gameFactory(GridSizes.Small, GridSizes.Small);
         game.grid[0][0].item = TileItem.CombatSanctuary;
 
-        expect(service.getPlacedCombatSanctuaryCount(game)).toBe(1);
+        expect(service['getPlacedCombatSanctuaryCount'](game)).toBe(1);
     });
 
     // Test adjustCountsForExistingItems
@@ -280,7 +280,7 @@ describe('TileItemCountService', () => {
 
     it('should return true when enough healing sanctuaries are placed', () => {
         const game = gameFactory(GridSizes.Small, GridSizes.Small);
-        const required = service.getRequiredHealingSanctuaryCount(game);
+        const required = service['getRequiredHealingSanctuaryCount'](game);
 
         for (let i = 0; i < required; i++) {
             game.grid[i][0].item = TileItem.HealingSanctuary;
@@ -291,7 +291,7 @@ describe('TileItemCountService', () => {
 
     it('should return true when enough combat sanctuaries are placed', () => {
         const game = gameFactory(GridSizes.Small, GridSizes.Small);
-        const required = service.getRequiredCombatSanctuaryCount(game);
+        const required = service['getRequiredCombatSanctuaryCount'](game);
 
         for (let i = 0; i < required; i++) {
             game.grid[i][0].item = TileItem.CombatSanctuary;

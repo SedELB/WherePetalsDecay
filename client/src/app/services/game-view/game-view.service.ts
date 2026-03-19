@@ -4,30 +4,12 @@ import { ROUTES } from '@app/constants/routes.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Direction } from '@common/direction';
 import { SocketNamespace } from '@common/enums';
+import { GameStartedData, PlayerMovedData, TileInfoData } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
-import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
 
 const ONE_SECOND_DELAY = 1000;
-
-interface PlayerMovedData {
-    socketId: string;
-    position: Vec2;
-    movementPoints: number;
-}
-
-interface GameStartedData {
-    lobby: Lobby;
-    turnOrder: string[];
-    playerPositions: Record<string, Vec2>;
-}
-
-interface TileInfoData {
-    tile: Tile;
-    cost: number;
-    player: { name: string; avatar: string } | null;
-}
 
 @Injectable({
     providedIn: 'root',
@@ -75,7 +57,7 @@ export class GameViewService {
             this.activePlayerSocketId.set(playerSocketId);
             this.turnNotification.set(null);
         });
-        
+
         this.webSocketService.onNamespace<number>(this.namespace, JoinGameEvents.BetweenTurnCountdown, (secondsLeft) => {
             this.disableEndTurn.set(true);
             this.turnCountdown.set(secondsLeft);
@@ -226,7 +208,7 @@ export class GameViewService {
     }
 
     // Utils
-    resetGameState(): void {
+    private resetGameState(): void {
         this.isDebugModeActive.set(false);
         this.gameOver.set(null);
         this.activePlayerSocketId.set(null);

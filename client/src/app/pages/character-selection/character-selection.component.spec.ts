@@ -32,9 +32,9 @@ import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
 import { CharacterService } from '@app/services/character/character.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
+import { AVATARS_PATH, BASE_STATS, RANDOM_NAMES } from '@common/constants/character.constants';
 import { SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { AVATARS_PATH, BASE_STATS, RANDOM_NAMES } from '@common/character';
 import { CharacterSelectionComponent } from './character-selection.component';
 
 describe('CharacterSelectionComponent', () => {
@@ -93,7 +93,7 @@ describe('CharacterSelectionComponent', () => {
   });
 
   // Avatar Deselection Tests
-  
+
   // These tests validate that clicking on an already-selected avatar deselects it.
   // This is an important UX feature allowing users to undo avatar selection.
   // Deselection also emits a WebSocket event with null avatar to notify the server.
@@ -289,7 +289,7 @@ describe('CharacterSelectionComponent', () => {
   });
 
   // Random Character Generation
-  
+
   // Tests the randomization feature that generates a complete valid character
   // using predefined name/avatar pools. Validates that generated values are
   // always drawn from valid option sets.
@@ -305,7 +305,7 @@ describe('CharacterSelectionComponent', () => {
   });
 
   // Form Validation Tests
-  
+
   // Comprehensive validation tests covering critical edge cases:
   // 1. Empty name string - prevents submission
   // 2. Missing avatar - prevents submission (guards against null selection)

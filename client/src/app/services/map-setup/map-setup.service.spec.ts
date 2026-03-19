@@ -89,7 +89,7 @@ describe('MapSetupService', () => {
         const game = gameFactory(2, 2);
         const counts = { spawnCount: 1, flagCount: 1 };
 
-        service.applyTile({ game, rowIndex: 0, colIndex: 0, tileAttribute: TileItem.Spawn, event: {} as MouseEvent, counts });
+        service['applyTile']({ game, rowIndex: 0, colIndex: 0, tileAttribute: TileItem.Spawn, event: {} as MouseEvent, counts });
         expect(game.grid[0][0].item).toBe(TileItem.Spawn);
         expect(counts.spawnCount).toBe(0);
     });
@@ -99,7 +99,7 @@ describe('MapSetupService', () => {
         const game = gameFactory(2, 2);
         const counts = { spawnCount: 1, flagCount: 1 };
 
-        service.applyTile({ game, rowIndex: 0, colIndex: 1, tileAttribute: TileTexture.Water, event: {} as MouseEvent, counts });
+        service['applyTile']({ game, rowIndex: 0, colIndex: 1, tileAttribute: TileTexture.Water, event: {} as MouseEvent, counts });
         expect(game.grid[0][1].type).toBe(TileTexture.Water);
     });
 
@@ -110,7 +110,7 @@ describe('MapSetupService', () => {
         game.grid[1][0].type = TileTexture.Wall;
 
         expect(() =>
-            service.applyTile({ game, rowIndex: 1, colIndex: 0, tileAttribute: TileItem.Flag, event: {} as MouseEvent, counts }),
+            service['applyTile']({ game, rowIndex: 1, colIndex: 0, tileAttribute: TileItem.Flag, event: {} as MouseEvent, counts }),
         ).toThrowError(/On ne peut pas placer cet object sur une tuile de terrain/);
     });
 
@@ -119,7 +119,7 @@ describe('MapSetupService', () => {
         const game = gameFactory(2, 2);
         const counts = { spawnCount: 0, flagCount: 0 };
 
-        service.applyTile({ game, rowIndex: 1, colIndex: 1, tileAttribute: TileItem.Flag, event: {} as MouseEvent, counts });
+        service['applyTile']({ game, rowIndex: 1, colIndex: 1, tileAttribute: TileItem.Flag, event: {} as MouseEvent, counts });
         expect(game.grid[1][1].item).toBeNull();
     });
 
@@ -129,7 +129,7 @@ describe('MapSetupService', () => {
         const counts = { spawnCount: 1, flagCount: 1 };
         game.grid[0][1].type = TileTexture.Water;
 
-        service.applyTile({ game, rowIndex: 0, colIndex: 1, tileAttribute: TileTexture.Water, event: {} as MouseEvent, counts });
+        service['applyTile']({ game, rowIndex: 0, colIndex: 1, tileAttribute: TileTexture.Water, event: {} as MouseEvent, counts });
         expect(game.grid[0][1].type).toBe(TileTexture.Water);
     });
 
@@ -139,7 +139,7 @@ describe('MapSetupService', () => {
         const counts = { spawnCount: 0, flagCount: 0 };
         game.grid[0][0].item = TileItem.Spawn;
 
-        service.deleteTile({
+        service['deleteTile']({
             game,
             rowIndex: 0,
             colIndex: 0,
@@ -157,7 +157,7 @@ describe('MapSetupService', () => {
         const counts = { spawnCount: 0, flagCount: 0 };
         game.grid[0][0].type = TileTexture.Wall;
 
-        service.deleteTile({
+        service['deleteTile']({
             game,
             rowIndex: 0,
             colIndex: 0,
@@ -174,7 +174,7 @@ describe('MapSetupService', () => {
         const counts = { spawnCount: 0, flagCount: 0 };
         game.grid[0][0].item = TileItem.Spawn;
 
-        service.deleteTile({
+        service['deleteTile']({
             game,
             rowIndex: 0,
             colIndex: 0,
@@ -191,7 +191,7 @@ describe('MapSetupService', () => {
         const counts = { spawnCount: 0, flagCount: 0 };
         const tile: Tile = { type: TileTexture.Floor, item: TileItem.Spawn };
 
-        service.removeBlockingItemIfNeeded(tile, TileTexture.Wall, counts);
+        service['removeBlockingItemIfNeeded'](tile, TileTexture.Wall, counts);
         expect(tile.item).toBeNull();
         expect(counts.spawnCount).toBe(1);
     });
@@ -200,7 +200,7 @@ describe('MapSetupService', () => {
         const counts = { spawnCount: 0, flagCount: 0 };
         const tile: Tile = { type: TileTexture.Floor, item: TileItem.Flag };
 
-        service.removeBlockingItemIfNeeded(tile, TileTexture.DoorOpened, counts);
+        service['removeBlockingItemIfNeeded'](tile, TileTexture.DoorOpened, counts);
         expect(tile.item).toBeNull();
         expect(counts.flagCount).toBe(1);
     });
@@ -253,7 +253,7 @@ describe('MapSetupService', () => {
     it('should apply tile when attribute is provided', () => {
         const game = gameFactory(2, 2);
         const counts = { spawnCount: 1, flagCount: 1 };
-        const spy = spyOn(service, 'applyTile');
+        const spy = spyOn<MapSetupService>(service, 'applyTile' as keyof MapSetupService);
 
         service.applyActiveSelection({ game, rowIndex: 0, colIndex: 0, tileAttribute: TileTexture.Wall, event: {} as MouseEvent, counts });
         expect(spy).toHaveBeenCalled();

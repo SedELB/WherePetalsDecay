@@ -18,6 +18,10 @@ import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Server, Socket } from 'socket.io';
+
+const INITIAL_WINS_COUNT = 0;
+const DUPLICATE_NAME_SUFFIX_START = 2;
+
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
 export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
@@ -53,7 +57,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         this.logger.log(`Payload (Lobby Created) by ${socket.id}`);
         payload.player.socketId = socket.id;
         payload.player.isHost = true;
-        payload.player.winsCount = 0;
+        payload.player.winsCount = INITIAL_WINS_COUNT;
         const createdLobby = this.lobbyService.createLobby(payload.game, socket.id, payload.player);
 
         if (createdLobby) {
@@ -94,7 +98,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         payload.player.character.name = finalPlayerName;
         payload.player.socketId = socket.id;
         payload.player.isHost = false;
-        payload.player.winsCount = 0;
+        payload.player.winsCount = INITIAL_WINS_COUNT;
 
         const updatedLobby = this.lobbyService.joinLobby(payload.lobbyId, payload.player);
 
@@ -185,7 +189,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
     private getValidName(name: string, lobby: Lobby): string {
         let finalName = name;
-        let counter = 2;
+        let counter = DUPLICATE_NAME_SUFFIX_START;
         while (lobby.players.some((player) => player.character.name === finalName)) {
             finalName = `${name}-${counter}`;
             counter++;
@@ -202,7 +206,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         } else {
             const leavingPlayer = lobby.players.find(player => player.socketId === socket.id);
 
-            if (leavingPlayer){
+            if (leavingPlayer) {
                 this.logger.log(`${leavingPlayer.character.name} left lobby: ${lobby.lobbyId}`);
                 this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
                 socket.broadcast.to(lobby.lobbyId).emit(JoinGameEvents.PlayerLeft, leavingPlayer);
@@ -210,7 +214,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
                 this.logger.log(`Pending player ${socket.id} left lobby: ${lobby.lobbyId}`);
                 this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
             }
-            
+
             const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
             this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
             this.server.to(lobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, lobby);

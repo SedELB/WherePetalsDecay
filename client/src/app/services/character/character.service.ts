@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
-import { AVATARS_PATH, BASE_STATS, Character, RANDOM_NAMES, RANDOM_PROBABILITY } from '@common/character';
+import { Character } from '@common/character';
+import { AVATARS_PATH, BASE_STATS, RANDOM_NAMES, RANDOM_PROBABILITY } from '@common/constants/character.constants';
 
 @Injectable({
     providedIn: 'root',

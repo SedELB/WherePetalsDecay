@@ -6,10 +6,12 @@ import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
 import { ROUTES } from '@app/constants/routes.constants';
-import { Game } from '@common/game';
 import { GameCreationService } from '@app/services/game-creation/game-creation.service';
+import { ButtonVariant } from '@common/enums';
+import { Game } from '@common/game';
 import { Subscription } from 'rxjs';
 import swal from 'sweetalert2';
+
 @Component({
     selector: 'app-game-creation',
     standalone: true,
@@ -24,7 +26,8 @@ import swal from 'sweetalert2';
 })
 
 export class GameCreationComponent implements OnInit, OnDestroy {
-    games: Game[] = [];
+    protected readonly buttonVariant = ButtonVariant;
+    protected games: Game[] = [];
     private gamesSubscription: Subscription | null = null;
     readonly routes = ROUTES;
 
@@ -39,9 +42,9 @@ export class GameCreationComponent implements OnInit, OnDestroy {
             error: (error: HttpErrorResponse) => {
                 const errorMessage = error.error || 'Erreur lors de la récupération des jeux';
                 swal.fire({
-                    title: 'Information',
-                    text: errorMessage,
-                    icon: 'info',
+                    title: 'Erreur',
+                    text: `${errorMessage}`,
+                    icon: 'error',
                     confirmButtonText: 'OK',
                 });
             },
@@ -56,10 +59,10 @@ export class GameCreationComponent implements OnInit, OnDestroy {
         });
     }
 
-        selectGame(game: Game): void {
-            this.router.navigate(['/character-selection'], { state: { game } });
-        }
-    
+    selectGame(game: Game): void {
+        this.router.navigate(['/character-selection'], { state: { game } });
+    }
+
     getGameSizeLabel(game: Game): { rows: number, cols: number } {
         return game.size;
     }

@@ -14,7 +14,7 @@ import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-facade.service';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
-import { GameMode, TileItem, TileTexture } from '@common/enums';
+import { GameMode, MapSetupMode, TileItem, TileTexture } from '@common/enums';
 import { Game } from '@common/game';
 import { Tile } from '@common/tile';
 import { BehaviorSubject, of } from 'rxjs';
@@ -91,7 +91,7 @@ describe('MapSetupPageComponent', () => {
         ]);
 
         const counts = makeCounts();
-        facade.initializeFromNavigation.and.returnValue(Promise.resolve({ game, mode: 'edit', itemCounts: counts }));
+        facade.initializeFromNavigation.and.returnValue(Promise.resolve({ game, mode: MapSetupMode.Edit, itemCounts: counts }));
 
         service.getObjectAt.and.returnValue(game.grid[0][0]);
         service.selectTileTexture.and.returnValue({ activeTileTexture: TileTexture.Wall, activeTileItem: null });
@@ -140,7 +140,7 @@ describe('MapSetupPageComponent', () => {
         await fixture.whenStable();
         expect(facade.initializeFromNavigation).toHaveBeenCalled();
         expect(component.game).toBe(game);
-        expect(component.mode).toBe('edit');
+        expect(component['mode']).toBe(MapSetupMode.Edit);
     });
 
     // Test that initialGameState is saved
@@ -156,14 +156,14 @@ describe('MapSetupPageComponent', () => {
     it('should subscribe to games$ when in edit mode', async () => {
         fixture.detectChanges();
         await fixture.whenStable();
-        expect(component.mode).toBe('edit');
+        expect(component['mode']).toBe(MapSetupMode.Edit);
         const subscription = (component as unknown as { gameSubscription?: unknown }).gameSubscription;
         expect(subscription).toBeTruthy();
     });
 
     // Test no subscription in create mode
     it('should not subscribe to games$ when in create mode', async () => {
-        facade.initializeFromNavigation.and.returnValue(Promise.resolve({ game, mode: 'create', itemCounts: makeCounts() }));
+        facade.initializeFromNavigation.and.returnValue(Promise.resolve({ game, mode: MapSetupMode.Create, itemCounts: makeCounts() }));
         fixture.detectChanges();
         await fixture.whenStable();
         const subscription = (component as unknown as { gameSubscription?: unknown }).gameSubscription;
@@ -178,7 +178,7 @@ describe('MapSetupPageComponent', () => {
 
         gamesSubject.next([]);
 
-        expect(component.mode).toBe('create');
+        expect(component['mode']).toBe(MapSetupMode.Create);
         expect(swalSpy).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Jeu supprimé' }));
     });
 

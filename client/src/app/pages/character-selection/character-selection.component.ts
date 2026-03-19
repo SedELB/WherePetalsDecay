@@ -7,8 +7,8 @@ import { ROUTES } from '@app/constants/routes.constants';
 import { CharacterService } from '@app/services/character/character.service';
 import { NAME_MAX_LENGTH } from '@app/services/game-validator/game-validator.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
-import { AVATARS_PATH, BASE_STATS } from '@common/character';
-import { SocketNamespace } from '@common/enums';
+import { AVATARS_PATH, BASE_STATS } from '@common/constants/character.constants';
+import { ButtonVariant, SocketNamespace } from '@common/enums';
 import { Game } from '@common/game';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
@@ -23,6 +23,7 @@ const TOAST_DELAY = 4000;
     styleUrl: './character-selection.component.scss',
 })
 export class CharacterSelectionComponent implements OnInit, OnDestroy {
+    protected readonly buttonVariant = ButtonVariant;
     characterName: string = '';
     selectedAvatar: string | null = null;
     lifeBonusSelected: boolean = true;

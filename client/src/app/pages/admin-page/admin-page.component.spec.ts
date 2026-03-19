@@ -9,13 +9,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
-import { Game } from '@common/game';
 import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { CommunicationService } from '@app/services/communication/communication.service';
-import { GameMode } from '@common/enums';
+import { GameMode, MapSetupMode } from '@common/enums';
+import { Game } from '@common/game';
 import { BehaviorSubject, of } from 'rxjs';
+import swal, { SweetAlertResult } from 'sweetalert2';
 import { AdminPageComponent } from './admin-page.component';
-import swal, {SweetAlertResult} from 'sweetalert2';
 
 
 describe('AdminPageComponent', () => {
@@ -122,7 +122,7 @@ describe('AdminPageComponent', () => {
   // Testing the subscription to games$, websocket
   it('should subscribe to games$ and fill gameCards array', () => {
     fixture.detectChanges();
-    expect(component.games.length).toBe(MOCK_GAME_CARDS.length);
+    expect(component['games'].length).toBe(MOCK_GAME_CARDS.length);
     expect(component.gameCards.length).toBe(MOCK_GAME_CARDS.length);
   });
 
@@ -195,7 +195,7 @@ describe('AdminPageComponent', () => {
 
     expect(router.navigate).toHaveBeenCalledWith(
       ['/editor', MOCK_GAME_CARDS[0]._id],
-      { state: { game: MOCK_GAME_CARDS[0], mode: 'edit' } },
+      { state: { game: MOCK_GAME_CARDS[0], mode: MapSetupMode.Edit } },
     );
   });
 
@@ -212,7 +212,7 @@ describe('AdminPageComponent', () => {
     // we leave this for the editor page
     expect(router.navigate).toHaveBeenCalledWith(
       ['/editor', undefined],
-      { state: { game: undefined, mode: 'edit' } },
+      { state: { game: undefined, mode: MapSetupMode.Edit } },
     );
   });
 
@@ -279,7 +279,7 @@ describe('AdminPageComponent', () => {
   it('should not call deleteGame when user cancels suppression', async () => {
     fixture.detectChanges();
     communicationService.deleteGame.and.returnValue(of(void 0));
-    
+
     spyOn(swal, 'fire').and.returnValue(
       Promise.resolve({ isConfirmed: false } as SweetAlertResult),
     );
@@ -293,7 +293,7 @@ describe('AdminPageComponent', () => {
   it('should render return button on the page', () => {
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    const returnButton = compiled.querySelector('app-button[variant="back"]');
+    const returnButton = compiled.querySelector('#back-button');
 
     expect(returnButton).toBeTruthy();
   });
@@ -372,7 +372,7 @@ describe('AdminPageComponent', () => {
     gamesSubject.next([]);
     fixture.detectChanges();
 
-    expect(component.games.length).toBe(0);
+    expect(component['games'].length).toBe(0);
     expect(component.gameCards.length).toBe(0);
 
     const gameCardElements = fixture.nativeElement.querySelectorAll('app-game-card');
@@ -385,12 +385,12 @@ describe('AdminPageComponent', () => {
     const UPDATED_GAME_COUNT = 2;
     fixture.detectChanges();
 
-    expect(component.games.length).toBe(INITIAL_GAME_COUNT);
+    expect(component['games'].length).toBe(INITIAL_GAME_COUNT);
 
     const newGames = [MOCK_GAME_CARDS[0], MOCK_GAME_CARDS[1]];
     gamesSubject.next(newGames);
 
-    expect(component.games.length).toBe(UPDATED_GAME_COUNT);
+    expect(component['games'].length).toBe(UPDATED_GAME_COUNT);
     expect(component.gameCards.length).toBe(UPDATED_GAME_COUNT);
   });
 });
