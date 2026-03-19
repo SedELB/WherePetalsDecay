@@ -219,8 +219,9 @@ describe('JoinGateway', () => {
             gateway.handleJoinLobby(mockSocket, mockPayload);
             expect(mockSocket.join).toHaveBeenCalledWith('lobby-1');
             expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyJoined, fakeLobby);
-            expect(mockServer.to).toHaveBeenCalledWith('lobby-1');
+            expect(mockSocket.broadcast.to).toHaveBeenCalledWith('lobby-1');
             expect(mockTo.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyUpdated, fakeLobby);
+            expect(mockTo.emit).toHaveBeenCalledWith(JoinGameEvents.PlayerJoined, mockPayload.player);
         });
     });
 

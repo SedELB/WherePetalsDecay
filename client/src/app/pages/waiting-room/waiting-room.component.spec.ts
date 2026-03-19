@@ -16,8 +16,7 @@
  *
  * WebSocket Mocking Strategy:
  * We capture every callback passed to onNamespace in a Map keyed by event name. This lets
- * us fire events manually with test data, also wrapped in setTimeout to simulate
- * network latency (500-5000ms).
+ * us fire events manually with test data
  */
 
 import { Component } from '@angular/core';
@@ -31,9 +30,6 @@ import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { WaitingRoomComponent } from './waiting-room.component';
-
-const BASE_4500 = 4500;
-const BASE_500 = 500;
 
 @Component({ template: '', standalone: true })
 class DummyRouteComponent {}
@@ -103,11 +99,6 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
         chatHistory: [],
         ...overrides,
     });
-
-    // Helper: delay between 500ms-5000ms to simulate network latency
-    const randomNetworkLatency = (): number => {
-        return Math.random() * BASE_4500 + BASE_500;
-    };
 
     const capturedCallbacks = new Map<string, (...args: unknown[]) => void>();
     const createWebSocketMock = () => {
@@ -261,71 +252,56 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
         });
 
         // When a player joins or leaves, the server sends an updated lobby object
-        it('should update currentLobby when LobbyUpdated event is received', (done) => {
+        it('should update currentLobby when LobbyUpdated event is received', () => {
             const updatedLobby = createMockLobby({ playerCount: 3 });
 
-            setTimeout(() => {
-                const callback = capturedCallbacks.get(JoinGameEvents.LobbyUpdated);
-                callback?.(updatedLobby);
+            const callback = capturedCallbacks.get(JoinGameEvents.LobbyUpdated);
+            callback?.(updatedLobby);
 
-                expect(component.currentLobby()).toEqual(updatedLobby);
-                done();
-            }, randomNetworkLatency());
+            expect(component.currentLobby()).toEqual(updatedLobby);
         });
 
         // Initial sync - we get the lobby state and also fetch existing chat messages
-        it('should update currentLobby and request chat history on LobbyStatusReceived', (done) => {
+        it('should update currentLobby and request chat history on LobbyStatusReceived', () => {
             const statusLobby = createMockLobby();
 
-            setTimeout(() => {
-                const callback = capturedCallbacks.get(JoinGameEvents.LobbyStatusReceived);
-                callback?.(statusLobby);
+            const callback = capturedCallbacks.get(JoinGameEvents.LobbyStatusReceived);
+            callback?.(statusLobby);
 
-                expect(component.currentLobby()).toEqual(statusLobby);
-                expect(chatService.requestHistory).toHaveBeenCalledWith(LOBBY_ID);
-                done();
-            }, randomNetworkLatency());
+            expect(component.currentLobby()).toEqual(statusLobby);
+            expect(chatService.requestHistory).toHaveBeenCalledWith(LOBBY_ID);
         });
 
         // Game is starting - save the lobby in gameViewService and navigate to the game page
-        it('should set lobby in gameViewService and navigate to game on GameStarting', (done) => {
+        it('should set lobby in gameViewService and navigate to game on GameStarting', () => {
             const finalLobby = createMockLobby();
             spyOn(router, 'navigate');
 
-            setTimeout(() => {
-                const callback = capturedCallbacks.get(JoinGameEvents.GameStarting);
-                callback?.(finalLobby);
+            const callback = capturedCallbacks.get(JoinGameEvents.GameStarting);
+            callback?.(finalLobby);
 
-                expect(gameViewService.setLobby).toHaveBeenCalledWith(finalLobby);
-                expect(router.navigate).toHaveBeenCalledWith(['/game', LOBBY_ID]);
-                done();
-            }, randomNetworkLatency());
+            expect(gameViewService.setLobby).toHaveBeenCalledWith(finalLobby);
+            expect(router.navigate).toHaveBeenCalledWith(['/game', LOBBY_ID]);
         });
 
         // Got kicked by the host - back to home
-        it('should navigate to home when PlayerKicked event is received', (done) => {
+        it('should navigate to home when PlayerKicked event is received', () => {
             spyOn(router, 'navigate');
 
-            setTimeout(() => {
-                const callback = capturedCallbacks.get(JoinGameEvents.PlayerKicked);
-                callback?.('Vous avez été exclu.');
+            const callback = capturedCallbacks.get(JoinGameEvents.PlayerKicked);
+            callback?.('Vous avez été exclu.');
 
-                expect(router.navigate).toHaveBeenCalledWith(['/home']);
-                done();
-            }, randomNetworkLatency());
+            expect(router.navigate).toHaveBeenCalledWith(['/home']);
         });
 
         // Host deleted the game - everyone goes home
-        it('should navigate to home when GameDeleted event is received', (done) => {
+        it('should navigate to home when GameDeleted event is received', () => {
             spyOn(router, 'navigate');
 
-            setTimeout(() => {
-                const callback = capturedCallbacks.get(JoinGameEvents.GameDeleted);
-                callback?.();
+            const callback = capturedCallbacks.get(JoinGameEvents.GameDeleted);
+            callback?.();
 
-                expect(router.navigate).toHaveBeenCalledWith(['/home']);
-                done();
-            }, randomNetworkLatency());
+            expect(router.navigate).toHaveBeenCalledWith(['/home']);
         });
     });
 });

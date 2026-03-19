@@ -21,10 +21,6 @@
  * properly triggered when users submit their character. Methods are mocked but not implemented
  * since this component primarily focuses on form logic rather than socket communication.
  * 
- * Network Latency Simulation:
- * For more realistic testing scenarios where event handling might involve async operations,
- * tests can be wrapped with setTimeout delays (500-5000ms) when testing WebSocket event ordering or
- * callback timing requirements.
  */
 
 import { ComponentFixture, TestBed } from '@angular/core/testing';
@@ -46,13 +42,7 @@ describe('CharacterSelectionComponent', () => {
   const SPEED_WITH_BONUS = BASE_STATS.speed + BASE_STATS.bonus;
   const TEST_AVATAR_INDEX = 5;
   const TEST_AVATAR_PATH = AVATARS_PATH[TEST_AVATAR_INDEX];
-  const BASE_4500 = 4500;
-  const BASE_500 = 500;
 
-  // Helper: Simulate random network latency between 500ms-5000ms for realistic async testing
-  const randomNetworkLatency = (): number => {
-    return Math.random() * BASE_4500 + BASE_500; // 500ms to 5000ms
-  };
 
   beforeEach(async () => {
     webSocketServiceSpy = jasmine.createSpyObj('WebSocketService', ['emitNamespace', 'onNamespace', 'offNamespace']);
@@ -130,7 +120,6 @@ describe('CharacterSelectionComponent', () => {
   // These tests validate that avatar selection is properly communicated via WebSocket.
   // When a user selects an avatar, it's emitted to the server. When other players'
   // avatar selections arrive via WebSocket events, the component updates accordingly
-  // with realistic network latency simulation.
 
   describe('Avatar Selection WebSocket Events', () => {
     it('should emit avatar selection event when avatar is selected', () => {
@@ -143,7 +132,7 @@ describe('CharacterSelectionComponent', () => {
       );
     });
 
-    it('should handle avatar selection confirmation event with network latency', (done) => {
+    it('should handle avatar selection confirmation event', () => {
       let avatarConfirmCallback: ((avatar: string) => void) | undefined;
 
       webSocketServiceSpy.onNamespace.and.callFake(
@@ -158,17 +147,12 @@ describe('CharacterSelectionComponent', () => {
       // First, select an avatar locally
       component.selectAvatar(TEST_AVATAR_PATH);
       expect(component.selectedAvatar).toBe(TEST_AVATAR_PATH);
-
-      // Simulate network latency before confirmation arrives from server
-      setTimeout(() => {
-        avatarConfirmCallback?.(TEST_AVATAR_PATH);
-        // Avatar should still be selected after confirmation
-        expect(component.selectedAvatar).toBe(TEST_AVATAR_PATH);
-        done();
-      }, randomNetworkLatency());
+      avatarConfirmCallback?.(TEST_AVATAR_PATH);
+      // Avatar should still be selected after confirmation
+      expect(component.selectedAvatar).toBe(TEST_AVATAR_PATH);
     });
 
-    it('should update pending avatars when other players select avatars with latency', (done) => {
+    it('should update pending avatars when other players select avatars', () => {
       let pendingAvatarCallback: ((data: { socketId: string; avatar: string }) => void) | undefined;
 
       webSocketServiceSpy.onNamespace.and.callFake(
@@ -181,15 +165,10 @@ describe('CharacterSelectionComponent', () => {
 
       const mockSocketId = 'socket-123';
       const mockAvatarPath = AVATARS_PATH[2];
+      pendingAvatarCallback?.({ socketId: mockSocketId, avatar: mockAvatarPath });
 
-      // Simulate network latency before event arrives
-      setTimeout(() => {
-        pendingAvatarCallback?.({ socketId: mockSocketId, avatar: mockAvatarPath });
-
-        // Verify pending avatars are tracked
-        expect(component.selectedAvatar).not.toBe(mockAvatarPath); // Component's own avatar unchanged
-        done();
-      }, randomNetworkLatency());
+      // Verify pending avatars are tracked
+      expect(component.selectedAvatar).not.toBe(mockAvatarPath); // Component's own avatar unchanged
     });
   });
 

@@ -5,7 +5,7 @@
     flex-direction: column;
     height: 100%;
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
+    border-radius: 0.625rem;
     overflow: auto;
     background: rgba(0, 0, 0, 0.25);
 }
@@ -13,8 +13,8 @@
 .header {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 12px;
+    gap: 0.75rem;
+    padding: 0.75rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     flex-shrink: 0;
 }
@@ -22,11 +22,11 @@
 .chat-header {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0.5rem;
 }
 
 .section-title {
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
 }
 
@@ -34,13 +34,13 @@
     display: flex;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 0.5rem;
 }
 
 .info-pill {
-    padding: 6px 10px;
-    border-radius: 16px;
-    font-size: 12px;
+    padding: 0.375rem 0.625rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
     border: 1px solid rgba(255, 255, 255, 0.15);
     opacity: 0.9;
 }
@@ -54,18 +54,18 @@
 }
 
 .messages-list {
-    min-height: 200px;
+    min-height: 12.5rem;
     overflow-y: scroll;
-    padding: 12px;
+    padding: 0.75rem;
     display: flex;
     flex-direction: column;
     flex: 1;
-    gap: 10px;
+    gap: 0.625rem;
 }
 
 .message {
-    padding: 5px;
-    border-radius: 10px;
+    padding: 0.3125rem;
+    border-radius: 0.625rem;
     border: 1px solid rgba(255, 255, 255, 0.12);
     background: rgba(255, 255, 255, 0.04);
     word-wrap: break-word;
@@ -75,10 +75,10 @@
 
 .message-info {
     display: flex;
-    gap: 10px;
-    font-size: 12px;
+    gap: 0.625rem;
+    font-size: 0.75rem;
     opacity: 0.75;
-    margin-bottom: 6px;
+    margin-bottom: 0.375rem;
 }
 
 .message-author {
@@ -86,40 +86,40 @@
 }
 
 .message-text {
-    padding: 10px;
-    border-radius: 10px;
+    padding: 0.625rem;
+    border-radius: 0.625rem;
     border: 1px solid rgba(255, 255, 255, 0.12);
     background: rgba(255, 255, 255, 0.04);
 }
 
 .chat-empty {
     opacity: 0.75;
-    font-size: 13px;
-    padding: 8px;
+    font-size: 0.8125rem;
+    padding: 0.5rem;
 }
 
 .footer {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    padding: 12px;
+    gap: 0.625rem;
+    padding: 0.75rem;
     border-top: 1px solid rgba(255, 255, 255, 0.12);
     flex-shrink: 0;
 }
 
 .chat-disabled {
     grid-column: 1 / -1;
-    padding: 10px;
-    border-radius: 10px;
+    padding: 0.625rem;
+    border-radius: 0.625rem;
     border: 1px solid rgba(255, 255, 255, 0.15);
     background: rgba(255, 0, 0, 0.08);
     opacity: 0.95;
 }
 .footer input {
     flex: 1;
-    min-width: 150px;
-    padding: 10px;
-    border-radius: 10px;
+    min-width: 9.375rem;
+    padding: 0.625rem;
+    border-radius: 0.625rem;
     border: 1px solid rgba(255, 255, 255, 0.15);
     background: rgba(0, 0, 0, 0.25);
     color: inherit;
@@ -129,19 +129,19 @@
 .footer-right {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 0.625rem;
 }
 
 .text-counter {
-    font-size: 12px;
+    font-size: 0.75rem;
     opacity: 0.8;
-    min-width: 64px;
+    min-width: 4rem;
     text-align: right;
 }
 
 .footer button {
-    padding: 10px 14px;
-    border-radius: 10px;
+    padding: 0.625rem 0.875rem;
+    border-radius: 0.625rem;
     border: 1px solid rgba(255, 255, 255, 0.15);
     background: rgba(255, 255, 255, 0.06);
     color: inherit;
@@ -156,15 +156,15 @@
 
 .chat-scroll-to-bottom {
     position: absolute;
-    bottom: 8px;
-    right: 26px;
-    width: 40px;
-    height: 40px;
+    bottom: 0.5rem;
+    right: 1.625rem;
+    width: 2.5rem;
+    height: 2.5rem;
     border-radius: 50%;
     border: 1px solid rgba(255, 255, 255, 0.15);
     background: rgb(37, 37, 107, 0.2);
     color: rgb(71, 105, 179);
-    font-size: 20px;
+    font-size: 1.25rem;
     cursor: pointer;
     display: flex;
     align-items: center;
