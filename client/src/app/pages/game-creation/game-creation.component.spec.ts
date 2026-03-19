@@ -108,15 +108,15 @@ describe('GameCreationComponent', () => {
     // Testing the subscription to visibleGames$, websocket
     it('should subscribe to visibleGames$ and fill games array', () => {
         fixture.detectChanges();
-        expect(component.games.length).toBe(MOCK_GAMES.length);
+        expect(component['games'].length).toBe(MOCK_GAMES.length);
     });
 
     // Make sure the ordering that appears is right
     it('should sort games by createdAt in ascending order', () => {
         fixture.detectChanges();
-        expect(component.games[0].name).toBe('Test1');
-        expect(component.games[1].name).toBe('Test2');
-        expect(component.games[2].name).toBe('Test3');
+        expect(component['games'][0].name).toBe('Test1');
+        expect(component['games'][1].name).toBe('Test2');
+        expect(component['games'][2].name).toBe('Test3');
     });
 
     // Handling possible backend type missmatch
@@ -129,8 +129,8 @@ describe('GameCreationComponent', () => {
         visibleGamesSubject.next(gamesWithStringDates);
         fixture.detectChanges();
 
-        expect(component.games[0].name).toBe('Test1');
-        expect(component.games[1].name).toBe('Test2');
+        expect(component['games'][0].name).toBe('Test1');
+        expect(component['games'][1].name).toBe('Test2');
     });
 
     // Stop the tracking visibleGames$ when the component is destroyed

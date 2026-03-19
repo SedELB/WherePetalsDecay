@@ -1,12 +1,13 @@
 import { GameMode } from '@common/enums';
+import { GridSize } from '@common/interfaces/grid-size';
 
-export interface HostedGame {
+export interface GameCard {
     name: string;
     description: string;
-    size: { rows: number; cols: number };
+    size: GridSize;
     gameMode: GameMode;
     thumbnail: string;
+    createdAt: Date;
     updatedAt: Date;
     isVisible: boolean;
-    playerJoined: number;
 }

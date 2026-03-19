@@ -1,13 +1,11 @@
+import { LobbyService } from '@app/services/lobby/lobby.service';
+import { ChatMessage } from '@common/chat-message';
+import { MAX_MESSAGE_LENGTH } from '@common/constants/validation.constants';
 import { SocketNamespace } from '@common/enums';
+import { JoinGameEvents } from '@common/join.gateway.events';
 import { Injectable } from '@nestjs/common';
 import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { JoinGameEvents } from '@common/join.gateway.events';
-import { ChatMessage } from '@common/chat-message';
-import { LobbyService } from '@app/services/lobby/lobby.service';
-
-const MAX_MESSAGE_LENGTH = 200;
-
 
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
@@ -17,8 +15,7 @@ export class ChatGateway {
     constructor(private readonly lobbyService: LobbyService) {}
 
     @SubscribeMessage(JoinGameEvents.ChatSendMessage)
-    handleChatMessage(@ConnectedSocket() socket : Socket, @MessageBody() payload: { lobbyId: string, message: string, senderName: string }){
-        
+    handleChatMessage(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; message: string; senderName: string }): void {
         const lobbyId = payload.lobbyId;
         if (!lobbyId) return;
 
@@ -39,17 +36,16 @@ export class ChatGateway {
         };
         this.lobbyService.saveMessage(lobbyId, chatMessage);
 
-        // Envoie à tout le monde dans la room (incluant l'émetteur)
         this.server.to(lobbyId).emit(JoinGameEvents.ReceivedChatMessage, chatMessage);
     }
 
     @SubscribeMessage(JoinGameEvents.ChatHistoryRequest)
-    handleChatHistoryRequest(@ConnectedSocket() socket : Socket, @MessageBody() lobbyId: string) {
+    handleChatHistoryRequest(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string): void {
         if (!socket.rooms.has(lobbyId)) return;
 
-        const chatHistory = this.lobbyService.getLobby(lobbyId).chatHistory;
-        if (!chatHistory) return;
+        const lobby = this.lobbyService.getLobby(lobbyId);
+        if (!lobby) return;
 
-        socket.emit(JoinGameEvents.ChatHistorySent, chatHistory);
+        socket.emit(JoinGameEvents.ChatHistorySent, lobby.chatHistory);
     }
 }

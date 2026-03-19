@@ -3,10 +3,11 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
+import { GameCard } from '@app/interfaces/game-card';
 import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { CommunicationService } from '@app/services/communication/communication.service';
+import { ButtonVariant, MapSetupMode } from '@common/enums';
 import { Game } from '@common/game';
-import { GameCard } from '@app/interfaces/gameCard';
 import { Subscription } from 'rxjs';
 import swal from 'sweetalert2';
 
@@ -17,7 +18,8 @@ import swal from 'sweetalert2';
     styleUrl: './admin-page.component.scss',
 })
 export class AdminPageComponent implements OnInit, OnDestroy {
-    games: Game[] = [];
+    protected readonly buttonVariant = ButtonVariant;
+    private games: Game[] = [];
     gameCards: GameCard[] = [];
 
     private subscription?: Subscription;
@@ -68,11 +70,11 @@ export class AdminPageComponent implements OnInit, OnDestroy {
     }
 
     navigateToGameEditor(name: string): void {
-        const game = this.games.find((g) => g.name === name);
-        this.router.navigate(['/editor', game?._id], { state: { game, mode: 'edit' } });
+        const selectedGame = this.games.find((gameItem) => gameItem.name === name);
+        this.router.navigate(['/editor', selectedGame?._id], { state: { game: selectedGame, mode: MapSetupMode.Edit } });
     }
 
-    changeVisibility(name: string) {
+    changeVisibility(name: string): void {
         const game = this.games.find((g) => g.name === name);
         if (!game) return;
         this.communicationService.updateVisiblity(game).subscribe({
@@ -88,7 +90,7 @@ export class AdminPageComponent implements OnInit, OnDestroy {
         });
     }
 
-    async removeGame(name: string) {
+    async removeGame(name: string): Promise<void> {
         const game = this.games.find((g) => g.name === name);
         if (!game) return;
 

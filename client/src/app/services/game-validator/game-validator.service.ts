@@ -1,28 +1,11 @@
 import { Injectable } from '@angular/core';
+import { NAME_MAX_LENGTH, DESC_MAX_LENGTH, TEXT_MIN_LENGTH, FLAG_REQUIRED, FLAG_NONE } from '@common/constants/validation.constants';
 import { GameMode, GridSizes, MaxPlayers, TileItem, TileTexture } from '@common/enums';
 import { PlacedObject } from '@common/game';
+import { GameDraftForValidation, GameValidationResult } from '@common/interfaces/game-validation';
+import { GridSize } from '@common/interfaces/grid-size';
 
-export const NAME_MAX_LENGTH = 20;
-export const DESC_MAX_LENGTH = 500;
-const TEXT_MIN_LENGTH = 1;
-const FLAG_REQUIRED = 1;
-const FLAG_NONE = 0;
-
-export interface GameValidationResult {
-    isValid: boolean;
-    errors: string[];
-}
-
-export interface GameDraftForValidation {
-    id?: string;
-    name: string;
-    description: string;
-    mode: string;
-    size: { rows: number; cols: number };
-    grid: TileTexture[][];
-    placedObjects: PlacedObject[];
-    existingNames?: string[];
-}
+export { NAME_MAX_LENGTH, DESC_MAX_LENGTH };
 
 @Injectable({
     providedIn: 'root',
@@ -89,7 +72,7 @@ export class GameValidatorService {
         return [];
     }
 
-    private validateGridSize(size: { rows: number; cols: number }, grid: TileTexture[][]): string[] {
+    private validateGridSize(size: GridSize, grid: TileTexture[][]): string[] {
         const errors: string[] = [];
 
         const validSizes = [GridSizes.Small, GridSizes.Medium, GridSizes.Large];
@@ -166,7 +149,7 @@ export class GameValidatorService {
         return errors;
     }
 
-    private validatePlacedObjectPositions(placedObjects: PlacedObject[], size: { rows: number; cols: number }): string[] {
+    private validatePlacedObjectPositions(placedObjects: PlacedObject[], size: GridSize): string[] {
         const errors: string[] = [];
 
         for (const obj of placedObjects) {

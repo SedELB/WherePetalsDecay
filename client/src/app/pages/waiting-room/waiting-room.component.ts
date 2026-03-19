@@ -1,17 +1,17 @@
-import { Component, computed, HostListener, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, computed, HostListener, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { ChatComponent } from '@app/components/chat/chat.component';
+import { ROUTES } from '@app/constants/routes.constants';
 import { ChatService } from '@app/services/chat/chat.service';
+import { GameViewService } from '@app/services/game-view/game-view.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
-import { Lobby } from '@common/lobby';
 import { SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { ROUTES } from '@app/constants/routes.constants';
-import swal from 'sweetalert2';
-import { GameViewService } from '@app/services/game-view/game-view.service';
+import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
+import swal from 'sweetalert2';
 const SMALL_DELAY = 100;
 const TOAST_DELAY = 4000;
 
@@ -57,7 +57,7 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
         this.router.navigate([this.routes.home]);
     }
 
-    setupUpdateListeners(): void {
+    private setupUpdateListeners(): void {
         // Listener for lobby updates
         this.webSocketService.onNamespace<Lobby>(SocketNamespace.Join, JoinGameEvents.LobbyUpdated, (updatedLobby) => {
             this.currentLobby.set(updatedLobby);

@@ -1,7 +1,7 @@
 import { NgClass } from '@angular/common';
 import { Component, ElementRef, HostListener, Input, OnInit, ViewChild } from '@angular/core';
+import { GameCard } from '@app/interfaces/game-card';
 import { GameMode } from '@common/enums';
-import { GameCard } from '@app/interfaces/gameCard';
 
 @Component({
   selector: 'app-game-card',
@@ -23,8 +23,8 @@ export class GameCardComponent implements OnInit {
     isVisible: true,
   };
 
-  @ViewChild('tooltip') tooltipRef!: ElementRef;
-  @ViewChild('thumbnail') thumbnailRef!: ElementRef;
+  @ViewChild('tooltip') private tooltipRef!: ElementRef;
+  @ViewChild('thumbnail') private thumbnailRef!: ElementRef;
 
   show = false;
   gameMode = GameMode;
@@ -42,20 +42,18 @@ export class GameCardComponent implements OnInit {
     this.windowHeight = visualViewport?.height ?? 0;
   }
 
-  displayTime(): string {
+  protected displayTime(): string {
     const rawDate = this.game.updatedAt;
     const date = rawDate instanceof Date ? rawDate : new Date(rawDate);
 
     if (Number.isNaN(date.getTime())) {
       return '';
     }
-
     return date.toLocaleString(undefined, {
       dateStyle: 'medium',
       timeStyle: 'short',
     });
   }
-
   onMouseEnter(): void {
     this.show = true;
     this.updateTooltipPosition();

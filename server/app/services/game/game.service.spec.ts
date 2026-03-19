@@ -1,7 +1,7 @@
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { Game, GameDocument, gameSchema } from '@app/model/schema/game.schema';
 import { BASE_10, CUSTOM_GRID_CLASSIC_SMALL, CUSTOM_GRID_CLASSIC_SMALL_INVALID } from '@app/utils/game.constants';
-import { GameMode, NbPlayersSmall } from '@app/utils/game.enum';
+import { GameMode, MaxPlayers } from '@common/enums';
 import { GAME_NOT_FOUND, NO_GAMES_FOUND, NO_VISIBLE_GAMES_FOUND } from '@common/error-messages';
 import { Logger } from '@nestjs/common';
 import { getConnectionToken, getModelToken, MongooseModule } from '@nestjs/mongoose';
@@ -9,8 +9,9 @@ import { Test } from '@nestjs/testing';
 import { ObjectId } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { Connection, Model } from 'mongoose';
+import { GameValidatorService } from './game-validator.service';
 import { GameService } from './game.service';
-import { GameValidatorService } from './gameValidator.service';
+
 const BASE_3 = 3;
 
 describe('GameServiceE2E', () => {
@@ -55,7 +56,7 @@ describe('GameServiceE2E', () => {
             size: { rows: BASE_10, cols: BASE_10 },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
-            maxPlayers: NbPlayersSmall.MaxPLayers,
+            maxPlayers: MaxPlayers.Small,
             grid: CUSTOM_GRID_CLASSIC_SMALL,
             isVisible: true,
         };
@@ -66,19 +67,25 @@ describe('GameServiceE2E', () => {
             size: { rows: BASE_10, cols: BASE_10 },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
-            maxPlayers: NbPlayersSmall.MaxPLayers,
+            maxPlayers: MaxPlayers.Small,
             grid: CUSTOM_GRID_CLASSIC_SMALL_INVALID,
             isVisible: true,
         };
     });
 
     afterEach(async () => {
-        await gameModel.deleteMany({}); // Deletes everything in the DB after each test.
+        if (gameModel) {
+            await gameModel.deleteMany({}); // Deletes everything in the DB after each test.
+        }
     });
 
     afterAll(async () => { // After all tests, closes the connection and stops the fakeDB.
-        await connection.close();
-        await mongoServer.stop({ doCleanup: true });
+        if (connection) {
+            await connection.close();
+        }
+        if (mongoServer) {
+            await mongoServer.stop({ doCleanup: true });
+        }
     });
 
     it('service and model should be defined', () => {
@@ -89,10 +96,10 @@ describe('GameServiceE2E', () => {
 
     it('start() should populate the database when there is no data', async () => {
         // Verifies that DB initialization triggers population with default games
-        const spyPopulateDB = jest.spyOn(gameService, 'populateDB');
+        const spyPopulateDB = jest.spyOn(gameService as object as Record<string, jest.Mock>, 'populateDB');
         const spyCountDocuments = jest.spyOn(gameModel, 'countDocuments');
         await gameModel.deleteMany({});
-        await gameService.start();
+        await gameService['start']();
         expect(spyPopulateDB).toHaveBeenCalled();
         expect(spyCountDocuments).toHaveBeenCalled();
     });
@@ -102,7 +109,7 @@ describe('GameServiceE2E', () => {
         const countsBefore = await gameModel.countDocuments();
         const spyInsertMany = jest.spyOn(gameModel, 'insertMany');
         const spyLog = jest.spyOn(logger, 'log');
-        await gameService.populateDB();
+        await gameService['populateDB']();
         const countsAfter = await gameModel.countDocuments();
         expect(countsAfter).toBeGreaterThan(countsBefore);
         expect(spyInsertMany).toHaveBeenCalled();
@@ -128,7 +135,7 @@ describe('GameServiceE2E', () => {
     it('getAllGames() return all three games in database', async () => {
         // Retrieves all games from database after population
         const spyFind = jest.spyOn(gameModel, 'find');
-        await gameService.populateDB();
+        await gameService['populateDB']();
         const result = await gameService.getAllGames();
         expect(result.length).toBeGreaterThan(2);
         expect(spyFind).toHaveBeenCalled();
@@ -190,16 +197,14 @@ describe('GameServiceE2E', () => {
 
     it('modifyGame() with an invalid id should fail', async () => {
         // Rejects modification requests with malformed ObjectId
-        const modifiedFakeGame = validGame;
+        const modifiedFakeGame = { ...validGame, name: 'Modified Game' };
         const nonExistentId = new ObjectId().toString();
-        modifiedFakeGame.name = 'Modified Game';
         await expect(gameService.modifyGame(nonExistentId + 'INVALID', modifiedFakeGame)).rejects.toThrow();
     });
 
     it('modifyGame() should fail if the game does not exist', async () => {
         // Throws error when attempting to modify non-existent game
-        const modifiedFakeGame = validGame;
-        modifiedFakeGame.name = 'Modified Game';
+        const modifiedFakeGame = { ...validGame, name: 'Modified Game' };
         const nonExistentId = new ObjectId().toString();
         const spyFindById = jest.spyOn(gameModel, 'findById');
         await expect(gameService.modifyGame(nonExistentId, modifiedFakeGame)).rejects.toThrow(GAME_NOT_FOUND);

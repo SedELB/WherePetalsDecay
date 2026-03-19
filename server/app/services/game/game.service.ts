@@ -6,7 +6,7 @@ import { THUMBNAIL1_INIT } from '@app/utils/thumbnail.constants/thumbnail1.const
 import { THUMBNAIL2_INIT } from '@app/utils/thumbnail.constants/thumbnail2.constant';
 import { THUMBNAIL3_INIT } from '@app/utils/thumbnail.constants/thumbnail3.constant';
 
-import { GameMode, NbPlayersMedium, NbPlayersSmall } from '@app/utils/game.enum';
+import { GameMode, MaxPlayers } from '@common/enums';
 import {
     GAME_DELETION_FAILED,
     GAME_NAME_NOT_UNIQUE,
@@ -18,7 +18,7 @@ import {
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { GameValidatorService } from './gameValidator.service';
+import { GameValidatorService } from './game-validator.service';
 
 @Injectable()
 export class GameService {
@@ -30,20 +30,20 @@ export class GameService {
         this.start();
     }
 
-    async start() {
+    private async start(): Promise<void> {
         if ((await this.gameModel.countDocuments()) === 0) {
             await this.populateDB();
         }
     }
 
-    async populateDB(): Promise<void> {
+    private async populateDB(): Promise<void> {
         const validGame1: CreateGameDto = {
             name: 'Valid Game 1',
             description: 'Desc. 1 - CLASSIC',
             size: { rows: BASE_10, cols: BASE_10 },
             gameMode: GameMode.Classic,
             thumbnail: THUMBNAIL1_INIT,
-            maxPlayers: NbPlayersSmall.MaxPLayers,
+            maxPlayers: MaxPlayers.Small,
             grid: CUSTOM_GRID_CLASSIC_SMALL,
             isVisible: true,
         };
@@ -54,7 +54,7 @@ export class GameService {
             size: { rows: BASE_10, cols: BASE_10 },
             gameMode: GameMode.Ctf,
             thumbnail: THUMBNAIL2_INIT,
-            maxPlayers: NbPlayersSmall.MaxPLayers,
+            maxPlayers: MaxPlayers.Small,
             grid: CUSTOM_GRID_CTF_SMALL,
             isVisible: false,
         };
@@ -65,7 +65,7 @@ export class GameService {
             size: { rows: BASE_15, cols: BASE_15 },
             gameMode: GameMode.Classic,
             thumbnail: THUMBNAIL3_INIT,
-            maxPlayers: NbPlayersMedium.MaxPLayers,
+            maxPlayers: MaxPlayers.Medium,
             grid: CUSTOM_GRID_CLASSIC_MEDIUM,
             isVisible: true,
         };

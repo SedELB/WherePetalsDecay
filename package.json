@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "@angular/cli": "^21.1.1",
-    "html2canvas": "^1.4.1"
-  }
-}

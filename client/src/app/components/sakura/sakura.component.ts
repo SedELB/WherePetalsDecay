@@ -8,16 +8,16 @@ import { SAKURA_FRAGMENT_SHADER, SAKURA_VERTEX_SHADER } from './sakura.constants
 interface Vec3 { x: number; y: number; z: number }
 
 class Petal {
-    pos   = [0, 0, 0];
-    vel   = [0, 0, 0];
+    pos = [0, 0, 0];
+    vel = [0, 0, 0];
     euler = [0, 0, 0];
-    spin  = [0, 0, 0];
-    size  = 1;
-    zkey  = 0;
+    spin = [0, 0, 0];
+    size = 1;
+    zkey = 0;
 
     update(dt: number): void {
         for (let i = 0; i < this.pos.length; i++) {
-            this.pos[i]   += this.vel[i]  * dt;
+            this.pos[i] += this.vel[i] * dt;
             this.euler[i] += this.spin[i] * dt;
         }
     }
@@ -34,64 +34,64 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
     @ViewChild('cvs') private canvasRef!: ElementRef<HTMLCanvasElement>;
 
     // ── Tunable constants ───────────────────────────────────────────────────
-    private readonly numPetals      = 100;   // Total number of petals on screen (lower = better perf)
-    private readonly areaY          = 20;    // Vertical half-size of the particle field
-    private readonly areaZ          = 20;    // Depth half-size of the particle field
-    private readonly cameraInitZ    = 100;   // Camera initial distance along Z
-    private readonly dofFocus       = 10;    // Depth-of-field: focus distance
-    private readonly dofRadius      = 4;     // Depth-of-field: sharp radius around focus
-    private readonly dofMax         = 8;     // Depth-of-field: max blur radius beyond focus
-    private readonly faderStart     = 10;    // Distance at which petals start fading in
-    private readonly sizeMin        = 0.9;   // Minimum petal size (0.0 – 2.0 recommended)
-    private readonly sizeRange      = 0.1;   // Random size variation added on top of sizeMin
-    private readonly speedBase      = 2;     // Base movement speed of petals (higher = faster)
-    private readonly velXMag        = 0.3;   // Horizontal (X) velocity spread
-    private readonly velXBias       = 0.8;   // Horizontal (X) velocity bias (positive = drift right)
-    private readonly velYMag        = 0.2;   // Vertical (Y) velocity spread
-    private readonly velYBias       = -1;    // Vertical (Y) velocity bias (negative = fall down)
-    private readonly velZMag        = 0.3;   // Depth (Z) velocity spread
-    private readonly velZBias       = 0.5;   // Depth (Z) velocity bias
-    private readonly spinHalfScale  = 0.5;   // Controls how fast petals spin (higher = faster)
-    private readonly nearPlane      = 0.1;   // Near clipping plane
-    private readonly farPlane       = 100;   // Far clipping plane
-    private readonly maxDeltaTime   = 0.05;  // Max frame delta time cap (prevents large jumps)
-    private readonly msPerSec       = 1000;  // Milliseconds per second
-    private readonly mat4Size       = 16;    // Elements in a 4x4 matrix
-    private readonly normalizeEps   = 1e-5;  // Epsilon for vector normalization
+    private readonly numPetals = 100;   // Total number of petals on screen (lower = better perf)
+    private readonly areaY = 20;    // Vertical half-size of the particle field
+    private readonly areaZ = 20;    // Depth half-size of the particle field
+    private readonly cameraInitZ = 100;   // Camera initial distance along Z
+    private readonly dofFocus = 10;    // Depth-of-field: focus distance
+    private readonly dofRadius = 4;     // Depth-of-field: sharp radius around focus
+    private readonly dofMax = 8;     // Depth-of-field: max blur radius beyond focus
+    private readonly faderStart = 10;    // Distance at which petals start fading in
+    private readonly sizeMin = 0.9;   // Minimum petal size (0.0 – 2.0 recommended)
+    private readonly sizeRange = 0.1;   // Random size variation added on top of sizeMin
+    private readonly speedBase = 2;     // Base movement speed of petals (higher = faster)
+    private readonly velXMag = 0.3;   // Horizontal (X) velocity spread
+    private readonly velXBias = 0.8;   // Horizontal (X) velocity bias (positive = drift right)
+    private readonly velYMag = 0.2;   // Vertical (Y) velocity spread
+    private readonly velYBias = -1;    // Vertical (Y) velocity bias (negative = fall down)
+    private readonly velZMag = 0.3;   // Depth (Z) velocity spread
+    private readonly velZBias = 0.5;   // Depth (Z) velocity bias
+    private readonly spinHalfScale = 0.5;   // Controls how fast petals spin (higher = faster)
+    private readonly nearPlane = 0.1;   // Near clipping plane
+    private readonly farPlane = 100;   // Far clipping plane
+    private readonly maxDeltaTime = 0.05;  // Max frame delta time cap (prevents large jumps)
+    private readonly msPerSec = 1000;  // Milliseconds per second
+    private readonly mat4Size = 16;    // Elements in a 4x4 matrix
+    private readonly normalizeEps = 1e-5;  // Epsilon for vector normalization
     private readonly degPerRotation = 360;   // Degrees in a full rotation
     private readonly floatsPerPetal = 8;     // Floats per petal in the GPU buffer (3 pos + 3 euler + 2 misc)
-    private readonly posComponents  = 3;     // Floats per position/euler vector
-    private readonly copyZOffset    = -2;    // Z offset applied to tiled field copies
+    private readonly posComponents = 3;     // Floats per position/euler vector
+    private readonly copyZOffset = -2;    // Z offset applied to tiled field copies
 
     // ── WebGL state ──────────────────────────────────────────────────────────
     private gl!: WebGLRenderingContext;
     private program: WebGLProgram | null = null;
-    private buffer:  WebGLBuffer  | null = null;
+    private buffer: WebGLBuffer | null = null;
 
     private uniforms = {
         uProjection: null as WebGLUniformLocation | null,
-        uModelview:  null as WebGLUniformLocation | null,
+        uModelview: null as WebGLUniformLocation | null,
         uResolution: null as WebGLUniformLocation | null,
-        uDOF:        null as WebGLUniformLocation | null,
-        uFade:       null as WebGLUniformLocation | null,
-        uOffset:     null as WebGLUniformLocation | null,
+        uDOF: null as WebGLUniformLocation | null,
+        uFade: null as WebGLUniformLocation | null,
+        uOffset: null as WebGLUniformLocation | null,
     };
     private attrs = { aPosition: -1, aEuler: -1, aMisc: -1 };
 
-    private petals:     Petal[]      = [];
+    private petals: Petal[] = [];
     private dataArray!: Float32Array;
-    private posOff  = 0;
-    private eulOff  = 0;
+    private posOff = 0;
+    private eulOff = 0;
     private miscOff = 0;
 
-    private areaX        = 0;
+    private areaX = 0;
     private projMatrix: Float32Array<ArrayBuffer> = new Float32Array(this.mat4Size);
     private viewMatrix: Float32Array<ArrayBuffer> = new Float32Array(this.mat4Size);
-    private dof!:    Vec3;
-    private fader!:  Vec3;
+    private dof!: Vec3;
+    private fader!: Vec3;
     private camPos!: Vec3;
 
-    private prev  = 0;
+    private prev = 0;
     private rafId = 0;
     private resizeObs!: ResizeObserver;
 
@@ -104,9 +104,9 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
         if (!ctx) {
             return;
         }
-        this.gl     = ctx as WebGLRenderingContext;
-        this.dof    = { x: this.dofFocus, y: this.dofRadius, z: this.dofMax };
-        this.fader  = { x: this.faderStart, y: this.areaZ, z: this.nearPlane };
+        this.gl = ctx as WebGLRenderingContext;
+        this.dof = { x: this.dofFocus, y: this.dofRadius, z: this.dofMax };
+        this.fader = { x: this.faderStart, y: this.areaZ, z: this.nearPlane };
         this.camPos = { x: 0, y: 0, z: this.cameraInitZ };
 
         this.buildProgram();
@@ -127,8 +127,8 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
     // ── Initialization ───────────────────────────────────────────────────────
 
     private buildProgram(): void {
-        const gl   = this.gl;
-        const vert = this.compileShader(gl.VERTEX_SHADER,   SAKURA_VERTEX_SHADER);
+        const gl = this.gl;
+        const vert = this.compileShader(gl.VERTEX_SHADER, SAKURA_VERTEX_SHADER);
         const frag = this.compileShader(gl.FRAGMENT_SHADER, SAKURA_FRAGMENT_SHADER);
         if (!vert || !frag) {
             return;
@@ -148,20 +148,20 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
         this.program = prog;
 
         this.uniforms.uProjection = gl.getUniformLocation(prog, 'uProjection');
-        this.uniforms.uModelview  = gl.getUniformLocation(prog, 'uModelview');
+        this.uniforms.uModelview = gl.getUniformLocation(prog, 'uModelview');
         this.uniforms.uResolution = gl.getUniformLocation(prog, 'uResolution');
-        this.uniforms.uDOF        = gl.getUniformLocation(prog, 'uDOF');
-        this.uniforms.uFade       = gl.getUniformLocation(prog, 'uFade');
-        this.uniforms.uOffset     = gl.getUniformLocation(prog, 'uOffset');
-        this.attrs.aPosition      = gl.getAttribLocation(prog, 'aPosition');
-        this.attrs.aEuler         = gl.getAttribLocation(prog, 'aEuler');
-        this.attrs.aMisc          = gl.getAttribLocation(prog, 'aMisc');
+        this.uniforms.uDOF = gl.getUniformLocation(prog, 'uDOF');
+        this.uniforms.uFade = gl.getUniformLocation(prog, 'uFade');
+        this.uniforms.uOffset = gl.getUniformLocation(prog, 'uOffset');
+        this.attrs.aPosition = gl.getAttribLocation(prog, 'aPosition');
+        this.attrs.aEuler = gl.getAttribLocation(prog, 'aEuler');
+        this.attrs.aMisc = gl.getAttribLocation(prog, 'aMisc');
 
-        this.posOff    = 0;
-        this.eulOff    = this.numPetals * this.posComponents;
-        this.miscOff   = this.numPetals * this.posComponents * 2;
+        this.posOff = 0;
+        this.eulOff = this.numPetals * this.posComponents;
+        this.miscOff = this.numPetals * this.posComponents * 2;
         this.dataArray = new Float32Array(this.numPetals * this.floatsPerPetal);
-        this.buffer    = gl.createBuffer();
+        this.buffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
         gl.bufferData(gl.ARRAY_BUFFER, this.dataArray, gl.DYNAMIC_DRAW);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -183,11 +183,11 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
 
     private initParticles(): void {
         const PI2 = Math.PI * 2;
-        const rnd  = (): number => Math.random() * 2 - 1;
+        const rnd = (): number => Math.random() * 2 - 1;
         this.petals = [];
 
         for (let i = 0; i < this.numPetals; i++) {
-            const p   = new Petal();
+            const p = new Petal();
             const dir = [
                 rnd() * this.velXMag + this.velXBias,
                 rnd() * this.velYMag + this.velYBias,
@@ -196,13 +196,13 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
             const len = Math.hypot(dir[0], dir[1], dir[2]);
             const spd = this.speedBase + Math.random();
 
-            p.vel   = dir.map(v => v / len * spd);
-            p.spin  = [rnd() * PI2 * this.spinHalfScale,
-                       rnd() * PI2 * this.spinHalfScale,
-                       rnd() * PI2 * this.spinHalfScale];
-            p.pos   = [rnd() * this.areaX, rnd() * this.areaY, rnd() * this.areaZ];
+            p.vel = dir.map(v => v / len * spd);
+            p.spin = [rnd() * PI2 * this.spinHalfScale,
+            rnd() * PI2 * this.spinHalfScale,
+            rnd() * PI2 * this.spinHalfScale];
+            p.pos = [rnd() * this.areaX, rnd() * this.areaY, rnd() * this.areaZ];
             p.euler = [Math.random() * PI2, Math.random() * PI2, Math.random() * PI2];
-            p.size  = this.sizeMin + Math.random() * this.sizeRange;
+            p.size = this.sizeMin + Math.random() * this.sizeRange;
             this.petals.push(p);
         }
     }
@@ -220,7 +220,7 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
         if (!this.program || !this.buffer) {
             return;
         }
-        const gl  = this.gl;
+        const gl = this.gl;
         const PI2 = Math.PI * 2;
 
         this.viewMatrix = this.buildLookAt(this.camPos, { x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 });
@@ -259,30 +259,30 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
         const h = gl.canvas.height;
         gl.uniform3fv(this.uniforms.uResolution, new Float32Array([w, h, w / h]));
         gl.uniformMatrix4fv(this.uniforms.uProjection, false, this.projMatrix);
-        gl.uniformMatrix4fv(this.uniforms.uModelview,  false, this.viewMatrix);
-        gl.uniform3fv(this.uniforms.uDOF,  new Float32Array([this.dof.x,   this.dof.y,   this.dof.z]));
+        gl.uniformMatrix4fv(this.uniforms.uModelview, false, this.viewMatrix);
+        gl.uniform3fv(this.uniforms.uDOF, new Float32Array([this.dof.x, this.dof.y, this.dof.z]));
         gl.uniform3fv(this.uniforms.uFade, new Float32Array([this.fader.x, this.fader.y, this.fader.z]));
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
         gl.bufferData(gl.ARRAY_BUFFER, this.dataArray, gl.DYNAMIC_DRAW);
 
-        const F    = Float32Array.BYTES_PER_ELEMENT;
+        const F = Float32Array.BYTES_PER_ELEMENT;
         const aPos = this.attrs.aPosition;
         const aEul = this.attrs.aEuler;
         const aMsc = this.attrs.aMisc;
         gl.enableVertexAttribArray(aPos);
         gl.enableVertexAttribArray(aEul);
         gl.enableVertexAttribArray(aMsc);
-        gl.vertexAttribPointer(aPos, this.posComponents, gl.FLOAT, false, 0, this.posOff  * F);
-        gl.vertexAttribPointer(aEul, this.posComponents, gl.FLOAT, false, 0, this.eulOff  * F);
-        gl.vertexAttribPointer(aMsc, 2,                  gl.FLOAT, false, 0, this.miscOff * F);
+        gl.vertexAttribPointer(aPos, this.posComponents, gl.FLOAT, false, 0, this.posOff * F);
+        gl.vertexAttribPointer(aEul, this.posComponents, gl.FLOAT, false, 0, this.eulOff * F);
+        gl.vertexAttribPointer(aMsc, 2, gl.FLOAT, false, 0, this.miscOff * F);
 
         const offsets: [number, number, number][] = [
             [0, 0, 0],
             [-this.areaX, -this.areaY, this.copyZOffset],
-            [-this.areaX,  this.areaY, this.copyZOffset],
-            [ this.areaX, -this.areaY, this.copyZOffset],
-            [ this.areaX,  this.areaY, this.copyZOffset],
+            [-this.areaX, this.areaY, this.copyZOffset],
+            [this.areaX, -this.areaY, this.copyZOffset],
+            [this.areaX, this.areaY, this.copyZOffset],
         ];
         for (const [ox, oy, oz] of offsets) {
             gl.uniform3f(this.uniforms.uOffset, ox, oy, oz);
@@ -301,14 +301,14 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
 
     private resize(): void {
         const canvas = this.canvasRef.nativeElement;
-        canvas.width  = canvas.offsetWidth;
+        canvas.width = canvas.offsetWidth;
         canvas.height = canvas.offsetHeight;
         const w = canvas.width;
         const h = canvas.height;
 
         this.gl.viewport(0, 0, w, h);
-        this.areaX    = this.areaY * (w / h);
-        this.fader.y  = this.areaZ;
+        this.areaX = this.areaY * (w / h);
+        this.fader.y = this.areaZ;
         this.camPos.z = this.areaZ + this.nearPlane;
 
         const angle = Math.atan2(this.areaY, this.camPos.z + this.areaZ) * this.degPerRotation / Math.PI;
@@ -320,7 +320,7 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
     private normalize(v: Vec3): void {
         let l = v.x * v.x + v.y * v.y + v.z * v.z;
         if (l > this.normalizeEps) {
-            l    = 1 / Math.sqrt(l);
+            l = 1 / Math.sqrt(l);
             v.x *= l; v.y *= l; v.z *= l;
         }
     }
@@ -335,8 +335,8 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
         const h = near * Math.tan(vdeg * Math.PI / this.degPerRotation) * 2;
         const w = h * aspect;
         const m = new Float32Array(this.mat4Size);
-        m[0]  = 2 * near / w;
-        m[5]  = 2 * near / h;
+        m[0] = 2 * near / w;
+        m[5] = 2 * near / h;
         m[10] = -(far + near) / (far - near);
         m[11] = -1;
         m[14] = -(2 * far * near / (far - near));
@@ -353,9 +353,9 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
         this.cross(top, front, side);
         this.normalize(top);
         const m = new Float32Array(this.mat4Size);
-        m[0] = side.x;  m[1] = top.x;  m[2]  = front.x;
-        m[4] = side.y;  m[5] = top.y;  m[6]  = front.y;
-        m[8] = side.z;  m[9] = top.z;  m[10] = front.z;
+        m[0] = side.x; m[1] = top.x; m[2] = front.x;
+        m[4] = side.y; m[5] = top.y; m[6] = front.y;
+        m[8] = side.z; m[9] = top.z; m[10] = front.z;
         m[12] = -(vpos.x * m[0] + vpos.y * m[4] + vpos.z * m[8]);
         m[13] = -(vpos.x * m[1] + vpos.y * m[5] + vpos.z * m[9]);
         m[14] = -(vpos.x * m[2] + vpos.y * m[6] + vpos.z * m[10]);

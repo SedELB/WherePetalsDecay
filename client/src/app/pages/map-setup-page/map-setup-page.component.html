@@ -1,5 +1,5 @@
 <main class="editor-bg" aria-label="Vue d'édition (Sprint 1)">
-  <app-button class="pos-back" variant="back" (clicked)="onBack()"></app-button>
+  <app-button class="pos-back" [variant]="buttonVariant.Back" (clicked)="onBack()"></app-button>
 
   @if (isGameLoaded) {
   <section class="editor-stage">
@@ -97,8 +97,8 @@
       </div>
     </aside>
 
-    <app-button [width]="200" class="pos-reset" [variant]="'default'" (clicked)="onReset()">Réinitialiser</app-button>
-    <app-button [width]="200" class="pos-save" [variant]="'default'" (clicked)="onSave()">Enregistrer</app-button>
+    <app-button [width]="200" class="pos-reset" (clicked)="onReset()">Réinitialiser</app-button>
+    <app-button [width]="200" class="pos-save" (clicked)="onSave()">Enregistrer</app-button>
   </section>
   }
 </main>

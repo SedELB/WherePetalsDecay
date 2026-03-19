@@ -18,14 +18,14 @@ export class TileItemCountService {
     throw new Error('Le mode de jeu n’est pas actuellement supporté (GameMode)');
   }
 
-  getRequiredHealingSanctuaryCount(game: Game): number {
+  private getRequiredHealingSanctuaryCount(game: Game): number {
     if (game.size.rows === GridSizes.Small) return SanctuaryCount.Small;
     if (game.size.rows === GridSizes.Medium) return SanctuaryCount.Medium;
     if (game.size.rows === GridSizes.Large) return SanctuaryCount.Large;
     throw new Error('La taille sélectionnée n’est pas actuellement supportée (HealingSanctuary)');
   }
 
-  getRequiredCombatSanctuaryCount(game: Game): number {
+  private getRequiredCombatSanctuaryCount(game: Game): number {
     if (game.size.rows === GridSizes.Small) return SanctuaryCount.Small;
     if (game.size.rows === GridSizes.Medium) return SanctuaryCount.Medium;
     if (game.size.rows === GridSizes.Large) return SanctuaryCount.Large;
