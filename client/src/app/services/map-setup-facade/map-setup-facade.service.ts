@@ -92,6 +92,7 @@ export class MapSetupFacadeService {
         icon: 'error',
         confirmButtonText: 'OK',
         scrollbarPadding: false,
+        width: '900px',
       });
       return;
     }

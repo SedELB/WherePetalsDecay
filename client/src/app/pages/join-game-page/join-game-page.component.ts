@@ -4,7 +4,7 @@ import { ButtonComponent } from '@app/components/button/button.component';
 import { LobbyCardComponent } from '@app/components/lobby-card/lobby-card.component';
 import { ROUTES } from '@app/constants/routes.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
-import { SocketNamespace } from '@common/enums';
+import { ButtonVariant, SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 
@@ -16,6 +16,7 @@ import { Lobby } from '@common/lobby';
   styleUrl: './join-game-page.component.scss',
 })
 export class JoinGamePageComponent implements OnInit, OnDestroy {
+  protected readonly ButtonVariant = ButtonVariant;
   private readonly webSocketService = inject(WebSocketService);
   private readonly router = inject(Router);
   readonly routes = ROUTES;

@@ -47,6 +47,9 @@ export enum ButtonVariant {
     Default = 'default',
     Back = 'back',
     Save = 'save',
+    DeleteGame = 'delete-game',
+    Edit = 'edit',
+    ToggleVisibility = 'toggle-visibility',
 }
 
 export enum MapSetupMode {

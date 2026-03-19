@@ -6,7 +6,7 @@ import { GameCardComponent } from '@app/components/game-card/game-card.component
 import { GameCard } from '@app/interfaces/game-card';
 import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { CommunicationService } from '@app/services/communication/communication.service';
-import { MapSetupMode } from '@common/enums';
+import { ButtonVariant, MapSetupMode } from '@common/enums';
 import { Game } from '@common/game';
 import { Subscription } from 'rxjs';
 import swal from 'sweetalert2';
@@ -18,6 +18,7 @@ import swal from 'sweetalert2';
     styleUrl: './admin-page.component.scss',
 })
 export class AdminPageComponent implements OnInit, OnDestroy {
+    protected readonly ButtonVariant = ButtonVariant;
     private games: Game[] = [];
     gameCards: GameCard[] = [];
 

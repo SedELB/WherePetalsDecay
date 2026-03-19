@@ -60,15 +60,24 @@ describe('GamePageComponent', () => {
         activePlayerSocketId: signal<string | null>(null),
         turnCountdown: signal<number>(0),
         reachableTiles: signal<{ x: number; y: number }[]>([]),
+        reachableTilesForTeleport: signal<{ x: number; y: number }[]>([]),
         movementPoints: signal<number>(0),
+        actionPoints: signal<number>(0),
+        disableEndTurn: signal<boolean>(false),
+        isDebugModeActive: signal<boolean>(false),
+        turnNotification: signal<string | null>(null),
         tileInfo: signal<unknown>(null),
         gameOver: signal<{ winnerSocketId: string | null; isForfeit?: boolean } | null>(null),
         getLocalSocketId: jasmine.createSpy('getLocalSocketId').and.returnValue(LOCAL_SOCKET),
+        isHost: jasmine.createSpy('isHost').and.returnValue(false),
         sendMove: jasmine.createSpy('sendMove'),
         sendEndTurn: jasmine.createSpy('sendEndTurn'),
         sendAbandon: jasmine.createSpy('sendAbandon'),
+        sendAbandonWithoutPrompt: jasmine.createSpy('sendAbandonWithoutPrompt'),
         sendCombat: jasmine.createSpy('sendCombat'),
         sendTileInfoRequest: jasmine.createSpy('sendTileInfoRequest'),
+        toggleDebugMode: jasmine.createSpy('toggleDebugMode'),
+        teleportMove: jasmine.createSpy('teleportMove'),
         setLobby: jasmine.createSpy('setLobby'),
         resetGameState: jasmine.createSpy('resetGameState'),
     };
@@ -80,12 +89,19 @@ describe('GamePageComponent', () => {
         mockGameViewService.activePlayerSocketId.set(null);
         mockGameViewService.turnCountdown.set(0);
         mockGameViewService.reachableTiles.set([]);
+        mockGameViewService.reachableTilesForTeleport.set([]);
         mockGameViewService.movementPoints.set(0);
+        mockGameViewService.actionPoints.set(0);
+        mockGameViewService.disableEndTurn.set(false);
+        mockGameViewService.isDebugModeActive.set(false);
+        mockGameViewService.turnNotification.set(null);
         mockGameViewService.tileInfo.set(null);
         mockGameViewService.gameOver.set(null);
         [mockGameViewService.sendMove, mockGameViewService.sendEndTurn,
-         mockGameViewService.sendAbandon, mockGameViewService.sendCombat,
-         mockGameViewService.sendTileInfoRequest].forEach((s) => s.calls.reset());
+         mockGameViewService.sendAbandon, mockGameViewService.sendAbandonWithoutPrompt,
+         mockGameViewService.sendCombat, mockGameViewService.sendTileInfoRequest,
+         mockGameViewService.toggleDebugMode, mockGameViewService.teleportMove,
+         mockGameViewService.isHost].forEach((s) => s.calls.reset());
     };
 
     beforeEach(async () => {
@@ -289,11 +305,17 @@ describe('GamePageComponent', () => {
         });
     });
 
-    describe('onCombat', () => {
+    describe('onTileClick (combat)', () => {
         /** Ensures the combat initiation action successfully dispatches the request to the server, targeting the precise opponent selected. */
-        it('should send the combat request with the target socket', () => {
+        it('should send the combat request with the target socket when clicking an adjacent player tile', () => {
             mockGameViewService.gameLobby.set(createLobby());
-            component.onCombat(OTHER_SOCKET);
+            mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
+            mockGameViewService.playerPositions.set({
+                [LOCAL_SOCKET]: { x: 0, y: 0 },
+                [OTHER_SOCKET]: { x: 1, y: 0 },
+            });
+            component.isCombatMode = true;
+            component.onTileClick(1, 0);
             expect(mockGameViewService.sendCombat).toHaveBeenCalledWith('lobby-1', OTHER_SOCKET);
         });
     });

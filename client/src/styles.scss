@@ -4,9 +4,13 @@ $text-color: white;
 $green-button: #78bc75;
 $rose-button: #95698d;
 $frame-color: #242153;
+$card-background: rgba(36, 33, 83, 0.7);
 $transparent-background: rgba(0, 0, 0, 0.41);
 $primary-color: #8b5cf6;
 $scroll-color: #25256b;
+
+$card-border: 1px solid rgba(255, 255, 255, 0.06);
+$card-shadow: 0px 0px 30px rgba(0, 0, 0, 0.35);
 
 html,
 body {
@@ -50,19 +54,39 @@ body {
 }
 
 .swal2-popup {
-    background: rgba(12, 14, 34, 0.95);
+    background: rgba(12, 14, 34, 0.95) !important;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 14px;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+    font-family: inherit;
+
+    .swal2-title { color: $text-color; }
+    .swal2-html-container { color: rgba(255, 255, 255, 0.85); }
 }
 
-.swal2-title {
-    color: $text-color;
-    font-weight: 600;
+
+.swal2-popup.swal2-toast {
+    padding: 10px 15px; 
+    width: auto;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    
+    .swal2-title {
+        font-size: 16px;
+        margin: 0;
+    }
+    
+    .swal2-timer-progress-bar {
+        background: $green-button;
+    }
 }
 
-.swal2-html-container {
-    color: rgba(255, 255, 255, 0.85);
+
+.swal2-popup:not(.swal2-toast) {
+    padding: 2rem;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    
+    .swal2-title {
+        font-size: 32px;
+    }
 }
 
 .swal2-icon {

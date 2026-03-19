@@ -26,6 +26,51 @@ export class MovementService {
         return targetPos;
     }
 
+    teleportPlayer(game: ActiveGame, socketId: string, targetPos: Vec2): Vec2 | null {
+        const currentPos = game.playerPositions.get(socketId);
+        if (!currentPos) return null;
+
+        if (!this.isValidTeleportMove(game, targetPos)) return null;
+
+        game.playerPositions.set(socketId, targetPos);
+
+        return targetPos;
+    }
+
+    getReachableTilesForTeleport(game: ActiveGame, socketId: string) : Vec2[] {
+        const startPos = game.playerPositions.get(socketId);
+        if (!startPos) return [];
+
+        const reachable: Vec2[] = [];
+        const visited = new Map<string, number>();
+        const queue: { pos: Vec2; cost: number }[] = [{ pos: startPos, cost: 0 }];
+
+        visited.set(this.posKey(startPos), 0);
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+
+            for (const offset of Object.values(DIRECTION_OFFSETS)) {
+                const nextPos: Vec2 = { x: current.pos.x + offset.x, y: current.pos.y + offset.y };
+                const key = this.posKey(nextPos);
+
+                if (!this.isWithinBounds(game.lobby.game, nextPos)) continue;
+                if (visited.has(key)) continue;
+                visited.set(key, 0);
+
+                const tile = game.lobby.game.grid[nextPos.y][nextPos.x];
+                const tileCost = TILE_COSTS[tile.type];
+                if (tileCost === Infinity) continue;
+                if (this.isTileOccupied(game, nextPos)) continue;
+
+                reachable.push(nextPos);
+                queue.push({ pos: nextPos, cost: 0 });
+            }
+        }
+
+        return reachable;
+    }
+
     getReachableTiles(game: ActiveGame, socketId: string): Vec2[] {
         const startPos = game.playerPositions.get(socketId);
         if (!startPos) return [];
@@ -68,6 +113,18 @@ export class MovementService {
 
     getMovementPoints(game: ActiveGame, socketId: string): number {
         return game.movementPoints.get(socketId) ?? 0;
+    }
+
+    private isValidTeleportMove(game: ActiveGame, targetPos: Vec2): boolean {
+        if (!this.isWithinBounds(game.lobby.game, targetPos)) return false;
+
+        const tile = game.lobby.game.grid[targetPos.y][targetPos.x];
+        const cost = TILE_COSTS[tile.type];
+
+        if (cost === Infinity) return false;
+        if (this.isTileOccupied(game, targetPos)) return false;
+
+        return true;
     }
 
     private isValidMove(game: ActiveGame, socketId: string, targetPos: Vec2): boolean {

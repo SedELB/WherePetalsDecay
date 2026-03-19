@@ -5,6 +5,7 @@ export const VICTORIES_TO_WIN = 3;
 export const TURN_DURATION = 30;
 export const TURN_DELAY = 3;
 export const SECOND = 1000;
+export const MAX_ACTION_POINTS = 1;
 
 export interface ActiveGame {
     lobby: Lobby;
@@ -13,10 +14,12 @@ export interface ActiveGame {
     playerPositions: Map<string, Vec2>;
     playerStartPositions: Map<string, Vec2>;
     movementPoints: Map<string, number>;
-    hasCombatted: Map<string, boolean>;
+    actionPoints: Map<string, number>;
+    isDebugMode?: boolean;
 }
 
 export interface TurnCallbacks {
+    onBetweenTurnCountdown: (lobbyId: string, secondsLeft: number) => void;
     onTurnCountdown: (lobbyId: string, secondsLeft: number) => void;
     onTurnStarted: (lobbyId: string, playerSocketId: string) => void;
     onTurnEnded: (lobbyId: string, playerSocketId: string) => void;

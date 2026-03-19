@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ActiveGame, SECOND, TURN_DELAY, TURN_DURATION, TurnCallbacks } from './active-game.interface';
+import { ActiveGame, MAX_ACTION_POINTS, SECOND, TURN_DELAY, TURN_DURATION, TurnCallbacks } from './active-game.interface';
 
 @Injectable()
 export class TurnService {
@@ -43,7 +43,7 @@ export class TurnService {
         const lobbyId = game.lobby.lobbyId;
         let secondsLeft = TURN_DELAY;
 
-        this.callbacks.onTurnCountdown(lobbyId, secondsLeft);
+        this.callbacks.onBetweenTurnCountdown(lobbyId, secondsLeft);
 
         const delayTimer = setInterval(() => {
             secondsLeft--;
@@ -52,10 +52,10 @@ export class TurnService {
                 this.delayTimers.delete(lobbyId);
                 this.startTurn(game);
             } else {
-                this.callbacks.onTurnCountdown(lobbyId, secondsLeft);
+                this.callbacks.onBetweenTurnCountdown(lobbyId, secondsLeft);
             }
         }, SECOND);
-
+        
         this.delayTimers.set(lobbyId, delayTimer);
     }
 
@@ -66,7 +66,7 @@ export class TurnService {
         if (!player) return;
 
         game.movementPoints.set(currentSocketId, player.character.speed);
-        game.hasCombatted.set(currentSocketId, false);
+        game.actionPoints.set(currentSocketId, MAX_ACTION_POINTS);
 
         this.callbacks.onTurnStarted(lobbyId, currentSocketId);
 

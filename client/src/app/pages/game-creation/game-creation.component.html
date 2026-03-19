@@ -1,28 +1,30 @@
 <div class="container">
-    <app-button [width]="100" [route]="routes.home">Retour</app-button>
+    <app-button [variant]="ButtonVariant.Back" [route]="routes.home"></app-button>
     <section class="game-selection">
         <h2>Créer une partie</h2>
         <p>Sélectionnez un jeu pour créer une nouvelle partie</p>
-        <div class="list-container">
-            @for(game of games; track game._id){
-                <app-game-card
-                    [game]="{
-                        name: game.name,
-                        description: game.description,
-                        size: getGameSizeLabel(game),
-                        gameMode: game.gameMode,
-                        createdAt: game.createdAt,
-                        updatedAt: game.updatedAt,
-                        thumbnail: game.thumbnail,
-                        isVisible: game.isVisible,
-                    }"
-                >
-                    <app-button [height]="50" (click)="selectGame(game)">Sélectionner</app-button>
-                </app-game-card>
-            }
-            @empty {
-                <p class="no-games">Aucun jeu disponible</p>
-            }
-        </div>
+        @if (games.length > 0){
+            <div class="list-container">
+                @for(game of games; track game._id){
+                    <app-game-card
+                        [game]="{
+                            name: game.name,
+                            description: game.description,
+                            size: getGameSizeLabel(game),
+                            gameMode: game.gameMode,
+                            createdAt: game.createdAt,
+                            updatedAt: game.updatedAt,
+                            thumbnail: game.thumbnail,
+                            isVisible: game.isVisible,
+                        }"
+                    >
+                        <app-button [height]="50" (click)="selectGame(game)">Sélectionner</app-button>
+                    </app-game-card>
+                }
+                </div>
+        }
+        @else {
+            <p class="no-games">Aucun jeu disponible</p>
+        }
     </section>
 </div>
