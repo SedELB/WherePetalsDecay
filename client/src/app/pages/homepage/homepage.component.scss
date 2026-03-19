@@ -1,7 +1,7 @@
 @use 'src/styles.scss' as *;
 
 .container {
-    background-image: $background-image;
+    background-image: url('../../../assets/background.png');
     background-position: center bottom;
     background-size: cover;
     display: flex;

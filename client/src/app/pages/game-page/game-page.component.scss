@@ -6,7 +6,7 @@
     position: fixed;
     inset: 0;
     z-index: 0;
-    background-image: $background-image;
+    background-image: url('../../../assets/background.png');
     background-size: cover;
     background-position: center bottom;
 }
@@ -238,27 +238,27 @@
     transition: background 0.15s ease;
 
     &[data-tile='floor'] {
-        background-image: $tile-floor;
+        background-image: url('../../../assets/tiles/default.png');
     }
 
     &[data-tile='wall'] {
-        background-image: $tile-wall;
+        background-image: url('../../../assets/tiles/wall.png');
     }
 
     &[data-tile='water'] {
-        background-image: $tile-water;
+        background-image: url('../../../assets/tiles/water.png');
     }
 
     &[data-tile='ice'] {
-        background-image: $tile-ice;
+        background-image: url('../../../assets/tiles/ice.png');
     }
 
     &[data-tile='doorOpened'] {
-        background-image: $tile-door-opened;
+        background-image: url('../../../assets/tiles/opened_door.png');
     }
 
     &[data-tile='doorClosed'] {
-        background-image: $tile-door-closed;
+        background-image: url('../../../assets/tiles/closed_door.png');
     }
 }
 

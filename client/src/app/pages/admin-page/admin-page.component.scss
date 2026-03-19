@@ -1,7 +1,7 @@
 @use 'src/styles.scss' as *;
 
 main {
-    background-image: $background-image;
+    background-image: url('../../../assets/background.png');
     background-size: cover;
     background-position: center bottom;
     height: 100vh;
