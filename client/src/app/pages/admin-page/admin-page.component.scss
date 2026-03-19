@@ -4,52 +4,59 @@ main {
     background-image: $background-image;
     background-size: cover;
     background-position: center bottom;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    padding-top: 5rem;
     padding-bottom: 2rem;
     box-sizing: border-box;
 }
 
 #back-button {
     position: absolute;
-    top: 75px;
-    left: 60px;
+    top: 4.6875rem;
+    left: 3.75rem;
 }
 
 h2 {
     color: $text-color;
     text-align: center;
+    flex-shrink: 0;
 }
 
 p {
     color: $text-color;
     text-align: center;
+    flex-shrink: 0;
 }
 
 .add-button {
-    margin-top: 30px;
+    margin-top: 1.875rem;
     width: auto;
     height: auto;
+    flex-shrink: 0;
 
     svg {
-        width: 30px;
-        height: 30px;
+        width: 1.875rem;
+        height: 1.875rem;
     }
 }
 
 .list-container {
     background-color: $transparent-background;
-    border-radius: 20px;
+    border-radius: 1.25rem;
     display: flex;
     flex-direction: column;
-    padding: 15px;
-    gap: 10px;
+    padding: 0.9375rem;
+    gap: 0.625rem;
     overflow-y: auto;
     overflow-x: hidden;
-    height: 600px;
+    flex: 1;
+    min-height: 0;
+    max-height: 37.5rem;
     width: auto;
     align-items: center;
 }
