@@ -1,3 +1,4 @@
+import { ASSET_PATHS } from '@common/constants/asset-paths.constants';
 import { TileItem, TileTexture } from '@common/enums';
 
 interface ObjectPlacementTool {
@@ -56,36 +57,36 @@ export const TILE_TOOLS: Record<TileTexture, TileTool> = {
         type: TileTexture.Floor,
         label: 'Sol',
         description: 'Surface de base, permet le passage libre des joueurs.',
-        image: './assets/tiles/default.png',
+        image: ASSET_PATHS.tiles.floor,
     },
     [TileTexture.Wall]: {
         type: TileTexture.Wall,
         label: 'Mur',
         description: 'Bloque le passage des joueurs.',
-        image: './assets/tiles/wall.png',
+        image: ASSET_PATHS.tiles.wall,
     },
     [TileTexture.Water]: {
         type: TileTexture.Water,
         label: 'Eau',
         description: 'Zone liquide, ralentit ou bloque selon les règles.',
-        image: './assets/tiles/water.png',
+        image: ASSET_PATHS.tiles.water,
     },
     [TileTexture.Ice]: {
         type: TileTexture.Ice,
         label: 'Glace',
         description: 'Surface glissante qui modifie les déplacements.',
-        image: './assets/tiles/ice.png',
+        image: ASSET_PATHS.tiles.ice,
     },
     [TileTexture.DoorOpened]: {
         type: TileTexture.DoorOpened,
         label: 'Porte ouverte',
         description: 'Porte ouverte qui permet le passage des joueurs.',
-        image: './assets/tiles/opened_door.png',
+        image: ASSET_PATHS.tiles.doorOpened,
     },
     [TileTexture.DoorClosed]: {
         type: TileTexture.DoorClosed,
         label: 'Porte',
         description: 'Porte fermée qui bloque le passage des joueurs.',
-        image: './assets/tiles/closed_door.png',
+        image: ASSET_PATHS.tiles.doorClosed,
     },
 };

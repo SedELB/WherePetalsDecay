@@ -53,7 +53,7 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
         hasAbandonned: false,
         character: {
             name: 'TestPlayer',
-            avatar: './assets/avatars/archer.png',
+            avatar: './assets/avatars/archer.webp',
             life: 8,
             speed: 6,
             attack: 4,
@@ -77,7 +77,7 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
             createMockPlayer({
                 socketId: PLAYER_SOCKET_ID, isHost: false,
                 character: {
-                    name: 'Player2', avatar: './assets/avatars/mage.png',
+                    name: 'Player2', avatar: './assets/avatars/mage.webp',
                     life: 6, speed: 8, attack: 4, defense: 4,
                     lifeBonus: false, attackDice: 'D4', defenseDice: 'D6',
                 },

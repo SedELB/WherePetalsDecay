@@ -4,7 +4,7 @@
     box-sizing: border-box;
     height: 100vh;
     padding: 1.5rem;
-    background: url('../../../assets/background.png') center bottom / cover no-repeat;
+    background: $background-image center bottom / cover no-repeat;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -238,27 +238,27 @@
     transition: background 0.15s ease;
 
     &[data-tile='floor'] {
-        background-image: url('../../../assets/tiles/default.png');
+        background-image: $tile-floor;
     }
 
     &[data-tile='wall'] {
-        background-image: url('../../../assets/tiles/wall.png');
+        background-image: $tile-wall;
     }
 
     &[data-tile='water'] {
-        background-image: url('../../../assets/tiles/water.png');
+        background-image: $tile-water;
     }
 
     &[data-tile='ice'] {
-        background-image: url('../../../assets/tiles/ice.png');
+        background-image: $tile-ice;
     }
 
     &[data-tile='doorOpened'] {
-        background-image: url('../../../assets/tiles/opened_door.png');
+        background-image: $tile-door-opened;
     }
 
     &[data-tile='doorClosed'] {
-        background-image: url('../../../assets/tiles/closed_door.png');
+        background-image: $tile-door-closed;
     }
 
     &.cell--clickable {
