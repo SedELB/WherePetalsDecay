@@ -60,36 +60,7 @@
                     <span class="timer-label">{{ getTimerLabel() }}</span>
                     <span class="timer-countdown">{{ getTimerDisplay() }}</span>
                 </div>
-                <div
-                    id="thumbnail"
-                    class="grid"
-                    [style.gridTemplateColumns]="'repeat(' + (game()?.grid?.[0]?.length ?? 0) + ', 1fr)'"
-                    [style.gridTemplateRows]="'repeat(' + (game()?.grid?.length ?? 0) + ', 1fr)'"
-                >
-                    @for (row of game()?.grid ?? []; track $index; let rowIndex = $index) {
-                        @for (cell of row; track $index; let colIndex = $index) {
-                            <div
-                                class="cell"
-                                [attr.data-tile]="cell.type"
-                                [class.cell--teleportable]="isTeleportable(colIndex, rowIndex)"
-                                [class.cell--reachable]="isReachable(colIndex, rowIndex)"
-                                [class.cell--has-player]="getPlayerAtPosition(colIndex, rowIndex)"
-                                [class.cell--combat-target]="isCombatMode && isAdjacentPlayer(colIndex, rowIndex)"
-                                (click)="onTileClick(colIndex, rowIndex)"
-                                (contextmenu)="onRightClick($event, { x: colIndex, y: rowIndex })"
-                            >
-                                @if (cell.item; as obj) {
-                                    <span class="cell-object" [attr.data-object]="obj">
-                                        <img class="cell-object__icon" [src]="items[obj].image" [alt]="obj" />
-                                    </span>
-                                }
-                                @if (getPlayerAtPosition(colIndex, rowIndex); as playerSocketId) {
-                                    <img class="player-icon" [src]="getPlayerAvatar(playerSocketId)" alt="player" />
-                                }
-                            </div>
-                        }
-                    }
-                </div>
+                <app-isometric-map [grid]="game()?.grid ?? []"></app-isometric-map>
             </div>
         </div>
     </section>

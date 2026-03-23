@@ -165,6 +165,7 @@
     grid-template-rows: auto 2.125rem 1fr;
     gap: 0.5rem;
     transform: scale(1);
+    overflow: hidden;
 }
 
 .timer-display {
