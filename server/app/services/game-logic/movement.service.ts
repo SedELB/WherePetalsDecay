@@ -1,4 +1,5 @@
 import { Direction, DIRECTION_OFFSETS } from '@common/direction';
+import { TileItem } from '@common/enums';
 import { Game } from '@common/game';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
@@ -61,6 +62,7 @@ export class MovementService {
                 const tile = game.lobby.game.grid[nextPos.y][nextPos.x];
                 const tileCost = TILE_COSTS[tile.type];
                 if (tileCost === Infinity) continue;
+                if (tile.item === TileItem.Spawn) continue;
                 if (this.isTileOccupied(game, nextPos)) continue;
 
                 reachable.push(nextPos);
@@ -76,18 +78,23 @@ export class MovementService {
         if (!startPos) return [];
 
         const remaining = game.movementPoints.get(socketId);
-        const reachable: Vec2[] = [];
-        const visited = new Map<string, number>();
+        const bestCost = new Map<string, number>();
         const queue: { pos: Vec2; cost: number }[] = [{ pos: startPos, cost: 0 }];
 
-        visited.set(this.posKey(startPos), 0);
+        bestCost.set(this.posKey(startPos), 0);
 
         while (queue.length > 0) {
-            const current = queue.shift();
+            let minIndex = 0;
+            for (let i = 1; i < queue.length; i++) {
+                if (queue[i].cost < queue[minIndex].cost) minIndex = i;
+            }
+            const current = queue.splice(minIndex, 1)[0];
+
+            const currentKey = this.posKey(current.pos);
+            if (current.cost > bestCost.get(currentKey)) continue;
 
             for (const offset of Object.values(DIRECTION_OFFSETS)) {
                 const nextPos: Vec2 = { x: current.pos.x + offset.x, y: current.pos.y + offset.y };
-                const key = this.posKey(nextPos);
 
                 if (!this.isWithinBounds(game.lobby.game, nextPos)) continue;
 
@@ -97,14 +104,23 @@ export class MovementService {
 
                 const totalCost = current.cost + tileCost;
                 if (totalCost > remaining) continue;
-                if (this.isTileOccupied(game, nextPos)) continue;
 
-                const previousCost = visited.get(key);
+                const key = this.posKey(nextPos);
+                const previousCost = bestCost.get(key);
                 if (previousCost !== undefined && previousCost <= totalCost) continue;
 
-                visited.set(key, totalCost);
-                reachable.push(nextPos);
+                bestCost.set(key, totalCost);
                 queue.push({ pos: nextPos, cost: totalCost });
+            }
+        }
+
+        bestCost.delete(this.posKey(startPos));
+
+        const reachable: Vec2[] = [];
+        for (const key of bestCost.keys()) {
+            const [x, y] = key.split(',').map(Number);
+            if (!this.isTileOccupied(game, { x, y })) {
+                reachable.push({ x, y });
             }
         }
 
@@ -122,6 +138,7 @@ export class MovementService {
         const cost = TILE_COSTS[tile.type];
 
         if (cost === Infinity) return false;
+        if (tile.item === TileItem.Spawn) return false;
         if (this.isTileOccupied(game, targetPos)) return false;
 
         return true;
