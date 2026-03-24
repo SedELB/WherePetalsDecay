@@ -175,6 +175,11 @@ export class GameLogicService {
         const player = game.lobby.players.find((p) => p.socketId === socketId);
         if (player) player.hasAbandonned = true;
 
+        const spawnPos = game.playerStartPositions.get(socketId);
+        if (spawnPos) {
+            game.lobby.game.grid[spawnPos.y][spawnPos.x].item = null;
+        }
+
         game.playerPositions.delete(socketId);
         return game.lobby;
     }
