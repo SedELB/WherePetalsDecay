@@ -70,7 +70,7 @@ export class ChatComponent implements OnInit, OnDestroy, OnChanges, AfterViewChe
 
     sendMessage(): void {
         if (!this.canSend) return;
-        const message = this.draftMessage.trim();
+        const message = this.draftMessage;
         this.draftMessage = '';
         this.shouldScroll = true;
         this.isNearBottom = true;
