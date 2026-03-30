@@ -8,7 +8,7 @@ describe('IsometricMapComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [IsometricMapComponent]
+      imports: [IsometricMapComponent],
     })
     .compileComponents();
 

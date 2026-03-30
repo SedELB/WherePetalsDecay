@@ -2,68 +2,132 @@
 <app-sakura class="sakura-layer"></app-sakura>
 
 <main class="container" (contextmenu)="$event.preventDefault()">
-    <app-button id="back-button" [width]="100" (click)="onAbandon()">Quitter</app-button>
-
-    <aside class="side-panel left" [class.debug-background]="this.isDebugModeActive()">
-        <section class="game-stats">
-            <h3 class="section-title">Informations de partie</h3>
-            <div class="game-info">
-                <ul>
-                    <li>Nom du jeu : <span>{{ game()?.name }}</span></li>
-                    <li>Taille du jeu : <span>{{ game()?.size?.rows }}X{{ game()?.size?.cols }}</span></li>
-                    <li>Mode de jeu : <span>{{ game()?.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</span></li>
-                    <li>Nombre de joueurs : <span>{{ lobby()?.playerCount }}</span></li>
-                    <li>Joueur actif : <span>{{ activePlayer()?.character?.name }}</span></li>
-                </ul>
-            </div>
-        </section>
-
-        <section class="players-list">
-            <h3 class="section-title">Ordre des tours</h3>
-            <div class="list">
-                <ul>
-                    @for (player of orderedPlayers(); track player.socketId) {
-                        <li [class.active]="player.socketId === activePlayerSocketId()"
-                            [class.abandonned]="player.hasAbandonned">
-                            <div class="player-info">
-                                <span class="info">
-                                    <span class="name">{{ player.character.name }}</span>
-                                    @if (player.isHost) { <span class="host-indicator">👑</span> }
-                                    @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator">▶</span> }
-                                </span>
-                                <p>Combats gagnés : <span class="wins">{{ player.winsCount }}</span></p>
-                            </div>
-                        </li>
-                    }
-                </ul>
-            </div>
-        </section>
-    </aside>
-
     <section class="game-board-wrapper">
         <div class="grid-container">
             <div class="map-frame" aria-label="Grille de carte" [class.debug-background]="this.isDebugModeActive()">
                 <div class="controls-panel">
-                    <span class="controls-title">Commandes</span>
-                    <span class="control"><span class="key">W</span> Haut</span>
-                    <span class="control"><span class="key">A</span> Gauche</span>
-                    <span class="control"><span class="key">S</span> Bas</span>
-                    <span class="control"><span class="key">D</span> Droite</span>
-                    @if (this.isDebugModeActive()){
-                        <span class="control"><span class="key">Clic droit</span> Téléportation</span>
-                    }
-                    @else {
-                        <span class="control"><span class="key">Clic droit</span> Info tuile</span>
-                    }
+                    <div class="panel-left">
+                        <app-button id="back-button" [width]="100" (click)="onAbandon()">Quitter</app-button>
+                    </div>
+                    <div class="commands-wrapper">
+                        <span class="controls-title">Commandes</span>
+                        <span class="control"><span class="key">W</span> Haut</span>
+                        <span class="control"><span class="key">A</span> Gauche</span>
+                        <span class="control"><span class="key">S</span> Bas</span>
+                        <span class="control"><span class="key">D</span> Droite</span>
+                        @if (this.isDebugModeActive()){
+                            <span class="control"><span class="key">Clic droit</span> Téléportation</span>
+                        }
+                        @else {
+                            <span class="control"><span class="key">Clic droit</span> Info tuile</span>
+                        }
+                    </div>
+                    <div class="panel-right"></div>
                 </div>
                 <div class="timer-display">
                     <span class="timer-label">{{ getTimerLabel() }}</span>
                     <span class="timer-countdown">{{ getTimerDisplay() }}</span>
                 </div>
-                <app-isometric-map [grid]="game()?.grid ?? []"></app-isometric-map>
+                <app-isometric-map 
+                    [grid]="game()?.grid ?? []"
+                    [players]="lobby()?.players ?? []"
+                    [playerPositions]="playerPositions()"
+                    [reachableTiles]="reachableTiles()"
+                    [teleportableTiles]="isDebugModeActive() ? reachableTilesForTeleport() : []"
+                    [localPlayerSocketId]="localPlayer()?.socketId"
+                    (tileClick)="onTileClick($event.x, $event.y)"
+                    (rightClick)="onRightClick($event.event, $event.pos)"
+                ></app-isometric-map>
             </div>
         </div>
     </section>
+
+    <div class="right-panels-group">
+        <button class="panel-toggle-btn" (click)="isLeftPanelOpen = !isLeftPanelOpen">
+            {{ isLeftPanelOpen ? '▶' : '◀' }} Info
+        </button>
+        <aside class="side-panel left" [class.collapsed]="!isLeftPanelOpen" [class.debug-background]="this.isDebugModeActive()">
+            <section class="game-stats">
+                <h3 class="section-title">Informations de partie</h3>
+                <div class="game-info">
+                    <ul>
+                        <li>Nom du jeu : <span>{{ game()?.name }}</span></li>
+                        <li>Taille du jeu : <span>{{ game()?.size?.rows }}X{{ game()?.size?.cols }}</span></li>
+                        <li>Mode de jeu : <span>{{ game()?.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</span></li>
+                        <li>Nombre de joueurs : <span>{{ lobby()?.playerCount }}</span></li>
+                        <li>Joueur actif : <span>{{ activePlayer()?.character?.name }}</span></li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="players-list">
+                <h3 class="section-title">Ordre des tours</h3>
+                <div class="list">
+                    <ul>
+                        @for (player of orderedPlayers(); track player.socketId) {
+                            <li [class.active]="player.socketId === activePlayerSocketId()"
+                                [class.abandonned]="player.hasAbandonned">
+                                <div class="player-info">
+                                    <span class="info">
+                                        <span class="name">{{ player.character.name }}</span>
+                                        @if (player.isHost) { <span class="host-indicator">👑</span> }
+                                        @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator">▶</span> }
+                                    </span>
+                                    <p>Combats gagnés : <span class="wins">{{ player.winsCount }}</span></p>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </section>
+        </aside>
+
+        <aside class="side-panel right" [class.debug-background]="this.isDebugModeActive()">
+            <section class="chat-box">
+                <div class="tab-bar">
+                    <button class="tab-btn" [class.active]="!isJournalOpen" (click)="isJournalOpen = false">Clavardage</button>
+                    <button class="tab-btn" [class.active]="isJournalOpen" (click)="isJournalOpen = true">Journal</button>
+                </div>
+                @if (isJournalOpen) {
+                    <div class="journal-container">
+                        <div class="journal-messages">
+                            <div class="chat-empty">Aucun événement pour l'instant.</div>
+                        </div>
+                    </div>
+                } @else {
+                    <app-chat
+                        [lobbyId]="lobby()?.lobbyId ?? ''"
+                        [playerName]="localPlayer()?.character?.name ?? ''"
+                        (chatFocusChange)="onChatFocusChange($event)"
+                    ></app-chat>
+                }
+            </section>
+
+            <section class="character-sheet">
+                <h3 class="section-title">Mon Personnage</h3>
+                <div class="local-player-info">
+                    <ul>
+                        <img [src]="localPlayer()?.character?.avatar" [alt]="localPlayer()?.character?.name" class="player-avatar"/>
+                        <li>Nom : <span>{{ localPlayer()?.character?.name }}</span></li>
+                        <li>PV restants : <span>{{ localPlayer()?.character?.life }}</span></li>
+                        <li>PV max : <span>{{ maxLife() }}</span></li>
+                        <li>Rapidité : <span>{{ localPlayer()?.character?.speed }}</span></li>
+                        <li>Attaque | Dés : <span>{{ localPlayer()?.character?.attack }} | {{ localPlayer()?.character?.attackDice }}</span></li>
+                        <li>Défense | Dés : <span>{{ localPlayer()?.character?.defense }} | {{ localPlayer()?.character?.defenseDice }}</span></li>
+                        <li>Points de mouvement : <span>{{ movementPoints() }}</span></li>
+                        <li>Points d'action : <span>{{ actionPoints() }}</span></li>
+                    </ul>
+                </div>
+            </section>
+
+            <div class="action-bar">
+                <app-button (click)="toggleCombatMode()" [class.combat-active]="isCombatMode" [disabled]="adjacentPlayers().length === 0 || !isMyTurn()">
+                    {{ isCombatMode ? 'Annuler action' : 'Action' }}
+                </app-button>
+                <app-button (click)="onEndTurn()" [disabled]="this.disableEndTurn() || isEndTurnDisabled()">Finir Tour</app-button>
+            </div>
+        </aside>
+    </div>
 
     @if (turnNotification(); as notification) {
         <div class="turn-notification-toast">
@@ -112,49 +176,4 @@
         </div>
     }
 
-    <aside class="side-panel right" [class.debug-background]="this.isDebugModeActive()">
-        <section class="chat-box">
-            <div class="tab-bar">
-                <button class="tab-btn" [class.active]="!isJournalOpen" (click)="isJournalOpen = false">Clavardage</button>
-                <button class="tab-btn" [class.active]="isJournalOpen" (click)="isJournalOpen = true">Journal</button>
-            </div>
-            @if (isJournalOpen) {
-                <div class="journal-container">
-                    <div class="journal-messages">
-                        <div class="chat-empty">Aucun événement pour l'instant.</div>
-                    </div>
-                </div>
-            } @else {
-                <app-chat
-                    [lobbyId]="lobby()?.lobbyId ?? ''"
-                    [playerName]="localPlayer()?.character?.name ?? ''"
-                    (chatFocusChange)="onChatFocusChange($event)"
-                ></app-chat>
-            }
-        </section>
-
-        <section class="character-sheet">
-            <h3 class="section-title">Mon Personnage</h3>
-            <div class="local-player-info">
-                <ul>
-                    <img [src]="localPlayer()?.character?.avatar" [alt]="localPlayer()?.character?.name" class="player-avatar"/>
-                    <li>Nom : <span>{{ localPlayer()?.character?.name }}</span></li>
-                    <li>PV restants : <span>{{ localPlayer()?.character?.life }}</span></li>
-                    <li>PV max : <span>{{ maxLife() }}</span></li>
-                    <li>Rapidité : <span>{{ localPlayer()?.character?.speed }}</span></li>
-                    <li>Attaque | Dés : <span>{{ localPlayer()?.character?.attack }} | {{ localPlayer()?.character?.attackDice }}</span></li>
-                    <li>Défense | Dés : <span>{{ localPlayer()?.character?.defense }} | {{ localPlayer()?.character?.defenseDice }}</span></li>
-                    <li>Points de mouvement : <span>{{ movementPoints() }}</span></li>
-                    <li>Points d'action : <span>{{ actionPoints() }}</span></li>
-                </ul>
-            </div>
-        </section>
-
-        <div class="action-bar">
-            <app-button (click)="toggleCombatMode()" [class.combat-active]="isCombatMode" [disabled]="adjacentPlayers().length === 0 || !isMyTurn()">
-                {{ isCombatMode ? 'Annuler action' : 'Action' }}
-            </app-button>
-            <app-button (click)="onEndTurn()" [disabled]="this.disableEndTurn() || isEndTurnDisabled()">Finir Tour</app-button>
-        </div>
-    </aside>
 </main>

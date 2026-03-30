@@ -39,6 +39,7 @@ export class GamePageComponent implements OnInit {
     isChatFocused = false;
     isJournalOpen = false;
     isCombatMode = false;
+    isLeftPanelOpen = false;
 
     protected gameMode = GameMode;
 
