@@ -1,4 +1,4 @@
-import { TileTexture } from '@common/enums';
+import { TileItem, TileTexture } from '@common/enums';
 import { TileColorSet } from '@app/interfaces/isometric-interfaces';
 
 
@@ -16,8 +16,6 @@ export const STROKE_COLOR = 'rgba(0, 0, 0, 0.3)';
 
 // Rendering Ratios and Offsets
 export const AUTO_ZOOM_FALLBACK = 0.8;
-export const NAV_KEY_MARGIN = 2.0;
-export const NAV_KEY_OFFSET_EXTRA = 0.5;
 
 export const RENDER_CONSTANTS = {
   itemFloatSpeed: 350,
@@ -28,16 +26,36 @@ export const RENDER_CONSTANTS = {
   playerWidthRatio: 0.75,
   playerHeightAdjustment: 0.9,
   playerDepthOffset: 0.1,
+
+  shadowOffsetYRatio: 0.05,
+  shadowRadiusXRatio: 0.4,
+  shadowRadiusYRatio: 0.1,
 };
 
 
 export const TILE_COLORS: Record<string, TileColorSet> = {
-  [TileTexture.Floor]: { top: '#0d9614ff', left: '#6eb853', right: '#52963a' }, // Green
-  [TileTexture.Water]: { top: '#5dade2', left: '#3498db', right: '#2e86c1' }, // Blue
-  [TileTexture.Ice]: { top: '#e0f7fa', left: '#b2ebf2', right: '#80deea' },   // White
-  [TileTexture.Wall]: { top: '#407070ff', left: '#538f8fff', right: '#101313ff' },  // Gray
-  [TileTexture.DoorClosed]: { top: '#d35400', left: '#ba4a00', right: '#a04000' }, // Wood
-  [TileTexture.DoorOpened]: { top: '#f39c12', left: '#d68910', right: '#b9770e' }, // Open wood
+  [TileTexture.Floor]: { top: '#6F9545', left: '#6F9545', right: '#6F9545' },
+  [TileTexture.Water]: { top: '#46A8CF', left: '#46A8CF', right: '#46A8CF' },
+  [TileTexture.Ice]: { top: '#BEE2F3', left: '#BEE2F3', right: '#BEE2F3' },
+  [TileTexture.Wall]: { top: '#8C897F', left: '#8C897F', right: '#8C897F' },
+  [TileTexture.DoorClosed]: { top: '#d35400', left: '#ba4a00', right: '#a04000' },
+  [TileTexture.DoorOpened]: { top: '#f39c12', left: '#d68910', right: '#b9770e' },
+};
+
+export const ISO_ITEM_ASSETS: Record<TileItem, string> = {
+  [TileItem.Spawn]: './assets/icons/spawnPoint.svg',
+  [TileItem.Flag]: './assets/icons/blackflag.svg',
+  [TileItem.HealingSanctuary]: './assets/icons/healingSanctuary.svg',
+  [TileItem.CombatSanctuary]: './assets/icons/combatSanctuary.svg',
+};
+
+export const ISO_TEXTURE_ASSETS: Record<TileTexture, string> = {
+  [TileTexture.Floor]: './assets/tiles/default.png',
+  [TileTexture.Water]: './assets/tiles/water.png',
+  [TileTexture.Ice]: './assets/tiles/ice.png',
+  [TileTexture.Wall]: './assets/tiles/wall.png',
+  [TileTexture.DoorClosed]: './assets/tiles/opened_door.png',
+  [TileTexture.DoorOpened]: './assets/tiles/closed_door.png',
 };
 
 export const DEFAULT_COLOR: TileColorSet = {

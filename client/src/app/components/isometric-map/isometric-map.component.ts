@@ -69,10 +69,12 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
     canvas.addEventListener('contextmenu', this.boundOnContextMenu);
 
 
+    // main loop at 60 fps
     const loop = () => {
       this.render();
       this.animationFrameId = requestAnimationFrame(loop);
     };
+
     loop();
   }
 
@@ -116,10 +118,10 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
 
   private onMouseUp(): void {
     this.isDragging = false;
-    this.canvasRef.nativeElement.style.cursor = 'grab';
+    this.canvasRef.nativeElement.style.cursor = 'default';
   }
 
-  private getGridPosition(e: MouseEvent): Vec2 | null {
+  private getOriginalGridPosition(e: MouseEvent): Vec2 | null {
     if (!this.grid || !this.grid.length || !this.grid[0].length) return null;
     const canvas = this.canvasRef.nativeElement;
     const rect = canvas.getBoundingClientRect();
@@ -158,7 +160,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   }
 
   private onClick(e: MouseEvent): void {
-    const pos = this.getGridPosition(e);
+    const pos = this.getOriginalGridPosition(e);
     if (pos) {
       this.tileClick.emit(pos);
     }
@@ -166,7 +168,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
 
   private onContextMenu(e: MouseEvent): void {
     e.preventDefault();
-    const pos = this.getGridPosition(e);
+    const pos = this.getOriginalGridPosition(e);
     if (pos) {
       this.rightClick.emit({ event: e, pos });
     }
@@ -225,7 +227,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
         this.cameraX = x;
         this.cameraY = y;
         this.needsRecenter = false;
-        canvas.style.cursor = 'grab';
+        canvas.style.cursor = 'default';
       },
     });
   }
