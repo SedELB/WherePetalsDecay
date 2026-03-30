@@ -2,6 +2,7 @@ import { Component, HostListener, OnInit, computed, effect } from '@angular/core
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { ChatComponent } from '@app/components/chat/chat.component';
+import { IsometricMapComponent } from '@app/components/isometric-map/isometric-map.component';
 import { SakuraComponent } from '@app/components/sakura/sakura.component';
 import { OBJECT_PLACEMENT_TOOL } from '@app/constants/map-setup-page-constant';
 import { ROUTES } from '@app/constants/routes.constants';
@@ -17,7 +18,7 @@ const GAME_OVER_REDIRECT_DELAY = 3000;
 
 @Component({
     selector: 'app-game-page',
-    imports: [ButtonComponent, SakuraComponent, ChatComponent],
+    imports: [ButtonComponent, SakuraComponent, ChatComponent, IsometricMapComponent],
     templateUrl: './game-page.component.html',
     styleUrl: './game-page.component.scss',
 })
@@ -38,6 +39,7 @@ export class GamePageComponent implements OnInit {
     isChatFocused = false;
     isJournalOpen = false;
     isCombatMode = false;
+    isLeftPanelOpen = true;
 
     protected gameMode = GameMode;
 
