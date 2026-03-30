@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Vec2 } from '@common/vec2';
 import { Player } from '@common/player';
-import { OBJECT_PLACEMENT_TOOL, TILE_TOOLS } from '@app/constants/map-setup-page-constant';
 import { TileRenderParams, RenderBoardConfig, TileColorSet, TileDepthParams } from '@app/interfaces/isometric-interfaces';
 
 import {
@@ -14,9 +13,10 @@ import {
   RENDER_CONSTANTS,
   TILE_COLORS,
   DEFAULT_COLOR,
-  NAV_KEY_MARGIN,
-  NAV_KEY_OFFSET_EXTRA,
+  ISO_ITEM_ASSETS,
+  ISO_TEXTURE_ASSETS,
 } from '@app/constants/isometric.constants';
+import { Tile } from '@common/tile';
 
 @Injectable({
   providedIn: 'root',
@@ -48,37 +48,54 @@ export class IsometricViewService {
 
 
   renderBoard(config: RenderBoardConfig): void {
-    const { ctx, width, height, grid, players, playerPositions, camera, needsRecenter, onRecenter } = config;
-    if (!grid?.length || !grid[0]?.length) return;
-    this.players = players;
-    this.playerPositions = playerPositions;
+    if (!config.grid?.length || !config.grid[0]?.length) return;
+    this.players = config.players;
+    this.playerPositions = config.playerPositions;
 
-    const totalRows = grid.length;
-    const totalColumns = grid[0].length;
+    const totalRows = config.grid.length;
+    const totalColumns = config.grid[0].length;
 
-    const fitTileW = (2 * width) / (totalColumns + totalRows);
+    // Optimization Phase
+    const { tileW, tileH } = this.calculateAutoZoom(totalRows, totalColumns, config);
+    const viewConfig = this.buildViewConfig(totalRows, totalColumns, tileW, tileH, config);
+    const vertices = this.buildVertexMap(totalRows, totalColumns, viewConfig);
+
+    // Camera Phase
+    config.ctx.save();
+    this.applyCameraTransform(config);
+
+    // Rendering Phase
+    this.renderGridTiles(vertices, totalRows, totalColumns, config);
+
+    config.ctx.restore();
+  }
+
+  private calculateAutoZoom(totalRows: number, totalColumns: number, config: RenderBoardConfig): { tileW: number, tileH: number } {
+    const fitTileW = (2 * config.width) / (totalColumns + totalRows);
     const tileW = Math.max(fitTileW, MIN_TILE_W);
     const tileH = tileW / TILE_RATIO;
 
-    if (needsRecenter) {
-      camera.zoom = fitTileW >= MIN_TILE_W ? 1 : fitTileW / MIN_TILE_W;
-      camera.zoom = Math.max(camera.zoom, AUTO_ZOOM_FALLBACK);
-      camera.x = 0;
-      camera.y = 0;
-      onRecenter(camera.zoom, camera.x, camera.y);
+    if (config.needsRecenter) {
+      config.camera.zoom = fitTileW >= MIN_TILE_W ? 1 : fitTileW / MIN_TILE_W;
+      config.camera.zoom = Math.max(config.camera.zoom, AUTO_ZOOM_FALLBACK);
+      config.camera.x = 0;
+      config.camera.y = 0;
+      config.onRecenter(config.camera.zoom, config.camera.x, config.camera.y);
     }
+    return { tileW, tileH };
+  }
 
-    ctx.save();
-    ctx.translate(width / 2, height / 2);
-    ctx.scale(camera.zoom, camera.zoom);
-    ctx.translate(camera.x, camera.y);
-    ctx.translate(-width / 2, -height / 2);
-
+  private buildViewConfig(totalRows: number, totalColumns: number, tileW: number, tileH: number, config: RenderBoardConfig) {
     const diamondHeight = (totalColumns + totalRows) * (tileH / 2);
-    const originX = width / 2;
-    const originY = (height - TILE_THICKNESS) / 2 - diamondHeight / 2;
-    const viewConfig = { originX, originY, tileW, tileH };
+    const originX = config.width / 2;
+    const originY = (config.height - TILE_THICKNESS) / 2 - diamondHeight / 2;
+    return { originX, originY, tileW, tileH };
+  }
 
+  private buildVertexMap(
+    totalRows: number, 
+    totalColumns: number, 
+    viewConfig: { originX: number; originY: number; tileW: number; tileH: number }): Vec2[][] {
     const vertices: Vec2[][] = [];
     for (let row = 0; row <= totalRows; row++) {
       const rowVerts: Vec2[] = [];
@@ -87,23 +104,34 @@ export class IsometricViewService {
       }
       vertices.push(rowVerts);
     }
+    return vertices;
+  }
 
-    ctx.lineWidth = TILE_LINE_WIDTH;
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = STROKE_COLOR;
+  private applyCameraTransform(config: RenderBoardConfig): void {
+    config.ctx.translate(config.width / 2, config.height / 2);
+    config.ctx.scale(config.camera.zoom, config.camera.zoom);
+    config.ctx.translate(config.camera.x, config.camera.y);
+    config.ctx.translate(-config.width / 2, -config.height / 2);
+  }
+
+  private renderGridTiles(vertices: Vec2[][], totalRows: number, totalColumns: number, config: RenderBoardConfig): void {
+    config.ctx.lineWidth = TILE_LINE_WIDTH;
+    config.ctx.lineJoin = 'round';
+    config.ctx.strokeStyle = STROKE_COLOR;
 
     for (let row = 0; row < totalRows; row++) {
       for (let col = 0; col < totalColumns; col++) {
         const tileParams: TileRenderParams = {
-          context: ctx,
-          tile: grid[row][col],
+          context: config.ctx,
+          tile: config.grid[row][col],
           surfaceTopLeft: vertices[row][col],
           surfaceTopRight: vertices[row][col + 1],
           surfaceBottomRight: vertices[row + 1][col + 1],
           surfaceBottomLeft: vertices[row + 1][col],
         };
-        const wallParams: TileDepthParams = {
-          context: ctx,
+        
+        const depthParams: TileDepthParams = {
+          context: config.ctx,
           thickness: TILE_THICKNESS,
           rowIndex: row,
           totalRows,
@@ -113,74 +141,9 @@ export class IsometricViewService {
           surfaceBottomRight: vertices[row + 1][col + 1],
           surfaceBottomLeft: vertices[row + 1][col],
         };
-        this.drawIsometricTile(tileParams, wallParams, config);
+        this.drawIsometricTile(tileParams, depthParams, config);
       }
     }
-
-    const centerCol = (totalColumns - 1) / 2;
-    const centerRow = (totalRows - 1) / 2;
-
-    const positions = {
-      north: { col: centerCol, row: -NAV_KEY_MARGIN },
-      west:  { col: -NAV_KEY_MARGIN, row: centerRow },
-      south: { col: centerCol, row: totalRows + NAV_KEY_MARGIN + NAV_KEY_OFFSET_EXTRA },
-      east:  { col: totalColumns + NAV_KEY_MARGIN + NAV_KEY_OFFSET_EXTRA, row: centerRow },
-    };
-
-    this.drawDirectionKey(ctx, 'W', positions.north.col, positions.north.row, viewConfig);
-    this.drawDirectionKey(ctx, 'A', positions.west.col,  positions.west.row,  viewConfig);
-    this.drawDirectionKey(ctx, 'S', positions.south.col, positions.south.row, viewConfig);
-    this.drawDirectionKey(ctx, 'D', positions.east.col,  positions.east.row,  viewConfig);
-    ctx.restore();
-  }
-
-
-  // Method generated by Claude 4.6 Sonnet on March 29th 2026
-  private drawDirectionKey(
-    ctx: CanvasRenderingContext2D,
-    keyChar: string,
-    col: number,
-    row: number,
-    viewConfig: { originX: number; originY: number; tileW: number; tileH: number },
-  ): void {
-
-    const north = this.toIso(col, row, viewConfig);
-    const east = this.toIso(col + 1, row, viewConfig);
-    const west = this.toIso(col, row + 1, viewConfig);
-    const size = 60;
-    ctx.save();
-    
-    ctx.transform(
-      (east.x - north.x) / size, (east.y - north.y) / size,
-      (west.x - north.x) / size, (west.y - north.y) / size,
-      north.x, north.y,
-    );
-
-    ctx.translate(-size / 2, -size / 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 4;
-    
-    const r = 8;
-    ctx.beginPath();
-    ctx.moveTo(r, 0);
-    ctx.lineTo(size - r, 0);
-    ctx.quadraticCurveTo(size, 0, size, r);
-    ctx.lineTo(size, size - r);
-    ctx.quadraticCurveTo(size, size, size - r, size);
-    ctx.lineTo(r, size);
-    ctx.quadraticCurveTo(0, size, 0, size - r);
-    ctx.lineTo(0, r);
-    ctx.quadraticCurveTo(0, 0, r, 0);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = '#3d3939ff';
-    ctx.font = 'bold 36px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(keyChar, size / 2, size / 2 + 2);
-    ctx.restore();
   }
 
 
@@ -208,84 +171,118 @@ export class IsometricViewService {
     }
   }
 
+
   private drawAssetsOnTile(params: TileRenderParams, col: number, row: number, config: RenderBoardConfig): void {
-    const { context: ctx, tile, surfaceTopLeft: north, surfaceTopRight: east,
-      surfaceBottomRight: south, surfaceBottomLeft: west } = params;
+    const { context: ctx, surfaceTopLeft: north, surfaceTopRight: east, 
+            surfaceBottomRight: south, surfaceBottomLeft: west } = params;
 
     const cx = (west.x + east.x) / 2;
     const cy = (north.y + south.y) / 2;
     const tileW = east.x - west.x;
     const tileH = south.y - north.y;
-    const shadowParams = {
-      yOffsetRatio: 0.05,
-      wRatio: 0.4,
-      hRatio: 0.1,
-    };
 
-    // Draws the floating animation if there is an item on the tile.
-    if (tile.item != null) {
-      const itemData = OBJECT_PLACEMENT_TOOL[tile.item];
-      if (itemData?.image) {
-        const itemImg = this.getImage(itemData.image);
-        if (itemImg?.complete && itemImg.naturalWidth > 0) {
-          const aspect = itemImg.naturalWidth / itemImg.naturalHeight;
-          const imgW = tileW * RENDER_CONSTANTS.itemWidthRatio;
-          const imgH = imgW / aspect;
+    const renderData = { ctx, cx, cy, tileW, tileH };
 
-          // Floating: sin of a constantly growing value returns a value [-1, 1].
-          const floatOffset = Math.sin(Date.now() / RENDER_CONSTANTS.itemFloatSpeed) *
-            (tileH * RENDER_CONSTANTS.itemFloatAmplitude) -
-            (tileH * RENDER_CONSTANTS.itemFloatBaseOffset);
+    this.drawItemAt(params.tile, renderData);
+    this.drawPlayerAt(col, row, renderData, config);
+  }
 
-            const tileLeft = cx - imgW/2;
-            const tileTop = cy - imgH/2;
-          ctx.drawImage(itemImg, tileLeft, tileTop + floatOffset, imgW, imgH);
-        }
-      }
-    }
+  private drawItemAt(tile: Tile, data: { ctx: CanvasRenderingContext2D; cx: number; cy: number; tileW: number; tileH: number }): void {
+    if (tile.item == null) return;
+    
+    // Using ISO specific assets instead of the editor tool assets
+    const imageSrc = ISO_ITEM_ASSETS[tile.item];
+    if (!imageSrc) return;
 
-    const playerAtTile = this.players.find((p) => {
-      const pos = this.playerPositions[p.socketId];
-      return pos?.x === col && pos?.y === row;
+    const itemImg = this.getImage(imageSrc);
+    if (!itemImg?.complete || itemImg.naturalWidth <= 0) return;
+
+    const aspect = itemImg.naturalWidth / itemImg.naturalHeight;
+    const imgW = data.tileW * RENDER_CONSTANTS.itemWidthRatio;
+    const imgH = imgW / aspect;
+
+    const floatOffset = Math.sin(Date.now() / RENDER_CONSTANTS.itemFloatSpeed) *
+        (data.tileH * RENDER_CONSTANTS.itemFloatAmplitude) -
+        (data.tileH * RENDER_CONSTANTS.itemFloatBaseOffset);
+
+    data.ctx.drawImage(itemImg, data.cx - imgW / 2, data.cy - imgH / 2 + floatOffset, imgW, imgH);
+  }
+
+  private drawPlayerAt(
+     col: number, 
+     row: number, 
+     data: { ctx: CanvasRenderingContext2D; cx: number; cy: number; tileW: number; tileH: number }, 
+     config: RenderBoardConfig,
+    ): void {
+      
+    const playerAtTile = this.players.find(p => {
+        const pos = this.playerPositions[p.socketId];
+        return pos?.x === col && pos?.y === row;
     });
 
-    if (playerAtTile?.character?.avatar) {
-      const playerImg = this.getImage(playerAtTile.character.avatar);
-      if (playerImg?.complete && playerImg.naturalWidth > 0) {
-        const aspect = playerImg.naturalWidth / playerImg.naturalHeight;
-        const imgW = tileW * RENDER_CONSTANTS.playerWidthRatio;
-        const imgH = imgW / aspect * RENDER_CONSTANTS.playerHeightAdjustment;
-        const shadowY = cy + (tileH * shadowParams.yOffsetRatio);
-        const radiusX = imgW * shadowParams.wRatio;
-        const radiusY = imgH * shadowParams.hRatio;
-        
-        // Drawing shadow underneath avatar
-        ctx.save();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.beginPath();
-        ctx.ellipse(cx, shadowY, radiusX, radiusY, 0, 0, 2*Math.PI);
-        ctx.fill();
-        ctx.restore();
+    if (!playerAtTile?.character?.avatar) return;
 
-        const charX = cx - imgW / 2;
-        const charY = cy - imgH + (tileH * RENDER_CONSTANTS.playerDepthOffset);
+    const playerImg = this.getImage(playerAtTile.character.avatar);
+    if (!playerImg?.complete || playerImg.naturalWidth <= 0) return;
 
-        // if the player is yourself, draws a glowing border
-        if (playerAtTile.socketId === config.localPlayerSocketId) {
-          ctx.save();
-          ctx.shadowColor = '#00f2fe';
-          ctx.shadowBlur = 12;
+    const aspect = playerImg.naturalWidth / playerImg.naturalHeight;
+    const imgW = data.tileW * RENDER_CONSTANTS.playerWidthRatio;
+    const imgH = (imgW / aspect) * RENDER_CONSTANTS.playerHeightAdjustment;
 
-          // Stamping a solid non-blurry version onto the blurry border
-          ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-          ctx.shadowBlur = 0;
-          ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-          ctx.restore();
-        } else {
-          ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-        }
-      }
+    this.drawPlayerShadow(data.ctx, { cx: data.cx, cy: data.cy, tileH: data.tileH, imgW, imgH });
+
+    const charX = data.cx - imgW / 2;
+    const charY = data.cy - imgH + (data.tileH * RENDER_CONSTANTS.playerDepthOffset);
+    const isLocal = playerAtTile.socketId === config.localPlayerSocketId;
+
+    if (isLocal) {
+        data.ctx.save();
+        data.ctx.shadowColor = '#00f2fe';
+        data.ctx.shadowBlur = 12;
+        data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
+        data.ctx.shadowBlur = 0;
+        data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
+        data.ctx.restore();
+    } else {
+        data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
     }
+  }
+
+  private drawPlayerShadow(ctx: CanvasRenderingContext2D, data: { cx: number; cy: number; tileH: number; imgW: number; imgH: number }): void {
+    const shadowY = data.cy + (data.tileH * RENDER_CONSTANTS.shadowOffsetYRatio);
+    const radiusX = data.imgW * RENDER_CONSTANTS.shadowRadiusXRatio;
+    const radiusY = data.imgH * RENDER_CONSTANTS.shadowRadiusYRatio;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(data.cx, shadowY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.restore();
+  }
+
+
+  private drawTileTexture(ctx: CanvasRenderingContext2D, tile: Tile, north: Vec2, east: Vec2, west: Vec2): void {
+    const imageSrc = ISO_TEXTURE_ASSETS[tile.type];
+    if (!imageSrc) return;
+
+    const tileImg = this.getImage(imageSrc);
+    if (!tileImg?.complete || tileImg.naturalWidth <= 0) return;
+
+    ctx.save();
+    ctx.clip();
+    const iw = tileImg.naturalWidth;
+    const ih = tileImg.naturalHeight;
+
+    // Square image to diamond image transformation
+    ctx.transform(
+      (east.x - north.x) / iw, (east.y - north.y) / iw,
+      (west.x - north.x) / ih, (west.y - north.y) / ih,
+      north.x, north.y,
+    );
+
+    ctx.drawImage(tileImg, 0, 0);
+    ctx.restore();
   }
 
   private drawIsometricTile(params: TileRenderParams, depthParams: TileDepthParams, config: RenderBoardConfig): void {
@@ -297,27 +294,8 @@ export class IsometricViewService {
     ctx.fillStyle = colors.top;
     ctx.fill();
 
-    // Warp tile texture onto the diamond surface
-    const tileTool = TILE_TOOLS[tile.type];
-    if (tileTool?.image) {
-      const tileImg = this.getImage(tileTool.image);
-      if (tileImg?.complete && tileImg.naturalWidth > 0) {
-        ctx.save();
-        ctx.clip();
-        const iw = tileImg.naturalWidth;
-        const ih = tileImg.naturalHeight;
-
-        // Square image to diamond image transformation
-        ctx.transform(
-          (east.x - north.x) / iw, (east.y - north.y) / iw,
-          (west.x - north.x) / ih, (west.y - north.y) / ih,
-          north.x, north.y,
-        );
-
-        ctx.drawImage(tileImg, 0, 0);
-        ctx.restore();
-      }
-    }
+    // Draw the tile texture
+    this.drawTileTexture(ctx, tile, north, east, west);
 
     const col = depthParams.columnIndex;
     const row = depthParams.rowIndex;
