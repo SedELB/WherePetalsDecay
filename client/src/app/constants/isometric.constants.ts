@@ -1,0 +1,65 @@
+import { TileItem, TileTexture } from '@common/enums';
+import { TileColorSet } from '@app/interfaces/isometric-interfaces';
+
+
+export const TILE_RATIO = 2.5;
+export const TILE_THICKNESS = 12;
+export const TILE_LINE_WIDTH = 1;
+export const MIN_TILE_W = 64;
+
+// Zoom limits
+export const MIN_ZOOM = 0.4;
+export const MAX_ZOOM = 3.0;
+export const ZOOM_SPEED = 0.001;
+
+export const STROKE_COLOR = 'rgba(0, 0, 0, 0.3)';
+
+// Rendering Ratios and Offsets
+export const AUTO_ZOOM_FALLBACK = 0.8;
+
+export const RENDER_CONSTANTS = {
+  itemFloatSpeed: 350,
+  itemFloatAmplitude: 0.10,
+  itemFloatBaseOffset: 0.4,
+  itemWidthRatio: 0.5,
+  
+  playerWidthRatio: 0.75,
+  playerHeightAdjustment: 0.9,
+  playerDepthOffset: 0.1,
+
+  shadowOffsetYRatio: 0.05,
+  shadowRadiusXRatio: 0.4,
+  shadowRadiusYRatio: 0.1,
+};
+
+
+export const TILE_COLORS: Record<string, TileColorSet> = {
+  [TileTexture.Floor]: { top: '#6F9545', left: '#6F9545', right: '#6F9545' },
+  [TileTexture.Water]: { top: '#46A8CF', left: '#46A8CF', right: '#46A8CF' },
+  [TileTexture.Ice]: { top: '#BEE2F3', left: '#BEE2F3', right: '#BEE2F3' },
+  [TileTexture.Wall]: { top: '#8C897F', left: '#8C897F', right: '#8C897F' },
+  [TileTexture.DoorClosed]: { top: '#d35400', left: '#ba4a00', right: '#a04000' },
+  [TileTexture.DoorOpened]: { top: '#f39c12', left: '#d68910', right: '#b9770e' },
+};
+
+export const ISO_ITEM_ASSETS: Record<TileItem, string> = {
+  [TileItem.Spawn]: './assets/icons/spawnPoint.svg',
+  [TileItem.Flag]: './assets/icons/blackflag.svg',
+  [TileItem.HealingSanctuary]: './assets/icons/healingSanctuary.svg',
+  [TileItem.CombatSanctuary]: './assets/icons/combatSanctuary.svg',
+};
+
+export const ISO_TEXTURE_ASSETS: Record<TileTexture, string> = {
+  [TileTexture.Floor]: './assets/tiles/default.png',
+  [TileTexture.Water]: './assets/tiles/water.png',
+  [TileTexture.Ice]: './assets/tiles/ice.png',
+  [TileTexture.Wall]: './assets/tiles/wall.png',
+  [TileTexture.DoorClosed]: './assets/tiles/opened_door.png',
+  [TileTexture.DoorOpened]: './assets/tiles/closed_door.png',
+};
+
+export const DEFAULT_COLOR: TileColorSet = {
+  top: '#83a0b5',
+  left: '#657e8c',
+  right: '#506573',
+};
