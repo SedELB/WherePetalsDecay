@@ -3,6 +3,14 @@ import { Injectable } from '@nestjs/common';
 
 export type JournalEntryCallback = (lobbyId: string, entry: JournalEntry) => void;
 
+export interface JournalEntryOptions {
+    eventType: JournalEventType;
+    playerNames: string[];
+    message: string;
+    isPrivate?: boolean;
+    involvedPlayerIds?: string[];
+}
+
 @Injectable()
 export class JournalService {
     private readonly entries: Map<string, JournalEntry[]> = new Map();
@@ -12,14 +20,14 @@ export class JournalService {
         this.onEntryAdded = callback;
     }
 
-    addEntry(lobbyId: string, eventType: JournalEventType, playerNames: string[], message: string, isPrivate = false, involvedPlayerIds: string[] = []): void {
+    addEntry(lobbyId: string, options: JournalEntryOptions): void {
         const entry: JournalEntry = {
             timestamp: new Date(),
-            eventType,
-            playerNames,
-            message,
-            isPrivate,
-            involvedPlayerIds,
+            eventType: options.eventType,
+            playerNames: options.playerNames,
+            message: options.message,
+            isPrivate: options.isPrivate ?? false,
+            involvedPlayerIds: options.involvedPlayerIds ?? [],
         };
 
         if (!this.entries.has(lobbyId)) {
