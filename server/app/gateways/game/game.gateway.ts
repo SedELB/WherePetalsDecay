@@ -177,21 +177,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const defDice = defender.character.defenseDice;
         const involvedIds = [socket.id, targetSocketId];
 
-        this.journalService.addEntry(lobbyId, {
-            eventType: JournalEventType.CombatAttackDetail,
-            playerNames: [attackerName],
-            message: `Attaque de ${attackerName} : base ${atkBase}, dé ${atkDice}.`,
-            isPrivate: true,
-            involvedPlayerIds: involvedIds,
-        });
-        this.journalService.addEntry(lobbyId, {
-            eventType: JournalEventType.CombatDefenseDetail,
-            playerNames: [defenderName],
-            message: `Défense de ${defenderName} : base ${defBase}, dé ${defDice}.`,
-            isPrivate: true,
-            involvedPlayerIds: involvedIds,
-        });
-
         const combatResult = this.gameLogicService.initiateCombat(lobbyId, socket.id, targetSocketId);
         if (!combatResult) return;
 
