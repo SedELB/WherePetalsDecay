@@ -277,4 +277,16 @@ export class GamePageComponent implements OnInit {
         const TEN = 10;
         return `00:${countdown < TEN ? '0' : ''}${countdown}`;
     }
+
+    getTeamPlayers(team: 'A' | 'B'): Player[] {
+        const lobby = this.lobby();
+        const orderedPlayers = this.orderedPlayers();
+        if (!lobby || !orderedPlayers) return [];
+
+        if (team === 'A') {
+            return orderedPlayers.filter(player => lobby.teamA.some(p => p.socketId === player.socketId));
+        } else {
+            return orderedPlayers.filter(player => lobby.teamB.some(p => p.socketId === player.socketId));
+        }
+    }
 }

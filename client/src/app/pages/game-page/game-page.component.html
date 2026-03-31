@@ -65,21 +65,62 @@
             <section class="players-list">
                 <h3 class="section-title">Ordre des tours</h3>
                 <div class="list">
-                    <ul>
-                        @for (player of orderedPlayers(); track player.socketId) {
-                            <li [class.active]="player.socketId === activePlayerSocketId()"
-                                [class.abandonned]="player.hasAbandonned">
-                                <div class="player-info">
-                                    <span class="info">
-                                        <span class="name">{{ player.character.name }}</span>
-                                        @if (player.isHost) { <span class="host-indicator">👑</span> }
-                                        @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator">▶</span> }
-                                    </span>
-                                    <p>Combats gagnés : <span class="wins">{{ player.winsCount }}</span></p>
-                                </div>
-                            </li>
-                        }
-                    </ul>
+                    @if (game()?.gameMode === gameMode.Classic){
+                        <ul>
+                            @for (player of orderedPlayers(); track player.socketId) {
+                                <li [class.active]="player.socketId === activePlayerSocketId()"
+                                    [class.abandonned]="player.hasAbandonned">
+                                    <div class="player-info">
+                                        <span class="info">
+                                            <span class="name">{{ player.character.name }}</span>
+                                            @if (player.isHost) { <span class="host-indicator">👑</span> }
+                                            @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator">▶</span> }
+                                        </span>
+                                        <p>Combats gagnés : <span class="wins">{{ player.winsCount }}</span></p>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    } @else {
+                        <!-- Mode CTF -->
+                        <div class="team-section team-a-section">
+                            <h4 class="team-title">Équipe A</h4>
+                            <ul>
+                                @for (player of getTeamPlayers('A'); track player.socketId) {
+                                    <li [class.active]="player.socketId === activePlayerSocketId()"
+                                        [class.abandonned]="player.hasAbandonned">
+                                        <div class="player-info">
+                                            <span class="info">
+                                                <span class="name">{{ player.character.name }}</span>
+                                                @if (player.isHost) { <span class="host-indicator">👑</span> }
+                                                @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator turn-indicator-a">▶</span> }
+                                            </span>
+                                            <p>Drapeaux : <span class="wins">{{ player.winsCount }}</span></p>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+
+                        <div class="team-section team-b-section">
+                            <h4 class="team-title">Équipe B</h4>
+                            <ul>
+                                @for (player of getTeamPlayers('B'); track player.socketId) {
+                                    <li [class.active]="player.socketId === activePlayerSocketId()"
+                                        [class.abandonned]="player.hasAbandonned">
+                                        <div class="player-info">
+                                            <span class="info">
+                                                <span class="name">{{ player.character.name }}</span>
+                                                @if (player.isHost) { <span class="host-indicator">👑</span> }
+                                                @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator turn-indicator-b">▶</span> }
+                                            </span>
+                                            <p>Drapeaux : <span class="wins">{{ player.winsCount }}</span></p>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
                 </div>
             </section>
         </aside>
