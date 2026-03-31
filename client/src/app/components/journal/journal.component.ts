@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewChecked, Component, ElementRef, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, ViewChild } from '@angular/core';
 import { JournalService } from '@app/services/journal/journal.service';
-import { JournalEntry } from '@common/journal-entry';
+import { JournalEntry, journalEventTranslations } from '@common/journal-entry';
 import { Subscription } from 'rxjs';
 
 const SCROLL_THRESHOLD = 75;
@@ -20,6 +20,7 @@ export class JournalComponent implements OnInit, OnDestroy, OnChanges, AfterView
 
     entries: JournalEntry[] = [];
     isNearBottom = true;
+    frenchGameEvents = journalEventTranslations;
 
     private entriesSub?: Subscription;
     private shouldScroll = false;
