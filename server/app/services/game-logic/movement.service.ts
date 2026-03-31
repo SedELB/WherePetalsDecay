@@ -38,7 +38,7 @@ export class MovementService {
         return targetPos;
     }
 
-    getReachableTilesForTeleport(game: ActiveGame, socketId: string) : Vec2[] {
+    getReachableTilesForTeleport(game: ActiveGame, socketId: string): Vec2[] {
         const startPos = game.playerPositions.get(socketId);
         if (!startPos) return [];
 
@@ -137,9 +137,7 @@ export class MovementService {
         const tile = game.lobby.game.grid[targetPos.y][targetPos.x];
         const cost = TILE_COSTS[tile.type];
 
-        if (cost === Infinity) return false;
-        if (tile.item === TileItem.Spawn) return false;
-        if (this.isTileOccupied(game, targetPos)) return false;
+        if (cost === Infinity || tile.item === TileItem.Spawn || this.isTileOccupied(game, targetPos)) return false;
 
         return true;
     }
