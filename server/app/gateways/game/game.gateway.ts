@@ -77,14 +77,15 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const { lobbyId, direction } = payload;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
-        const newPosition = this.gameLogicService.movePlayer(lobbyId, socket.id, direction);
-        if (!newPosition) return;
+        const result = this.gameLogicService.movePlayer(lobbyId, socket.id, direction);
+        if (!result) return;
 
         const movementPoints = this.gameLogicService.getMovementPoints(lobbyId, socket.id);
         this.server.to(lobbyId).emit(JoinGameEvents.PlayerMoved, {
             socketId: socket.id,
-            position: newPosition,
+            position: result.position,
             movementPoints,
+            flagTaken: result.flagJustTaken,
         });
 
         this.sendReachableTiles(lobbyId, socket.id);

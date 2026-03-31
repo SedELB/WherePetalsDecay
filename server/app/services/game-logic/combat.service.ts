@@ -3,7 +3,8 @@ import { Player } from '@common/player';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
-import { ActiveGame, CombatResult, VICTORIES_TO_WIN } from './active-game.interface';
+import { ActiveGame, VICTORIES_TO_WIN } from './active-game.interface';
+import { CombatResult} from '@common/interfaces/game-view';
 
 @Injectable()
 export class CombatService {
@@ -37,15 +38,18 @@ export class CombatService {
         game.actionPoints.set(attackerId, actionPoints - 1);
         attacker.winsCount++;
 
+        const loserOldPosition = game.playerPositions.get(defenderId);
         const loserNewPosition = this.resetLoserPosition(game, defenderId);
 
         return {
             winnerId: attackerId,
             loserId: defenderId,
+            loser: defender,
             damage: defender.character.life,
             loserHpLeft: defender.character.life,
             killed: true,
             loserNewPosition,
+            loserOldPosition,
         };
     }
 

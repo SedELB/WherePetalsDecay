@@ -12,6 +12,7 @@ import { ActiveGame, TurnCallbacks } from './active-game.interface';
 import { CombatService } from './combat.service';
 import { MovementService } from './movement.service';
 import { TurnService } from './turn.service';
+import { CTFService } from './ctf.service';
 
 const RANDOM_THRESHOLD = 0.5;
 const INITIAL_WINS_COUNT = 0;
@@ -22,6 +23,7 @@ export class GameLogicService {
         private readonly turnService: TurnService,
         private readonly movementService: MovementService,
         private readonly combatService: CombatService,
+        private readonly ctfService: CTFService,
     ) {
         this.activeGames = new Map<string, ActiveGame>();
     }
@@ -113,7 +115,18 @@ export class GameLogicService {
     movePlayer(lobbyId: string, socketId: string, direction: Direction) {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
-        return this.movementService.movePlayer(game, socketId, direction);
+        const targetPos = this.movementService.movePlayer(game, socketId, direction);
+
+        let flagJustTaken = false;
+        const isThereFlag = this.ctfService.isThereFlag(game, targetPos);
+        if (isThereFlag) {
+            this.ctfService.removeFlagFromTile(game, targetPos);
+            const player = game.lobby.players.find(p => p.socketId === socketId);
+            player.hasFlag = true;
+            flagJustTaken = true;
+        }
+
+        return {position: targetPos, flagJustTaken};
     }
 
     teleportPlayer(lobbyId: string, socketId: string, targetPos: Vec2) {
@@ -157,7 +170,18 @@ export class GameLogicService {
     initiateCombat(lobbyId: string, attackerId: string, defenderId: string) {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
-        return this.combatService.initiateCombat(game, attackerId, defenderId);
+
+        const combatResult = this.combatService.initiateCombat(game, attackerId, defenderId);
+        const loser = combatResult.loser;
+
+        if (loser.hasFlag){
+            this.ctfService.setFlagOnTile(game, combatResult.loserOldPosition);
+            loser.hasFlag = false;
+            combatResult.wasFlagDropped = true;
+        }
+
+        return combatResult;
+
     }
 
     checkWinCondition(lobbyId: string) {
