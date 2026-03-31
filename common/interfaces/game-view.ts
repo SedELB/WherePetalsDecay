@@ -1,3 +1,4 @@
+import { Player } from '@common/player';
 import { Lobby } from '../lobby';
 import { Tile } from '../tile';
 import { Vec2 } from '../vec2';
@@ -6,6 +7,19 @@ export interface PlayerMovedData {
     socketId: string;
     position: Vec2;
     movementPoints: number;
+    flagTaken?: boolean;
+}
+
+export interface CombatResult {
+    winnerId: string;
+    loserId: string;
+    loser: Player;
+    damage: number;
+    loserHpLeft: number;
+    killed: boolean;
+    loserNewPosition: Vec2 | null;
+    loserOldPosition: Vec2;
+    wasFlagDropped?: boolean;
 }
 
 export interface GameStartedData {

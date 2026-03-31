@@ -3,8 +3,8 @@ import { Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Direction } from '@common/direction';
-import { SocketNamespace } from '@common/enums';
-import { GameStartedData, PlayerMovedData, TileInfoData } from '@common/interfaces/game-view';
+import { SocketNamespace, TileItem } from '@common/enums';
+import { CombatResult, GameStartedData, PlayerMovedData, TileInfoData } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Vec2 } from '@common/vec2';
@@ -31,6 +31,7 @@ export class GameViewService {
     readonly tileInfo = signal<TileInfoData | null>(null);
     readonly gameOver = signal<{ winnerSocketId: string | null; isForfeit?: boolean } | null>(null);
     readonly turnNotification = signal<string | null>(null);
+    readonly isFlagTaken = signal<boolean>(false);
 
     constructor(
         private readonly webSocketService: WebSocketService,
@@ -94,6 +95,14 @@ export class GameViewService {
             if (data.socketId === this.getLocalSocketId()) {
                 this.movementPoints.set(data.movementPoints);
             }
+
+            if (data.flagTaken){
+                this.gameLobby.update((lobby) => {
+                    if (!lobby) return lobby;
+                    lobby.game.grid[data.position.y][data.position.x].item = null;
+                    return {...lobby};
+                });
+            }
         });
 
         this.webSocketService.onNamespace<PlayerMovedData>(this.namespace, JoinGameEvents.PlayerTeleported, (data) => {
@@ -130,7 +139,7 @@ export class GameViewService {
         });
 
         this.webSocketService.onNamespace
-            <{ winnerId: string; loserId: string; damage: number; loserHpLeft: number; killed: boolean; loserNewPosition: Vec2 | null }>
+            <CombatResult>
             (this.namespace, JoinGameEvents.CombatResult, (data) => {
                 this.gameLobby.update((lobby) => {
                     if (!lobby) return lobby;
@@ -145,9 +154,18 @@ export class GameViewService {
                     });
                     return { ...lobby, players: updatedPlayers };
                 });
+
                 if (data.loserNewPosition) {
                     const newPos = data.loserNewPosition;
                     this.playerPositions.update((positions) => ({ ...positions, [data.loserId]: newPos }));
+                }
+
+                if (data.wasFlagDropped){
+                    this.gameLobby.update((lobby) => {
+                        if (!lobby) return lobby;
+                        lobby.game.grid[data.loserOldPosition.y][data.loserOldPosition.x].item = TileItem.Flag;
+                        return {...lobby};
+                    });
                 }
             });
 
