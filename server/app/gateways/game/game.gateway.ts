@@ -44,9 +44,13 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
                 this.autoEndTurnIfNoActions(lobbyId, playerSocketId);
 
                 const game = this.gameLogicService.getActiveGame(lobbyId);
-                const player = game.lobby.players.find((player) => player.socketId === playerSocketId);
-                const playerName = player.character.name;
-                this.journalService.addEntry(lobbyId, JournalEventType.TurnStart, [playerName], `Début du tour de ${playerName}.`);
+                const turnPlayer = game.lobby.players.find((player) => player.socketId === playerSocketId);
+                const playerName = turnPlayer.character.name;
+                this.journalService.addEntry(lobbyId, {
+                    eventType: JournalEventType.TurnStart,
+                    playerNames: [playerName],
+                    message: `Début du tour de ${playerName}.`,
+                });
             },
             onTurnEnded: (lobbyId: string, playerSocketId: string) => {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnEnded, playerSocketId);
@@ -128,7 +132,11 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const host = activeGame.lobby.players.find((player) => player.socketId === socket.id);
         const hostName = host.character.name;
         const modeLabel = activeGame.isDebugMode ? 'activé' : 'désactivé';
-        this.journalService.addEntry(lobbyId, JournalEventType.DebugToggle, [hostName], `Mode de débogage ${modeLabel} par ${hostName}.`);
+        this.journalService.addEntry(lobbyId, {
+            eventType: JournalEventType.DebugToggle,
+            playerNames: [hostName],
+            message: `Mode de débogage ${modeLabel} par ${hostName}.`,
+        });
 
         if (!activeGame.isDebugMode) {
             const currentSocketId = activeGame.turnOrder[activeGame.currentTurnIndex];
@@ -157,7 +165,11 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const attackerName = attacker.character.name;
         const defenderName = defender.character.name;
 
-        this.journalService.addEntry(lobbyId, JournalEventType.CombatStart, [attackerName, defenderName], `Début du combat : ${attackerName} vs ${defenderName}.`);
+        this.journalService.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatStart,
+            playerNames: [attackerName, defenderName],
+            message: `Début du combat : ${attackerName} vs ${defenderName}.`,
+        });
 
         const atkBase = attacker.character.attack;
         const atkDice = attacker.character.attackDice;
@@ -165,10 +177,20 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const defDice = defender.character.defenseDice;
         const involvedIds = [socket.id, targetSocketId];
 
-        this.journalService.addEntry(lobbyId, JournalEventType.CombatAttackDetail, [attackerName],
-            `Attaque de ${attackerName} : base ${atkBase}, dé ${atkDice}.`, true, involvedIds);
-        this.journalService.addEntry(lobbyId, JournalEventType.CombatDefenseDetail, [defenderName],
-            `Défense de ${defenderName} : base ${defBase}, dé ${defDice}.`, true, involvedIds);
+        this.journalService.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatAttackDetail,
+            playerNames: [attackerName],
+            message: `Attaque de ${attackerName} : base ${atkBase}, dé ${atkDice}.`,
+            isPrivate: true,
+            involvedPlayerIds: involvedIds,
+        });
+        this.journalService.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatDefenseDetail,
+            playerNames: [defenderName],
+            message: `Défense de ${defenderName} : base ${defBase}, dé ${defDice}.`,
+            isPrivate: true,
+            involvedPlayerIds: involvedIds,
+        });
 
         const combatResult = this.gameLogicService.initiateCombat(lobbyId, socket.id, targetSocketId);
         if (!combatResult) return;
@@ -179,11 +201,18 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const winnerName = combatResult.winnerId === socket.id ? attackerName : defenderName;
         const loserName = combatResult.winnerId === socket.id ? defenderName : attackerName;
 
-        this.journalService.addEntry(lobbyId, JournalEventType.CombatDamageResult, [winnerName, loserName],
-            `${winnerName} inflige des dégâts à ${loserName}.`, true, [socket.id, targetSocketId]);
-
-        this.journalService.addEntry(lobbyId, JournalEventType.CombatEnd, [winnerName, loserName],
-            `Fin du combat : ${winnerName} remporte le combat contre ${loserName}.`);
+        this.journalService.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatDamageResult,
+            playerNames: [winnerName, loserName],
+            message: `${winnerName} inflige des dégâts à ${loserName}.`,
+            isPrivate: true,
+            involvedPlayerIds: [socket.id, targetSocketId],
+        });
+        this.journalService.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatEnd,
+            playerNames: [winnerName, loserName],
+            message: `Fin du combat : ${winnerName} remporte le combat contre ${loserName}.`,
+        });
 
         const winner = this.gameLogicService.checkWinCondition(lobbyId);
         if (winner) {
@@ -227,9 +256,13 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const activeGame = this.gameLogicService.findActiveGameBySocketId(socket.id);
         if (!activeGame) return;
 
-        const player = activeGame.lobby.players.find((player) => player.socketId === socket.id);
-        const playerName = player.character.name;
-        this.journalService.addEntry(activeGame.lobby.lobbyId, JournalEventType.PlayerAbandon, [playerName], `${playerName} a abandonné la partie.`);
+        const abandonPlayer = activeGame.lobby.players.find((player) => player.socketId === socket.id);
+        const playerName = abandonPlayer.character.name;
+        this.journalService.addEntry(activeGame.lobby.lobbyId, {
+            eventType: JournalEventType.PlayerAbandon,
+            playerNames: [playerName],
+            message: `${playerName} a abandonné la partie.`,
+        });
 
         const isGameOver = this.gameLogicService.executePlayerAbandon(
             activeGame.lobby.lobbyId,
@@ -246,7 +279,11 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
         const activePlayers = activeGame.lobby.players.filter((player) => !player.hasAbandonned);
         const activeNames = activePlayers.map((player) => player.character.name);
-        this.journalService.addEntry(lobbyId, JournalEventType.GameOver, activeNames, `Fin de la partie. Joueurs encore actifs : ${activeNames.join(', ')}.`);
+        this.journalService.addEntry(lobbyId, {
+            eventType: JournalEventType.GameOver,
+            playerNames: activeNames,
+            message: `Fin de la partie. Joueurs encore actifs : ${activeNames.join(', ')}.`,
+        });
 
         this.server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId, isForfeit: false });
         this.gameLogicService.endGame(lobbyId);
