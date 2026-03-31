@@ -9,6 +9,7 @@ const ALPHANUMERIC_BASE = 36;
 const ID_SUBSTRING_START = 2;
 const ID_SUBSTRING_END = 7;
 const ID_PADDING_LENGTH = 5;
+const HALF_CHANCE = 0.5;
 
 @Injectable()
 export class LobbyService {
@@ -45,6 +46,8 @@ export class LobbyService {
             players: [player],
             pendingAvatars: {},
             chatHistory: [],
+            teamA: [],
+            teamB: [],
         };
 
         this.lobbies.set(lobbyId, lobby);
@@ -53,6 +56,15 @@ export class LobbyService {
 
     getLobby(lobbyId: string): Lobby | undefined {
         return this.lobbies.get(lobbyId);
+    }
+
+    addPlayerToRandomTeam(lobbyId: string, player: Player): void {
+        const lobby = this.getLobby(lobbyId);
+        if (Math.random() > HALF_CHANCE) {
+            lobby.teamA.push(player);
+        } else {
+            lobby.teamB.push(player);
+        }
     }
 
     getAvailableLobbies(): Lobby[] {
@@ -94,6 +106,8 @@ export class LobbyService {
             lobby.players = lobby.players.filter((player) => player.socketId !== socketId);
             delete lobby.pendingAvatars[socketId];
             lobby.playerCount = lobby.players.length;
+            lobby.teamA = lobby.teamA.filter(p => p.socketId !== socketId);
+            lobby.teamB = lobby.teamB.filter(p => p.socketId !== socketId);
 
             if (lobby.playerCount < lobby.game.maxPlayers) {
                 lobby.isLocked = false;

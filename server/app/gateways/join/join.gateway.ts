@@ -1,4 +1,4 @@
-import { SocketNamespace } from '@common/enums';
+import { GameMode, SocketNamespace } from '@common/enums';
 import { Game } from '@common/game';
 import { Injectable, Logger } from '@nestjs/common';
 import {
@@ -62,6 +62,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
         if (createdLobby) {
             socket.join(createdLobby.lobbyId);
+            if (createdLobby.game.gameMode === GameMode.Ctf) this.lobbyService.addPlayerToRandomTeam(createdLobby.lobbyId, payload.player);
             socket.emit(JoinGameEvents.GameHosted, createdLobby);
             this.handleGetLobbies();
         } else {
@@ -104,10 +105,10 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
 
         if (updatedLobby) {
             socket.join(updatedLobby.lobbyId);
+            if (updatedLobby.game.gameMode === GameMode.Ctf) this.lobbyService.addPlayerToRandomTeam(updatedLobby.lobbyId, payload.player);
             socket.emit(JoinGameEvents.LobbyJoined, updatedLobby);
             socket.broadcast.to(updatedLobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby);
             socket.broadcast.to(updatedLobby.lobbyId).emit(JoinGameEvents.PlayerJoined, payload.player);
-
             this.handleGetLobbies();
         }
     }
@@ -166,6 +167,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         const success = this.lobbyService.kickPlayer(payload.lobbyId, socket.id, payload.targetSocketId);
 
         if (success) {
+            
             this.server.to(payload.targetSocketId).emit(JoinGameEvents.PlayerKicked, `Vous avez été exclu par l'organisateur.`);
             this.server.in(payload.targetSocketId).socketsLeave(payload.lobbyId);
 
