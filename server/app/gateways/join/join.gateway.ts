@@ -58,6 +58,11 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         payload.player.socketId = socket.id;
         payload.player.isHost = true;
         payload.player.winsCount = INITIAL_WINS_COUNT;
+        payload.player.combatCount = 0;
+        payload.player.lossCount = 0;
+        payload.player.totalHpLost = 0;
+        payload.player.totalHpDealt = 0;
+        payload.player.visitedTilesCount = 0;
         const createdLobby = this.lobbyService.createLobby(payload.game, socket.id, payload.player);
 
         if (createdLobby) {
@@ -99,6 +104,11 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         payload.player.socketId = socket.id;
         payload.player.isHost = false;
         payload.player.winsCount = INITIAL_WINS_COUNT;
+        payload.player.combatCount = 0;
+        payload.player.lossCount = 0;
+        payload.player.totalHpLost = 0;
+        payload.player.totalHpDealt = 0;
+        payload.player.visitedTilesCount = 0;
 
         const updatedLobby = this.lobbyService.joinLobby(payload.lobbyId, payload.player);
 

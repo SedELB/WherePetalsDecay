@@ -196,7 +196,10 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     }
 
     private handleGameOver(lobbyId: string, winnerSocketId: string | null): void {
-        this.server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId, isForfeit: false });
+        const gameStats = this.gameLogicService.getGameStats(lobbyId);
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        const players = activeGame ? [...activeGame.lobby.players] : [];
+        this.server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId, isForfeit: false, players, gameStats });
         this.gameLogicService.endGame(lobbyId);
         this.lobbyService.deleteLobby(lobbyId);
         this.server.in(lobbyId).socketsLeave(lobbyId);

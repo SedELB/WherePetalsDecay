@@ -4,9 +4,11 @@ import { ROUTES } from '@app/constants/routes.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Direction } from '@common/direction';
 import { SocketNamespace } from '@common/enums';
+import { GameOverData, GameStats } from '@common/interfaces/game-stats';
 import { GameStartedData, PlayerMovedData, TileInfoData } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
+import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 
 const ONE_SECOND_DELAY = 1000;
@@ -31,6 +33,8 @@ export class GameViewService {
     readonly tileInfo = signal<TileInfoData | null>(null);
     readonly gameOver = signal<{ winnerSocketId: string | null; isForfeit?: boolean } | null>(null);
     readonly turnNotification = signal<string | null>(null);
+    readonly endGamePlayers = signal<Player[]>([]);
+    readonly endGameStats = signal<GameStats | null>(null);
 
     constructor(
         private readonly webSocketService: WebSocketService,
@@ -162,8 +166,11 @@ export class GameViewService {
             this.setLobby(updatedLobby);
         });
 
-        this.webSocketService.onNamespace<{ winnerSocketId: string | null; isForfeit?: boolean }>(this.namespace, JoinGameEvents.GameOver, (data) => {
+        this.webSocketService.onNamespace<GameOverData>(this.namespace, JoinGameEvents.GameOver, (data) => {
             this.gameOver.set(data);
+            if (data.players) this.endGamePlayers.set(data.players);
+            if (data.gameStats) this.endGameStats.set(data.gameStats);
+            this.router.navigate([ROUTES.endGame]);
         });
 
         this.webSocketService.onNamespace<TileInfoData>(this.namespace, JoinGameEvents.TileInfo, (data) => {
