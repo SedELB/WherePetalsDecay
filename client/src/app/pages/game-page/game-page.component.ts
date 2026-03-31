@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, computed, effect } from '@angular/core';
+import { Component, HostListener, OnInit, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { ChatComponent } from '@app/components/chat/chat.component';
@@ -13,8 +13,6 @@ import { GameMode } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
-
-const GAME_OVER_REDIRECT_DELAY = 3000;
 
 @Component({
     selector: 'app-game-page',
@@ -113,28 +111,11 @@ export class GamePageComponent implements OnInit {
         });
     });
 
-    private gameOverTimeout: ReturnType<typeof setTimeout> | null = null;
-
     constructor(
         protected readonly gameViewService: GameViewService,
         private readonly router: Router,
-    ) {
-        effect(() => {
-            const over = this.gameOver();
-            if (this.gameOverTimeout) {
-                clearTimeout(this.gameOverTimeout);
-                this.gameOverTimeout = null;
-            }
-            if (over) {
-                this.gameOverTimeout = setTimeout(() => {
-                    this.gameOverTimeout = null;
-                    if (this.gameOver()) {
-                        this.router.navigate([this.routes.home]);
-                    }
-                }, GAME_OVER_REDIRECT_DELAY);
-            }
-        });
-    }
+    ) {}
+
 
     ngOnInit(): void {
         if (!this.lobby()) {
