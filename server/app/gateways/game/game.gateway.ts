@@ -58,7 +58,10 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             return;
         }
 
-        finalLobby.players = this.gameLogicService.shufflePlayers(finalLobby.players);
+        finalLobby.players.map(p => {
+            p.flagsCaptured = 0;
+        });
+        
         const activeGame = this.gameLogicService.initializeGame(finalLobby);
 
         this.server.to(lobbyId).emit(JoinGameEvents.GameStarting, activeGame.lobby);
@@ -135,7 +138,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     }
 
     @SubscribeMessage(JoinGameEvents.RequestCombat)
-    handleRequestCombat(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; targetSocketId: string }) {
+    handleRequestCombat(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string, targetSocketId: string }) {
         const { lobbyId, targetSocketId } = payload;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
@@ -152,6 +155,23 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         }
 
         this.gameLogicService.endTurn(lobbyId);
+    }
+
+    @SubscribeMessage(JoinGameEvents.TransferFlag)
+    handleTransferFlag(@ConnectedSocket() socket: Socket, @MessageBody() payload: {lobbyId: string, targetSocketId: string}) {
+        const { lobbyId, targetSocketId } = payload;
+        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
+
+        const wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, socket.id, targetSocketId);
+        if (!wasFlagTransfered) return;
+
+        const flagTransferData = {
+            giverPlayerId: socket.id,
+            targetPlayerId: targetSocketId,
+        };
+
+        this.sendActionPoints(lobbyId, socket.id);
+        this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, flagTransferData);
     }
 
     @SubscribeMessage(JoinGameEvents.RequestTileInfo)

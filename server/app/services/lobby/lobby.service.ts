@@ -1,9 +1,10 @@
+import { ChatMessage } from '@common/chat-message';
 import { HISTORY_MAX_MESSAGE } from '@common/constants/validation.constants';
+import { GameMode } from '@common/enums';
 import { Game } from '@common/game';
 import { Lobby } from '@common/lobby';
-import { Injectable } from '@nestjs/common';
 import { Player } from '@common/player';
-import { ChatMessage } from '@common/chat-message';
+import { Injectable } from '@nestjs/common';
 
 const ALPHANUMERIC_BASE = 36;
 const ID_SUBSTRING_START = 2;
@@ -58,13 +59,14 @@ export class LobbyService {
         return this.lobbies.get(lobbyId);
     }
 
-    addPlayerToRandomTeam(lobbyId: string, player: Player): void {
+    private createTeams(lobbyId: string): { teamA: Player[], teamB: Player[] } {
         const lobby = this.getLobby(lobbyId);
-        if (Math.random() > HALF_CHANCE) {
-            lobby.teamA.push(player);
-        } else {
-            lobby.teamB.push(player);
-        }
+        if (lobby.game.gameMode !== GameMode.Ctf || lobby.playerCount % 2 !== 0) return null ;
+
+        const randomPlayers = [...lobby.players].sort(() => Math.random() - HALF_CHANCE);
+        const teamA = [...randomPlayers].slice(0, randomPlayers.length / 2);
+        const teamB = [...randomPlayers].slice(randomPlayers.length / 2);
+        return { teamA, teamB };
     }
 
     getAvailableLobbies(): Lobby[] {
@@ -153,14 +155,21 @@ export class LobbyService {
         }
     }
 
-    canStartGame(lobbyId: string, hostSocketId: string): Lobby | undefined {
+    canStartGame(lobbyId: string, hostSocketId: string): Lobby | null {
         const lobby = this.getLobby(lobbyId);
 
         if (lobby && lobby.hostSocketId === hostSocketId && lobby.playerCount >= 2) {
-            lobby.isLocked = true;
-            return lobby;
+            if (lobby.game.gameMode === GameMode.Ctf) {
+                const { teamA, teamB } = this.createTeams(lobbyId);
+                const finalLobby = { ...lobby, teamA, teamB };
+                finalLobby.isLocked = true;
+                return finalLobby;
+            } else {
+                lobby.isLocked = true;
+                return lobby;
+            }
         }
-        return undefined;
+        return null;
     }
 
     kickPlayer(lobbyId: string, hostSocketId: string, targetSocketId: string): boolean {

@@ -38,8 +38,8 @@ export class GamePageComponent implements OnInit {
 
     isChatFocused = false;
     isJournalOpen = false;
-    isCombatMode = false;
     isLeftPanelOpen = true;
+    isActionMode = false;
 
     protected gameMode = GameMode;
 
@@ -57,6 +57,8 @@ export class GamePageComponent implements OnInit {
     readonly tileInfo = computed(() => this.gameViewService.tileInfo());
     readonly gameOver = computed(() => this.gameViewService.gameOver());
     readonly turnNotification = computed(() => this.gameViewService.turnNotification());
+    readonly currentPlayerId = computed(() => this.gameViewService.getLocalSocketId());
+    readonly isFlagTaken = computed(() => this.gameViewService.isFlagTaken());
 
     readonly orderedPlayers = computed(() => {
         const order = this.gameViewService.turnOrder();
@@ -199,20 +201,41 @@ export class GamePageComponent implements OnInit {
         });
     }
 
-    toggleCombatMode(): void {
-        this.isCombatMode = !this.isCombatMode;
+    toggleActionMode(): void {
+        this.isActionMode = !this.isActionMode;
     }
 
-    onTileClick(col: number, row: number): void {
-        if (!this.isCombatMode) return;
-        const targetSocketId = this.getPlayerAtPosition(col, row);
-        if (!targetSocketId) return;
+    onTileClick(x: number, y: number): void {
+        if (!this.isActionMode) return;
+
+        const lobbyId = this.lobby()?.lobbyId;
+        const currentPlayer = this.lobby()?.players.find(p => p.socketId === this.currentPlayerId());
+        if (!lobbyId || !currentPlayer) return;
+
+        const targetSocketId = this.getPlayerAtPosition(x, y);
+        const targetPlayer = this.lobby()?.players.find(p => p.socketId === targetSocketId);
+        if (!targetSocketId || !targetPlayer) return;
+        if (targetSocketId === this.currentPlayerId()) return;
+
         const isAdjacent = this.adjacentPlayers().some((p) => p.socketId === targetSocketId);
         if (!isAdjacent) return;
 
-        const lobbyId = this.lobby()?.lobbyId;
-        if (lobbyId) this.gameViewService.sendCombat(lobbyId, targetSocketId);
-        this.isCombatMode = false;
+        // If currentPlayer and target are on the same team
+        const allTeams = [this.getTeamPlayers('A'), this.getTeamPlayers('B')];
+        const inSameTeam = allTeams.some(team => 
+            team.some(p => p.socketId === this.currentPlayerId()) && 
+            team.some(p => p.socketId === targetSocketId),
+        );
+
+        if (inSameTeam) {
+            if (currentPlayer.hasFlag) {
+                this.gameViewService.transferFlag(lobbyId, targetSocketId);
+            }
+        } else {
+            this.gameViewService.sendCombat(lobbyId, targetSocketId);
+        }
+
+        this.isActionMode = false;
     }
 
     onRightClick(event: MouseEvent, position: Vec2): void {
@@ -241,10 +264,10 @@ export class GamePageComponent implements OnInit {
         return this.reachableTilesForTeleport().some((t) => t.x === col && t.y === row);
     }
 
-    getPlayerAtPosition(col: number, row: number): string | null {
+    getPlayerAtPosition(x: number, y: number): string | null {
         const positions = this.playerPositions();
         for (const [socketId, pos] of Object.entries(positions)) {
-            if (pos.x === col && pos.y === row) return socketId;
+            if (pos.x === x && pos.y === y) return socketId;
         }
         return null;
     }

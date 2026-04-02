@@ -24,6 +24,7 @@ export enum JoinGameEvents {
     ChatHistoryRequest = "chatHistoryRequest",
     Teleport = 'teleport',
     ToggleDebugMode = 'toogleDebugMode',
+    TransferFlag = 'transferFlag',
 
     // Response events (confirmations)
     GameHosted = 'gameHosted',
@@ -38,6 +39,7 @@ export enum JoinGameEvents {
     PlayerKicked = 'playerKicked',
     ReceivedChatMessage = 'receivedChatMessage',
     ReachableTilesForTeleport = 'reachableTilesForTeleport',
+    FlagTransferred = 'flagTransferred',
 
     //--------Game-View-Events--------
     GameStarted = 'gameStarted',
