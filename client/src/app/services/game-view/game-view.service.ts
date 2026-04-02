@@ -96,12 +96,17 @@ export class GameViewService {
                 this.movementPoints.set(data.movementPoints);
             }
 
-            if (data.flagTaken){
+            if (data.flagTaken) {
                 this.gameLobby.update((lobby) => {
                     if (!lobby) return lobby;
                     lobby.game.grid[data.position.y][data.position.x].item = null;
-                    return {...lobby};
+                    const updatedPlayers = lobby.players.map((p) => {
+                        if (p.socketId === data.socketId) return { ...p, hasFlag: true };
+                        return p;
+                    });
+                    return { ...lobby, players: updatedPlayers };
                 });
+                this.isFlagTaken.set(true);
             }
         });
 
@@ -160,14 +165,36 @@ export class GameViewService {
                     this.playerPositions.update((positions) => ({ ...positions, [data.loserId]: newPos }));
                 }
 
-                if (data.wasFlagDropped){
+                if (data.wasFlagDropped) {
                     this.gameLobby.update((lobby) => {
                         if (!lobby) return lobby;
                         lobby.game.grid[data.loserOldPosition.y][data.loserOldPosition.x].item = TileItem.Flag;
-                        return {...lobby};
+                        const updatedPlayers = lobby.players.map((p) => {
+                            if (p.socketId === data.loserId) return { ...p, hasFlag: false };
+                            return p;
+                        });
+
+                        return { ...lobby, players: updatedPlayers };
                     });
+                    this.isFlagTaken.set(false);
                 }
             });
+
+        this.webSocketService.onNamespace<{ giverPlayerId: string, targetPlayerId: string }>
+            (this.namespace, JoinGameEvents.FlagTransferred, (flagTransferData) => {
+                const { giverPlayerId, targetPlayerId } = flagTransferData;
+
+                this.gameLobby.update((lobby) => {
+                    if (!lobby) return lobby;
+                    const giver = lobby.players.find(p => p.socketId === giverPlayerId);
+                    const taker = lobby.players.find(p => p.socketId === targetPlayerId);
+                    if (!giver || !taker) return lobby;
+                    taker.hasFlag = true;
+                    giver.hasFlag = false;
+                    return { ...lobby };
+                });
+            });
+
 
         this.webSocketService.onNamespace<{ socketId: string, updatedLobby: Lobby }>(this.namespace, JoinGameEvents.PlayerAbandoned, (payload) => {
             const { socketId, updatedLobby } = payload;
@@ -221,6 +248,10 @@ export class GameViewService {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestCombat, { lobbyId, targetSocketId });
     }
 
+    transferFlag(lobbyId: string, targetSocketId: string): void {
+        this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.TransferFlag, { lobbyId, targetSocketId });
+    }
+
     sendTileInfoRequest(lobbyId: string, position: Vec2): void {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestTileInfo, { lobbyId, position });
     }
@@ -233,12 +264,14 @@ export class GameViewService {
         this.turnCountdown.set(0);
         this.disableEndTurn.set(false);
         this.reachableTiles.set([]);
+        this.reachableTilesForTeleport.set([]);
         this.movementPoints.set(0);
         this.actionPoints.set(0);
         this.tileInfo.set(null);
         this.playerPositions.set({});
         this.turnOrder.set([]);
         this.turnNotification.set(null);
+        this.isFlagTaken.set(false);
     }
 
     private showNextTurnNotification(endedPlayerSocketId: string): void {

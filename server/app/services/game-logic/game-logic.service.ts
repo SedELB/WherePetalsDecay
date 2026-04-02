@@ -116,6 +116,7 @@ export class GameLogicService {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
         const targetPos = this.movementService.movePlayer(game, socketId, direction);
+        if (!targetPos) return null;
 
         let flagJustTaken = false;
         const isThereFlag = this.ctfService.isThereFlag(game, targetPos);
@@ -181,7 +182,25 @@ export class GameLogicService {
         }
 
         return combatResult;
+    }
 
+    transferFlag(lobbyId: string, giverPlayerId: string, targetPlayerId: string): boolean {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return null;
+
+        const giverActionPoints = game.actionPoints.get(giverPlayerId) ?? 0;
+        if (giverActionPoints <= 0) return null;
+
+        const adjacentPlayers = this.getAdjacentPlayers(lobbyId, giverPlayerId);
+        if (!adjacentPlayers.some((player) => player.socketId === targetPlayerId)) return null;
+        
+        const wasFlagTransfered = this.ctfService.wasFlagTransfered(game, giverPlayerId, targetPlayerId);
+        if (wasFlagTransfered) {
+            game.actionPoints.set(giverPlayerId, giverActionPoints - 1);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     checkWinCondition(lobbyId: string) {
