@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ActiveGame } from './active-game.interface';
 import { Vec2 } from '@common/vec2';
 import { TileItem } from '@common/enums';
+import { Player } from '@common/player';
 @Injectable()
 export class CTFService {
     isThereFlag(game: ActiveGame, pos: Vec2 | null): boolean {
@@ -32,6 +33,18 @@ export class CTFService {
             return true;
         } else {
             return false;
+        }
+    }
+
+    checkWinCondition(game: ActiveGame, flagOwnerId: string, flagOwnerPos: Vec2): Player | null {
+        const flagPlayer = game.lobby.players.find(p => p.socketId === flagOwnerId);
+        const flagPlayerSpawn = game.playerStartPositions.get(flagOwnerId);
+        if (!flagPlayer) return;
+
+        if (flagPlayer.hasFlag && flagOwnerPos.x === flagPlayerSpawn.x && flagOwnerPos.y === flagPlayerSpawn.y){
+            return flagPlayer;
+        } else {
+            return null;
         }
     }
 }

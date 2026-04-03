@@ -48,6 +48,7 @@ export class GamePageComponent implements OnInit {
     readonly lobby = computed(() => this.gameViewService.gameLobby());
     readonly game = computed(() => this.lobby()?.game);
     readonly playerPositions = computed(() => this.gameViewService.playerPositions());
+    readonly playerStartPositions = computed(() => this.gameViewService.playerStartPositions());
     readonly reachableTiles = computed(() => this.gameViewService.reachableTiles());
     readonly reachableTilesForTeleport = computed(() => this.gameViewService.reachableTilesForTeleport());
     readonly movementPoints = computed(() => this.gameViewService.movementPoints());
@@ -210,14 +211,14 @@ export class GamePageComponent implements OnInit {
 
         const lobbyId = this.lobby()?.lobbyId;
         const currentPlayer = this.lobby()?.players.find(p => p.socketId === this.currentPlayerId());
-        if (!lobbyId || !currentPlayer) return;
+        if (!lobbyId || !currentPlayer || this.actionPoints() <= 0) return;
 
         const targetSocketId = this.getPlayerAtPosition(x, y);
         const targetPlayer = this.lobby()?.players.find(p => p.socketId === targetSocketId);
         if (!targetSocketId || !targetPlayer) return;
         if (targetSocketId === this.currentPlayerId()) return;
 
-        const isAdjacent = this.adjacentPlayers().some((p) => p.socketId === targetSocketId);
+        const isAdjacent = this.adjacentPlayers().some(p => p.socketId === targetSocketId);
         if (!isAdjacent) return;
 
         // If currentPlayer and target are on the same team
@@ -228,9 +229,12 @@ export class GamePageComponent implements OnInit {
         );
 
         if (inSameTeam) {
-            if (currentPlayer.hasFlag) {
+            if (currentPlayer.hasFlag) { // If current player wants to give the flag
+                this.gameViewService.giveFlagTransfer(lobbyId, targetSocketId);
+            } else if (targetPlayer.hasFlag) { // If current player wants to request the flag
                 this.gameViewService.requestFlagTransfer(lobbyId, targetSocketId);
             }
+
         } else {
             this.gameViewService.sendCombat(lobbyId, targetSocketId);
         }

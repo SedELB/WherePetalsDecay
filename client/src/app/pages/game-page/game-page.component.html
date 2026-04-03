@@ -173,7 +173,7 @@
             </section>
 
             <div class="action-bar">
-                <app-button (click)="toggleActionMode()" [disabled]="adjacentPlayers().length === 0 || !isMyTurn()">
+                <app-button (click)="toggleActionMode()" [disabled]="adjacentPlayers().length === 0 || !isMyTurn() || actionPoints() <= 0">
                     {{ isActionMode ? 'Annuler action' : 'Action' }}
                 </app-button>
                 <app-button (click)="onEndTurn()" [disabled]="this.disableEndTurn() || isEndTurnDisabled()">Finir Tour</app-button>
@@ -190,23 +190,28 @@
     @if (gameOver(); as over) {
         <div class="game-over-overlay">
             <div class="game-over-message">
-                @if (over.winnerSocketId === localPlayer()?.socketId) {
-                    @if (over.isForfeit) {
-                        <p>Vous avez gagné car tous les autres joueurs ont quitté !</p>
+                <h2>Partie terminée</h2>
+
+                @if (over.isForfeit && over.winnerSocketId === localPlayer()?.socketId) {
+                    <p>Vous avez gagné car tous les autres joueurs ont quitté !</p>
+                }
+                @else if (over.winnerSocketId) {
+                    @if (over.winnerSocketId === localPlayer()?.socketId) {
+                        @if (game()?.gameMode === gameMode.Ctf) {
+                            <p>Félicitations ! Vous avez gagné en ramenant le drapeau à votre base !</p>
+                        } @else {
+                            <p>Félicitations ! Vous avez gagné la partie avec 3 victoires !</p>
+                        }
                     } @else {
-                        <p>Vous avez gagné la partie avec 3 victoires !</p>
+                        @if (game()?.gameMode === gameMode.Ctf) {
+                            <p>{{ getPlayerName(over.winnerSocketId) }} a ramené le drapeau et fait gagner son équipe !</p>
+                        } @else {
+                            <p>{{ getPlayerName(over.winnerSocketId) }} a atteint 3 victoires et remporte la partie.</p>
+                        }
                     }
-
-                } @else if (over.winnerSocketId) {
-                    <p>{{ getPlayerName(over.winnerSocketId) }} a atteint 3 victoires et remporte la partie.</p>
-
-                } @else if (over.abandonTeam === 'A') {
-                    <h2>Partie terminée</h2>
-                    <p>L'équipe A a abandonné.</p>
-                    <p>Redirection vers le menu principal...</p>
-                } @else if (over.abandonTeam === 'B') {
-                    <h2>Partie terminée</h2>
-                    <p>L'équipe B a abandonné.</p>
+                }
+                @else if (over.abandonTeam) {
+                    <p>L'équipe {{ over.abandonTeam }} a abandonné la partie.</p>
                     <p>Redirection vers le menu principal...</p>
                 }
             </div>
