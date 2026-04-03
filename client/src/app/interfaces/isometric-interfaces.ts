@@ -52,4 +52,7 @@ export interface RenderBoardConfig {
   reachableTiles?: Vec2[];
   teleportableTiles?: Vec2[];
   localPlayerSocketId?: string;
+  isCTF?: boolean;
+  teamA?: Player[];
+  teamB?: Player[];
 }

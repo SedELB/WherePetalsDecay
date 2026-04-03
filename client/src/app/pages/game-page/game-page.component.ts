@@ -14,7 +14,7 @@ import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
 
-const GAME_OVER_REDIRECT_DELAY = 3000;
+const GAME_OVER_REDIRECT_DELAY = 5000;
 
 @Component({
     selector: 'app-game-page',
@@ -229,7 +229,7 @@ export class GamePageComponent implements OnInit {
 
         if (inSameTeam) {
             if (currentPlayer.hasFlag) {
-                this.gameViewService.transferFlag(lobbyId, targetSocketId);
+                this.gameViewService.requestFlagTransfer(lobbyId, targetSocketId);
             }
         } else {
             this.gameViewService.sendCombat(lobbyId, targetSocketId);

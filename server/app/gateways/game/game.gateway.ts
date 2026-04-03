@@ -157,21 +157,38 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         this.gameLogicService.endTurn(lobbyId);
     }
 
-    @SubscribeMessage(JoinGameEvents.TransferFlag)
-    handleTransferFlag(@ConnectedSocket() socket: Socket, @MessageBody() payload: {lobbyId: string, targetSocketId: string}) {
+    @SubscribeMessage(JoinGameEvents.FlagTransferRequest)
+    handleFlagTransferRequest(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; targetSocketId: string }) {
         const { lobbyId, targetSocketId } = payload;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
-        const wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, socket.id, targetSocketId);
+        const requesterName = this.gameLogicService.getActiveGame(lobbyId)
+            ?.lobby.players.find(p => p.socketId === socket.id)?.character?.name ?? 'Un coéquipier';
+
+        this.server.to(targetSocketId).emit(JoinGameEvents.FlagTransferRequest, {
+            requesterId: socket.id,
+            requesterName,
+            lobbyId,
+        });
+    }
+
+    @SubscribeMessage(JoinGameEvents.FlagTransferResponse)
+    handleFlagTransferResponse(
+        @ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; requesterId: string; accepted: boolean },
+    ) {
+        const { lobbyId, requesterId, accepted } = payload;
+        if (!accepted) return;
+
+        if (!this.gameLogicService.isPlayerTurn(lobbyId, requesterId)) return;
+
+        const wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, requesterId, socket.id);
         if (!wasFlagTransfered) return;
 
-        const flagTransferData = {
-            giverPlayerId: socket.id,
-            targetPlayerId: targetSocketId,
-        };
-
-        this.sendActionPoints(lobbyId, socket.id);
-        this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, flagTransferData);
+        this.sendActionPoints(lobbyId, requesterId);
+        this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, {
+            giverPlayerId: requesterId,
+            targetPlayerId: socket.id,
+        });
     }
 
     @SubscribeMessage(JoinGameEvents.RequestTileInfo)

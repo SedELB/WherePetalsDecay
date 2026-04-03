@@ -1,6 +1,6 @@
 import { BASE_STATS } from '@common/constants/character.constants';
 import { Direction } from '@common/direction';
-import { TileItem } from '@common/enums';
+import { GameMode, TileItem } from '@common/enums';
 import { Game } from '@common/game';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
@@ -229,16 +229,28 @@ export class GameLogicService {
         const wasCurrentTurn = this.isPlayerTurn(lobbyId, socket.id);
         const updatedLobby = this.abandonPlayer(lobbyId, socket.id);
 
-
         if (updatedLobby) {
             const payload = { socketId: socket.id, updatedLobby };
             server.to(lobbyId).emit(JoinGameEvents.PlayerAbandoned, payload);
         }
-
         socket.leave(lobbyId);
 
-
         const activePlayers = this.getActivePlayers(lobbyId);
+
+        if (game.lobby.game.gameMode === GameMode.Ctf) {
+            const teamA = this.getActivePlayers(lobbyId, 'A');
+            const teamB = this.getActivePlayers(lobbyId, 'B');
+            if (teamA.length === 0) {
+                server.to(lobbyId).emit(JoinGameEvents.GameOver, { abandonTeam: 'A' });
+                this.endGame(lobbyId);
+                return true;
+
+            } else if (teamB.length === 0) {
+                server.to(lobbyId).emit(JoinGameEvents.GameOver, { abandonTeam: 'B' });
+                this.endGame(lobbyId);
+                return true;
+            }
+        }
 
         if (activePlayers.length <= 1) {
             const winnerId = activePlayers.length === 1 ? activePlayers[0].socketId : null;
@@ -246,6 +258,7 @@ export class GameLogicService {
 
             this.endGame(lobbyId);
             server.in(lobbyId).socketsLeave(lobbyId);
+        
             return true;
         } else if (wasCurrentTurn) {
             this.endTurn(lobbyId);
@@ -255,10 +268,17 @@ export class GameLogicService {
         return false;
     }
 
-    getActivePlayers(lobbyId: string): Player[] {
+    getActivePlayers(lobbyId: string, team?: 'A' | 'B'): Player[] {
         const game = this.activeGames.get(lobbyId);
         if (!game) return [];
-        return game.lobby.players.filter((player) => !player.hasAbandonned);
+
+        if (team === 'A') {
+            return game.lobby.teamA.filter(player => !player.hasAbandonned);
+        } else if (team === 'B') {
+            return game.lobby.teamB.filter(player => !player.hasAbandonned);
+        } else {
+            return game.lobby.players.filter((player) => !player.hasAbandonned);
+        }
     }
 
     // Alt
