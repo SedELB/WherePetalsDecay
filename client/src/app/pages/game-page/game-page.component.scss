@@ -165,10 +165,11 @@
 .local-player-info {
     align-self: flex-start;
     margin-left: 0.625rem;
-    width: 100%;
+    width: calc(100% - 1.25rem);
     ul {
-        padding-left: 1rem;
+        padding-left: 0;
         text-align: left;
+        list-style: none;
     }
 
     li {
@@ -184,6 +185,32 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
+
+    .info {
+        display: flex;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 0.5rem;
+        width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+    .name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex-shrink: 1;
+    }
+
+    .stats-icon,
+    .host-indicator,
+    .flag-indicator,
+    .turn-indicator {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
 }
 
 .list p {
@@ -191,7 +218,23 @@
 }
 
 .players-list li.active .name {
-    color: rgb(6, 241, 6);
+    color: #78bc75;
+}
+
+.players-list li.active .info {
+    border: 1px solid #78bc75;
+    border-radius: 0.35rem;
+    padding: 0.3rem 0.6rem;
+    box-shadow: 0 0 8px rgba(120, 188, 117, 0.6), inset 0 0 4px rgba(120, 188, 117, 0.3);
+    background-color: rgba(120, 188, 117, 0.1);
+}
+
+.players-list li.active .turn-indicator {
+    color: #78bc75;
+}
+
+.turn-indicator {
+    order: -1;
 }
 
 .players-list li.abandonned .name {
@@ -583,26 +626,22 @@
 .team-section {
     margin-bottom: 0.5rem;
 
-    .team-title {
-        font-size: 1em;
-        margin: 0.5rem 0 0.25rem 0;
-        text-align: center;
-        background-color: rgba(0, 0, 0, 0.25);
-        border-radius: 0.375rem;
-        padding: 0.25rem 0;
-    }
-
     &.team-a-section {
-        .team-title {
-            color: #3b82f6;
-            border-left: 4px solid #3b82f6;
-        }
-
         ul li {
             border-left: 2px solid #3b82f6;
             background-color: rgba(59, 130, 246, 0.05);
             padding-left: 0.5rem;
             margin-bottom: 0.3125rem;
+        }
+
+        li.active .info {
+            border-color: #3b82f6;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.6), inset 0 0 4px rgba(59, 130, 246, 0.3);
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        li.active .name {
+            color: #3b82f6;
         }
 
         .turn-indicator-a {
@@ -611,16 +650,21 @@
     }
 
     &.team-b-section {
-        .team-title {
-            color: #ef4444;
-            border-left: 4px solid #ef4444;
-        }
-
         ul li {
             border-left: 2px solid #ef4444;
             background-color: rgba(239, 68, 68, 0.05);
             padding-left: 0.5rem;
             margin-bottom: 0.3125rem;
+        }
+
+        li.active .info {
+            border-color: #ef4444;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.6), inset 0 0 4px rgba(239, 68, 68, 0.3);
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+
+        li.active .name {
+            color: #ef4444;
         }
 
         .turn-indicator-b {

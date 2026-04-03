@@ -25,6 +25,8 @@ export enum JoinGameEvents {
     Teleport = 'teleport',
     ToggleDebugMode = 'toogleDebugMode',
     TransferFlag = 'transferFlag',
+    FlagTransferRequest = 'flagTransferRequest',
+    FlagTransferResponse = 'flagTransferResponse',
 
     // Response events (confirmations)
     GameHosted = 'gameHosted',

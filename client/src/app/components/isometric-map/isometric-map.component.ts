@@ -21,6 +21,9 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   @Input() reachableTiles: Vec2[] = [];
   @Input() teleportableTiles: Vec2[] = [];
   @Input() localPlayerSocketId?: string;
+  @Input() isCTF: boolean = false;
+  @Input() teamA: Player[] = [];
+  @Input() teamB: Player[] = [];
 
   @Output() tileClick = new EventEmitter<Vec2>();
   @Output() rightClick = new EventEmitter<{event: MouseEvent, pos: Vec2}>();
@@ -54,12 +57,13 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   constructor(private isometricViewService: IsometricViewService) {}
 
   ngOnChanges(): void {
-    this.needsRecenter = true;
+    this.needsRecenter = false;
     this.render();
   }
 
   ngAfterViewInit(): void {
     const canvas = this.canvasRef.nativeElement;
+    this.needsRecenter = true;
     canvas.addEventListener('mousedown', this.boundOnMouseDown);
     canvas.addEventListener('mousemove', this.boundOnMouseMove);
     canvas.addEventListener('mouseup', this.boundOnMouseUp);
@@ -222,6 +226,9 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
       reachableTiles: this.reachableTiles,
       teleportableTiles: this.teleportableTiles,
       localPlayerSocketId: this.localPlayerSocketId,
+      isCTF: this.isCTF,
+      teamA: this.teamA,
+      teamB: this.teamB,
       onRecenter: (zoom, x, y) => {
         this.zoom = zoom;
         this.cameraX = x;

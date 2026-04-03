@@ -8,6 +8,7 @@ import { CombatResult, GameStartedData, PlayerMovedData, TileInfoData } from '@c
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Vec2 } from '@common/vec2';
+import swal from 'sweetalert2';
 
 const ONE_SECOND_DELAY = 1000;
 
@@ -29,9 +30,10 @@ export class GameViewService {
     readonly movementPoints = signal<number>(0);
     readonly actionPoints = signal<number>(0);
     readonly tileInfo = signal<TileInfoData | null>(null);
-    readonly gameOver = signal<{ winnerSocketId: string | null; isForfeit?: boolean } | null>(null);
+    readonly gameOver = signal<{ winnerSocketId?: string | null; isForfeit?: boolean; abandonTeam?: string} | null>(null);
     readonly turnNotification = signal<string | null>(null);
     readonly isFlagTaken = signal<boolean>(false);
+    private closeFlagTransferSwal: (() => void) | null = null;
 
     constructor(
         private readonly webSocketService: WebSocketService,
@@ -88,6 +90,11 @@ export class GameViewService {
             this.reachableTiles.set([]);
             this.reachableTilesForTeleport.set([]);
             this.showNextTurnNotification(endedPlayerSocketId);
+            // Auto-close pending flag transfer dialog
+            if (this.closeFlagTransferSwal) {
+                this.closeFlagTransferSwal();
+                this.closeFlagTransferSwal = null;
+            }
         });
 
         this.webSocketService.onNamespace<PlayerMovedData>(this.namespace, JoinGameEvents.PlayerMoved, (data) => {
@@ -195,6 +202,29 @@ export class GameViewService {
                 });
             });
 
+        this.webSocketService.onNamespace<{ requesterId: string; requesterName: string; lobbyId: string }>
+            (this.namespace, JoinGameEvents.FlagTransferRequest, ({ requesterId, requesterName, lobbyId }) => {
+                this.closeFlagTransferSwal = () => swal.close();
+
+                swal.fire({
+                    title: 'Transfert de drapeau',
+                    text: `${requesterName} veut vous passer le drapeau.`,
+                    icon: 'question',
+                    confirmButtonText: 'Accepter',
+                    cancelButtonText: 'Refuser',
+                    showCancelButton: true,
+                    timer: undefined,
+                    allowOutsideClick: false,
+                }).then((result) => {
+                    this.closeFlagTransferSwal = null;
+                    this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.FlagTransferResponse, {
+                        lobbyId,
+                        requesterId,
+                        accepted: result.isConfirmed,
+                    });
+                });
+            });
+
 
         this.webSocketService.onNamespace<{ socketId: string, updatedLobby: Lobby }>(this.namespace, JoinGameEvents.PlayerAbandoned, (payload) => {
             const { socketId, updatedLobby } = payload;
@@ -207,7 +237,8 @@ export class GameViewService {
             this.setLobby(updatedLobby);
         });
 
-        this.webSocketService.onNamespace<{ winnerSocketId: string | null; isForfeit?: boolean }>(this.namespace, JoinGameEvents.GameOver, (data) => {
+        this.webSocketService.onNamespace<{ winnerSocketId?: string | null; isForfeit?: boolean;
+            abandonTeam?: string }>(this.namespace, JoinGameEvents.GameOver, (data) => {
             this.gameOver.set(data);
         });
 
@@ -248,8 +279,8 @@ export class GameViewService {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestCombat, { lobbyId, targetSocketId });
     }
 
-    transferFlag(lobbyId: string, targetSocketId: string): void {
-        this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.TransferFlag, { lobbyId, targetSocketId });
+    requestFlagTransfer(lobbyId: string, targetSocketId: string): void {
+        this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.FlagTransferRequest, { lobbyId, targetSocketId });
     }
 
     sendTileInfoRequest(lobbyId: string, position: Vec2): void {

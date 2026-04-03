@@ -234,11 +234,32 @@ export class IsometricViewService {
     const charX = data.cx - imgW / 2;
     const charY = data.cy - imgH + (data.tileH * RENDER_CONSTANTS.playerDepthOffset);
     const isLocal = playerAtTile.socketId === config.localPlayerSocketId;
+    let glowColor: string | null = null;
 
-    if (isLocal) {
+    if (config.isCTF) {
+        const isTeamA = config.teamA?.some(p => p.socketId === playerAtTile.socketId);
+        const isTeamB = config.teamB?.some(p => p.socketId === playerAtTile.socketId);
+
+        if (isTeamA) {
+            glowColor = '#3b82f6'; 
+        } else if (isTeamB) {
+            glowColor = '#ef4444';
+        }
+    } else if (isLocal) {
+        glowColor = '#00f2fe';
+    }
+
+    if (glowColor) {
         data.ctx.save();
-        data.ctx.shadowColor = '#00f2fe';
-        data.ctx.shadowBlur = 12;
+        data.ctx.shadowColor = glowColor;
+
+        data.ctx.shadowBlur = 30;
+        data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
+
+        data.ctx.shadowBlur = 18;
+        data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
+
+        data.ctx.shadowBlur = 8;
         data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
         data.ctx.shadowBlur = 0;
         data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
@@ -246,6 +267,7 @@ export class IsometricViewService {
     } else {
         data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
     }
+    
   }
 
   private drawPlayerShadow(ctx: CanvasRenderingContext2D, data: { cx: number; cy: number; tileH: number; imgW: number; imgH: number }): void {
