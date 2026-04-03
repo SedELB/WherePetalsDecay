@@ -26,10 +26,17 @@ export interface GameStartedData {
     lobby: Lobby;
     turnOrder: string[];
     playerPositions: Record<string, Vec2>;
+    playerStartPositions: Record<string, Vec2>;
 }
 
 export interface TileInfoData {
     tile: Tile;
     cost: number;
     player: { name: string; avatar: string } | null;
+}
+
+export interface GameOverData {
+    winnerSocketId?: string | null;
+    isForfeit?: boolean;
+    abandonTeam?: string;
 }

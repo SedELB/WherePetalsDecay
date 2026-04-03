@@ -1,7 +1,7 @@
 import { GameLogicService } from '@app/services/game-logic/game-logic.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Direction } from '@common/direction';
-import { SocketNamespace } from '@common/enums';
+import { GameMode, SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
@@ -70,6 +70,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             lobby: activeGame.lobby,
             turnOrder: activeGame.turnOrder,
             playerPositions: this.gameLogicService.getPlayerPositions(lobbyId),
+            playerStartPositions: activeGame.playerStartPositions,
         });
 
         this.gameLogicService.startTurnCycle(lobbyId);
@@ -94,6 +95,14 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         this.sendReachableTiles(lobbyId, socket.id);
         this.sendReachableTilesForTeleport(lobbyId, socket.id);
         this.autoEndTurnIfNoActions(lobbyId, socket.id);
+
+        if (this.lobbyService.getLobby(lobbyId).game.gameMode === GameMode.Ctf) {
+            const winner = this.gameLogicService.checkWinCondition(lobbyId, socket.id, result.position);
+            if (winner) {
+                this.handleGameOver(lobbyId, winner.socketId);
+                return;
+            }
+        }
     }
 
     @SubscribeMessage(JoinGameEvents.Teleport)
@@ -106,7 +115,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
         this.server.to(lobbyId).emit(JoinGameEvents.PlayerTeleported, {
             socketId: socket.id,
-            position: newPosition,
+            position: newPosition.position,
+            flagTaken: newPosition.flagJustTaken,
         });
 
         this.sendReachableTiles(lobbyId, socket.id);
@@ -157,15 +167,30 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         this.gameLogicService.endTurn(lobbyId);
     }
 
-    @SubscribeMessage(JoinGameEvents.FlagTransferRequest)
-    handleFlagTransferRequest(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; targetSocketId: string }) {
+    @SubscribeMessage(JoinGameEvents.GiveFlagRequest)
+    handleGiveFlagRequest(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; targetSocketId: string }) {
         const { lobbyId, targetSocketId } = payload;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
         const requesterName = this.gameLogicService.getActiveGame(lobbyId)
             ?.lobby.players.find(p => p.socketId === socket.id)?.character?.name ?? 'Un coéquipier';
 
-        this.server.to(targetSocketId).emit(JoinGameEvents.FlagTransferRequest, {
+        this.server.to(targetSocketId).emit(JoinGameEvents.GiveFlagResponse, {
+            requesterId: socket.id,
+            requesterName,
+            lobbyId,
+        });
+    }
+
+    @SubscribeMessage(JoinGameEvents.RequestFlagRequest)
+    handleRequestFlagRequest(@ConnectedSocket() socket: Socket, @MessageBody() payload: {lobbyId: string, targetSocketId: string}) {
+        const { lobbyId, targetSocketId } = payload;
+        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
+
+        const requesterName = this.gameLogicService.getActiveGame(lobbyId)
+            ?.lobby.players.find(p => p.socketId === socket.id)?.character?.name ?? 'Un coéquipier';
+        
+        this.server.to(targetSocketId).emit(JoinGameEvents.RequestFlagResponse, {
             requesterId: socket.id,
             requesterName,
             lobbyId,
@@ -174,21 +199,32 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
     @SubscribeMessage(JoinGameEvents.FlagTransferResponse)
     handleFlagTransferResponse(
-        @ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; requesterId: string; accepted: boolean },
+        @ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; requesterId: string; accepted: boolean, isRequest?: boolean },
     ) {
-        const { lobbyId, requesterId, accepted } = payload;
+        const { lobbyId, requesterId, accepted, isRequest} = payload;
         if (!accepted) return;
 
         if (!this.gameLogicService.isPlayerTurn(lobbyId, requesterId)) return;
 
-        const wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, requesterId, socket.id);
-        if (!wasFlagTransfered) return;
-
-        this.sendActionPoints(lobbyId, requesterId);
-        this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, {
-            giverPlayerId: requesterId,
-            targetPlayerId: socket.id,
-        });
+        if (!isRequest) {
+            // Case 1: Active player GIVES and PAYS
+            const wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, requesterId, socket.id, requesterId);
+            if (!wasFlagTransfered) return;
+            this.sendActionPoints(lobbyId, requesterId);
+            this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, {
+                giverPlayerId: requesterId,
+                targetPlayerId: socket.id,
+            });
+        } else {
+            // Case 2: Active player RECEIVES and PAYS
+            const wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, socket.id, requesterId, requesterId);
+            if (!wasFlagTransfered) return;
+            this.sendActionPoints(lobbyId, requesterId);
+            this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, {
+                giverPlayerId: socket.id,
+                targetPlayerId: requesterId,
+            });
+        }
     }
 
     @SubscribeMessage(JoinGameEvents.RequestTileInfo)
@@ -246,7 +282,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
         const movementPoints = this.gameLogicService.getMovementPoints(lobbyId, socketId);
         const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
-        if (movementPoints <= 0 || actionPoints <= 0) {
+        if (movementPoints <= 0 && actionPoints <= 0) {
             this.gameLogicService.endTurn(lobbyId);
         }
     }

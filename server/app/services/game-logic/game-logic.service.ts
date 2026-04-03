@@ -133,7 +133,19 @@ export class GameLogicService {
     teleportPlayer(lobbyId: string, socketId: string, targetPos: Vec2) {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
-        return this.movementService.teleportPlayer(game, socketId, targetPos);
+        const landingPos = this.movementService.teleportPlayer(game, socketId, targetPos);
+        if (!landingPos) return null;
+
+        let flagJustTaken = false;
+        const isThereFlag = this.ctfService.isThereFlag(game, landingPos);
+        if (isThereFlag) {
+            this.ctfService.removeFlagFromTile(game, landingPos);
+            const player = game.lobby.players.find(p => p.socketId === socketId);
+            player.hasFlag = true;
+            flagJustTaken = true;
+        }
+
+        return {position: landingPos, flagJustTaken};
     }
 
     getReachableTilesForTeleport(lobbyId: string, socketId: string){
@@ -184,29 +196,36 @@ export class GameLogicService {
         return combatResult;
     }
 
-    transferFlag(lobbyId: string, giverPlayerId: string, targetPlayerId: string): boolean {
+    transferFlag(lobbyId: string, giverPlayerId: string, targetPlayerId: string, payerId: string): boolean {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
 
-        const giverActionPoints = game.actionPoints.get(giverPlayerId) ?? 0;
-        if (giverActionPoints <= 0) return null;
+        const payerActionPoints = game.actionPoints.get(payerId) ?? 0;
+        if (payerActionPoints <= 0) return null;
 
         const adjacentPlayers = this.getAdjacentPlayers(lobbyId, giverPlayerId);
         if (!adjacentPlayers.some((player) => player.socketId === targetPlayerId)) return null;
         
         const wasFlagTransfered = this.ctfService.wasFlagTransfered(game, giverPlayerId, targetPlayerId);
         if (wasFlagTransfered) {
-            game.actionPoints.set(giverPlayerId, giverActionPoints - 1);
+            game.actionPoints.set(payerId, payerActionPoints - 1);
             return true;
         } else {
             return false;
         }
     }
 
-    checkWinCondition(lobbyId: string) {
+    checkWinCondition(lobbyId: string, flagOwnerId?: string, flagOwnerPos?: Vec2) {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
-        return this.combatService.checkWinCondition(game);
+
+        if (game.lobby.game.gameMode === GameMode.Classic) return this.combatService.checkWinCondition(game);
+        if (game.lobby.game.gameMode === GameMode.Ctf) {
+            if (flagOwnerId && flagOwnerPos) {
+                 return this.ctfService.checkWinCondition(game, flagOwnerId, flagOwnerPos);
+            }
+        }
+        return null;
     }
 
     // Abandon

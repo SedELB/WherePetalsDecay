@@ -25,8 +25,8 @@ export enum JoinGameEvents {
     Teleport = 'teleport',
     ToggleDebugMode = 'toogleDebugMode',
     TransferFlag = 'transferFlag',
-    FlagTransferRequest = 'flagTransferRequest',
-    FlagTransferResponse = 'flagTransferResponse',
+    GiveFlagRequest = 'giveFlagRequest',
+    RequestFlagRequest = 'requestFlagRequest',
 
     // Response events (confirmations)
     GameHosted = 'gameHosted',
@@ -42,6 +42,9 @@ export enum JoinGameEvents {
     ReceivedChatMessage = 'receivedChatMessage',
     ReachableTilesForTeleport = 'reachableTilesForTeleport',
     FlagTransferred = 'flagTransferred',
+    GiveFlagResponse = 'giveFlagResponse',
+    RequestFlagResponse = 'requestFlagResponse',
+    FlagTransferResponse = 'flagTransferResponse',
 
     //--------Game-View-Events--------
     GameStarted = 'gameStarted',
