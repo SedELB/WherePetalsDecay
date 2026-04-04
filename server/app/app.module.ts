@@ -16,6 +16,8 @@ import { GameGateway } from './gateways/game/game.gateway';
 import { GamesGateway } from './gateways/games/games.gateway';
 import { JoinGateway } from './gateways/join/join.gateway';
 import { ChatGateway } from './gateways/chat/chat.gateway';
+import { JournalGateway } from './gateways/journal/journal.gateway';
+import { JournalService } from './services/journal/journal.service';
 @Module({
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),
@@ -41,6 +43,7 @@ import { ChatGateway } from './gateways/chat/chat.gateway';
         CombatService,
         CTFService,
         GameLogicService, 
+        JournalService,
 
         // Gateways
         AdminGateway, 
@@ -48,6 +51,7 @@ import { ChatGateway } from './gateways/chat/chat.gateway';
         GamesGateway, 
         JoinGateway, 
         ChatGateway,
+        JournalGateway,
         
         Logger,
     ],

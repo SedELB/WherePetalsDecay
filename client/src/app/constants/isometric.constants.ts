@@ -1,5 +1,5 @@
-import { TileItem, TileTexture } from '@common/enums';
 import { TileColorSet } from '@app/interfaces/isometric-interfaces';
+import { TileItem, TileTexture } from '@common/enums';
 
 
 export const TILE_RATIO = 2.5;
@@ -22,7 +22,16 @@ export const RENDER_CONSTANTS = {
   itemFloatAmplitude: 0.10,
   itemFloatBaseOffset: 0.4,
   itemWidthRatio: 0.5,
-  
+  itemVerticalOffset: -0.25,
+
+  itemShadowRadiusXRatio: 0.2,
+  itemShadowRadiusYRatio: 0.08,
+  itemShadowOffsetYRatio: 0.35,
+  itemShadowScaleMin: 0.65,
+  itemShadowScaleRange: 0.35,
+  itemShadowAlphaMin: 0.12,
+  itemShadowAlphaRange: 0.22,
+
   playerWidthRatio: 0.75,
   playerHeightAdjustment: 0.9,
   playerDepthOffset: 0.1,
@@ -30,6 +39,11 @@ export const RENDER_CONSTANTS = {
   shadowOffsetYRatio: 0.05,
   shadowRadiusXRatio: 0.4,
   shadowRadiusYRatio: 0.1,
+
+  actionPulseBase: 0.38,
+  actionPulseAmplitude: 0.22,
+  actionPulseSpeed: 300,
+  actionGlowLineWidth: 2.5,
 };
 
 
@@ -54,8 +68,8 @@ export const ISO_TEXTURE_ASSETS: Record<TileTexture, string> = {
   [TileTexture.Water]: './assets/tiles/water.png',
   [TileTexture.Ice]: './assets/tiles/ice.png',
   [TileTexture.Wall]: './assets/tiles/wall.png',
-  [TileTexture.DoorClosed]: './assets/tiles/opened_door.png',
-  [TileTexture.DoorOpened]: './assets/tiles/closed_door.png',
+  [TileTexture.DoorClosed]: './assets/tiles/closed_door.png',
+  [TileTexture.DoorOpened]: './assets/tiles/opened_door.png',
 };
 
 export const DEFAULT_COLOR: TileColorSet = {

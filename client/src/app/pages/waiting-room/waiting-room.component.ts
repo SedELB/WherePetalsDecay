@@ -170,6 +170,8 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
     }
 
     onStartGame(): void {
+        swal.close();
+        
         if (this.canStartGame()) {
             this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.StartGame, this.lobbyId());
         }

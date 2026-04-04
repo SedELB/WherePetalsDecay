@@ -1,11 +1,13 @@
-import { Component, HostListener, OnInit, computed, effect } from '@angular/core';
+import { Component, HostListener, OnInit, computed, effect, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { ChatComponent } from '@app/components/chat/chat.component';
 import { IsometricMapComponent } from '@app/components/isometric-map/isometric-map.component';
+import { JournalComponent } from '@app/components/journal/journal.component';
 import { SakuraComponent } from '@app/components/sakura/sakura.component';
 import { OBJECT_PLACEMENT_TOOL } from '@app/constants/map-setup-page-constant';
 import { ROUTES } from '@app/constants/routes.constants';
+import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS, KEY_TO_DIRECTION } from '@common/direction';
@@ -18,7 +20,7 @@ const GAME_OVER_REDIRECT_DELAY = 5000;
 
 @Component({
     selector: 'app-game-page',
-    imports: [ButtonComponent, SakuraComponent, ChatComponent, IsometricMapComponent],
+    imports: [ButtonComponent, SakuraComponent, ChatComponent, IsometricMapComponent, JournalComponent],
     templateUrl: './game-page.component.html',
     styleUrl: './game-page.component.scss',
 })
@@ -39,7 +41,8 @@ export class GamePageComponent implements OnInit {
     isChatFocused = false;
     isJournalOpen = false;
     isLeftPanelOpen = true;
-    isActionMode = false;
+    readonly isSubMenuOpen = signal(false);
+    readonly activeSubAction = signal<ActionHighlightType | null>(null);
 
     protected gameMode = GameMode;
 
@@ -116,6 +119,83 @@ export class GamePageComponent implements OnInit {
         });
     });
 
+
+    readonly attackTargets = computed((): Vec2[] => {
+        if (!this.isMyTurn()) return [];
+        const localId = this.gameViewService.getLocalSocketId();
+        const allTeams = [this.getTeamPlayers('A'), this.getTeamPlayers('B')];
+        return this.adjacentPlayers()
+            .filter(p => {
+                const isSameTeam = allTeams.some(team =>
+                    team.some(t => t.socketId === localId) &&
+                    team.some(t => t.socketId === p.socketId),
+                );
+                return !isSameTeam;
+            })
+            .map(p => this.playerPositions()[p.socketId])
+            .filter((pos): pos is Vec2 => !!pos);
+    });
+
+    readonly requestFlagTargets = computed((): Vec2[] => {
+        if (!this.isMyTurn()) return [];
+        const localId = this.gameViewService.getLocalSocketId();
+        const localPlayer = this.localPlayer();
+        if (!localPlayer || localPlayer.hasFlag) return [];
+        const allTeams = [this.getTeamPlayers('A'), this.getTeamPlayers('B')];
+        return this.adjacentPlayers()
+            .filter(p => {
+                const isSameTeam = allTeams.some(team =>
+                    team.some(t => t.socketId === localId) &&
+                    team.some(t => t.socketId === p.socketId),
+                );
+                return isSameTeam && p.hasFlag;
+            })
+            .map(p => this.playerPositions()[p.socketId])
+            .filter((pos): pos is Vec2 => !!pos);
+    });
+
+
+    readonly giveFlagTargets = computed((): Vec2[] => {
+        if (!this.isMyTurn()) return [];
+        const localId = this.gameViewService.getLocalSocketId();
+        const localPlayer = this.localPlayer();
+        if (!localPlayer?.hasFlag) return [];
+        const allTeams = [this.getTeamPlayers('A'), this.getTeamPlayers('B')];
+        return this.adjacentPlayers()
+            .filter(p => {
+                const isSameTeam = allTeams.some(team =>
+                    team.some(t => t.socketId === localId) &&
+                    team.some(t => t.socketId === p.socketId),
+                );
+                return isSameTeam;
+            })
+            .map(p => this.playerPositions()[p.socketId])
+            .filter((pos): pos is Vec2 => !!pos);
+    });
+
+    readonly actionHighlightTiles = computed((): ActionTileHighlight[] => {
+        const subAction = this.activeSubAction();
+        if (!this.isSubMenuOpen() || !subAction) return [];
+        const typeMap: Record<ActionHighlightType, Vec2[]> = {
+            attack:       this.attackTargets(),
+            requestFlag:  this.requestFlagTargets(),
+            giveFlag:     this.giveFlagTargets(),
+        };
+        return (typeMap[subAction] ?? []).map(pos => ({
+            pos,
+            type: subAction,
+        }));
+    });
+
+
+    readonly hasAnyAction = computed(() =>
+        this.isMyTurn() &&
+        this.actionPoints() > 0 &&
+        (this.attackTargets().length > 0 ||
+         this.requestFlagTargets().length > 0 ||
+         this.giveFlagTargets().length > 0),
+    );
+
     private gameOverTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor(
@@ -182,7 +262,11 @@ export class GamePageComponent implements OnInit {
 
     onEndTurn(): void {
         const lobbyId = this.lobby()?.lobbyId;
-        if (lobbyId) this.gameViewService.sendEndTurn(lobbyId);
+        if (lobbyId) {
+            this.isSubMenuOpen.set(false);
+            this.activeSubAction.set(null);
+            this.gameViewService.sendEndTurn(lobbyId);
+        }
     }
 
     onAbandon(): void {
@@ -202,44 +286,47 @@ export class GamePageComponent implements OnInit {
         });
     }
 
-    toggleActionMode(): void {
-        this.isActionMode = !this.isActionMode;
+    toggleSubMenu(): void {
+        const next = !this.isSubMenuOpen();
+        this.isSubMenuOpen.set(next);
+        if (!next) {
+            this.activeSubAction.set(null);
+        }
+    }
+
+    selectSubAction(type: ActionHighlightType): void {
+        const current = this.activeSubAction();
+        this.activeSubAction.set(current === type ? null : type);
     }
 
     onTileClick(x: number, y: number): void {
-        if (!this.isActionMode) return;
+        if (!this.isSubMenuOpen() || !this.activeSubAction()) return;
 
         const lobbyId = this.lobby()?.lobbyId;
-        const currentPlayer = this.lobby()?.players.find(p => p.socketId === this.currentPlayerId());
-        if (!lobbyId || !currentPlayer || this.actionPoints() <= 0) return;
+        if (!lobbyId || this.actionPoints() <= 0) return;
 
         const targetSocketId = this.getPlayerAtPosition(x, y);
-        const targetPlayer = this.lobby()?.players.find(p => p.socketId === targetSocketId);
-        if (!targetSocketId || !targetPlayer) return;
-        if (targetSocketId === this.currentPlayerId()) return;
+        if (!targetSocketId || targetSocketId === this.currentPlayerId()) return;
 
-        const isAdjacent = this.adjacentPlayers().some(p => p.socketId === targetSocketId);
-        if (!isAdjacent) return;
-
-        // If currentPlayer and target are on the same team
-        const allTeams = [this.getTeamPlayers('A'), this.getTeamPlayers('B')];
-        const inSameTeam = allTeams.some(team => 
-            team.some(p => p.socketId === this.currentPlayerId()) && 
-            team.some(p => p.socketId === targetSocketId),
+        const isHighlighted = this.actionHighlightTiles().some(
+            h => h.pos.x === x && h.pos.y === y,
         );
+        if (!isHighlighted) return;
 
-        if (inSameTeam) {
-            if (currentPlayer.hasFlag) { // If current player wants to give the flag
+        switch (this.activeSubAction()) {
+            case 'attack':
+                this.gameViewService.sendCombat(lobbyId, targetSocketId);
+                break;
+            case 'giveFlag':
                 this.gameViewService.giveFlagTransfer(lobbyId, targetSocketId);
-            } else if (targetPlayer.hasFlag) { // If current player wants to request the flag
+                break;
+            case 'requestFlag':
                 this.gameViewService.requestFlagTransfer(lobbyId, targetSocketId);
-            }
-
-        } else {
-            this.gameViewService.sendCombat(lobbyId, targetSocketId);
+                break;
         }
 
-        this.isActionMode = false;
+        this.isSubMenuOpen.set(false);
+        this.activeSubAction.set(null);
     }
 
     onRightClick(event: MouseEvent, position: Vec2): void {
