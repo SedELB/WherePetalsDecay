@@ -1,0 +1,23 @@
+<div class="journal list-container">
+    <section class="body">
+        <div class="entries-list list-container" #journalContainer (scroll)="onScroll()">
+            @for (entry of entries; track $index) {
+            <div class="entry" [class.entry--private]="entry.isPrivate">
+                <div class="entry-info">
+                    <span class="entry-time">{{ formatTimestamp(entry.timestamp) }}</span>
+                    <span class="entry-players">{{ frenchGameEvents[entry.eventType] }}</span>
+                </div>
+                <div class="entry-message">{{ entry.message }}</div>
+            </div>
+            } @empty {
+            <div class="journal-empty">Aucun événement pour l'instant.</div>
+            }
+        </div>
+
+        @if (!isNearBottom) {
+        <button class="journal-scroll-to-bottom" (click)="scrollToBottomClicked()" type="button" title="Descendre vers les nouveaux événements">
+            🡻
+        </button>
+        }
+    </section>
+</div>

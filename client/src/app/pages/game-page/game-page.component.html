@@ -91,11 +91,9 @@
                     <button class="tab-btn" [class.active]="isJournalOpen" (click)="isJournalOpen = true">Journal</button>
                 </div>
                 @if (isJournalOpen) {
-                    <div class="journal-container">
-                        <div class="journal-messages">
-                            <div class="chat-empty">Aucun événement pour l'instant.</div>
-                        </div>
-                    </div>
+                    <app-journal
+                        [lobbyId]="lobby()?.lobbyId ?? ''"
+                    ></app-journal>
                 } @else {
                     <app-chat
                         [lobbyId]="lobby()?.lobbyId ?? ''"
