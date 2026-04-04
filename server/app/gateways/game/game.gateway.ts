@@ -171,12 +171,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             message: `Début du combat : ${attackerName} vs ${defenderName}.`,
         });
 
-        const atkBase = attacker.character.attack;
-        const atkDice = attacker.character.attackDice;
-        const defBase = defender.character.defense;
-        const defDice = defender.character.defenseDice;
-        const involvedIds = [socket.id, targetSocketId];
-
         const combatResult = this.gameLogicService.initiateCombat(lobbyId, socket.id, targetSocketId);
         if (!combatResult) return;
 
