@@ -205,7 +205,10 @@ export class IsometricViewService {
         (data.tileH * RENDER_CONSTANTS.itemFloatAmplitude) -
         (data.tileH * RENDER_CONSTANTS.itemFloatBaseOffset);
 
-    data.ctx.drawImage(itemImg, data.cx - imgW / 2, data.cy - imgH / 2 + floatOffset, imgW, imgH);
+    const verticalShift = data.tileH * RENDER_CONSTANTS.itemVerticalOffset;
+
+    this.drawItemShadow(data.ctx, { cx: data.cx, cy: data.cy, tileW: data.tileW, tileH: data.tileH, floatOffset, verticalShift });
+    data.ctx.drawImage(itemImg, data.cx - imgW / 2, data.cy - imgH / 2 + floatOffset + verticalShift, imgW, imgH);
   }
 
   private drawPlayerAt(
@@ -270,6 +273,29 @@ export class IsometricViewService {
     
   }
 
+  private drawItemShadow(
+    ctx: CanvasRenderingContext2D,
+    data: { cx: number; cy: number; tileW: number; tileH: number; floatOffset: number; verticalShift: number },
+  ): void {
+    // Shadow stays on the tile surface (fixed Y), shifted up with the item
+    const shadowY = data.cy + (data.tileH * RENDER_CONSTANTS.itemShadowOffsetYRatio) + data.verticalShift;
+
+    // Shadow shrinks and fades as the item floats higher (floatOffset more negative = higher)
+    const heightAboveGround = -data.floatOffset / (data.tileH * RENDER_CONSTANTS.itemFloatBaseOffset);
+    const scale = RENDER_CONSTANTS.itemShadowScaleMin + RENDER_CONSTANTS.itemShadowScaleRange * (1 - heightAboveGround);
+    const alpha = RENDER_CONSTANTS.itemShadowAlphaMin + RENDER_CONSTANTS.itemShadowAlphaRange * (1 - heightAboveGround);
+
+    const radiusX = data.tileW * RENDER_CONSTANTS.itemShadowRadiusXRatio * scale;
+    const radiusY = data.tileH * RENDER_CONSTANTS.itemShadowRadiusYRatio * scale;
+
+    ctx.save();
+    ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+    ctx.beginPath();
+    ctx.ellipse(data.cx, shadowY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.restore();
+  }
+
   private drawPlayerShadow(ctx: CanvasRenderingContext2D, data: { cx: number; cy: number; tileH: number; imgW: number; imgH: number }): void {
     const shadowY = data.cy + (data.tileH * RENDER_CONSTANTS.shadowOffsetYRatio);
     const radiusX = data.imgW * RENDER_CONSTANTS.shadowRadiusXRatio;
@@ -330,6 +356,33 @@ export class IsometricViewService {
       this.buildPolygonPath(ctx, [north, east, south, west]);
       ctx.fillStyle = isTeleportable ? 'rgba(0, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.4)';
       ctx.fill();
+      ctx.restore();
+    }
+
+    // Action-specific highlight
+    const actionHighlight = config.actionHighlightTiles?.find(h => h.pos.x === col && h.pos.y === row);
+    if (actionHighlight) {
+      const pulse = RENDER_CONSTANTS.actionPulseBase +
+        RENDER_CONSTANTS.actionPulseAmplitude * Math.sin(Date.now() / RENDER_CONSTANTS.actionPulseSpeed);
+      const ACTION_COLORS: Record<string, string> = {
+        attack:       `rgba(255, 60, 60, ${pulse})`,
+        giveFlag:     `rgba(50, 255, 110, ${pulse})`,
+        requestFlag:  `rgba(80, 180, 255, ${pulse})`,
+      };
+      ctx.save();
+      this.buildPolygonPath(ctx, [north, east, south, west]);
+      ctx.fillStyle = ACTION_COLORS[actionHighlight.type] ?? `rgba(255,255,255,${pulse})`;
+      ctx.fill();
+      
+      // Glow outline
+      const GLOW_COLORS: Record<string, string> = {
+        attack:       'rgba(255, 60, 60, 0.9)',
+        giveFlag:     'rgba(50, 255, 110, 0.9)',
+        requestFlag:  'rgba(80, 180, 255, 0.9)',
+      };
+      ctx.strokeStyle = GLOW_COLORS[actionHighlight.type] ?? 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = RENDER_CONSTANTS.actionGlowLineWidth;
+      ctx.stroke();
       ctx.restore();
     }
 

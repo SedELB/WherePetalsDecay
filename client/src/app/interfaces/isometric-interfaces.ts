@@ -2,6 +2,13 @@ import { Vec2 } from '@common/vec2';
 import { Tile } from '@common/tile';
 import { Player } from '@common/player';
 
+export type ActionHighlightType = 'attack' | 'giveFlag' | 'requestFlag';
+
+export interface ActionTileHighlight {
+  pos: Vec2;
+  type: ActionHighlightType;
+}
+
 // Moved here from isometric.constants.ts so it can be shared across service methods
 export interface TileColorSet {
   top: string;
@@ -51,6 +58,7 @@ export interface RenderBoardConfig {
   onRecenter: (zoom: number, x: number, y: number) => void;
   reachableTiles?: Vec2[];
   teleportableTiles?: Vec2[];
+  actionHighlightTiles?: ActionTileHighlight[];
   localPlayerSocketId?: string;
   isCTF?: boolean;
   teamA?: Player[];

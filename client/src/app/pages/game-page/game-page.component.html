@@ -43,6 +43,7 @@
                     [isCTF]="game()?.gameMode === gameMode.Ctf"
                     [teamA]="lobby()?.teamA ?? []"
                     [teamB]="lobby()?.teamB ?? []"
+                    [actionHighlightTiles]="actionHighlightTiles()"
                     (tileClick)="onTileClick($event.x, $event.y)"
                     (rightClick)="onRightClick($event.event, $event.pos)"
                 ></app-isometric-map>
@@ -141,11 +142,9 @@
                     <button class="tab-btn" [class.active]="isJournalOpen" (click)="isJournalOpen = true">Journal</button>
                 </div>
                 @if (isJournalOpen) {
-                    <div class="journal-container">
-                        <div class="journal-messages">
-                            <div class="chat-empty">Aucun événement pour l'instant.</div>
-                        </div>
-                    </div>
+                    <app-journal
+                        [lobbyId]="lobby()?.lobbyId ?? ''"
+                    ></app-journal>
                 } @else {
                     <app-chat
                         [lobbyId]="lobby()?.lobbyId ?? ''"
@@ -172,9 +171,41 @@
                 </div>
             </section>
 
+            <div class="sub-action-panel" [class.open]="isSubMenuOpen()">
+                @if (attackTargets().length > 0) {
+                    <button
+                        id="sub-action-attack"
+                        class="sub-action-btn attack"
+                        [class.selected]="activeSubAction() === 'attack'"
+                        (click)="selectSubAction('attack')"
+                    >⚔ Attaquer</button>
+                }
+                @if (requestFlagTargets().length > 0) {
+                    <button
+                        id="sub-action-request-flag"
+                        class="sub-action-btn flag-req"
+                        [class.selected]="activeSubAction() === 'requestFlag'"
+                        (click)="selectSubAction('requestFlag')"
+                    >🏳 Demander drapeau</button>
+                }
+                @if (giveFlagTargets().length > 0) {
+                    <button
+                        id="sub-action-give-flag"
+                        class="sub-action-btn flag-give"
+                        [class.selected]="activeSubAction() === 'giveFlag'"
+                        (click)="selectSubAction('giveFlag')"
+                    >🚩 Donner drapeau</button>
+                }
+            </div>
+
             <div class="action-bar">
-                <app-button (click)="toggleActionMode()" [disabled]="adjacentPlayers().length === 0 || !isMyTurn() || actionPoints() <= 0">
-                    {{ isActionMode ? 'Annuler action' : 'Action' }}
+                <app-button
+                    id="action-toggle-btn"
+                    (click)="toggleSubMenu()"
+                    [disabled]="!hasAnyAction()"
+                    [class.active-action]="isSubMenuOpen()"
+                >
+                    {{ isSubMenuOpen() ? 'Annuler' : 'Action' }}
                 </app-button>
                 <app-button (click)="onEndTurn()" [disabled]="this.disableEndTurn() || isEndTurnDisabled()">Finir Tour</app-button>
             </div>
