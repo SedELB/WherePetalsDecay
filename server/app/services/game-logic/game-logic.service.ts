@@ -122,7 +122,7 @@ export class GameLogicService {
         return this.movementService.teleportPlayer(game, socketId, targetPos);
     }
 
-    getReachableTilesForTeleport(lobbyId: string, socketId: string){
+    getReachableTilesForTeleport(lobbyId: string, socketId: string) {
         const game = this.activeGames.get(lobbyId);
         if (!game) return [];
         return this.movementService.getReachableTilesForTeleport(game, socketId);
@@ -274,4 +274,11 @@ export class GameLogicService {
         }
         return array;
     }
+    private toggleDoor(game: Game, socketId: string, position: Vec2) {
+        //TO DO BIENTOT
+    }
+    private verifyDoorToggleValid(game: Game, socketId: string, position: Vec2) {
+        //TO DO BIENTOT
+    }
+
 }
