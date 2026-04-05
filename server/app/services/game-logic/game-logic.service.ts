@@ -199,6 +199,11 @@ export class GameLogicService {
         const player = game.lobby.players.find((p) => p.socketId === socketId);
         if (player) player.hasAbandonned = true;
 
+        const spawnPos = game.playerStartPositions.get(socketId);
+        if (spawnPos) {
+            game.lobby.game.grid[spawnPos.y][spawnPos.x].item = null;
+        }
+
         game.playerPositions.delete(socketId);
         return game.lobby;
     }
@@ -228,7 +233,6 @@ export class GameLogicService {
             server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId, isForfeit: true, players: allPlayers, gameStats });
 
             this.endGame(lobbyId);
-            server.in(lobbyId).socketsLeave(lobbyId);
             return true;
         } else if (wasCurrentTurn) {
             this.endTurn(lobbyId);
