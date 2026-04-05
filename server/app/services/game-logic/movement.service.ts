@@ -157,11 +157,14 @@ export class MovementService {
     private trackTileVisit(game: ActiveGame, socketId: string, pos: Vec2, tileType: TileTexture, tileItem: TileItem | null): void {
         const key = this.posKey(pos);
 
-        if (!game.visitedTilesPerPlayer.has(socketId)) {
-            game.visitedTilesPerPlayer.set(socketId, new Set());
+        const isTerrainTile = tileType === TileTexture.Floor || tileType === TileTexture.Water || tileType === TileTexture.Ice;
+        if (isTerrainTile) {
+            if (!game.visitedTilesPerPlayer.has(socketId)) {
+                game.visitedTilesPerPlayer.set(socketId, new Set());
+            }
+            game.visitedTilesPerPlayer.get(socketId).add(key);
+            game.globalVisitedTiles.add(key);
         }
-        game.visitedTilesPerPlayer.get(socketId).add(key);
-        game.globalVisitedTiles.add(key);
 
         if (tileItem === TileItem.HealingSanctuary || tileItem === TileItem.CombatSanctuary) {
             game.sanctuariesUsed.add(key);

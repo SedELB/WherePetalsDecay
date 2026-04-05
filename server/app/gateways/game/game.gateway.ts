@@ -146,6 +146,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
         const winner = this.gameLogicService.checkWinCondition(lobbyId);
         if (winner) {
+            this.gameLogicService.incrementTotalTurns(lobbyId);
             this.handleGameOver(lobbyId, winner.socketId);
             return;
         }
@@ -206,13 +207,18 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     }
 
     private autoEndTurnIfNoActions(lobbyId: string, socketId: string): void {
-        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-        if (activeGame?.isDebugMode) return;
+    const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+    if (activeGame?.isDebugMode) return;
 
-        const movementPoints = this.gameLogicService.getMovementPoints(lobbyId, socketId);
-        const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
-        if (movementPoints <= 0 || actionPoints <= 0) {
-            this.gameLogicService.endTurn(lobbyId);
+    const reachable = this.gameLogicService.getReachableTiles(lobbyId, socketId);
+    const adjacent = this.gameLogicService.getAdjacentPlayers(lobbyId, socketId);
+    const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
+
+    const canMove = reachable.length > 0;
+    const canFight = adjacent.length > 0 && actionPoints > 0;
+
+    if (!canMove && !canFight) {
+        this.gameLogicService.endTurn(lobbyId);
         }
     }
 
