@@ -21,7 +21,7 @@ export class LoadingComponent implements OnChanges, OnDestroy {
     private fadeTimeout?: ReturnType<typeof setTimeout>;
 
     ngOnChanges(changes: SimpleChanges): void {
-        if (changes['isLoading'] && !this.isLoading) {
+        if (changes.isLoading && !this.isLoading) {
             this.hideTimeout = setTimeout(() => {
                 this.hiding = true;
                 this.fadeTimeout = setTimeout(() => {
