@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Direction } from '@common/direction';
-import { SocketNamespace } from '@common/enums';
+import { SocketNamespace, TileTexture } from '@common/enums';
 import { GameStartedData, PlayerMovedData, TileInfoData } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
@@ -169,6 +169,20 @@ export class GameViewService {
         this.webSocketService.onNamespace<TileInfoData>(this.namespace, JoinGameEvents.TileInfo, (data) => {
             this.tileInfo.set(data);
         });
+
+        this.webSocketService.onNamespace<{ position: Vec2; newType: TileTexture }>(
+            this.namespace, JoinGameEvents.DoorToggled, (data) => {
+                this.gameLobby.update((lobby) => {
+                    if (!lobby) return lobby;
+                    const updatedGrid = lobby.game.grid.map((row, y) =>
+                        row.map((tile, x) =>
+                            x === data.position.x && y === data.position.y ? { ...tile, type: data.newType } : tile,
+                        ),
+                    );
+                    return { ...lobby, game: { ...lobby.game, grid: updatedGrid } };
+                });
+            },
+        );
     }
 
     // Emit
@@ -201,6 +215,10 @@ export class GameViewService {
 
     sendCombat(lobbyId: string, targetSocketId: string): void {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestCombat, { lobbyId, targetSocketId });
+    }
+
+    sendToggleDoor(lobbyId: string, position: Vec2): void {
+        this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestToggleDoor, { lobbyId, position });
     }
 
     sendTileInfoRequest(lobbyId: string, position: Vec2): void {

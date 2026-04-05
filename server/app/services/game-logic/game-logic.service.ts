@@ -1,6 +1,6 @@
 import { BASE_STATS } from '@common/constants/character.constants';
-import { Direction } from '@common/direction';
-import { TileItem } from '@common/enums';
+import { Direction, DIRECTION_OFFSETS } from '@common/direction';
+import { TileItem, TileTexture } from '@common/enums';
 import { Game } from '@common/game';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
@@ -166,6 +166,44 @@ export class GameLogicService {
         return this.combatService.checkWinCondition(game);
     }
 
+    toggleDoor(lobbyId: string, socketId: string, position: Vec2): TileTexture | null {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return null;
+
+        const ap = game.actionPoints.get(socketId) ?? 0;
+        if (ap <= 0) return null;
+
+        const playerPos = game.playerPositions.get(socketId);
+        if (!playerPos) return null;
+        const isAdjacent = Object.values(DIRECTION_OFFSETS).some(
+            (offset) => playerPos.x + offset.x === position.x && playerPos.y + offset.y === position.y,
+        );
+        if (!isAdjacent) return null;
+
+        const tile = game.lobby.game.grid[position.y]?.[position.x];
+        if (!tile) return null;
+        const isDoor = tile.type === TileTexture.DoorClosed || tile.type === TileTexture.DoorOpened;
+        if (!isDoor) return null;
+
+        if (tile.type === TileTexture.DoorOpened) {
+            const someoneOnTile = [...game.playerPositions.values()].some(
+                (pos) => pos.x === position.x && pos.y === position.y,
+            );
+            const flagOnTile = tile.item === TileItem.Flag;
+            if (someoneOnTile || flagOnTile) return null;
+        }
+
+        if (tile.type === TileTexture.DoorClosed) {
+            tile.type = TileTexture.DoorOpened;
+        } else {
+            tile.type = TileTexture.DoorClosed;
+        }
+        game.actionPoints.set(socketId, ap - 1);
+
+
+        return tile.type;
+    }
+
     // Abandon
 
     abandonPlayer(lobbyId: string, socketId: string): Lobby | undefined {
@@ -273,12 +311,6 @@ export class GameLogicService {
             [array[i], array[j]] = [array[j], array[i]];
         }
         return array;
-    }
-    private toggleDoor(game: Game, socketId: string, position: Vec2) {
-        //TO DO BIENTOT
-    }
-    private verifyDoorToggleValid(game: Game, socketId: string, position: Vec2) {
-        //TO DO BIENTOT
     }
 
 }

@@ -174,6 +174,25 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         });
     }
 
+    @SubscribeMessage(JoinGameEvents.RequestToggleDoor) handleRequestToggleDoor(
+        @ConnectedSocket() socket: Socket,
+        @MessageBody() payload: { lobbyId: string; position: Vec2 }
+    ) {
+        const { lobbyId, position } = payload;
+        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
+
+        const result = this.gameLogicService.toggleDoor(lobbyId, socket.id, position);
+        if (!result) return;
+
+        const game = this.gameLogicService.getActiveGame(lobbyId);
+        this.server.to(lobbyId).emit(JoinGameEvents.DoorToggled, {
+            position,
+            newType: game.lobby.game.grid[position.y][position.x].type,
+        });
+
+        this.sendActionPoints(lobbyId, socket.id);
+        this.autoEndTurnIfNoActions(lobbyId, socket.id);
+    }
     @SubscribeMessage(JoinGameEvents.PlayerAbandon)
     handlePlayerAbandon(@ConnectedSocket() socket: Socket) {
         this.processGameDisconnect(socket);
