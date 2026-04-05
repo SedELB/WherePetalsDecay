@@ -189,7 +189,8 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
         }, SMALL_DELAY);
     }
 
-    onOpenVPMenu() {
-        prompt('Choisir profil : agressif ou defensif'); // TODO: temp
+    onAddVirtualPlayer(profile: string): void {
+        // TODO: emit to server with the chosen profile (agressif | defensif)
+        void profile;
     }
 }
