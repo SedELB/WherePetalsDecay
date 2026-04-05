@@ -15,6 +15,8 @@ import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
 
+const MOVE_COOLDOWN_MS = 150;
+
 @Component({
     selector: 'app-game-page',
     imports: [ButtonComponent, SakuraComponent, ChatComponent, IsometricMapComponent, JournalComponent],
@@ -36,6 +38,7 @@ export class GamePageComponent implements OnInit {
     };
 
     isChatFocused = false;
+    private isMoveCoolingDown = false;
     isJournalOpen = false;
     isCombatMode = false;
     isLeftPanelOpen = true;
@@ -133,9 +136,12 @@ export class GamePageComponent implements OnInit {
             return;
         }
 
-        if (!this.isMyTurn() || this.isChatFocused) return;
+        if (!this.isMyTurn() || this.isChatFocused || this.isMoveCoolingDown) return;
         const direction = KEY_TO_DIRECTION[event.key];
         if (!direction) return;
+
+        this.isMoveCoolingDown = true;
+        setTimeout(() => (this.isMoveCoolingDown = false), MOVE_COOLDOWN_MS);
 
         if (lobbyId) this.gameViewService.sendMove(lobbyId, direction);
     }
@@ -155,7 +161,7 @@ export class GamePageComponent implements OnInit {
         }
     }
 
-    isEndTurnDisabled(){
+    isEndTurnDisabled() {
         return !(this.isMyTurn() || (this.isDebugModeActive() && this.gameViewService.isHost()));
     }
 
@@ -201,7 +207,7 @@ export class GamePageComponent implements OnInit {
         event.preventDefault();
         const lobbyId = this.lobby()?.lobbyId;
         if (!lobbyId) return;
-        if (this.isDebugModeActive()){
+        if (this.isDebugModeActive()) {
             this.gameViewService.teleportMove(lobbyId, position);
             return;
         }

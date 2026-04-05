@@ -1,9 +1,6 @@
 @use 'src/styles.scss' as *;
 
 main {
-    background-image: url('../../../assets/background.png');
-    background-size: cover;
-    background-position: center bottom;
     height: 100vh;
     overflow: hidden;
     display: flex;
@@ -46,6 +43,7 @@ p {
 }
 
 .list-container {
+    animation: fade-in 0.4s ease both;
     background-color: $transparent-background;
     border-radius: 1.25rem;
     display: flex;

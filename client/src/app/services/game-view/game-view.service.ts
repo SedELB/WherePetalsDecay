@@ -207,6 +207,10 @@ export class GameViewService {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestTileInfo, { lobbyId, position });
     }
 
+    leaveEndGame(lobbyId: string): void {
+        this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.LeaveEndGame, lobbyId);
+    }
+
     // Utils
     private resetGameState(): void {
         this.isDebugModeActive.set(false);

@@ -1,4 +1,4 @@
-// Events (language) for communicating between the client and the server.
+// Events for communicating between the client and the server
 export enum JoinGameEvents {
     // Broadcast events
     UpdatedLobbiesList = 'updatedLobbiesList',
@@ -39,7 +39,7 @@ export enum JoinGameEvents {
     ReceivedChatMessage = 'receivedChatMessage',
     ReachableTilesForTeleport = 'reachableTilesForTeleport',
 
-    //--------Game-View-Events--------
+    // Game Events
     GameStarted = 'gameStarted',
     TurnCountdown = 'turnCountdown',
     TurnStarted = 'turnStarted',
@@ -48,6 +48,7 @@ export enum JoinGameEvents {
     PlayerAbandon = 'playerAbandon',
     PlayerAbandoned = 'playerAbandoned',
     GameOver = 'gameOver',
+    LeaveEndGame = 'leaveEndGame',
 
     // Movement
     RequestMove = 'requestMove',

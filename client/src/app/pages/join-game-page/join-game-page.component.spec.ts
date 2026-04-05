@@ -289,6 +289,7 @@ describe('JoinGamePageComponent', () => {
         // When there are no lobbies, the user should see a message instead of a blank page
         it('should show "Aucun salon disponible" when the list is empty', () => {
             component.activeLobbies = [];
+            component.isReady = true;
             fixture.detectChanges();
             expect((fixture.nativeElement as HTMLElement).textContent).toContain('Aucun salon disponible');
         });
@@ -296,6 +297,7 @@ describe('JoinGamePageComponent', () => {
         // One card per lobby
         it('should render one lobby card per lobby', () => {
             component.activeLobbies = mockLobbies;
+            component.isReady = true;
             fixture.detectChanges();
             expect((fixture.nativeElement as HTMLElement).querySelectorAll('app-lobby-card').length).toBe(2);
         });
@@ -303,6 +305,7 @@ describe('JoinGamePageComponent', () => {
         // The empty message should disappear once we have actual lobbies to show
         it('should not show the empty message when there are lobbies', () => {
             component.activeLobbies = mockLobbies;
+            component.isReady = true;
             fixture.detectChanges();
             expect((fixture.nativeElement as HTMLElement).querySelector('.no-games')).toBeNull();
         });
@@ -320,6 +323,7 @@ describe('JoinGamePageComponent', () => {
         // The empty state placeholder should come back if all lobbies disappear
         it('should render the empty message when the list is reset to empty', () => {
             component.activeLobbies = [];
+            component.isReady = true;
             fixture.detectChanges();
             const el = fixture.nativeElement as HTMLElement;
             expect(el.textContent).toContain('Aucun salon disponible');
