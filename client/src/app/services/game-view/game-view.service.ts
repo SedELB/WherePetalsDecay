@@ -12,6 +12,7 @@ import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 
 const ONE_SECOND_DELAY = 1000;
+const END_GAME_REDIRECT_DELAY = 3000;
 
 @Injectable({
     providedIn: 'root',
@@ -160,7 +161,9 @@ export class GameViewService {
             this.gameOver.set(data);
             if (data.players) this.endGamePlayers.set(data.players);
             if (data.gameStats) this.endGameStats.set(data.gameStats);
-            this.router.navigate([ROUTES.endGame]);
+            setTimeout(() => {
+                this.router.navigate([ROUTES.endGame]);
+            }, END_GAME_REDIRECT_DELAY);
         });
 
         this.webSocketService.onNamespace<TileInfoData>(this.namespace, JoinGameEvents.TileInfo, (data) => {

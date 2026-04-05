@@ -88,8 +88,12 @@ export class EndGamePageComponent implements OnInit {
     }
 
     sortIndicator(col: SortColumn): string {
-        if (this.sortColumn() !== col) return '';
+        if (this.sortColumn() !== col) return ' ▼';
         return this.sortAscending() ? ' ▲' : ' ▼';
+    }
+
+    isActiveSort(col: SortColumn): boolean {
+        return this.sortColumn() === col;
     }
 
     visitedPercent(player: Player): string {

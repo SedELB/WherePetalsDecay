@@ -108,6 +108,10 @@
                 background: rgba(255, 255, 255, 0.08);
             }
         }
+
+        &.active-sort {
+            color: $text-color;
+        }
     }
 
     tbody tr {
@@ -211,6 +215,10 @@
             border-bottom: none;
         }
     }
+}
+
+.sort-dim {
+    opacity: 0.3;
 }
 
 .stat-label {
