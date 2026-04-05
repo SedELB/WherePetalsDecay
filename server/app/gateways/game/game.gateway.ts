@@ -275,9 +275,14 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
         if (activeGame?.isDebugMode) return;
 
-        const movementPoints = this.gameLogicService.getMovementPoints(lobbyId, socketId);
+        const reachableTiles = this.gameLogicService.getReachableTiles(lobbyId, socketId);
+        if (reachableTiles.length > 0) return;
+
         const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
-        if (movementPoints <= 0 || actionPoints <= 0) {
+        const adjacentPlayers = this.gameLogicService.getAdjacentPlayers(lobbyId, socketId);
+        const canAttack = actionPoints > 0 && adjacentPlayers.length > 0;
+
+        if (!canAttack) {
             this.gameLogicService.endTurn(lobbyId);
         }
     }
