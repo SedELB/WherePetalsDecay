@@ -98,6 +98,8 @@ export class MovementService {
 
                 if (!this.isWithinBounds(game.lobby.game, nextPos)) continue;
 
+                if (this.isTileOccupied(game, nextPos)) continue;
+
                 const tile = game.lobby.game.grid[nextPos.y][nextPos.x];
                 const tileCost = TILE_COSTS[tile.type];
                 if (tileCost === Infinity) continue;

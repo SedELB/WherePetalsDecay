@@ -9,12 +9,13 @@ import { ROUTES } from '@app/constants/routes.constants';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS, KEY_TO_DIRECTION } from '@common/direction';
-import { GameMode } from '@common/enums';
+import { GameMode, TileTexture } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
 
 const GAME_OVER_REDIRECT_DELAY = 3000;
+const MOVE_COOLDOWN_MS = 150;
 
 @Component({
     selector: 'app-game-page',
@@ -37,6 +38,7 @@ export class GamePageComponent implements OnInit {
     };
 
     isChatFocused = false;
+    private isMoveCoolingDown = false;
     isJournalOpen = false;
     isCombatMode = false;
     isLeftPanelOpen = true;
@@ -48,7 +50,30 @@ export class GamePageComponent implements OnInit {
     readonly lobby = computed(() => this.gameViewService.gameLobby());
     readonly game = computed(() => this.lobby()?.game);
     readonly playerPositions = computed(() => this.gameViewService.playerPositions());
-    readonly reachableTiles = computed(() => this.gameViewService.reachableTiles());
+    readonly reachableTiles = computed(() => {
+        const tiles = this.gameViewService.reachableTiles();
+        if (this.movementPoints() !== 0 || !this.isMyTurn()) return tiles;
+
+        const grid = this.game()?.grid;
+        const localId = this.gameViewService.getLocalSocketId();
+        const myPos = localId ? this.playerPositions()[localId] : null;
+        if (!grid || !myPos) return tiles;
+
+        const positions = this.playerPositions();
+        const isOccupied = (pos: Vec2) => Object.entries(positions).some(([id, p]) => id !== localId && p.x === pos.x && p.y === pos.y);
+
+        const extraIceTiles: Vec2[] = [];
+        for (const offset of Object.values(DIRECTION_OFFSETS)) {
+            const neighbor: Vec2 = { x: myPos.x + offset.x, y: myPos.y + offset.y };
+            const row = grid[neighbor.y];
+            if (!row) continue;
+            const tile = row[neighbor.x];
+            if (tile?.type === TileTexture.Ice && !isOccupied(neighbor) && !tiles.some((t) => t.x === neighbor.x && t.y === neighbor.y)) {
+                extraIceTiles.push(neighbor);
+            }
+        }
+        return extraIceTiles.length > 0 ? [...tiles, ...extraIceTiles] : tiles;
+    });
     readonly reachableTilesForTeleport = computed(() => this.gameViewService.reachableTilesForTeleport());
     readonly movementPoints = computed(() => this.gameViewService.movementPoints());
     readonly actionPoints = computed(() => this.gameViewService.actionPoints());
@@ -151,9 +176,12 @@ export class GamePageComponent implements OnInit {
             return;
         }
 
-        if (!this.isMyTurn() || this.isChatFocused) return;
+        if (!this.isMyTurn() || this.isChatFocused || this.isMoveCoolingDown) return;
         const direction = KEY_TO_DIRECTION[event.key];
         if (!direction) return;
+
+        this.isMoveCoolingDown = true;
+        setTimeout(() => (this.isMoveCoolingDown = false), MOVE_COOLDOWN_MS);
 
         if (lobbyId) this.gameViewService.sendMove(lobbyId, direction);
     }

@@ -6,9 +6,6 @@
     position: fixed;
     inset: 0;
     z-index: 0;
-    background-image: url('../../../assets/background.png');
-    background-size: cover;
-    background-position: center bottom;
 }
 
 .sakura-layer {
@@ -295,7 +292,6 @@
     min-height: 0;
     padding: 0;
     cursor: default;
-    background-size: cover;
     transition: background 0.15s ease;
 
     &[data-tile='floor'] {
