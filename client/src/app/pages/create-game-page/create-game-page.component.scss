@@ -1,9 +1,6 @@
 @use 'src/styles.scss' as *;
 
 body {
-    background-image: url('../../../assets/background.png');
-    background-size: cover;
-    background-position: center bottom;
     display: flex;
     flex-direction: column;
     justify-content: center;
