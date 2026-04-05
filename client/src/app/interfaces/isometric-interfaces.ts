@@ -9,7 +9,6 @@ export interface ActionTileHighlight {
   type: ActionHighlightType;
 }
 
-// Moved here from isometric.constants.ts so it can be shared across service methods
 export interface TileColorSet {
   top: string;
   left: string;
@@ -23,7 +22,6 @@ export interface GridCorners {
   bottomRight: Vec2;
 }
 
-// Slimmed down: only the 4 vertices, tile, and ctx. Wall/grid-position info is handled separately.
 export interface TileRenderParams {
   context: CanvasRenderingContext2D;
   tile: Tile;
@@ -33,7 +31,6 @@ export interface TileRenderParams {
   surfaceBottomRight: Vec2;
 }
 
-// Separate, minimal interface for wall-drop rendering (only what drawTileDepth actually needs)
 export interface TileDepthParams {
   context: CanvasRenderingContext2D;
   thickness: number;
