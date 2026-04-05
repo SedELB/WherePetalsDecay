@@ -33,7 +33,7 @@ describe('GamePageComponent', () => {
     const TILE_Y = 5;
 
     const createPlayer = (socketId: string, overrides: Partial<Player> = {}): Player => ({
-        socketId, isHost: false, winsCount: 0, hasAbandonned: false,
+        socketId, isHost: false, winsCount: 0, hasAbandonned: false, flagsCaptured: 0, hasFlag: false,
         character: {
             name: `Player-${socketId}`, avatar: 'avatar.png', life: DEFAULT_LIFE, speed: 4,
             attack: 4, defense: 4, lifeBonus: false, attackDice: 'D6', defenseDice: 'D4',
@@ -50,7 +50,7 @@ describe('GamePageComponent', () => {
             gameMode: GameMode.Classic, thumbnail: '', maxPlayers: 4, grid: [],
             isVisible: true, createdAt: new Date(), updatedAt: new Date(),
         },
-        pendingAvatars: {}, chatHistory: [], ...overrides,
+        pendingAvatars: {}, chatHistory: [], teamA: [], teamB: [], ...overrides,
     });
 
     const mockGameViewService = {
@@ -65,7 +65,6 @@ describe('GamePageComponent', () => {
         actionPoints: signal<number>(0),
         disableEndTurn: signal<boolean>(false),
         isDebugModeActive: signal<boolean>(false),
-        turnNotification: signal<string | null>(null),
         tileInfo: signal<unknown>(null),
         gameOver: signal<{ winnerSocketId: string | null; isForfeit?: boolean } | null>(null),
         getLocalSocketId: jasmine.createSpy('getLocalSocketId').and.returnValue(LOCAL_SOCKET),
@@ -94,7 +93,6 @@ describe('GamePageComponent', () => {
         mockGameViewService.actionPoints.set(0);
         mockGameViewService.disableEndTurn.set(false);
         mockGameViewService.isDebugModeActive.set(false);
-        mockGameViewService.turnNotification.set(null);
         mockGameViewService.tileInfo.set(null);
         mockGameViewService.gameOver.set(null);
         [mockGameViewService.sendMove, mockGameViewService.sendEndTurn,
@@ -314,7 +312,9 @@ describe('GamePageComponent', () => {
                 [LOCAL_SOCKET]: { x: 0, y: 0 },
                 [OTHER_SOCKET]: { x: 1, y: 0 },
             });
-            component.isCombatMode = true;
+            mockGameViewService.actionPoints.set(1);
+            component.isSubMenuOpen.set(true);
+            component.activeSubAction.set('attack');
             component.onTileClick(1, 0);
             expect(mockGameViewService.sendCombat).toHaveBeenCalledWith('lobby-1', OTHER_SOCKET);
         });

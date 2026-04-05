@@ -51,6 +51,8 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
         isHost: true,
         winsCount: 0,
         hasAbandonned: false,
+        flagsCaptured: 0,
+        hasFlag: false,
         character: {
             name: 'TestPlayer',
             avatar: './assets/avatars/archer.png',
@@ -97,6 +99,8 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
             isVisible: true,
         },
         chatHistory: [],
+        teamA: [],
+        teamB: [],
         ...overrides,
     });
 

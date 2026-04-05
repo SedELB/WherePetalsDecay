@@ -50,6 +50,8 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
         isHost: true,
         winsCount: 0,
         hasAbandonned: false,
+        flagsCaptured: 0,
+        hasFlag: false,
         character: {
             name: 'TestPlayer',
             avatar: './assets/avatars/archer.png',
@@ -96,6 +98,8 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
             isVisible: true,
         },
         chatHistory: [],
+        teamA: [],
+        teamB: [],
         ...overrides,
     });
 
