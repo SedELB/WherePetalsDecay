@@ -29,11 +29,13 @@ export function buildVertexMap(
   totalColumns: number, 
   viewConfig: { originX: number; originY: number; tileW: number; tileH: number }): Vec2[][] {
   const vertices: Vec2[][] = [];
+  
   for (let row = 0; row <= totalRows; row++) {
     const rowVerts: Vec2[] = [];
     for (let col = 0; col <= totalColumns; col++) {
       rowVerts.push(toIso(col, row, viewConfig));
     }
+    
     vertices.push(rowVerts);
   }
   return vertices;

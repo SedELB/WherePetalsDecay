@@ -178,7 +178,7 @@
                         class="sub-action-btn attack"
                         [class.selected]="activeSubAction() === 'attack'"
                         (click)="selectSubAction('attack')"
-                    >⚔ Attaquer</button>
+                    >Attaquer</button>
                 }
                 @if (requestFlagTargets().length > 0) {
                     <button
@@ -186,7 +186,7 @@
                         class="sub-action-btn flag-req"
                         [class.selected]="activeSubAction() === 'requestFlag'"
                         (click)="selectSubAction('requestFlag')"
-                    >🏳 Demander drapeau</button>
+                    >Demander drapeau</button>
                 }
                 @if (giveFlagTargets().length > 0) {
                     <button
@@ -194,7 +194,7 @@
                         class="sub-action-btn flag-give"
                         [class.selected]="activeSubAction() === 'giveFlag'"
                         (click)="selectSubAction('giveFlag')"
-                    >🚩 Donner drapeau</button>
+                    >Donner drapeau</button>
                 }
             </div>
 
