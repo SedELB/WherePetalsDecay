@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { MouseEventType } from '@app/constants/map-setup-page-constant';
-import type { GameDraftForValidation } from '@common/interfaces/game-validation';
 import {
     CellInteractionParams,
     MapSetupInteractionState,
@@ -12,6 +11,7 @@ import {
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { TileItem, TileTexture } from '@common/enums';
 import { type PlacedObject, Game } from '@common/game';
+import type { GameDraftForValidation } from '@common/interfaces/game-validation';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
 
@@ -67,6 +67,7 @@ export class MapSetupService {
     }
 
     private applyTile(params: TileParams): void {
+        console.log("applyTile");
         const { game, rowIndex, colIndex, tileAttribute, event, counts } = params;
         const currentTile = game.grid[rowIndex]?.[colIndex];
 
@@ -81,9 +82,19 @@ export class MapSetupService {
         } else {
             if ([TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed].includes(tileAttribute as TileTexture) && currentTile.item) {
                 this.deleteTile({ game, rowIndex, colIndex, tileAttribute, event, counts });
+
+            }
+            if (tileAttribute === TileTexture.DoorClosed || tileAttribute === TileTexture.DoorOpened) {
+                currentTile.type = this.inverseDoor(currentTile.type);
+                return;
             }
             if (currentTile.type !== tileAttribute) currentTile.type = tileAttribute as TileTexture;
         }
+    }
+    private inverseDoor(oldType: TileTexture): TileTexture {
+        if (oldType === TileTexture.DoorClosed) return TileTexture.DoorOpened;
+        if (oldType === TileTexture.DoorOpened) return TileTexture.DoorClosed;
+        return TileTexture.DoorClosed;
     }
 
     private deleteTile(params: TileParams): void {

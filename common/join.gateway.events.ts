@@ -65,4 +65,14 @@ export enum JoinGameEvents {
     TileInfo = 'tileInfo',
     GameLobbyUpdated = 'gameLobbyUpdated',
     ChatHistorySent = "chatHistorySent",
+
+
+    // Journal
+    JournalEntry = 'journalEntry',
+    JournalHistoryRequest = 'journalHistoryRequest',
+    JournalHistorySent = 'journalHistorySent',
+
+    //Door
+    RequestToggleDoor = 'requestToggleDoor',
+    DoorToggled = 'doorToggled',
 }
