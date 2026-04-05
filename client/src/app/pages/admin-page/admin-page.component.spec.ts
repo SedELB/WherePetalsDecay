@@ -309,6 +309,7 @@ describe('AdminPageComponent', () => {
 
   // Verify all games appear
   it('should render all games as app-game-card components', () => {
+    component.isReady = true;
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const gameCardElements = compiled.querySelectorAll('app-game-card');
@@ -331,6 +332,7 @@ describe('AdminPageComponent', () => {
 
   // Visible games show hide button
   it('should display "Cacher" when game is visible', () => {
+    component.isReady = true;
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const gameCards = compiled.querySelectorAll<HTMLElement>('app-game-card');
@@ -344,6 +346,7 @@ describe('AdminPageComponent', () => {
 
   // Hidden games should have a show button
   it('should display "Afficher" when game is not visible', () => {
+    component.isReady = true;
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const gameCards = compiled.querySelectorAll<HTMLElement>('app-game-card');
@@ -357,6 +360,7 @@ describe('AdminPageComponent', () => {
 
   // The visibale game cards should change when one game is shown or hidden
   it('should update the page when gameCards array changes', () => {
+    component.isReady = true;
     fixture.detectChanges();
 
     const reducedGames = [MOCK_GAME_CARDS[0]];

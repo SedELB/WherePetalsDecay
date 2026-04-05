@@ -1,9 +1,6 @@
 @use 'src/styles.scss' as *;
 
 .container {
-    background-image: url('../../../assets/background.png');
-    background-position: center bottom;
-    background-size: cover;
     display: flex;
     flex-direction: column;
     align-items: center;

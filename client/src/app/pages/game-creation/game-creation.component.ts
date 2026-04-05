@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
+import { LoadingComponent } from '@app/components/loading/loading.component';
 import { ROUTES } from '@app/constants/routes.constants';
 import { GameCreationService } from '@app/services/game-creation/game-creation.service';
 import { ButtonVariant } from '@common/enums';
@@ -15,19 +16,15 @@ import swal from 'sweetalert2';
 @Component({
     selector: 'app-game-creation',
     standalone: true,
-    imports: [
-        CommonModule,
-        FormsModule,
-        ButtonComponent,
-        GameCardComponent,
-    ],
+    imports: [CommonModule, FormsModule, ButtonComponent, GameCardComponent, LoadingComponent],
     templateUrl: './game-creation.component.html',
     styleUrl: './game-creation.component.scss',
 })
-
 export class GameCreationComponent implements OnInit, OnDestroy {
     protected readonly buttonVariant = ButtonVariant;
     protected games: Game[] = [];
+    isLoading = true;
+    isReady = false;
     private gamesSubscription: Subscription | null = null;
     readonly routes = ROUTES;
 
@@ -38,8 +35,12 @@ export class GameCreationComponent implements OnInit, OnDestroy {
 
     ngOnInit(): void {
         this.gameCreationService.fetchVisibleGames().subscribe({
-            next: (games) => this.gameCreationService.setGames(games),
+            next: (games) => {
+                this.gameCreationService.setGames(games);
+                this.isLoading = false;
+            },
             error: (error: HttpErrorResponse) => {
+                this.isLoading = false;
                 const errorMessage = error.error || 'Erreur lors de la récupération des jeux';
                 swal.fire({
                     title: 'Erreur',
@@ -63,7 +64,7 @@ export class GameCreationComponent implements OnInit, OnDestroy {
         this.router.navigate(['/character-selection'], { state: { game } });
     }
 
-    getGameSizeLabel(game: Game): { rows: number, cols: number } {
+    getGameSizeLabel(game: Game): { rows: number; cols: number } {
         return game.size;
     }
 
