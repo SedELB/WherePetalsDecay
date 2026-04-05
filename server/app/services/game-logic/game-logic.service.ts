@@ -7,7 +7,6 @@ import { GameStats } from '@common/interfaces/game-stats';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
-import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
@@ -117,6 +116,13 @@ export class GameLogicService {
         if (game) {
             game.totalTurns++;
             this.turnService.endTurn(game);
+        }
+    }
+
+    incrementTotalTurns(lobbyId: string): void {
+        const game = this.activeGames.get(lobbyId);
+        if (game) {
+            game.totalTurns++;
         }
     }
 
@@ -337,13 +343,15 @@ export class GameLogicService {
     }
 
     private countTerrainTiles(grid: Game['grid']): number {
-        let count = 0;
-        for (const row of grid) {
-            for (const tile of row) {
-                if (TILE_COSTS[tile.type] !== Infinity) count++;
+    let count = 0;
+    for (const row of grid) {
+        for (const tile of row) {
+            if (tile.type === TileTexture.Floor || tile.type === TileTexture.Water || tile.type === TileTexture.Ice) {
+                count++;
             }
         }
-        return count;
+    }
+    return count;
     }
 
     private countTilesByItem(grid: Game['grid'], items: TileItem[]): number {

@@ -72,16 +72,6 @@ export class GameViewService {
             }
         });
 
-        this.webSocketService.onNamespace<number>(this.namespace, JoinGameEvents.BetweenTurnCountdown, (secondsLeft) => {
-            this.disableEndTurn.set(true);
-            this.turnCountdown.set(secondsLeft);
-            if (secondsLeft <= 1) {
-                setTimeout(() => {
-                    this.disableEndTurn.set(false);
-                }, ONE_SECOND_DELAY);
-            }
-        });
-
         this.webSocketService.onNamespace<number>(this.namespace, JoinGameEvents.TurnCountdown, (secondsLeft) => {
             this.turnCountdown.set(secondsLeft);
         });
