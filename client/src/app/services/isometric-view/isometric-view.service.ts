@@ -308,6 +308,9 @@ export class IsometricViewService {
       this.buildPolygonPath(ctx, [north, east, south, west]);
       ctx.fillStyle = isTeleportable ? 'rgba(0, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.4)';
       ctx.fill();
+      ctx.strokeStyle = isTeleportable ? 'rgba(0, 220, 220, 0.9)' : 'rgba(80, 220, 80, 0.9)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
       ctx.restore();
     }
 

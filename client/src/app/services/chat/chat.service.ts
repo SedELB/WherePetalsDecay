@@ -38,7 +38,7 @@ export class ChatService {
     sendMessage(lobbyId: string, playerName: string | undefined, message: string): void {
         if (!lobbyId) return;
 
-        const trimmed = (message ?? '').trim().slice(0, MAX_MESSAGE_LENGTH);
+        const trimmed = (message ?? '').slice(0, MAX_MESSAGE_LENGTH);
         if (!trimmed) return;
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.ChatSendMessage, {
             lobbyId,
