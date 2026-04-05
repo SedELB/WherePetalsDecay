@@ -6,9 +6,12 @@ const FADE_DURATION_MS = 400;
 
 @Component({
     selector: 'app-loading',
+    standalone: true,
+    imports: [],
     templateUrl: './loading.component.html',
     styleUrls: ['./loading.component.scss'],
 })
+
 export class LoadingComponent implements OnChanges, OnDestroy {
     @Input() isLoading = true;
     @Output() hidden = new EventEmitter<void>();
