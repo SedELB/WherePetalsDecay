@@ -1,8 +1,10 @@
 import { GameLogicService } from '@app/services/game-logic/game-logic.service';
+import { JournalService } from '@app/services/journal/journal.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Direction } from '@common/direction';
 import { SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
+import { JournalEventType } from '@common/journal-entry';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Injectable, Logger } from '@nestjs/common';
@@ -21,6 +23,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         private readonly logger: Logger,
         private readonly gameLogicService: GameLogicService,
         private readonly lobbyService: LobbyService,
+        private readonly journalService: JournalService,
     ) {}
 
     afterInit() {
@@ -39,6 +42,15 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
                 this.sendReachableTiles(lobbyId, playerSocketId);
                 this.sendReachableTilesForTeleport(lobbyId, playerSocketId);
                 this.autoEndTurnIfNoActions(lobbyId, playerSocketId);
+
+                const game = this.gameLogicService.getActiveGame(lobbyId);
+                const turnPlayer = game.lobby.players.find((player) => player.socketId === playerSocketId);
+                const playerName = turnPlayer.character.name;
+                this.journalService.addEntry(lobbyId, {
+                    eventType: JournalEventType.TurnStart,
+                    playerNames: [playerName],
+                    message: `Début du tour de ${playerName}.`,
+                });
             },
             onTurnEnded: (lobbyId: string, playerSocketId: string) => {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnEnded, playerSocketId);
@@ -117,6 +129,15 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         activeGame.isDebugMode = !state;
         this.server.to(lobbyId).emit(JoinGameEvents.DebugToggled, !state);
 
+        const host = activeGame.lobby.players.find((player) => player.socketId === socket.id);
+        const hostName = host.character.name;
+        const modeLabel = activeGame.isDebugMode ? 'activé' : 'désactivé';
+        this.journalService.addEntry(lobbyId, {
+            eventType: JournalEventType.DebugToggle,
+            playerNames: [hostName],
+            message: `Mode de débogage ${modeLabel} par ${hostName}.`,
+        });
+
         if (!activeGame.isDebugMode) {
             const currentSocketId = activeGame.turnOrder[activeGame.currentTurnIndex];
             if (currentSocketId) {
@@ -138,11 +159,39 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const { lobbyId, targetSocketId } = payload;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        const attacker = activeGame.lobby.players.find((player) => player.socketId === socket.id);
+        const defender = activeGame.lobby.players.find((player) => player.socketId === targetSocketId);
+        const attackerName = attacker.character.name;
+        const defenderName = defender.character.name;
+
+        this.journalService.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatStart,
+            playerNames: [attackerName, defenderName],
+            message: `Début du combat : ${attackerName} vs ${defenderName}.`,
+        });
+
         const combatResult = this.gameLogicService.initiateCombat(lobbyId, socket.id, targetSocketId);
         if (!combatResult) return;
 
         this.sendActionPoints(lobbyId, socket.id);
         this.server.to(lobbyId).emit(JoinGameEvents.CombatResult, combatResult);
+
+        const winnerName = combatResult.winnerId === socket.id ? attackerName : defenderName;
+        const loserName = combatResult.winnerId === socket.id ? defenderName : attackerName;
+
+        this.journalService.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatDamageResult,
+            playerNames: [winnerName, loserName],
+            message: `${winnerName} inflige des dégâts à ${loserName}.`,
+            isPrivate: true,
+            involvedPlayerIds: [socket.id, targetSocketId],
+        });
+        this.journalService.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatEnd,
+            playerNames: [winnerName, loserName],
+            message: `Fin du combat : ${winnerName} remporte le combat contre ${loserName}.`,
+        });
 
         const winner = this.gameLogicService.checkWinCondition(lobbyId);
         if (winner) {
@@ -151,7 +200,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             return;
         }
 
-        this.gameLogicService.endTurn(lobbyId);
+        this.sendReachableTiles(lobbyId, socket.id);
+        this.sendReachableTilesForTeleport(lobbyId, socket.id);
+        this.autoEndTurnIfNoActions(lobbyId, socket.id);
     }
 
     @SubscribeMessage(JoinGameEvents.RequestTileInfo)
@@ -185,6 +236,14 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const activeGame = this.gameLogicService.findActiveGameBySocketId(socket.id);
         if (!activeGame) return;
 
+        const abandonPlayer = activeGame.lobby.players.find((player) => player.socketId === socket.id);
+        const playerName = abandonPlayer.character.name;
+        this.journalService.addEntry(activeGame.lobby.lobbyId, {
+            eventType: JournalEventType.PlayerAbandon,
+            playerNames: [playerName],
+            message: `${playerName} a abandonné la partie.`,
+        });
+
         const isGameOver = this.gameLogicService.executePlayerAbandon(
             activeGame.lobby.lobbyId,
             socket,
@@ -200,25 +259,35 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const gameStats = this.gameLogicService.getGameStats(lobbyId);
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
         const players = activeGame ? [...activeGame.lobby.players] : [];
+        const activePlayers = activeGame.lobby.players.filter((player) => !player.hasAbandonned);
+        const activeNames = activePlayers.map((player) => player.character.name);
+        this.journalService.addEntry(lobbyId, {
+            eventType: JournalEventType.GameOver,
+            playerNames: activeNames,
+            message: `Fin de la partie. Joueurs encore actifs : ${activeNames.join(', ')}.`,
+        });
+
         this.server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId, isForfeit: false, players, gameStats });
+
         this.gameLogicService.endGame(lobbyId);
+        this.journalService.clearEntries(lobbyId);
         this.lobbyService.deleteLobby(lobbyId);
         this.server.in(lobbyId).socketsLeave(lobbyId);
     }
 
     private autoEndTurnIfNoActions(lobbyId: string, socketId: string): void {
-    const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-    if (activeGame?.isDebugMode) return;
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        if (activeGame?.isDebugMode) return;
 
-    const reachable = this.gameLogicService.getReachableTiles(lobbyId, socketId);
-    const adjacent = this.gameLogicService.getAdjacentPlayers(lobbyId, socketId);
-    const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
+        const reachable = this.gameLogicService.getReachableTiles(lobbyId, socketId);
+        const adjacent = this.gameLogicService.getAdjacentPlayers(lobbyId, socketId);
+        const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
 
-    const canMove = reachable.length > 0;
-    const canFight = adjacent.length > 0 && actionPoints > 0;
+        const canMove = reachable.length > 0;
+        const canFight = adjacent.length > 0 && actionPoints > 0;
 
-    if (!canMove && !canFight) {
-        this.gameLogicService.endTurn(lobbyId);
+        if (!canMove && !canFight) {
+            this.gameLogicService.endTurn(lobbyId);
         }
     }
 
