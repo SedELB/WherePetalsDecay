@@ -9,7 +9,7 @@ import { ROUTES } from '@app/constants/routes.constants';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS, KEY_TO_DIRECTION } from '@common/direction';
-import { GameMode } from '@common/enums';
+import { GameMode, TileTexture } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
@@ -173,7 +173,7 @@ export class GamePageComponent implements OnInit {
         }
     }
 
-    isEndTurnDisabled(){
+    isEndTurnDisabled() {
         return !(this.isMyTurn() || (this.isDebugModeActive() && this.gameViewService.isHost()));
     }
 
@@ -204,14 +204,29 @@ export class GamePageComponent implements OnInit {
     }
 
     onTileClick(col: number, row: number): void {
+        const lobbyId = this.lobby()?.lobbyId;
+        if (!lobbyId) return;
+
+        const tileType = this.game()?.grid[row][col].type;
+        const isDoor = tileType === TileTexture.DoorClosed || tileType === TileTexture.DoorOpened;
+        const isAdjacentTile = Object.values(DIRECTION_OFFSETS).some((offset) => {
+            const localId = this.gameViewService.getLocalSocketId();
+            const myPos = localId ? this.playerPositions()[localId] : null;
+            return myPos && myPos.x + offset.x === col && myPos.y + offset.y === row;
+        });
+
+        if (this.isMyTurn() && isDoor && isAdjacentTile) {
+            this.gameViewService.sendToggleDoor(lobbyId, { x: col, y: row });
+            return;
+        }
+
         if (!this.isCombatMode) return;
         const targetSocketId = this.getPlayerAtPosition(col, row);
         if (!targetSocketId) return;
         const isAdjacent = this.adjacentPlayers().some((p) => p.socketId === targetSocketId);
         if (!isAdjacent) return;
 
-        const lobbyId = this.lobby()?.lobbyId;
-        if (lobbyId) this.gameViewService.sendCombat(lobbyId, targetSocketId);
+        this.gameViewService.sendCombat(lobbyId, targetSocketId);
         this.isCombatMode = false;
     }
 
@@ -219,7 +234,7 @@ export class GamePageComponent implements OnInit {
         event.preventDefault();
         const lobbyId = this.lobby()?.lobbyId;
         if (!lobbyId) return;
-        if (this.isDebugModeActive()){
+        if (this.isDebugModeActive()) {
             this.gameViewService.teleportMove(lobbyId, position);
             return;
         }

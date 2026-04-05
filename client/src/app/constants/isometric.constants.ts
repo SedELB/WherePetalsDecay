@@ -1,5 +1,5 @@
-import { TileItem, TileTexture } from '@common/enums';
 import { TileColorSet } from '@app/interfaces/isometric-interfaces';
+import { TileItem, TileTexture } from '@common/enums';
 
 
 export const TILE_RATIO = 2.5;
@@ -22,7 +22,7 @@ export const RENDER_CONSTANTS = {
   itemFloatAmplitude: 0.10,
   itemFloatBaseOffset: 0.4,
   itemWidthRatio: 0.5,
-  
+
   playerWidthRatio: 0.75,
   playerHeightAdjustment: 0.9,
   playerDepthOffset: 0.1,
@@ -54,8 +54,8 @@ export const ISO_TEXTURE_ASSETS: Record<TileTexture, string> = {
   [TileTexture.Water]: './assets/tiles/water.png',
   [TileTexture.Ice]: './assets/tiles/ice.png',
   [TileTexture.Wall]: './assets/tiles/wall.png',
-  [TileTexture.DoorClosed]: './assets/tiles/opened_door.png',
-  [TileTexture.DoorOpened]: './assets/tiles/closed_door.png',
+  [TileTexture.DoorClosed]: './assets/tiles/closed_door.png',
+  [TileTexture.DoorOpened]: './assets/tiles/opened_door.png',
 };
 
 export const DEFAULT_COLOR: TileColorSet = {
