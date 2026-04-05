@@ -1,3 +1,38 @@
+@if (variant === buttonVariant.AddVirtualPlayer) {
+    <!-- Inspired by : https://uiverse.io/risabbir/smart-husky-6 -->
+    <div class="vp-menu" [ngClass]="{ disabled: disabled, open: isMenuOpen }">
+        <!-- Sub-button: Agressif  -->
+        <button
+            class="vp-sub-btn vp-sub-left"
+            [disabled]="disabled"
+            (click)="onProfileSelected('aggressive')"
+            data-profile="agressif"
+        >
+            <img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/>
+            <span class="vp-label">Agressif</span>
+        </button>
+
+        <!-- Central + button -->
+        <button class="vp-main-btn" [disabled]="disabled" (click)="toggleMenu()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            <span class="vp-main-label">Ajouter un joueur virtuel</span>
+        </button>
+
+        <!-- Sub-button: Défensif -->
+        <button
+            class="vp-sub-btn vp-sub-right"
+            [disabled]="disabled"
+            (click)="onProfileSelected('defensive')"
+            data-profile="defensif"
+        >
+            <img src="./assets/icons/shield.svg" class="vp-icon" alt="icône bouclier"/>
+            <span class="vp-label">Défensif</span>
+        </button>
+
+    </div>
+} @else {
 <button 
     class="btn"
     [ngStyle]="{
@@ -32,3 +67,4 @@
     }
     <ng-content></ng-content>
 </button>
+}

@@ -50,6 +50,7 @@ export enum ButtonVariant {
     DeleteGame = 'delete-game',
     Edit = 'edit',
     ToggleVisibility = 'toggle-visibility',
+    AddVirtualPlayer = 'add-virtual-player',
 }
 
 export enum MapSetupMode {
