@@ -28,6 +28,7 @@ import {
 } from './game-page.helper';
 
 const GAME_OVER_REDIRECT_DELAY = 5000;
+const MOVE_COOLDOWN_MS = 150;
 
 @Component({
     selector: 'app-game-page',
@@ -58,6 +59,7 @@ export class GamePageComponent implements OnInit {
     };
 
     isChatFocused = false;
+    private isMoveCoolingDown = false;
     isJournalOpen = false;
     isLeftPanelOpen = true;
     readonly isSubMenuOpen = signal(false);
@@ -198,9 +200,14 @@ export class GamePageComponent implements OnInit {
             return;
         }
 
-        if (!this.isMyTurn() || this.isChatFocused) return;
+        if (!this.isMyTurn() || this.isChatFocused || this.isMoveCoolingDown) return;
         const direction = KEY_TO_DIRECTION[event.key];
-        if (direction && lobbyId) this.gameViewService.sendMove(lobbyId, direction);
+        if (!direction) return;
+
+        this.isMoveCoolingDown = true;
+        setTimeout(() => (this.isMoveCoolingDown = false), MOVE_COOLDOWN_MS);
+
+        if (lobbyId) this.gameViewService.sendMove(lobbyId, direction);
     }
 
     onChatFocusChange(focused: boolean): void {
@@ -215,7 +222,7 @@ export class GamePageComponent implements OnInit {
         this.gameViewService.sendAbandonWithoutPrompt(lobbyId);
     }
 
-    isEndTurnDisabled(): boolean {
+    isEndTurnDisabled(): boolean  {
         return !(this.isMyTurn() || (this.isDebugModeActive() && this.gameViewService.isHost()));
     }
 
