@@ -68,8 +68,8 @@ export const ISO_TEXTURE_ASSETS: Record<TileTexture, string> = {
   [TileTexture.Water]: './assets/tiles/water.png',
   [TileTexture.Ice]: './assets/tiles/ice.png',
   [TileTexture.Wall]: './assets/tiles/wall.png',
-  [TileTexture.DoorClosed]: './assets/tiles/closed_door.png',
-  [TileTexture.DoorOpened]: './assets/tiles/opened_door.png',
+  [TileTexture.DoorClosed]: '',
+  [TileTexture.DoorOpened]: '',
 };
 
 export const DEFAULT_COLOR: TileColorSet = {
