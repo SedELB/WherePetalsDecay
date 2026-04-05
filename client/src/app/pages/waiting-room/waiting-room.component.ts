@@ -7,7 +7,7 @@ import { ROUTES } from '@app/constants/routes.constants';
 import { ChatService } from '@app/services/chat/chat.service';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
-import { SocketNamespace } from '@common/enums';
+import { ButtonVariant, SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
@@ -31,6 +31,7 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
     private readonly route = inject(ActivatedRoute);
     private readonly gameViewService = inject(GameViewService);
     private readonly routes = ROUTES;
+    protected readonly buttonVariant = ButtonVariant;
 
     ngOnInit(): void {
         this.lobbyId.set(this.route.snapshot.paramMap.get('lobbyId'));
@@ -186,5 +187,9 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
         setTimeout(() => {
             this.router.navigate(['/home']);
         }, SMALL_DELAY);
+    }
+
+    onOpenVPMenu() {
+        prompt('Choisir profil : agressif ou defensif'); // TODO: temp
     }
 }

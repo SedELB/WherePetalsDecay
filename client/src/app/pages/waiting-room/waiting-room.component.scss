@@ -19,7 +19,7 @@ $text-color: #ffffff;
 .waiting-room-card {
     background: rgba(0, 0, 0, 0.85);
     border-radius: 0.75rem;
-    padding: 2rem;
+    padding: 1rem 2rem;
     max-width: 75rem;
     width: 100%;
     color: $text-color;
@@ -31,24 +31,26 @@ $text-color: #ffffff;
 
 h1 {
     text-align: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
+    margin-top: 0;
     color: $primary-color;
     flex-shrink: 0;
 }
 
 h2 {
     font-size: 1.2rem;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 0.5rem;
 }
 
 .room-info {
     display: flex;
     justify-content: space-around;
+    align-items: center;
     flex-wrap: wrap;
     gap: 1rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     padding: 1rem;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 0.5rem;
@@ -67,6 +69,10 @@ h2 {
         margin-left: 0.5rem;
         color: #ffa500;
     }
+
+    p {
+        margin: 0;
+    }
 }
 
 .main-content {
@@ -83,6 +89,7 @@ h2 {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
 }
 
 .right-panel {
@@ -117,16 +124,33 @@ h2 {
 }
 
 .players-section {
-    flex: 1;
-    min-height: 0;
+    // flex: 1; // TODO: to delete
+    // min-height: 100px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    margin-bottom: 1.5rem;
+    // margin-bottom: 1rem;
 
     h2 {
         flex-shrink: 0;
+        margin-top: 0;
     }
+}
+
+.players-area {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+}
+
+.vp-footer {
+    flex-shrink: 0;  
+    padding: 1rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: center;
 }
 
 .players-list {
@@ -221,6 +245,6 @@ h2 {
     gap: 1rem;
     flex-wrap: wrap;
     flex-shrink: 0;
-    padding-top: 1rem;
+    padding: 1rem 0.25rem;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
