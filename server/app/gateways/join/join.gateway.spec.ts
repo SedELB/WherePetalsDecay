@@ -51,10 +51,12 @@ describe('JoinGateway', () => {
         players: [],
         pendingAvatars: {},
         chatHistory: [],
+        teamA: [],
+        teamB: [],
     };
 
     const makeMockPlayer = (): Player => ({
-        socketId: null,
+        socketId: '',
         character: {
             name: 'MOCK_PLAYER',
             avatar: 'mockavatar.png',
@@ -68,7 +70,9 @@ describe('JoinGateway', () => {
         },
         isHost: false,
         winsCount: 0,
+        flagsCaptured: 0,
         hasAbandonned: false,
+        hasFlag: false,
     });
 
     beforeEach(async () => {

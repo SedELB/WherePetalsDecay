@@ -51,7 +51,8 @@ describe('JoinGamePageComponent', () => {
 
     const createMockLobby = (overrides: Partial<Lobby> = {}): Lobby => ({
         lobbyId: 'lobby-1', gameId: '1', game: createMockGame(), hostSocketId: 'socket-1',
-        playerCount: 2, isLocked: false, players: [], pendingAvatars: {}, chatHistory: [], ...overrides,
+        playerCount: 2, isLocked: false, players: [], pendingAvatars: {}, chatHistory: [],
+        teamA: [], teamB: [], ...overrides,
     });
 
     const mockLobbies: Lobby[] = [
