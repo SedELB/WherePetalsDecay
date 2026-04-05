@@ -15,6 +15,17 @@ import { GameMode } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
+import {
+    getAttackTargets,
+    getGiveFlagTargets,
+    getPlayerAtPosition,
+    getPlayerAvatar,
+    getPlayerName,
+    getRequestFlagTargets,
+    getTeamPlayers,
+    getTimerDisplay,
+    getTimerLabel,
+} from './game-page.helper';
 
 const GAME_OVER_REDIRECT_DELAY = 5000;
 
@@ -36,6 +47,12 @@ export class GamePageComponent implements OnInit {
         ice: 'Glace',
         doorOpened: 'Porte ouverte',
         doorClosed: 'Porte fermée',
+    };
+    readonly itemNames: Record<string, string> = {
+        spawn: 'Point de départ',
+        flag: 'Drapeau',
+        healingSanctuary: 'Sanctuaire de soin',
+        combatSanctuary: 'Sanctuaire de combat',
     };
 
     isChatFocused = false;
@@ -122,55 +139,27 @@ export class GamePageComponent implements OnInit {
 
     readonly attackTargets = computed((): Vec2[] => {
         if (!this.isMyTurn()) return [];
-        const localId = this.gameViewService.getLocalSocketId();
-        const allTeams = [this.getTeamPlayers('A'), this.getTeamPlayers('B')];
-        return this.adjacentPlayers()
-            .filter(p => {
-                const isSameTeam = allTeams.some(team =>
-                    team.some(t => t.socketId === localId) &&
-                    team.some(t => t.socketId === p.socketId),
-                );
-                return !isSameTeam;
-            })
-            .map(p => this.playerPositions()[p.socketId])
-            .filter((pos): pos is Vec2 => !!pos);
+        const localId = this.gameViewService.getLocalSocketId() ?? null;
+        const allTeams = [getTeamPlayers('A', this.lobby(), this.orderedPlayers()), getTeamPlayers('B', this.lobby(), this.orderedPlayers())];
+        return getAttackTargets(localId, this.adjacentPlayers(), this.playerPositions(), allTeams);
     });
 
     readonly requestFlagTargets = computed((): Vec2[] => {
         if (!this.isMyTurn()) return [];
-        const localId = this.gameViewService.getLocalSocketId();
-        const localPlayer = this.localPlayer();
-        if (!localPlayer || localPlayer.hasFlag) return [];
-        const allTeams = [this.getTeamPlayers('A'), this.getTeamPlayers('B')];
-        return this.adjacentPlayers()
-            .filter(p => {
-                const isSameTeam = allTeams.some(team =>
-                    team.some(t => t.socketId === localId) &&
-                    team.some(t => t.socketId === p.socketId),
-                );
-                return isSameTeam && p.hasFlag;
-            })
-            .map(p => this.playerPositions()[p.socketId])
-            .filter((pos): pos is Vec2 => !!pos);
+        const localId = this.gameViewService.getLocalSocketId() ?? null;
+        const allTeams = [getTeamPlayers('A', this.lobby(), this.orderedPlayers()), getTeamPlayers('B', this.lobby(), this.orderedPlayers())];
+        return getRequestFlagTargets(
+            this.localPlayer(), localId, this.adjacentPlayers(), this.playerPositions(), allTeams,
+        );
     });
-
 
     readonly giveFlagTargets = computed((): Vec2[] => {
         if (!this.isMyTurn()) return [];
-        const localId = this.gameViewService.getLocalSocketId();
-        const localPlayer = this.localPlayer();
-        if (!localPlayer?.hasFlag) return [];
-        const allTeams = [this.getTeamPlayers('A'), this.getTeamPlayers('B')];
-        return this.adjacentPlayers()
-            .filter(p => {
-                const isSameTeam = allTeams.some(team =>
-                    team.some(t => t.socketId === localId) &&
-                    team.some(t => t.socketId === p.socketId),
-                );
-                return isSameTeam;
-            })
-            .map(p => this.playerPositions()[p.socketId])
-            .filter((pos): pos is Vec2 => !!pos);
+        const localId = this.gameViewService.getLocalSocketId() ?? null;
+        const allTeams = [getTeamPlayers('A', this.lobby(), this.orderedPlayers()), getTeamPlayers('B', this.lobby(), this.orderedPlayers())];
+        return getGiveFlagTargets(
+            this.localPlayer(), localId, this.adjacentPlayers(), this.playerPositions(), allTeams,
+        );
     });
 
     readonly actionHighlightTiles = computed((): ActionTileHighlight[] => {
@@ -340,10 +329,13 @@ export class GamePageComponent implements OnInit {
         if (lobbyId) this.gameViewService.sendTileInfoRequest(lobbyId, position);
     }
 
+    getTeamPlayers(team: 'A' | 'B'): Player[] {
+        return getTeamPlayers(team, this.lobby(), this.orderedPlayers());
+    }
+
     isAdjacentPlayer(col: number, row: number): boolean {
         const playerSocketId = this.getPlayerAtPosition(col, row);
-        if (!playerSocketId) return false;
-        return this.adjacentPlayers().some((p) => p.socketId === playerSocketId);
+        return !!playerSocketId && this.adjacentPlayers().some((p) => p.socketId === playerSocketId);
     }
 
     isReachable(col: number, row: number): boolean {
@@ -351,56 +343,30 @@ export class GamePageComponent implements OnInit {
     }
 
     isTeleportable(col: number, row: number): boolean {
-        if (!this.isDebugModeActive()) return false;
-        return this.reachableTilesForTeleport().some((t) => t.x === col && t.y === row);
+        return this.isDebugModeActive() && this.reachableTilesForTeleport().some((t) => t.x === col && t.y === row);
     }
 
     getPlayerAtPosition(x: number, y: number): string | null {
-        const positions = this.playerPositions();
-        for (const [socketId, pos] of Object.entries(positions)) {
-            if (pos.x === x && pos.y === y) return socketId;
-        }
-        return null;
+        return getPlayerAtPosition(x, y, this.playerPositions());
     }
 
     getPlayerAvatar(socketId: string): string | undefined {
-        return this.lobby()?.players.find((player) => player.socketId === socketId)?.character?.avatar;
+        return getPlayerAvatar(socketId, this.lobby()?.players ?? []);
     }
 
     getPlayerName(socketId: string): string {
-        return this.lobby()?.players.find((player) => player.socketId === socketId)?.character?.name ?? 'Un joueur';
+        return getPlayerName(socketId, this.lobby()?.players ?? []);
     }
 
     getTimerLabel(): string {
-        const activeId = this.activePlayerSocketId();
-        if (!activeId) {
-            return 'Prochain tour...';
-        }
-        const name = this.getPlayerName(activeId);
-        if (activeId === this.gameViewService.getLocalSocketId()) {
-            return 'Votre tour';
-        }
-        return `Tour de ${name}`;
+        return getTimerLabel(
+            this.activePlayerSocketId() ?? null,
+            this.gameViewService.getLocalSocketId() ?? null,
+            this.lobby()?.players ?? [],
+        );
     }
 
     getTimerDisplay(): string {
-        const countdown = this.turnCountdown();
-        if (!this.activePlayerSocketId()) {
-            return `00:0${countdown}`;
-        }
-        const TEN = 10;
-        return `00:${countdown < TEN ? '0' : ''}${countdown}`;
-    }
-
-    getTeamPlayers(team: 'A' | 'B'): Player[] {
-        const lobby = this.lobby();
-        const orderedPlayers = this.orderedPlayers();
-        if (!lobby || !orderedPlayers) return [];
-
-        if (team === 'A') {
-            return orderedPlayers.filter(player => lobby.teamA.some(p => p.socketId === player.socketId));
-        } else {
-            return orderedPlayers.filter(player => lobby.teamB.some(p => p.socketId === player.socketId));
-        }
+        return getTimerDisplay(this.turnCountdown(), this.activePlayerSocketId() ?? null);
     }
 }
