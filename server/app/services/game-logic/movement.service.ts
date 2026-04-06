@@ -1,5 +1,5 @@
 import { Direction, DIRECTION_OFFSETS } from '@common/direction';
-import { TileItem } from '@common/enums';
+import { TileItem, TileTexture } from '@common/enums';
 import { Game } from '@common/game';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
@@ -23,6 +23,8 @@ export class MovementService {
         const remaining = game.movementPoints.get(socketId) - cost;
         game.movementPoints.set(socketId, remaining);
         game.playerPositions.set(socketId, targetPos);
+
+        this.trackTileVisit(game, socketId, targetPos, tile.type, tile.item);
 
         return targetPos;
     }
@@ -166,6 +168,31 @@ export class MovementService {
             if (playerPos.x === pos.x && playerPos.y === pos.y) return true;
         }
         return false;
+    }
+
+    private trackTileVisit(game: ActiveGame, socketId: string, pos: Vec2, tileType: TileTexture, tileItem: TileItem | null): void {
+        const key = this.posKey(pos);
+
+        const isTerrainTile = tileType === TileTexture.Floor || tileType === TileTexture.Water || tileType === TileTexture.Ice;
+        if (isTerrainTile) {
+            if (!game.visitedTilesPerPlayer.has(socketId)) {
+                game.visitedTilesPerPlayer.set(socketId, new Set());
+            }
+            game.visitedTilesPerPlayer.get(socketId).add(key);
+            game.globalVisitedTiles.add(key);
+        }
+
+        if (tileItem === TileItem.HealingSanctuary || tileItem === TileItem.CombatSanctuary) {
+            game.sanctuariesUsed.add(key);
+        }
+
+        if (tileType === TileTexture.DoorOpened) {
+            game.doorsInteracted.add(key);
+        }
+
+        if (tileItem === TileItem.Flag) {
+            game.flagHolders.add(socketId);
+        }
     }
 
     private posKey(pos: Vec2): string {

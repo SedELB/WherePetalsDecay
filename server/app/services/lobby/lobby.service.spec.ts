@@ -46,6 +46,11 @@ describe('LobbyService', () => {
         isHost: false,
         winsCount: 0,
         hasAbandonned: false,
+        combatCount: 0,
+        lossCount: 0,
+        totalHpLost: 0,
+        totalHpDealt: 0,
+        visitedTilesCount: 0,
     };
 
     beforeEach(async () => {
