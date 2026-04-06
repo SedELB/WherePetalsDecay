@@ -1,7 +1,9 @@
 import { BASE_STATS } from '@common/constants/character.constants';
+import { MS_PER_SECOND, PERCENT } from '@common/constants/game-stats.constants';
 import { Direction } from '@common/direction';
-import { TileItem } from '@common/enums';
+import { GameMode, TileItem, TileTexture } from '@common/enums';
 import { Game } from '@common/game';
+import { GameStats } from '@common/interfaces/game-stats';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
@@ -69,7 +71,19 @@ export class GameLogicService {
             playerStartPositions,
             movementPoints,
             actionPoints,
+            visitedTilesPerPlayer: new Map(),
+            globalVisitedTiles: new Set(),
+            sanctuariesUsed: new Set(),
+            doorsInteracted: new Set(),
+            flagHolders: new Set(),
+            totalTurns: 0,
+            gameStartTime: Date.now(),
         };
+
+        for (const [socketId, pos] of playerPositions) {
+            activeGame.visitedTilesPerPlayer.set(socketId, new Set([`${pos.x},${pos.y}`]));
+            activeGame.globalVisitedTiles.add(`${pos.x},${pos.y}`);
+        }
 
         this.activeGames.set(lobby.lobbyId, activeGame);
         return activeGame;
@@ -99,7 +113,17 @@ export class GameLogicService {
 
     endTurn(lobbyId: string): void {
         const game = this.activeGames.get(lobbyId);
-        if (game) this.turnService.endTurn(game);
+        if (game) {
+            game.totalTurns++;
+            this.turnService.endTurn(game);
+        }
+    }
+
+    incrementTotalTurns(lobbyId: string): void {
+        const game = this.activeGames.get(lobbyId);
+        if (game) {
+            game.totalTurns++;
+        }
     }
 
     isPlayerTurn(lobbyId: string, socketId: string): boolean {
@@ -204,10 +228,11 @@ export class GameLogicService {
 
         if (activePlayers.length <= 1) {
             const winnerId = activePlayers.length === 1 ? activePlayers[0].socketId : null;
-            server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId, isForfeit: true });
+            const gameStats = this.getGameStats(lobbyId);
+            const allPlayers = game.lobby.players ? [...game.lobby.players] : [];
+            server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId, isForfeit: true, players: allPlayers, gameStats });
 
             this.endGame(lobbyId);
-            server.in(lobbyId).socketsLeave(lobbyId);
             return true;
         } else if (wasCurrentTurn) {
             this.endTurn(lobbyId);
@@ -221,6 +246,47 @@ export class GameLogicService {
         const game = this.activeGames.get(lobbyId);
         if (!game) return [];
         return game.lobby.players.filter((player) => !player.hasAbandonned);
+    }
+
+    getGameStats(lobbyId: string): GameStats | null {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return null;
+
+        const grid = game.lobby.game.grid;
+        const totalTerrainTiles = this.countTerrainTiles(grid);
+        const totalSanctuaries = this.countTilesByItem(grid, [TileItem.HealingSanctuary, TileItem.CombatSanctuary]);
+        const totalDoors = this.countTilesByType(grid, [TileTexture.DoorOpened, TileTexture.DoorClosed]);
+        const totalOpenDoors = this.countTilesByType(grid, [TileTexture.DoorOpened]);
+
+        const visitedPercent = totalTerrainTiles > 0
+            ? (game.globalVisitedTiles.size / totalTerrainTiles) * PERCENT
+            : 0;
+
+        const sanctuaryPercent = totalSanctuaries > 0
+            ? (game.sanctuariesUsed.size / totalSanctuaries) * PERCENT
+            : null;
+
+        const doorsPercent = (totalDoors > 0 || totalOpenDoors > 0)
+            ? (game.doorsInteracted.size / Math.max(totalDoors, 1)) * PERCENT
+            : null;
+
+        const isCTF = game.lobby.game.gameMode === GameMode.Ctf;
+        const flagHoldersCount = isCTF ? game.flagHolders.size : null;
+
+        for (const player of game.lobby.players) {
+            const playerTiles = game.visitedTilesPerPlayer.get(player.socketId);
+            player.visitedTilesCount = playerTiles ? playerTiles.size : 0;
+        }
+
+        return {
+            gameDurationSeconds: Math.floor((Date.now() - game.gameStartTime) / MS_PER_SECOND),
+            totalTurns: game.totalTurns,
+            totalTerrainTiles,
+            visitedTilesPercentage: visitedPercent,
+            sanctuaryUsagePercentage: sanctuaryPercent,
+            doorsManipulatedPercentage: doorsPercent,
+            uniqueFlagHoldersCount: flagHoldersCount,
+        };
     }
 
     // Alt
@@ -278,5 +344,37 @@ export class GameLogicService {
             [array[i], array[j]] = [array[j], array[i]];
         }
         return array;
+    }
+
+    private countTerrainTiles(grid: Game['grid']): number {
+    let count = 0;
+    for (const row of grid) {
+        for (const tile of row) {
+            if (tile.type === TileTexture.Floor || tile.type === TileTexture.Water || tile.type === TileTexture.Ice) {
+                count++;
+            }
+        }
+    }
+    return count;
+    }
+
+    private countTilesByItem(grid: Game['grid'], items: TileItem[]): number {
+        let count = 0;
+        for (const row of grid) {
+            for (const tile of row) {
+                if (tile.item && items.includes(tile.item)) count++;
+            }
+        }
+        return count;
+    }
+
+    private countTilesByType(grid: Game['grid'], types: TileTexture[]): number {
+        let count = 0;
+        for (const row of grid) {
+            for (const tile of row) {
+                if (types.includes(tile.type)) count++;
+            }
+        }
+        return count;
     }
 }

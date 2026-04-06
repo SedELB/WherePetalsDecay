@@ -37,12 +37,19 @@ export class CombatService {
         game.actionPoints.set(attackerId, actionPoints - 1);
         attacker.winsCount++;
 
+        const damage = defender.character.life;
+        attacker.combatCount++;
+        defender.combatCount++;
+        attacker.totalHpDealt += damage;
+        defender.totalHpLost += damage;
+        defender.lossCount++;
+
         const loserNewPosition = this.resetLoserPosition(game, defenderId);
 
         return {
             winnerId: attackerId,
             loserId: defenderId,
-            damage: defender.character.life,
+            damage,
             loserHpLeft: defender.character.life,
             killed: true,
             loserNewPosition,
