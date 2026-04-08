@@ -1,6 +1,6 @@
 import { BASE_STATS } from '@common/constants/character.constants';
 import { Direction } from '@common/direction';
-import { TileItem } from '@common/enums';
+import { PlayerType, TileItem } from '@common/enums';
 import { Game } from '@common/game';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
@@ -196,8 +196,9 @@ export class GameLogicService {
 
 
         const activePlayers = this.getActivePlayers(lobbyId);
+        const activeRealPlayers = activePlayers.filter((p) => p.playerType === PlayerType.Reel);
 
-        if (activePlayers.length <= 1) {
+        if (activePlayers.length <= 1 || activeRealPlayers.length === 0) {
             const winnerId = activePlayers.length === 1 ? activePlayers[0].socketId : null;
             server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId, isForfeit: true });
 
