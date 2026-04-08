@@ -27,6 +27,8 @@ export enum JoinGameEvents {
     TransferFlag = 'transferFlag',
     GiveFlagRequest = 'giveFlagRequest',
     RequestFlagRequest = 'requestFlagRequest',
+    StartCombat = 'startCombat',
+    SendPosture = 'sendPosture',
 
     // Response events (confirmations)
     GameHosted = 'gameHosted',
@@ -45,6 +47,8 @@ export enum JoinGameEvents {
     GiveFlagResponse = 'giveFlagResponse',
     RequestFlagResponse = 'requestFlagResponse',
     FlagTransferResponse = 'flagTransferResponse',
+    CombatStarted = 'combatStarted',
+    PostureReceived = 'postureReceived',
 
     // Game Events
     GameStarted = 'gameStarted',
@@ -66,7 +70,11 @@ export enum JoinGameEvents {
 
     // Combat
     RequestCombat = 'requestCombat',
+    CombatRoundStarted = 'combatRoundStarted',
+    CombatRoundCountdown = 'combatRoundCountdown',
+    CombatRoundResolved = 'combatRoundResolved',
     CombatResult = 'combatResult',
+    CombatEnded = 'combatEnded',
 
     // Info
     RequestTileInfo = 'requestTileInfo',
