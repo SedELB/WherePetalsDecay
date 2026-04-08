@@ -54,11 +54,21 @@ describe('LobbyCardComponent', () => {
         createdAt: new Date(), updatedAt: new Date(), isVisible: true, ...overrides,
     });
 
-    const createMockLobby = (overrides: Partial<Lobby> = {}): Lobby => ({
-        lobbyId: 'ABCDE', gameId: 'game-1', hostSocketId: 'socket-1', playerCount: 1,
-        isLocked: false, pendingAvatars: {}, players: [], game: createMockGame(),
-        chatHistory: [], teamA: [], teamB: [], ...overrides,
-    });
+    const createMockLobby = (overrides: Partial<Lobby> = {}): Lobby => {
+        const { teamA, teamB, ...restOverrides } = overrides;
+        return {
+            lobbyId: 'ABCDE',
+            gameId: 'game-1',
+            hostSocketId: 'socket-1',
+            playerCount: 1,
+            isLocked: false,
+            pendingAvatars: {},
+            players: [],
+            game: createMockGame(),
+            chatHistory: [],
+            teamA: teamA ? teamA : [], teamB: teamB ? teamB : [], ...restOverrides,
+        };
+    };
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({

@@ -46,12 +46,12 @@ describe('LobbyService', () => {
         isHost: false,
         winsCount: 0,
         hasAbandonned: false,
+        hasFlag: false,
         combatCount: 0,
         lossCount: 0,
         totalHpLost: 0,
         totalHpDealt: 0,
         visitedTilesCount: 0,
-        hasFlag: false,
     };
 
     beforeEach(async () => {
@@ -118,6 +118,7 @@ describe('LobbyService', () => {
 
             expect(service.getAvailableLobbies()).toHaveLength(0);
         });
+
     });
 
     describe('joinLobby', () => {
@@ -154,6 +155,7 @@ describe('LobbyService', () => {
 
             expect(() => service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' })).toThrow();
         });
+
     });
 
     describe('deleteLobby', () => {
@@ -217,6 +219,18 @@ describe('LobbyService', () => {
             expect(updatedLobby.isLocked).toBe(false);
         });
 
+        it('should keep manually locked lobby locked when non-full player leaves', () => {
+            const smallGame = { ...mockGame, _id: '2', maxPlayers: 2 };
+            const lobby = service.createLobby(smallGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            const startedLobby = service.getLobby(lobby.lobbyId);
+            startedLobby.isLocked = true;
+
+            service.removePlayerFromLobby(lobby.lobbyId, 'socket-1');
+
+            const updatedLobby = service.getLobby(lobby.lobbyId);
+            expect(updatedLobby.isLocked).toBe(true);
+        });
+
         it('should remove player from pendingAvatars on leave', () => {
             const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
             const retrievedLobby = service.getLobby(lobby.lobbyId);
@@ -269,6 +283,41 @@ describe('LobbyService', () => {
 
         it('should do nothing if lobby does not exist', () => {
             expect(() => service.updatePlayerAvatar('nonexistent', 'socket-1', 'avatar.png')).not.toThrow();
+        });
+    });
+
+    describe('canStartGame', () => {
+        it('should lock classic lobby on game start', () => {
+            const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' });
+
+            const result = service.canStartGame(lobby.lobbyId, 'socket-1');
+
+            expect(result).toBeTruthy();
+            expect(result.isLocked).toBe(true);
+        });
+
+        it('should assign teams and lock ctf lobby on game start', () => {
+            const ctfGame = { ...mockGame, _id: 'ctf-1', gameMode: GameMode.Ctf };
+            const lobby = service.createLobby(ctfGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' });
+
+            const result = service.canStartGame(lobby.lobbyId, 'socket-1');
+
+            expect(result).toBeTruthy();
+            expect(result.isLocked).toBe(true);
+            expect(result.teamA.length + result.teamB.length).toBe(2);
+        });
+
+        it('should return null for ctf when teams cannot be formed', () => {
+            const ctfGame = { ...mockGame, _id: 'ctf-2', gameMode: GameMode.Ctf, maxPlayers: 3 };
+            const lobby = service.createLobby(ctfGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+            service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' });
+            service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-3' });
+
+            const result = service.canStartGame(lobby.lobbyId, 'socket-1');
+
+            expect(result).toBeNull();
         });
     });
 });

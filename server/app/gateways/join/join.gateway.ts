@@ -21,6 +21,7 @@ import { Server, Socket } from 'socket.io';
 
 const INITIAL_WINS_COUNT = 0;
 const DUPLICATE_NAME_SUFFIX_START = 2;
+const LOBBIES_REFRESH_DELAY_MS = 0;
 
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
@@ -78,6 +79,16 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     handleGetLobbies() {
         const availableLobbies = this.lobbyService.getAvailableLobbies();
         this.server.emit(JoinGameEvents.UpdatedLobbiesList, availableLobbies);
+    }
+
+    @SubscribeMessage(JoinGameEvents.StartGame)
+    handleStartGameLobbiesRefresh() {
+        this.deferLobbiesRefresh();
+    }
+
+    @SubscribeMessage(JoinGameEvents.LeaveEndGame)
+    handleLeaveEndGameLobbiesRefresh() {
+        this.deferLobbiesRefresh();
     }
 
     @SubscribeMessage(JoinGameEvents.JoinLobby)
@@ -175,7 +186,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         const success = this.lobbyService.kickPlayer(payload.lobbyId, socket.id, payload.targetSocketId);
 
         if (success) {
-            
+
             this.server.to(payload.targetSocketId).emit(JoinGameEvents.PlayerKicked, `Vous avez été exclu par l'organisateur.`);
             this.server.in(payload.targetSocketId).socketsLeave(payload.lobbyId);
 
@@ -213,6 +224,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             this.logger.log(`Host left. Deleting lobby: ${lobby.lobbyId}`);
             socket.to(lobby.lobbyId).emit(JoinGameEvents.GameDeleted);
             this.lobbyService.deleteLobby(lobby.lobbyId);
+            socket.leave(lobby.lobbyId);
         } else {
             const leavingPlayer = lobby.players.find(player => player.socketId === socket.id);
 
@@ -224,6 +236,8 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
                 this.logger.log(`Pending player ${socket.id} left lobby: ${lobby.lobbyId}`);
                 this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
             }
+
+            socket.leave(lobby.lobbyId);
 
             const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
             this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
@@ -241,5 +255,9 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         if (isGameActive) return;
 
         this.leaveFromWaitingLobby(lobby, socket);
+    }
+
+    private deferLobbiesRefresh() {
+        setTimeout(() => this.handleGetLobbies(), LOBBIES_REFRESH_DELAY_MS);
     }
 }

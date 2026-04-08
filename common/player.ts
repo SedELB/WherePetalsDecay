@@ -7,6 +7,7 @@ export interface Player {
     isHost: boolean;
     hasAbandonned: boolean;
     hasFlag: boolean;
+    onIceTile?: boolean;
     combatCount: number;
     lossCount: number;
     totalHpLost: number;
