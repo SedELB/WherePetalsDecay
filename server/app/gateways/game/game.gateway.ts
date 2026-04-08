@@ -68,10 +68,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             return;
         }
 
-        finalLobby.players.map(p => {
-            p.flagsCaptured = 0;
-        });
-
         const activeGame = this.gameLogicService.initializeGame(finalLobby);
 
         this.server.to(lobbyId).emit(JoinGameEvents.GameStarting, activeGame.lobby);
