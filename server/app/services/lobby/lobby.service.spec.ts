@@ -31,7 +31,7 @@ describe('LobbyService', () => {
     };
 
     const mockPlayer: Player = {
-        socketId: null,
+        socketId: '',
         character: {
             name: 'MOCK_PLAYER',
             avatar: 'mockavatar.png',
@@ -51,6 +51,7 @@ describe('LobbyService', () => {
         totalHpLost: 0,
         totalHpDealt: 0,
         visitedTilesCount: 0,
+        hasFlag: false,
     };
 
     beforeEach(async () => {

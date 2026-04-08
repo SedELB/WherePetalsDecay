@@ -23,24 +23,40 @@ describe('GamePageComponent', () => {
 
     const LOCAL_SOCKET = 'local-socket';
     const OTHER_SOCKET = 'other-socket';
-    
+
     const DEFAULT_LIFE = 6;
     const BONUS_LIFE = 8;
-    const TIMER_SHORT = 5;
-    const TIMER_LONG = 25;
-    const TIMER_DELAY = 3;
     const TILE_X = 3;
     const TILE_Y = 5;
 
-    const createPlayer = (socketId: string, overrides: Partial<Player> = {}): Player => ({
-        socketId, isHost: false, winsCount: 0, hasAbandonned: false,
-        combatCount: 0, lossCount: 0, totalHpLost: 0, totalHpDealt: 0, visitedTilesCount: 0,
-        character: {
-            name: `Player-${socketId}`, avatar: 'avatar.png', life: DEFAULT_LIFE, speed: 4,
-            attack: 4, defense: 4, lifeBonus: false, attackDice: 'D6', defenseDice: 'D4',
-        },
-        ...overrides,
-    });
+    const createPlayer = (socketId: string, overrides: Partial<Player> = {}): Player => {
+        const { hasFlag, ...restOverrides } = overrides;
+
+        return {
+            socketId,
+            isHost: false,
+            winsCount: 0,
+            hasAbandonned: false,
+            hasFlag: hasFlag ?? false,
+            combatCount: 0,
+            lossCount: 0,
+            totalHpLost: 0,
+            totalHpDealt: 0,
+            visitedTilesCount: 0,
+            character: {
+                name: `Player-${socketId}`,
+                avatar: 'avatar.png',
+                life: DEFAULT_LIFE,
+                speed: 4,
+                attack: 4,
+                defense: 4,
+                lifeBonus: false,
+                attackDice: 'D6',
+                defenseDice: 'D4',
+            },
+            ...restOverrides,
+        };
+    };
 
     const createLobby = (overrides: Partial<Lobby> = {}): Lobby => ({
         lobbyId: 'lobby-1', gameId: 'game-1', hostSocketId: LOCAL_SOCKET,
@@ -51,7 +67,7 @@ describe('GamePageComponent', () => {
             gameMode: GameMode.Classic, thumbnail: '', maxPlayers: 4, grid: [],
             isVisible: true, createdAt: new Date(), updatedAt: new Date(),
         },
-        pendingAvatars: {}, chatHistory: [], ...overrides,
+        pendingAvatars: {}, chatHistory: [], teamA: [], teamB: [], ...overrides,
     });
 
     const mockGameViewService = {
@@ -66,7 +82,6 @@ describe('GamePageComponent', () => {
         actionPoints: signal<number>(0),
         disableEndTurn: signal<boolean>(false),
         isDebugModeActive: signal<boolean>(false),
-        turnNotification: signal<string | null>(null),
         tileInfo: signal<unknown>(null),
         gameOver: signal<{ winnerSocketId: string | null; isForfeit?: boolean } | null>(null),
         getLocalSocketId: jasmine.createSpy('getLocalSocketId').and.returnValue(LOCAL_SOCKET),
@@ -95,14 +110,13 @@ describe('GamePageComponent', () => {
         mockGameViewService.actionPoints.set(0);
         mockGameViewService.disableEndTurn.set(false);
         mockGameViewService.isDebugModeActive.set(false);
-        mockGameViewService.turnNotification.set(null);
         mockGameViewService.tileInfo.set(null);
         mockGameViewService.gameOver.set(null);
         [mockGameViewService.sendMove, mockGameViewService.sendEndTurn,
-         mockGameViewService.sendAbandon, mockGameViewService.sendAbandonWithoutPrompt,
-         mockGameViewService.sendCombat, mockGameViewService.sendTileInfoRequest,
-         mockGameViewService.toggleDebugMode, mockGameViewService.teleportMove,
-         mockGameViewService.isHost].forEach((s) => s.calls.reset());
+        mockGameViewService.sendAbandon, mockGameViewService.sendAbandonWithoutPrompt,
+        mockGameViewService.sendCombat, mockGameViewService.sendTileInfoRequest,
+        mockGameViewService.toggleDebugMode, mockGameViewService.teleportMove,
+        mockGameViewService.isHost].forEach((s) => s.calls.reset());
     };
 
     beforeEach(async () => {
@@ -188,9 +202,9 @@ describe('GamePageComponent', () => {
                 players: [
                     createPlayer(LOCAL_SOCKET, {
                         isHost: true,
-                        character: { 
-                            name: 'Tank', avatar: '', life: BONUS_LIFE, speed: 4, 
-                            attack: 4, defense: 4, lifeBonus: true, attackDice: 'D6', defenseDice: 'D4', 
+                        character: {
+                            name: 'Tank', avatar: '', life: BONUS_LIFE, speed: 4,
+                            attack: 4, defense: 4, lifeBonus: true, attackDice: 'D6', defenseDice: 'D4',
                         },
                     }),
                     createPlayer(OTHER_SOCKET),
@@ -246,8 +260,8 @@ describe('GamePageComponent', () => {
 
         /** Ensures that players who have already quit the session are completely ignored and cannot be targeted for combat. */
         it('should exclude players who abandoned', () => {
-            const lobby = createLobby({ 
-                players: [createPlayer(LOCAL_SOCKET, { isHost: true }), createPlayer(OTHER_SOCKET, { hasAbandonned: true })], 
+            const lobby = createLobby({
+                players: [createPlayer(LOCAL_SOCKET, { isHost: true }), createPlayer(OTHER_SOCKET, { hasAbandonned: true })],
             });
             mockGameViewService.gameLobby.set(lobby);
             mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
@@ -315,7 +329,9 @@ describe('GamePageComponent', () => {
                 [LOCAL_SOCKET]: { x: 0, y: 0 },
                 [OTHER_SOCKET]: { x: 1, y: 0 },
             });
-            component.isCombatMode = true;
+            mockGameViewService.actionPoints.set(1);
+            component.isSubMenuOpen.set(true);
+            component.activeSubAction.set('attack');
             component.onTileClick(1, 0);
             expect(mockGameViewService.sendCombat).toHaveBeenCalledWith('lobby-1', OTHER_SOCKET);
         });
@@ -404,29 +420,6 @@ describe('GamePageComponent', () => {
         it('should say "Prochain tour..." during the inter-turn delay', () => {
             mockGameViewService.activePlayerSocketId.set(null);
             expect(component.getTimerLabel()).toBe('Prochain tour...');
-        });
-    });
-
-    describe('getTimerDisplay', () => {
-        /** Ensures aesthetic consistency by padding single-digit seconds with a leading zero to maintain a strict MM:SS format. */
-        it('should pad single-digit seconds with a leading zero', () => {
-            mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
-            mockGameViewService.turnCountdown.set(TIMER_SHORT);
-            expect(component.getTimerDisplay()).toBe('00:05');
-        });
-
-        /** Displays standard double-digit countdowns correctly without inadvertently modifying or corrupting the number string. */
-        it('should not pad double-digit seconds', () => {
-            mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
-            mockGameViewService.turnCountdown.set(TIMER_LONG);
-            expect(component.getTimerDisplay()).toBe('00:25');
-        });
-
-        /** Confirms that the formatting logic also applies correctly to the short countdown bridging two turns. */
-        it('should format the 3-second delay countdown', () => {
-            mockGameViewService.activePlayerSocketId.set(null);
-            mockGameViewService.turnCountdown.set(TIMER_DELAY);
-            expect(component.getTimerDisplay()).toBe('00:03');
         });
     });
 });

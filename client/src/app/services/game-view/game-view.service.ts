@@ -3,13 +3,14 @@ import { Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Direction } from '@common/direction';
-import { SocketNamespace } from '@common/enums';
-import { GameOverData, GameStats } from '@common/interfaces/game-stats';
-import { GameStartedData, PlayerMovedData, TileInfoData } from '@common/interfaces/game-view';
+import { SocketNamespace, TileItem } from '@common/enums';
+import { GameStats } from '@common/interfaces/game-stats';
+import { CombatResult, GameOverData, GameStartedData, PlayerMovedData, TileInfoData } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
+import swal from 'sweetalert2';
 
 const ONE_SECOND_DELAY = 1000;
 const END_GAME_REDIRECT_DELAY = 3000;
@@ -24,6 +25,7 @@ export class GameViewService {
     readonly disableEndTurn = signal<boolean>(false);
     readonly gameLobby = signal<Lobby | null>(null);
     readonly playerPositions = signal<Record<string, Vec2>>({});
+    readonly playerStartPositions = signal<Record<string, Vec2>>({});
     readonly turnOrder = signal<string[]>([]);
     readonly activePlayerSocketId = signal<string | null>(null);
     readonly turnCountdown = signal<number>(0);
@@ -32,8 +34,10 @@ export class GameViewService {
     readonly movementPoints = signal<number>(0);
     readonly actionPoints = signal<number>(0);
     readonly tileInfo = signal<TileInfoData | null>(null);
-    readonly gameOver = signal<{ winnerSocketId: string | null; isForfeit?: boolean } | null>(null);
+    readonly gameOver = signal<GameOverData | null>(null);
     readonly turnNotification = signal<string | null>(null);
+    readonly isFlagTaken = signal<boolean>(false);
+    private closeFlagTransferSwal: (() => void) | null = null;
     readonly endGamePlayers = signal<Player[]>([]);
     readonly endGameStats = signal<GameStats | null>(null);
 
@@ -55,6 +59,7 @@ export class GameViewService {
             this.setLobby(data.lobby);
             this.turnOrder.set(data.turnOrder);
             this.playerPositions.set(data.playerPositions);
+            this.playerStartPositions.set(data.playerStartPositions);
             this.showFirstTurnNotification(data.turnOrder, data.lobby);
         });
 
@@ -82,6 +87,11 @@ export class GameViewService {
             this.reachableTiles.set([]);
             this.reachableTilesForTeleport.set([]);
             this.showNextTurnNotification(endedPlayerSocketId);
+            // Auto-close pending flag transfer dialog
+            if (this.closeFlagTransferSwal) {
+                this.closeFlagTransferSwal();
+                this.closeFlagTransferSwal = null;
+            }
         });
 
         this.webSocketService.onNamespace<PlayerMovedData>(this.namespace, JoinGameEvents.PlayerMoved, (data) => {
@@ -89,11 +99,38 @@ export class GameViewService {
             if (data.socketId === this.getLocalSocketId()) {
                 this.movementPoints.set(data.movementPoints);
             }
+
+            if (data.flagTaken) {
+                this.gameLobby.update((lobby) => {
+                    if (!lobby) return lobby;
+                    lobby.game.grid[data.position.y][data.position.x].item = null;
+                    const updatedPlayers = lobby.players.map((p) => {
+                        if (p.socketId === data.socketId) return { ...p, hasFlag: true };
+                        return p;
+                    });
+                    return { ...lobby, players: updatedPlayers };
+                });
+                this.isFlagTaken.set(true);
+            }
         });
 
         this.webSocketService.onNamespace<PlayerMovedData>(this.namespace, JoinGameEvents.PlayerTeleported, (data) => {
             if (!this.isDebugModeActive()) return;
             this.playerPositions.update((positions) => ({ ...positions, [data.socketId]: data.position }));
+
+            if (data.flagTaken) {
+                this.gameLobby.update((lobby) => {
+                    if (!lobby) return lobby;
+                    lobby.game.grid[data.position.y][data.position.x].item = null;
+                    const updatedPlayers = lobby.players.map((p) => {
+                        if (p.socketId === data.socketId) return { ...p, hasFlag: true };
+                        return p;
+                    });
+
+                    return { ...lobby, players: updatedPlayers };
+                });
+                this.isFlagTaken.set(true);
+            }
         });
 
         this.webSocketService.onNamespace<boolean>(this.namespace, JoinGameEvents.DebugToggled, (data) => {
@@ -125,7 +162,7 @@ export class GameViewService {
         });
 
         this.webSocketService.onNamespace
-            <{ winnerId: string; loserId: string; damage: number; loserHpLeft: number; killed: boolean; loserNewPosition: Vec2 | null }>
+            <CombatResult>
             (this.namespace, JoinGameEvents.CombatResult, (data) => {
                 this.gameLobby.update((lobby) => {
                     if (!lobby) return lobby;
@@ -140,11 +177,90 @@ export class GameViewService {
                     });
                     return { ...lobby, players: updatedPlayers };
                 });
+
                 if (data.loserNewPosition) {
                     const newPos = data.loserNewPosition;
                     this.playerPositions.update((positions) => ({ ...positions, [data.loserId]: newPos }));
                 }
+
+                if (data.wasFlagDropped) {
+                    this.gameLobby.update((lobby) => {
+                        if (!lobby) return lobby;
+                        lobby.game.grid[data.loserOldPosition.y][data.loserOldPosition.x].item = TileItem.Flag;
+                        const updatedPlayers = lobby.players.map((p) => {
+                            if (p.socketId === data.loserId) return { ...p, hasFlag: false };
+                            return p;
+                        });
+
+                        return { ...lobby, players: updatedPlayers };
+                    });
+                    this.isFlagTaken.set(false);
+                }
             });
+
+        this.webSocketService.onNamespace<{ giverPlayerId: string, targetPlayerId: string }>
+            (this.namespace, JoinGameEvents.FlagTransferred, (flagTransferData) => {
+                const { giverPlayerId, targetPlayerId } = flagTransferData;
+
+                this.gameLobby.update((lobby) => {
+                    if (!lobby) return lobby;
+                    const giver = lobby.players.find(p => p.socketId === giverPlayerId);
+                    const taker = lobby.players.find(p => p.socketId === targetPlayerId);
+                    if (!giver || !taker) return lobby;
+                    taker.hasFlag = true;
+                    giver.hasFlag = false;
+                    return { ...lobby };
+                });
+            });
+
+        this.webSocketService.onNamespace<{ requesterId: string; requesterName: string; lobbyId: string }>
+            (this.namespace, JoinGameEvents.GiveFlagResponse, ({ requesterId, requesterName, lobbyId }) => {
+                this.closeFlagTransferSwal = () => swal.close();
+
+                swal.fire({
+                    title: 'Transfert de drapeau',
+                    text: `${requesterName} veut vous passer le drapeau.`,
+                    icon: 'question',
+                    confirmButtonText: 'Accepter',
+                    cancelButtonText: 'Refuser',
+                    showCancelButton: true,
+                    timer: undefined,
+                    allowOutsideClick: false,
+                }).then((result) => {
+                    this.closeFlagTransferSwal = null;
+                    this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.FlagTransferResponse, {
+                        lobbyId,
+                        requesterId,
+                        accepted: result.isConfirmed,
+                    });
+                });
+            });
+
+        this.webSocketService.onNamespace<{ requesterId: string; requesterName: string; lobbyId: string }>(
+            this.namespace, JoinGameEvents.RequestFlagResponse, (requestFlagData) => {
+                const {requesterId, requesterName, lobbyId } = requestFlagData;
+                
+                this.closeFlagTransferSwal = () => swal.close();
+                swal.fire({
+                    title: 'Transfert de drapeau',
+                    text: `${requesterName} veut avoir le drapeau.`,
+                    icon: 'question',
+                    confirmButtonText: 'Accepter',
+                    cancelButtonText: 'Refuser',
+                    showCancelButton: true,
+                    timer: undefined,
+                    allowOutsideClick: false,
+                }).then((result) => {
+                    this.closeFlagTransferSwal = null;
+                    this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.FlagTransferResponse, {
+                        lobbyId,
+                        requesterId,
+                        accepted: result.isConfirmed,
+                        isRequest: true,
+                    });
+                });
+            });
+
 
         this.webSocketService.onNamespace<{ socketId: string, updatedLobby: Lobby }>(this.namespace, JoinGameEvents.PlayerAbandoned, (payload) => {
             const { socketId, updatedLobby } = payload;
@@ -192,6 +308,7 @@ export class GameViewService {
         if (this.isHost() && this.isDebugModeActive()) {
             this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.ToggleDebugMode, { lobbyId, state: this.isDebugModeActive() });
         }
+        
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.PlayerAbandon, lobbyId);
     }
 
@@ -201,6 +318,14 @@ export class GameViewService {
 
     sendCombat(lobbyId: string, targetSocketId: string): void {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestCombat, { lobbyId, targetSocketId });
+    }
+
+    giveFlagTransfer(lobbyId: string, targetSocketId: string): void {
+        this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.GiveFlagRequest, { lobbyId, targetSocketId });
+    }
+
+    requestFlagTransfer(lobbyId: string, targetSocketId: string | undefined): void {
+        this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestFlagRequest, { lobbyId, targetSocketId });
     }
 
     sendTileInfoRequest(lobbyId: string, position: Vec2): void {
@@ -219,12 +344,14 @@ export class GameViewService {
         this.turnCountdown.set(0);
         this.disableEndTurn.set(false);
         this.reachableTiles.set([]);
+        this.reachableTilesForTeleport.set([]);
         this.movementPoints.set(0);
         this.actionPoints.set(0);
         this.tileInfo.set(null);
         this.playerPositions.set({});
         this.turnOrder.set([]);
         this.turnNotification.set(null);
+        this.isFlagTaken.set(false);
     }
 
     private showNextTurnNotification(endedPlayerSocketId: string): void {

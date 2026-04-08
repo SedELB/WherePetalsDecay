@@ -1,8 +1,6 @@
 import { BASE_STATS } from '@common/constants/character.constants';
-import { MS_PER_SECOND, PERCENT } from '@common/constants/game-stats.constants';
 import { Direction } from '@common/direction';
-import { GameMode, TileItem, TileTexture } from '@common/enums';
-import { Game } from '@common/game';
+import { GameMode } from '@common/enums';
 import { GameStats } from '@common/interfaces/game-stats';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
@@ -12,10 +10,11 @@ import { Injectable } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { ActiveGame, TurnCallbacks } from './active-game.interface';
 import { CombatService } from './combat.service';
+import { CTFService } from './ctf.service';
+import { GameSetupService } from './game-setup.service';
 import { MovementService } from './movement.service';
 import { TurnService } from './turn.service';
 
-const RANDOM_THRESHOLD = 0.5;
 const INITIAL_WINS_COUNT = 0;
 
 @Injectable()
@@ -24,6 +23,8 @@ export class GameLogicService {
         private readonly turnService: TurnService,
         private readonly movementService: MovementService,
         private readonly combatService: CombatService,
+        private readonly ctfService: CTFService,
+        private readonly gameSetupService: GameSetupService,
     ) {
         this.activeGames = new Map<string, ActiveGame>();
     }
@@ -37,8 +38,8 @@ export class GameLogicService {
     }
 
     initializeGame(lobby: Lobby): ActiveGame {
-        const spawnPositions = this.extractSpawnPositions(lobby.game);
-        const shuffledSpawns = this.shuffle([...spawnPositions]);
+        const spawnPositions = this.gameSetupService.extractSpawnPositions(lobby.game);
+        const shuffledSpawns = this.gameSetupService.shuffle([...spawnPositions]);
 
         const playerPositions = new Map<string, Vec2>();
         const playerStartPositions = new Map<string, Vec2>();
@@ -59,9 +60,9 @@ export class GameLogicService {
             actionPoints.set(player.socketId, 0);
         });
 
-        this.removeUnusedSpawns(lobby.game, shuffledSpawns, activePlayers.length);
+        this.gameSetupService.removeUnusedSpawns(lobby.game, shuffledSpawns, activePlayers.length);
 
-        const turnOrder = this.computeTurnOrder(activePlayers);
+        const turnOrder = this.gameSetupService.computeTurnOrder(activePlayers);
 
         const activeGame: ActiveGame = {
             lobby,
@@ -137,16 +138,40 @@ export class GameLogicService {
     movePlayer(lobbyId: string, socketId: string, direction: Direction) {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
-        return this.movementService.movePlayer(game, socketId, direction);
+        const targetPos = this.movementService.movePlayer(game, socketId, direction);
+        if (!targetPos) return null;
+
+        let flagJustTaken = false;
+        const isThereFlag = this.ctfService.isThereFlag(game, targetPos);
+        if (isThereFlag) {
+            this.ctfService.removeFlagFromTile(game, targetPos);
+            const player = game.lobby.players.find(p => p.socketId === socketId);
+            player.hasFlag = true;
+            flagJustTaken = true;
+        }
+
+        return { position: targetPos, flagJustTaken };
     }
 
     teleportPlayer(lobbyId: string, socketId: string, targetPos: Vec2) {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
-        return this.movementService.teleportPlayer(game, socketId, targetPos);
+        const landingPos = this.movementService.teleportPlayer(game, socketId, targetPos);
+        if (!landingPos) return null;
+
+        let flagJustTaken = false;
+        const isThereFlag = this.ctfService.isThereFlag(game, landingPos);
+        if (isThereFlag) {
+            this.ctfService.removeFlagFromTile(game, landingPos);
+            const player = game.lobby.players.find(p => p.socketId === socketId);
+            player.hasFlag = true;
+            flagJustTaken = true;
+        }
+
+        return { position: landingPos, flagJustTaken };
     }
 
-    getReachableTilesForTeleport(lobbyId: string, socketId: string){
+    getReachableTilesForTeleport(lobbyId: string, socketId: string) {
         const game = this.activeGames.get(lobbyId);
         if (!game) return [];
         return this.movementService.getReachableTilesForTeleport(game, socketId);
@@ -181,13 +206,49 @@ export class GameLogicService {
     initiateCombat(lobbyId: string, attackerId: string, defenderId: string) {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
-        return this.combatService.initiateCombat(game, attackerId, defenderId);
+
+        const combatResult = this.combatService.initiateCombat(game, attackerId, defenderId);
+        const loser = combatResult.loser;
+
+        if (loser.hasFlag) {
+            this.ctfService.setFlagOnNearestValidTile(game, combatResult.loserOldPosition, loser.socketId);
+            loser.hasFlag = false;
+            combatResult.wasFlagDropped = true;
+        }
+
+        return combatResult;
     }
 
-    checkWinCondition(lobbyId: string) {
+    transferFlag(lobbyId: string, giverPlayerId: string, targetPlayerId: string, payerId: string): boolean {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
-        return this.combatService.checkWinCondition(game);
+
+        const payerActionPoints = game.actionPoints.get(payerId) ?? 0;
+        if (payerActionPoints <= 0) return null;
+
+        const adjacentPlayers = this.getAdjacentPlayers(lobbyId, giverPlayerId);
+        if (!adjacentPlayers.some((player) => player.socketId === targetPlayerId)) return null;
+
+        const wasFlagTransfered = this.ctfService.wasFlagTransfered(game, giverPlayerId, targetPlayerId);
+        if (wasFlagTransfered) {
+            game.actionPoints.set(payerId, payerActionPoints - 1);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    checkWinCondition(lobbyId: string, flagOwnerId?: string, flagOwnerPos?: Vec2) {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return null;
+
+        if (game.lobby.game.gameMode === GameMode.Classic) return this.combatService.checkWinCondition(game);
+        if (game.lobby.game.gameMode === GameMode.Ctf) {
+            if (flagOwnerId && flagOwnerPos) {
+                return this.ctfService.checkWinCondition(game, flagOwnerId, flagOwnerPos);
+            }
+        }
+        return null;
     }
 
     // Abandon
@@ -197,7 +258,14 @@ export class GameLogicService {
         if (!game) return;
 
         const player = game.lobby.players.find((p) => p.socketId === socketId);
+        const playerPos = game.playerPositions.get(socketId);
+
         if (player) player.hasAbandonned = true;
+
+        if (player.hasFlag) {
+            player.hasFlag = false;
+            this.ctfService.setFlagOnNearestValidTile(game, playerPos, socketId);
+        }
 
         const spawnPos = game.playerStartPositions.get(socketId);
         if (spawnPos) {
@@ -215,7 +283,6 @@ export class GameLogicService {
         const wasCurrentTurn = this.isPlayerTurn(lobbyId, socket.id);
         const updatedLobby = this.abandonPlayer(lobbyId, socket.id);
 
-
         if (updatedLobby) {
             const payload = { socketId: socket.id, updatedLobby };
             server.to(lobbyId).emit(JoinGameEvents.PlayerAbandoned, payload);
@@ -223,8 +290,22 @@ export class GameLogicService {
 
         socket.leave(lobbyId);
 
-
         const activePlayers = this.getActivePlayers(lobbyId);
+
+        if (game.lobby.game.gameMode === GameMode.Ctf) {
+            const teamA = this.getActivePlayers(lobbyId, 'A');
+            const teamB = this.getActivePlayers(lobbyId, 'B');
+            if (teamA.length === 0) {
+                server.to(lobbyId).emit(JoinGameEvents.GameOver, { abandonTeam: 'A' });
+                this.endGame(lobbyId);
+                return true;
+
+            } else if (teamB.length === 0) {
+                server.to(lobbyId).emit(JoinGameEvents.GameOver, { abandonTeam: 'B' });
+                this.endGame(lobbyId);
+                return true;
+            }
+        }
 
         if (activePlayers.length <= 1) {
             const winnerId = activePlayers.length === 1 ? activePlayers[0].socketId : null;
@@ -233,6 +314,8 @@ export class GameLogicService {
             server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId, isForfeit: true, players: allPlayers, gameStats });
 
             this.endGame(lobbyId);
+            server.in(lobbyId).socketsLeave(lobbyId);
+
             return true;
         } else if (wasCurrentTurn) {
             this.endTurn(lobbyId);
@@ -242,57 +325,30 @@ export class GameLogicService {
         return false;
     }
 
-    getActivePlayers(lobbyId: string): Player[] {
+    getActivePlayers(lobbyId: string, team?: 'A' | 'B'): Player[] {
         const game = this.activeGames.get(lobbyId);
         if (!game) return [];
-        return game.lobby.players.filter((player) => !player.hasAbandonned);
+
+        if (team === 'A') {
+            return game.lobby.teamA.filter(player => !player.hasAbandonned);
+        } else if (team === 'B') {
+            return game.lobby.teamB.filter(player => !player.hasAbandonned);
+        } else {
+            return game.lobby.players.filter((player) => !player.hasAbandonned);
+        }
     }
 
     getGameStats(lobbyId: string): GameStats | null {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
 
-        const grid = game.lobby.game.grid;
-        const totalTerrainTiles = this.countTerrainTiles(grid);
-        const totalSanctuaries = this.countTilesByItem(grid, [TileItem.HealingSanctuary, TileItem.CombatSanctuary]);
-        const totalDoors = this.countTilesByType(grid, [TileTexture.DoorOpened, TileTexture.DoorClosed]);
-        const totalOpenDoors = this.countTilesByType(grid, [TileTexture.DoorOpened]);
-
-        const visitedPercent = totalTerrainTiles > 0
-            ? (game.globalVisitedTiles.size / totalTerrainTiles) * PERCENT
-            : 0;
-
-        const sanctuaryPercent = totalSanctuaries > 0
-            ? (game.sanctuariesUsed.size / totalSanctuaries) * PERCENT
-            : null;
-
-        const doorsPercent = (totalDoors > 0 || totalOpenDoors > 0)
-            ? (game.doorsInteracted.size / Math.max(totalDoors, 1)) * PERCENT
-            : null;
-
-        const isCTF = game.lobby.game.gameMode === GameMode.Ctf;
-        const flagHoldersCount = isCTF ? game.flagHolders.size : null;
-
-        for (const player of game.lobby.players) {
-            const playerTiles = game.visitedTilesPerPlayer.get(player.socketId);
-            player.visitedTilesCount = playerTiles ? playerTiles.size : 0;
-        }
-
-        return {
-            gameDurationSeconds: Math.floor((Date.now() - game.gameStartTime) / MS_PER_SECOND),
-            totalTurns: game.totalTurns,
-            totalTerrainTiles,
-            visitedTilesPercentage: visitedPercent,
-            sanctuaryUsagePercentage: sanctuaryPercent,
-            doorsManipulatedPercentage: doorsPercent,
-            uniqueFlagHoldersCount: flagHoldersCount,
-        };
+        return this.gameSetupService.buildGameStats(game);
     }
 
     // Alt
 
     shufflePlayers(players: Player[]): Player[] {
-        return this.shuffle([...players]);
+        return this.gameSetupService.shuffle([...players]);
     }
 
     getPlayerPositions(lobbyId: string): Record<string, Vec2> {
@@ -306,75 +362,5 @@ export class GameLogicService {
         return positions;
     }
 
-    private removeUnusedSpawns(game: Game, shuffledSpawns: Vec2[], playerCount: number): void {
-        const usedSpawns = new Set(shuffledSpawns.slice(0, playerCount).map((s) => `${s.x},${s.y}`));
-        for (let row = 0; row < game.grid.length; row++) {
-            for (let col = 0; col < game.grid[row].length; col++) {
-                if (game.grid[row][col].item === TileItem.Spawn && !usedSpawns.has(`${col},${row}`)) {
-                    game.grid[row][col].item = null;
-                }
-            }
-        }
-    }
 
-    private extractSpawnPositions(game: Game): Vec2[] {
-        const spawns: Vec2[] = [];
-        for (let row = 0; row < game.grid.length; row++) {
-            for (let col = 0; col < game.grid[row].length; col++) {
-                if (game.grid[row][col].item === TileItem.Spawn) {
-                    spawns.push({ x: col, y: row });
-                }
-            }
-        }
-        return spawns;
-    }
-
-    private computeTurnOrder(players: Player[]): string[] {
-        const sorted = [...players].sort((a, b) => {
-            const speedDiff = b.character.speed - a.character.speed;
-            if (speedDiff !== 0) return speedDiff;
-            return Math.random() - RANDOM_THRESHOLD;
-        });
-        return sorted.map((p) => p.socketId);
-    }
-
-    private shuffle<T>(array: T[]): T[] {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-    }
-
-    private countTerrainTiles(grid: Game['grid']): number {
-    let count = 0;
-    for (const row of grid) {
-        for (const tile of row) {
-            if (tile.type === TileTexture.Floor || tile.type === TileTexture.Water || tile.type === TileTexture.Ice) {
-                count++;
-            }
-        }
-    }
-    return count;
-    }
-
-    private countTilesByItem(grid: Game['grid'], items: TileItem[]): number {
-        let count = 0;
-        for (const row of grid) {
-            for (const tile of row) {
-                if (tile.item && items.includes(tile.item)) count++;
-            }
-        }
-        return count;
-    }
-
-    private countTilesByType(grid: Game['grid'], types: TileTexture[]): number {
-        let count = 0;
-        for (const row of grid) {
-            for (const tile of row) {
-                if (types.includes(tile.type)) count++;
-            }
-        }
-        return count;
-    }
 }
