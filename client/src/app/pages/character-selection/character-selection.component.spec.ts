@@ -283,6 +283,30 @@ describe('CharacterSelectionComponent', () => {
     expect(AVATARS_PATH).toContain(component.selectedAvatar as string);
   });
 
+  it('should not deselect current avatar when no alternative is available', () => {
+    component.selectedAvatar = TEST_AVATAR_PATH;
+    component.currentlySelectedAvatars = [...AVATARS_PATH];
+
+    component.generateRandomCharacter();
+
+    expect(component.selectedAvatar).toBe(TEST_AVATAR_PATH);
+  });
+
+  it('should pass only available avatars to random generation', () => {
+    component.selectedAvatar = AVATARS_PATH[0];
+    component.currentlySelectedAvatars = [AVATARS_PATH[0], AVATARS_PATH[1], AVATARS_PATH[2]];
+
+    const characterService = TestBed.inject(CharacterService);
+    const serviceSpy = spyOn(characterService, 'generateRandomCharacter').and.callThrough();
+
+    component.generateRandomCharacter();
+
+    const calledPool = serviceSpy.calls.mostRecent().args[0] as string[];
+    expect(calledPool).not.toContain(AVATARS_PATH[0]);
+    expect(calledPool).not.toContain(AVATARS_PATH[1]);
+    expect(calledPool).not.toContain(AVATARS_PATH[2]);
+  });
+
   // Form Validation Tests
 
   // Comprehensive validation tests covering critical edge cases:

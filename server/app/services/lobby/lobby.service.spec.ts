@@ -119,7 +119,11 @@ describe('LobbyService', () => {
         it('should add a player and update playerCount', () => {
             const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
 
-            const updatedLobby = service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' });
+            const updatedLobby = service.joinLobby(lobby.lobbyId, {
+                ...mockPlayer,
+                socketId: 'socket-2',
+                character: { ...mockPlayer.character, avatar: 'mockavatar-2.png' },
+            });
 
             expect(updatedLobby.players).toHaveLength(2);
             expect(updatedLobby.playerCount).toBe(2);
@@ -131,7 +135,11 @@ describe('LobbyService', () => {
             const smallGame = { ...mockGame, _id: '2', maxPlayers: 2 };
             const lobby = service.createLobby(smallGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
 
-            const updatedLobby = service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' });
+            const updatedLobby = service.joinLobby(lobby.lobbyId, {
+                ...mockPlayer,
+                socketId: 'socket-2',
+                character: { ...mockPlayer.character, avatar: 'mockavatar-2.png' },
+            });
 
             expect(updatedLobby.isLocked).toBe(true);
         });
@@ -148,6 +156,48 @@ describe('LobbyService', () => {
             retrievedLobby.isLocked = true;
 
             expect(() => service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' })).toThrow();
+        });
+
+        it('should throw if requested avatar is already taken by another player', () => {
+            const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
+
+            expect(() => service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' })).toThrow('Avatar already taken');
+        });
+
+        it('should throw if requested avatar is in pendingAvatars for another socket', () => {
+            const lobby = service.createLobby(mockGame, 'socket-1', {
+                ...mockPlayer,
+                socketId: 'socket-1',
+                character: { ...mockPlayer.character, avatar: 'host-avatar.png' },
+            });
+            const retrievedLobby = service.getLobby(lobby.lobbyId);
+            retrievedLobby.pendingAvatars['socket-pending'] = 'avatar-pending.png';
+
+            expect(() =>
+                service.joinLobby(lobby.lobbyId, {
+                    ...mockPlayer,
+                    socketId: 'socket-2',
+                    character: { ...mockPlayer.character, avatar: 'avatar-pending.png' },
+                }),
+            ).toThrow('Avatar already taken');
+        });
+
+        it('should remove pending avatar entry for the joining socket', () => {
+            const lobby = service.createLobby(mockGame, 'socket-1', {
+                ...mockPlayer,
+                socketId: 'socket-1',
+                character: { ...mockPlayer.character, avatar: 'host-avatar.png' },
+            });
+            const retrievedLobby = service.getLobby(lobby.lobbyId);
+            retrievedLobby.pendingAvatars['socket-2'] = 'avatar-pending.png';
+
+            service.joinLobby(lobby.lobbyId, {
+                ...mockPlayer,
+                socketId: 'socket-2',
+                character: { ...mockPlayer.character, avatar: 'avatar-pending.png' },
+            });
+
+            expect(retrievedLobby.pendingAvatars['socket-2']).toBeUndefined();
         });
     });
 
@@ -169,7 +219,11 @@ describe('LobbyService', () => {
 
         it('should find lobby by player socketId', () => {
             const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
-            service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' });
+            service.joinLobby(lobby.lobbyId, {
+                ...mockPlayer,
+                socketId: 'socket-2',
+                character: { ...mockPlayer.character, avatar: 'mockavatar-2.png' },
+            });
 
             expect(service.findLobbyBySocketId('socket-2')).toBeDefined();
         });
@@ -190,7 +244,11 @@ describe('LobbyService', () => {
     describe('removePlayerFromLobby', () => {
         it('should remove the player and update playerCount', () => {
             const lobby = service.createLobby(mockGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
-            service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' });
+            service.joinLobby(lobby.lobbyId, {
+                ...mockPlayer,
+                socketId: 'socket-2',
+                character: { ...mockPlayer.character, avatar: 'mockavatar-2.png' },
+            });
 
             service.removePlayerFromLobby(lobby.lobbyId, 'socket-2');
 
@@ -204,7 +262,11 @@ describe('LobbyService', () => {
         it('should unlock lobby when playerCount drops below maxPlayers', () => {
             const smallGame = { ...mockGame, _id: '2', maxPlayers: 2 };
             const lobby = service.createLobby(smallGame, 'socket-1', { ...mockPlayer, socketId: 'socket-1' });
-            service.joinLobby(lobby.lobbyId, { ...mockPlayer, socketId: 'socket-2' });
+            service.joinLobby(lobby.lobbyId, {
+                ...mockPlayer,
+                socketId: 'socket-2',
+                character: { ...mockPlayer.character, avatar: 'mockavatar-2.png' },
+            });
 
             service.removePlayerFromLobby(lobby.lobbyId, 'socket-2');
 

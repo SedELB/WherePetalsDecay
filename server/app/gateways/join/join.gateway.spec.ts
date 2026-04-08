@@ -232,6 +232,22 @@ describe('JoinGateway', () => {
             expect(mockTo.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyUpdated, fakeLobby);
             expect(mockTo.emit).toHaveBeenCalledWith(JoinGameEvents.PlayerJoined, mockPayload.player);
         });
+
+        it('should emit LobbyError when join fails because avatar is already taken', () => {
+            const mockPayload = { lobbyId: 'lobby-1', player: makeMockPlayer() };
+            jest.spyOn(lobbyService, 'getLobby').mockReturnValue(fakeLobby);
+            jest.spyOn(lobbyService, 'getLobbyValidationError').mockReturnValue(undefined);
+            jest.spyOn(lobbyService, 'getValidName').mockReturnValue(mockPayload.player.character.name);
+            jest.spyOn(lobbyService, 'joinLobby').mockImplementation(() => {
+                throw new Error('Avatar already taken');
+            });
+
+            gateway.handleJoinLobby(mockSocket, mockPayload);
+            const lobbyError = "Cet avatar n'est plus disponible. Veuillez en choisir un autre.";
+            expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyError, lobbyError);
+            expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.UpdateOccupiedAvatars, []);
+            expect(mockSocket.join).not.toHaveBeenCalled();
+        });
     });
 
     describe('handleGetStatus', () => {
