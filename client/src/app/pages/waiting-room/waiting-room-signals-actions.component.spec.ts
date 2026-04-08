@@ -50,8 +50,12 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
         isHost: true,
         winsCount: 0,
         hasAbandonned: false,
-        flagsCaptured: 0,
         hasFlag: false,
+        combatCount: 0,
+        lossCount: 0,
+        totalHpLost: 0,
+        totalHpDealt: 0,
+        visitedTilesCount: 0,
         character: {
             name: 'TestPlayer',
             avatar: './assets/avatars/archer.png',

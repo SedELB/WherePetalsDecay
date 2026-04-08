@@ -13,6 +13,8 @@ import { Game, gameSchema } from './model/schema/game.schema';
 import { CombatService } from './services/game-logic/combat.service';
 import { CTFService } from './services/game-logic/ctf.service';
 import { GameLogicService } from './services/game-logic/game-logic.service';
+import { GameSetupService } from './services/game-logic/game-setup.service';
+import { GameStatsService } from './services/game-logic/game-stats.service';
 import { MovementService } from './services/game-logic/movement.service';
 import { TurnService } from './services/game-logic/turn.service';
 import { GameValidatorService } from './services/game/game-validator.service';
@@ -43,6 +45,8 @@ import { LobbyService } from './services/lobby/lobby.service';
         MovementService,
         CombatService,
         CTFService,
+        GameSetupService,
+        GameStatsService,
         GameLogicService,
         JournalService,
         GameTurnSyncService,

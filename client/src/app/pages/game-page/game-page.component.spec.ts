@@ -33,7 +33,8 @@ describe('GamePageComponent', () => {
     const TILE_Y = 5;
 
     const createPlayer = (socketId: string, overrides: Partial<Player> = {}): Player => ({
-        socketId, isHost: false, winsCount: 0, hasAbandonned: false, flagsCaptured: 0, hasFlag: false,
+        socketId, isHost: false, winsCount: 0, hasAbandonned: false,
+        combatCount: 0, lossCount: 0, totalHpLost: 0, totalHpDealt: 0, visitedTilesCount: 0,
         character: {
             name: `Player-${socketId}`, avatar: 'avatar.png', life: DEFAULT_LIFE, speed: 4,
             attack: 4, defense: 4, lifeBonus: false, attackDice: 'D6', defenseDice: 'D4',

@@ -4,13 +4,16 @@ import { ROUTES } from '@app/constants/routes.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Direction } from '@common/direction';
 import { SocketNamespace, TileItem } from '@common/enums';
+import { GameStats } from '@common/interfaces/game-stats';
 import { CombatResult, GameOverData, GameStartedData, PlayerMovedData, TileInfoData } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
+import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
 
 const ONE_SECOND_DELAY = 1000;
+const END_GAME_REDIRECT_DELAY = 3000;
 
 @Injectable({
     providedIn: 'root',
@@ -35,6 +38,8 @@ export class GameViewService {
     readonly turnNotification = signal<string | null>(null);
     readonly isFlagTaken = signal<boolean>(false);
     private closeFlagTransferSwal: (() => void) | null = null;
+    readonly endGamePlayers = signal<Player[]>([]);
+    readonly endGameStats = signal<GameStats | null>(null);
 
     constructor(
         private readonly webSocketService: WebSocketService,
@@ -61,16 +66,6 @@ export class GameViewService {
         this.webSocketService.onNamespace<string>(this.namespace, JoinGameEvents.TurnStarted, (playerSocketId) => {
             this.activePlayerSocketId.set(playerSocketId);
             this.turnNotification.set(null);
-        });
-
-        this.webSocketService.onNamespace<number>(this.namespace, JoinGameEvents.BetweenTurnCountdown, (secondsLeft) => {
-            this.disableEndTurn.set(true);
-            this.turnCountdown.set(secondsLeft);
-            if (secondsLeft <= 1) {
-                setTimeout(() => {
-                    this.disableEndTurn.set(false);
-                }, ONE_SECOND_DELAY);
-            }
         });
 
         this.webSocketService.onNamespace<number>(this.namespace, JoinGameEvents.BetweenTurnCountdown, (secondsLeft) => {
@@ -278,10 +273,13 @@ export class GameViewService {
             this.setLobby(updatedLobby);
         });
 
-        this.webSocketService.onNamespace<GameOverData>(this.namespace, JoinGameEvents.GameOver, (payload) => {
-            if (payload.winnerSocketId || payload.isForfeit || payload.abandonTeam) {
-                this.gameOver.set(payload);
-            }
+        this.webSocketService.onNamespace<GameOverData>(this.namespace, JoinGameEvents.GameOver, (data) => {
+            this.gameOver.set(data);
+            if (data.players) this.endGamePlayers.set(data.players);
+            if (data.gameStats) this.endGameStats.set(data.gameStats);
+            setTimeout(() => {
+                this.router.navigate([ROUTES.endGame]);
+            }, END_GAME_REDIRECT_DELAY);
         });
 
         this.webSocketService.onNamespace<TileInfoData>(this.namespace, JoinGameEvents.TileInfo, (data) => {
@@ -332,6 +330,10 @@ export class GameViewService {
 
     sendTileInfoRequest(lobbyId: string, position: Vec2): void {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestTileInfo, { lobbyId, position });
+    }
+
+    leaveEndGame(lobbyId: string): void {
+        this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.LeaveEndGame, lobbyId);
     }
 
     // Utils

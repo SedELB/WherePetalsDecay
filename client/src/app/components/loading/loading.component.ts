@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleCha
 
 const DOT_COUNT = 20;
 const HIDE_DELAY_MS = 100;
-const FADE_DURATION_MS = 400;
+const FADE_DURATION_MS = 200;
 
 @Component({
     selector: 'app-loading',

@@ -6,6 +6,7 @@ import { AdminPageComponent } from '@app/pages/admin-page/admin-page.component';
 import { AppComponent } from '@app/pages/app/app.component';
 import { CharacterSelectionComponent } from '@app/pages/character-selection/character-selection.component';
 import { CreateGamePageComponent } from '@app/pages/create-game-page/create-game-page.component';
+import { EndGamePageComponent } from '@app/pages/end-game-page/end-game-page.component';
 import { GameCreationComponent } from '@app/pages/game-creation/game-creation.component';
 import { GamePageComponent } from '@app/pages/game-page/game-page.component';
 import { HomePageComponent } from '@app/pages/homepage/homepage.component';
@@ -31,6 +32,7 @@ const routes: Routes = [
     { path: 'game/:id', component: GamePageComponent },
     { path: 'waiting-room/:lobbyId', component: WaitingRoomComponent },
     { path: 'join', component: JoinGamePageComponent },
+    { path: 'end-game', component: EndGamePageComponent },
     { path: '**', redirectTo: '/home' },
 ];
 

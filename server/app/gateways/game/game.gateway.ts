@@ -19,6 +19,7 @@ import { GameTurnSyncService } from './game-turn-sync.service';
 @Injectable()
 export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     @WebSocketServer() private server: Server;
+    private readonly endGamePlayers = new Map<string, Set<string>>();
 
     constructor(
         private readonly logger: Logger,
@@ -209,6 +210,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
         const winner = this.gameLogicService.checkWinCondition(lobbyId);
         if (winner) {
+            this.gameLogicService.incrementTotalTurns(lobbyId);
             this.handleGameOver(lobbyId, winner.socketId);
             return;
         }
@@ -346,12 +348,18 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         );
 
         if (isGameOver) {
-            this.lobbyService.deleteLobby(activeGame.lobby.lobbyId);
+            const lobbyId = activeGame.lobby.lobbyId;
+            const remainingPlayers = activeGame.lobby.players
+                .filter((p) => !p.hasAbandonned)
+                .map((p) => p.socketId);
+            this.endGamePlayers.set(lobbyId, new Set(remainingPlayers));
         }
     }
 
     private handleGameOver(lobbyId: string, winnerSocketId: string | null): void {
+        const gameStats = this.gameLogicService.getGameStats(lobbyId);
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        const players = activeGame ? [...activeGame.lobby.players] : [];
         const activePlayers = activeGame.lobby.players.filter((player) => !player.hasAbandonned);
         const activeNames = activePlayers.map((player) => player.character.name);
         this.journalService.addEntry(lobbyId, {
@@ -360,11 +368,42 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             message: `Fin de la partie. Joueurs encore actifs : ${activeNames.join(', ')}.`,
         });
 
-        this.server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId, isForfeit: false });
+        const socketIds = new Set(players.map((p) => p.socketId));
+        this.endGamePlayers.set(lobbyId, socketIds);
+
+        this.server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId, isForfeit: false, players, gameStats });
+
         this.gameLogicService.endGame(lobbyId);
         this.journalService.clearEntries(lobbyId);
-        this.lobbyService.deleteLobby(lobbyId);
-        this.server.in(lobbyId).socketsLeave(lobbyId);
     }
 
+    @SubscribeMessage(JoinGameEvents.LeaveEndGame)
+    handleLeaveEndGame(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string): void {
+        const remaining = this.endGamePlayers.get(lobbyId);
+        if (!remaining) return;
+
+        remaining.delete(socket.id);
+        socket.leave(lobbyId);
+
+        if (remaining.size === 0) {
+            this.endGamePlayers.delete(lobbyId);
+            this.lobbyService.deleteLobby(lobbyId);
+        }
+    }
+
+    private autoEndTurnIfNoActions(lobbyId: string, socketId: string): void {
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        if (activeGame?.isDebugMode) return;
+
+        const reachable = this.gameLogicService.getReachableTiles(lobbyId, socketId);
+        const adjacent = this.gameLogicService.getAdjacentPlayers(lobbyId, socketId);
+        const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
+
+        const canMove = reachable.length > 0;
+        const canFight = adjacent.length > 0 && actionPoints > 0;
+
+        if (!canMove && !canFight) {
+            this.gameLogicService.endTurn(lobbyId);
+        }
+    }
 }

@@ -16,6 +16,13 @@ export interface ActiveGame {
     movementPoints: Map<string, number>;
     actionPoints: Map<string, number>;
     isDebugMode?: boolean;
+    visitedTilesPerPlayer: Map<string, Set<string>>;
+    globalVisitedTiles: Set<string>;
+    sanctuariesUsed: Set<string>;
+    doorsInteracted: Set<string>;
+    flagHolders: Set<string>;
+    totalTurns: number;
+    gameStartTime: number;
 }
 
 export interface TurnCallbacks {
