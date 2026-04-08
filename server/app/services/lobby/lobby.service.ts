@@ -1,14 +1,20 @@
 import { HISTORY_MAX_MESSAGE } from '@common/constants/validation.constants';
+import { PlayerType, VirtualPlayerProfile } from '@common/enums';
 import { Game } from '@common/game';
 import { Lobby } from '@common/lobby';
 import { Injectable } from '@nestjs/common';
 import { Player } from '@common/player';
 import { ChatMessage } from '@common/chat-message';
+import { AVATARS_PATH, RANDOM_NAMES, BASE_STATS, RANDOM_PROBABILITY } from '@common/constants/character.constants';
+import { Character } from '@common/character';
+
 
 const ALPHANUMERIC_BASE = 36;
 const ID_SUBSTRING_START = 2;
 const ID_SUBSTRING_END = 7;
 const ID_PADDING_LENGTH = 5;
+const DUPLICATE_NAME_SUFFIX_START = 2;
+const VIRTUAL_PLAYER_ID_BASE = 1000;
 
 @Injectable()
 export class LobbyService {
@@ -165,5 +171,96 @@ export class LobbyService {
         const player = lobby.players.find((p) => p.socketId === socketId);
         if (player) player.hasAbandonned = true;
         return lobby;
+    }
+    
+    addVirtualPlayer(lobbyId: string, profile: VirtualPlayerProfile): Lobby {
+        const lobby = this.getLobby(lobbyId);
+        if (!lobby) throw new Error('There is no lobby associated with the provided ID');
+
+        const allUnavailableAvatars = this.getOccupiedAvatars(lobby);
+        const availableAvatars = AVATARS_PATH.filter(
+            (avatar) => !allUnavailableAvatars.includes(avatar),
+        );
+
+        let randomAvatar: string;
+
+        if (availableAvatars.length > 0) {
+            // TODO: Vérifier s'il reste des avatars disponibles, sinon lancer une erreur ou prendre un par défaut
+            const randomAvatarIndex: number = Math.floor(Math.random() * availableAvatars.length);
+            randomAvatar = availableAvatars[randomAvatarIndex];
+        } else {
+            randomAvatar = './assets/avatars/old-hag.png';
+        }
+
+        // TODO: noms disponibles ??
+        const randomNameIndex: number = Math.floor(Math.random() * RANDOM_NAMES.length);
+        const randomName = RANDOM_NAMES[randomNameIndex];
+        const finalName = this.getValidName(randomName, lobby);
+
+        const lifeBonus: boolean = Math.random() < RANDOM_PROBABILITY;
+        const attackDiceD6: boolean = Math.random() < RANDOM_PROBABILITY;
+
+        const lifeValue = BASE_STATS.life + (lifeBonus ? BASE_STATS.bonus : 0);
+        const speedValue = BASE_STATS.speed + (!lifeBonus ? BASE_STATS.bonus : 0);
+
+        const character: Character = {
+            name: finalName, 
+            avatar: randomAvatar,
+            life: lifeValue,
+            speed: speedValue,
+            attack: BASE_STATS.attack,
+            defense: BASE_STATS.defense,
+            lifeBonus,
+            attackDice: attackDiceD6 ? 'D6' : 'D4',
+            defenseDice: attackDiceD6 ? 'D4' : 'D6',
+        };
+        const virtualPLayer: Player = {
+            socketId: `virtual-${Date.now()}-${Math.floor(Math.random() * VIRTUAL_PLAYER_ID_BASE)}`,
+            character,
+            isHost: false,
+            winsCount: 0,
+            hasAbandonned: false,
+            playerType: PlayerType.Virtual,
+            virtualProfile: profile,
+        };
+
+        const updatedLobby = this.joinLobby(lobbyId, virtualPLayer);
+        return updatedLobby;
+    }
+
+    getOccupiedAvatars(lobby: Lobby): string[] {
+        const confirmedAvatars = lobby.players
+            .map((player) => player.character?.avatar)
+            .filter((avatar): avatar is string => avatar !== undefined && avatar !== null && avatar !== '');
+
+        const pendingAvatars = Object.values(lobby.pendingAvatars || {});
+        return [...confirmedAvatars, ...pendingAvatars];
+    }
+
+    getValidName(name: string, lobby: Lobby): string {
+        let finalName = name;
+        let counter = DUPLICATE_NAME_SUFFIX_START;
+        while (lobby.players.some((player) => player.character.name === finalName)) {
+            finalName = `${name}-${counter}`;
+            counter++;
+        }
+
+        return finalName;
+    }
+
+    getLobbyValidationError(lobby: Lobby | undefined): string | undefined {
+        if (!lobby) {
+            return `Ce salon n'existe plus.`;
+        }
+
+        if (lobby.playerCount >= lobby.game.maxPlayers) {
+            return 'Ce salon est plein !';
+        }
+
+        if (lobby.isLocked) {
+            return 'Ce salon est verrouillé !';
+        }
+
+        return undefined;
     }
 }
