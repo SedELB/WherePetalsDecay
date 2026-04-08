@@ -188,7 +188,7 @@ export class GameLogicService {
         const loser = combatResult.loser;
 
         if (loser.hasFlag){
-            this.ctfService.setFlagOnTile(game, combatResult.loserOldPosition);
+            this.ctfService.setFlagOnNearestValidTile(game, combatResult.loserOldPosition, loser.socketId);
             loser.hasFlag = false;
             combatResult.wasFlagDropped = true;
         }
@@ -235,7 +235,14 @@ export class GameLogicService {
         if (!game) return;
 
         const player = game.lobby.players.find((p) => p.socketId === socketId);
+        const playerPos = game.playerPositions.get(socketId);
+
         if (player) player.hasAbandonned = true;
+
+        if (player.hasFlag) {
+            player.hasFlag = false;
+            this.ctfService.setFlagOnNearestValidTile(game, playerPos, socketId);
+        }
 
         const spawnPos = game.playerStartPositions.get(socketId);
         if (spawnPos) {
@@ -257,6 +264,7 @@ export class GameLogicService {
             const payload = { socketId: socket.id, updatedLobby };
             server.to(lobbyId).emit(JoinGameEvents.PlayerAbandoned, payload);
         }
+
         socket.leave(lobbyId);
 
         const activePlayers = this.getActivePlayers(lobbyId);
