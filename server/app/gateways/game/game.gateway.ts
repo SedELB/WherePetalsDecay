@@ -2,7 +2,7 @@ import { GameLogicService } from '@app/services/game-logic/game-logic.service';
 import { JournalService } from '@app/services/journal/journal.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Direction } from '@common/direction';
-import { SocketNamespace } from '@common/enums';
+import { GameMode, SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { JournalEventType } from '@common/journal-entry';
 import { TILE_COSTS } from '@common/tile-costs';
@@ -13,6 +13,7 @@ import {
     SubscribeMessage, WebSocketGateway, WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { GameTurnSyncService } from './game-turn-sync.service';
 
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
@@ -25,6 +26,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         private readonly gameLogicService: GameLogicService,
         private readonly lobbyService: LobbyService,
         private readonly journalService: JournalService,
+        private readonly gameTurnSyncService: GameTurnSyncService,
     ) {}
 
     afterInit() {
@@ -38,11 +40,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             },
             onTurnStarted: (lobbyId: string, playerSocketId: string) => {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnStarted, playerSocketId);
-                this.sendMovementPoints(lobbyId, playerSocketId);
-                this.sendActionPoints(lobbyId, playerSocketId);
-                this.sendReachableTiles(lobbyId, playerSocketId);
-                this.sendReachableTilesForTeleport(lobbyId, playerSocketId);
-                this.autoEndTurnIfNoActions(lobbyId, playerSocketId);
+                this.gameTurnSyncService.syncPlayerTurnState(this.server, lobbyId, playerSocketId);
 
                 const game = this.gameLogicService.getActiveGame(lobbyId);
                 const turnPlayer = game.lobby.players.find((player) => player.socketId === playerSocketId);
@@ -71,7 +69,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             return;
         }
 
-        finalLobby.players = this.gameLogicService.shufflePlayers(finalLobby.players);
         const activeGame = this.gameLogicService.initializeGame(finalLobby);
 
         this.server.to(lobbyId).emit(JoinGameEvents.GameStarting, activeGame.lobby);
@@ -80,6 +77,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             lobby: activeGame.lobby,
             turnOrder: activeGame.turnOrder,
             playerPositions: this.gameLogicService.getPlayerPositions(lobbyId),
+            playerStartPositions: activeGame.playerStartPositions,
         });
 
         this.gameLogicService.startTurnCycle(lobbyId);
@@ -89,20 +87,37 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     handleRequestMove(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; direction: Direction }) {
         const { lobbyId, direction } = payload;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
 
-        const newPosition = this.gameLogicService.movePlayer(lobbyId, socket.id, direction);
-        if (!newPosition) return;
+        const result = this.gameLogicService.movePlayer(lobbyId, socket.id, direction);
+        if (!result) return;
 
         const movementPoints = this.gameLogicService.getMovementPoints(lobbyId, socket.id);
         this.server.to(lobbyId).emit(JoinGameEvents.PlayerMoved, {
             socketId: socket.id,
-            position: newPosition,
+            position: result.position,
             movementPoints,
+            flagTaken: result.flagJustTaken,
         });
 
-        this.sendReachableTiles(lobbyId, socket.id);
-        this.sendReachableTilesForTeleport(lobbyId, socket.id);
-        this.autoEndTurnIfNoActions(lobbyId, socket.id);
+        if (result.flagJustTaken) {
+            const playerName = activeGame.lobby.players.find(p => p.socketId === socket.id).character.name;
+            this.journalService.addEntry(lobbyId, {
+                eventType: JournalEventType.FlagPickedUp,
+                playerNames: [playerName],
+                message: `${playerName} a ramassé le drapeau.`,
+            });
+        }
+
+        this.gameTurnSyncService.refreshPlayerNavigationState(this.server, lobbyId, socket.id);
+
+        if (this.lobbyService.getLobby(lobbyId).game.gameMode === GameMode.Ctf) {
+            const winner = this.gameLogicService.checkWinCondition(lobbyId, socket.id, result.position);
+            if (winner) {
+                this.handleGameOver(lobbyId, winner.socketId);
+                return;
+            }
+        }
     }
 
     @SubscribeMessage(JoinGameEvents.Teleport)
@@ -115,12 +130,11 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
         this.server.to(lobbyId).emit(JoinGameEvents.PlayerTeleported, {
             socketId: socket.id,
-            position: newPosition,
+            position: newPosition.position,
+            flagTaken: newPosition.flagJustTaken,
         });
 
-        this.sendReachableTiles(lobbyId, socket.id);
-        this.sendReachableTilesForTeleport(lobbyId, socket.id);
-        this.autoEndTurnIfNoActions(lobbyId, socket.id);
+        this.gameTurnSyncService.refreshPlayerNavigationState(this.server, lobbyId, socket.id);
     }
 
     @SubscribeMessage(JoinGameEvents.ToggleDebugMode)
@@ -142,7 +156,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (!activeGame.isDebugMode) {
             const currentSocketId = activeGame.turnOrder[activeGame.currentTurnIndex];
             if (currentSocketId) {
-                this.autoEndTurnIfNoActions(lobbyId, currentSocketId);
+                this.gameTurnSyncService.autoEndTurnIfNoActions(lobbyId, currentSocketId);
             }
         }
     }
@@ -156,7 +170,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     }
 
     @SubscribeMessage(JoinGameEvents.RequestCombat)
-    handleRequestCombat(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; targetSocketId: string }) {
+    handleRequestCombat(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string, targetSocketId: string }) {
         const { lobbyId, targetSocketId } = payload;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
@@ -175,7 +189,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const combatResult = this.gameLogicService.initiateCombat(lobbyId, socket.id, targetSocketId);
         if (!combatResult) return;
 
-        this.sendActionPoints(lobbyId, socket.id);
+        this.gameTurnSyncService.emitActionPoints(this.server, lobbyId, socket.id);
         this.server.to(lobbyId).emit(JoinGameEvents.CombatResult, combatResult);
 
         const winnerName = combatResult.winnerId === socket.id ? attackerName : defenderName;
@@ -201,9 +215,91 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             return;
         }
 
-        this.sendReachableTiles(lobbyId, socket.id);
-        this.sendReachableTilesForTeleport(lobbyId, socket.id);
-        this.autoEndTurnIfNoActions(lobbyId, socket.id);
+        this.gameTurnSyncService.refreshPlayerNavigationState(this.server, lobbyId, socket.id);
+    }
+
+    @SubscribeMessage(JoinGameEvents.GiveFlagRequest)
+    handleGiveFlagRequest(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; targetSocketId: string }) {
+        const { lobbyId, targetSocketId } = payload;
+        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
+
+        const requesterName = this.gameLogicService.getActiveGame(lobbyId)
+            ?.lobby.players.find(p => p.socketId === socket.id)?.character?.name ?? 'Un coéquipier';
+
+        this.server.to(targetSocketId).emit(JoinGameEvents.GiveFlagResponse, {
+            requesterId: socket.id,
+            requesterName,
+            lobbyId,
+        });
+    }
+
+    @SubscribeMessage(JoinGameEvents.RequestFlagRequest)
+    handleRequestFlagRequest(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string, targetSocketId: string }) {
+        const { lobbyId, targetSocketId } = payload;
+        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
+
+        const requesterName = this.gameLogicService.getActiveGame(lobbyId)
+            ?.lobby.players.find(p => p.socketId === socket.id)?.character?.name ?? 'Un coéquipier';
+
+        this.server.to(targetSocketId).emit(JoinGameEvents.RequestFlagResponse, {
+            requesterId: socket.id,
+            requesterName,
+            lobbyId,
+        });
+    }
+
+    @SubscribeMessage(JoinGameEvents.FlagTransferResponse)
+    handleFlagTransferResponse(
+        @ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; requesterId: string; accepted: boolean, isRequest?: boolean },
+    ) {
+        const { lobbyId, requesterId, accepted, isRequest } = payload;
+        if (!accepted) return;
+
+        if (!this.gameLogicService.isPlayerTurn(lobbyId, requesterId)) return;
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+
+        if (!isRequest) {
+            // Case 1: Active player GIVES and PAYS
+            const wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, requesterId, socket.id, requesterId);
+            if (!wasFlagTransfered) return;
+
+            const giverPlayerName = activeGame.lobby.players.find(p => p.socketId === requesterId).character.name;
+            const receiverPlayerName = activeGame.lobby.players.find(p => p.socketId === socket.id).character.name;
+            const message = `${giverPlayerName} transfère son drapeau à ${receiverPlayerName}.`;
+
+            this.gameTurnSyncService.emitActionPoints(this.server, lobbyId, requesterId);
+            this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, {
+                giverPlayerId: requesterId,
+                targetPlayerId: socket.id,
+            });
+
+            this.journalService.addEntry(lobbyId, {
+                eventType: JournalEventType.FlagTransfer,
+                playerNames: [giverPlayerName, receiverPlayerName],
+                message,
+            });
+
+        } else {
+            // Case 2: Active player RECEIVES and PAYS
+            const wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, socket.id, requesterId, requesterId);
+            if (!wasFlagTransfered) return;
+
+            const giverPlayerName = activeGame.lobby.players.find(p => p.socketId === socket.id).character.name;
+            const receiverPlayerName = activeGame.lobby.players.find(p => p.socketId === requesterId).character.name;
+            const message = `${giverPlayerName} transfère son drapeau à ${receiverPlayerName}.`;
+
+            this.gameTurnSyncService.emitActionPoints(this.server, lobbyId, requesterId);
+            this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, {
+                giverPlayerId: socket.id,
+                targetPlayerId: requesterId,
+            });
+
+            this.journalService.addEntry(lobbyId, {
+                eventType: JournalEventType.FlagTransfer,
+                playerNames: [giverPlayerName, receiverPlayerName],
+                message,
+            });
+        }
     }
 
     @SubscribeMessage(JoinGameEvents.RequestTileInfo)
@@ -309,31 +405,5 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (!canMove && !canFight) {
             this.gameLogicService.endTurn(lobbyId);
         }
-    }
-
-    private sendMovementPoints(lobbyId: string, socketId: string): void {
-        const mp = this.gameLogicService.getMovementPoints(lobbyId, socketId);
-        this.server.to(lobbyId).emit(JoinGameEvents.MovementPoints, { socketId, movementPoints: mp });
-    }
-
-    private sendActionPoints(lobbyId: string, socketId: string): void {
-        const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
-        this.server.to(lobbyId).emit(JoinGameEvents.ActionPoints, { socketId, actionPoints });
-    }
-
-    private sendReachableTiles(lobbyId: string, socketId: string): void {
-        const reachableTiles = this.gameLogicService.getReachableTiles(lobbyId, socketId);
-        this.server.to(lobbyId).emit(JoinGameEvents.ReachableTiles, {
-            socketId,
-            tiles: reachableTiles,
-        });
-    }
-
-    private sendReachableTilesForTeleport(lobbyId: string, socketId: string): void {
-        const reachableTiles = this.gameLogicService.getReachableTilesForTeleport(lobbyId, socketId);
-        this.server.to(lobbyId).emit(JoinGameEvents.ReachableTilesForTeleport, {
-            socketId,
-            tiles: reachableTiles,
-        });
     }
 }

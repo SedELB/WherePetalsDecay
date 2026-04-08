@@ -117,7 +117,6 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             socket.emit(JoinGameEvents.LobbyJoined, updatedLobby);
             socket.broadcast.to(updatedLobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby);
             socket.broadcast.to(updatedLobby.lobbyId).emit(JoinGameEvents.PlayerJoined, payload.player);
-
             this.handleGetLobbies();
         }
     }
@@ -176,6 +175,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         const success = this.lobbyService.kickPlayer(payload.lobbyId, socket.id, payload.targetSocketId);
 
         if (success) {
+            
             this.server.to(payload.targetSocketId).emit(JoinGameEvents.PlayerKicked, `Vous avez été exclu par l'organisateur.`);
             this.server.in(payload.targetSocketId).socketsLeave(payload.lobbyId);
 

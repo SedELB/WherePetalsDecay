@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
+import { Component, OnDestroy, computed, signal, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { ChatComponent } from '@app/components/chat/chat.component';
@@ -25,7 +25,7 @@ type SortColumn =
     templateUrl: './end-game-page.component.html',
     styleUrl: './end-game-page.component.scss',
 })
-export class EndGamePageComponent implements OnInit, OnDestroy {
+export class EndGamePageComponent implements OnDestroy, OnInit {
     isJournalOpen = false;
 
     sortColumn = signal<SortColumn>('winsCount');
@@ -72,8 +72,8 @@ export class EndGamePageComponent implements OnInit, OnDestroy {
         readonly gameViewService: GameViewService,
     ) {}
 
-    ngOnInit(): void {
-        if (this.players().length === 0) {
+    ngOnInit(){
+        if (this.players().length === 0){
             this.router.navigate([ROUTES.home]);
         }
     }

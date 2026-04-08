@@ -11,6 +11,7 @@ export enum JournalEventType {
     DebugToggle = 'debugToggle',
     PlayerAbandon = 'playerAbandon',
     FlagTransfer = 'flagTransfer',
+    FlagPickedUp = 'flagPickedUp',
     GameOver = 'gameOver',
 }
 
@@ -27,6 +28,7 @@ export const journalEventTranslations = {
     [JournalEventType.DebugToggle]: 'Mode Debug',
     [JournalEventType.PlayerAbandon]: 'Abandon de joueur',
     [JournalEventType.FlagTransfer]: 'Transfert de drapeau',
+    [JournalEventType.FlagPickedUp]: 'Ramassage de drapeau',
     [JournalEventType.GameOver]: 'Partie terminée',
 };
 

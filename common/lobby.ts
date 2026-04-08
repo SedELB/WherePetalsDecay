@@ -12,6 +12,8 @@ export interface Lobby {
     players: Player[],
     pendingAvatars: Record<string, string>,
     chatHistory: ChatMessage[],
+    teamA: Player[],
+    teamB: Player[],
 };
 
 

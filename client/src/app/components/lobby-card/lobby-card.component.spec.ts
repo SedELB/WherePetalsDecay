@@ -57,7 +57,7 @@ describe('LobbyCardComponent', () => {
     const createMockLobby = (overrides: Partial<Lobby> = {}): Lobby => ({
         lobbyId: 'ABCDE', gameId: 'game-1', hostSocketId: 'socket-1', playerCount: 1,
         isLocked: false, pendingAvatars: {}, players: [], game: createMockGame(),
-        chatHistory: [], ...overrides,
+        chatHistory: [], teamA: [], teamB: [], ...overrides,
     });
 
     beforeEach(async () => {
@@ -272,6 +272,8 @@ describe('LobbyCardComponent (content projection)', () => {
             grid: [], createdAt: new Date(), updatedAt: new Date(), isVisible: true,
         },
         chatHistory: [],
+        teamA: [],
+        teamB: [],
     });
 
     beforeEach(async () => {

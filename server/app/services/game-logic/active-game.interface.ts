@@ -31,12 +31,3 @@ export interface TurnCallbacks {
     onTurnStarted: (lobbyId: string, playerSocketId: string) => void;
     onTurnEnded: (lobbyId: string, playerSocketId: string) => void;
 }
-
-export interface CombatResult {
-    winnerId: string;
-    loserId: string;
-    damage: number;
-    loserHpLeft: number;
-    killed: boolean;
-    loserNewPosition: Vec2 | null;
-}

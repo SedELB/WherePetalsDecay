@@ -50,6 +50,7 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
         isHost: true,
         winsCount: 0,
         hasAbandonned: false,
+        hasFlag: false,
         combatCount: 0,
         lossCount: 0,
         totalHpLost: 0,
@@ -101,6 +102,8 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
             isVisible: true,
         },
         chatHistory: [],
+        teamA: [],
+        teamB: [],
         ...overrides,
     });
 

@@ -11,7 +11,6 @@ export class MovementService {
     movePlayer(game: ActiveGame, socketId: string, direction: Direction): Vec2 | null {
         const currentPos = game.playerPositions.get(socketId);
         if (!currentPos) return null;
-
         const offset = DIRECTION_OFFSETS[direction];
         const targetPos: Vec2 = { x: currentPos.x + offset.x, y: currentPos.y + offset.y };
 
