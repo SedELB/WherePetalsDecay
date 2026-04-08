@@ -176,7 +176,8 @@ h2 {
 }
 
 .player-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
     align-items: center;
     gap: 1rem;
     padding: 0.75rem 1rem;
@@ -197,6 +198,30 @@ h2 {
     }
 }
 
+.player-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.player-line1 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+    min-width: 0;
+}
+
+.player-line2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
 .me-badge {
     font-size: 0.85em;
     font-weight: bold;
@@ -213,17 +238,31 @@ h2 {
 }
 
 .player-name {
-    flex: 1;
-    font-size: 1.1rem;
+    word-break: break-word;
+}
+
+.vp-icon {
+    width: 1em;
+    height: 1em;
+    margin-right: 0.2rem;
+    filter: brightness(0) saturate(100%) invert(34%) sepia(82%) saturate(1209%) hue-rotate(243deg) brightness(97%) contrast(93%);
+}
+
+.virtual-player-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    color: $primary-color;
 }
 
 .organizer-badge {
-    margin-left: 0.5rem;
     font-size: 0.85rem;
     color: gold;
+    white-space: nowrap;
 }
 
 .kick-btn {
+    flex-shrink: 0;
     padding: 0.4rem 0.8rem;
     background: #dc3545;
     color: white;

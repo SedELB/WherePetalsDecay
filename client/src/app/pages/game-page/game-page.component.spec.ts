@@ -8,7 +8,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { GameViewService } from '@app/services/game-view/game-view.service';
-import { GameMode } from '@common/enums';
+import { GameMode, PlayerType } from '@common/enums';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { GamePageComponent } from './game-page.component';
@@ -33,7 +33,7 @@ describe('GamePageComponent', () => {
     const TILE_Y = 5;
 
     const createPlayer = (socketId: string, overrides: Partial<Player> = {}): Player => ({
-        socketId, isHost: false, winsCount: 0, hasAbandonned: false,
+        socketId, isHost: false, winsCount: 0, hasAbandonned: false, playerType: PlayerType.Reel,
         character: {
             name: `Player-${socketId}`, avatar: 'avatar.png', life: DEFAULT_LIFE, speed: 4,
             attack: 4, defense: 4, lifeBonus: false, attackDice: 'D6', defenseDice: 'D4',

@@ -24,7 +24,7 @@ export class CharacterService {
     }
 
     generateRandomCharacter(): { name: string; avatarPath: string; lifeBonus: boolean; attackDiceD6: boolean } {
-        const randomAvatarIndex: number = Math.floor(Math.random() * RANDOM_NAMES.length);
+        const randomAvatarIndex: number = Math.floor(Math.random() * AVATARS_PATH.length);
         const randomNameIndex: number = Math.floor(Math.random() * RANDOM_NAMES.length);
         const randomAvatar: string = AVATARS_PATH[randomAvatarIndex];
         const lifeBonus: boolean = Math.random() < RANDOM_PROBABILITY;
@@ -45,5 +45,4 @@ export class CharacterService {
     isValidAvatar(index: number | null): boolean {
         return index !== null && index >= 0 && index < AVATARS_PATH.length;
     }
-    
 }

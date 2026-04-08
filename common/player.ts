@@ -1,4 +1,5 @@
 import { Character } from './character';
+import { PlayerType, VirtualPlayerProfile } from './enums';
 
 export interface Player {
     socketId: string;
@@ -6,4 +7,6 @@ export interface Player {
     isHost: boolean;
     winsCount: number;
     hasAbandonned: boolean;
+    playerType: PlayerType;
+    virtualProfile?: VirtualPlayerProfile;
 }

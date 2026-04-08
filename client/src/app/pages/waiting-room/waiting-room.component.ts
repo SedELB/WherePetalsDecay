@@ -190,7 +190,11 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
     }
 
     onAddVirtualPlayer(profile: string): void {
-        // TODO: emit to server with the chosen profile (agressif | defensif)
-        void profile;
+        if (this.isOrganizer()) {
+            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.AddVirtualPlayer, {
+                lobbyId: this.lobbyId(),
+                profile,
+            });
+        }
     }
 }

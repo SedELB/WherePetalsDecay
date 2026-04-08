@@ -7,7 +7,7 @@
  * - Edge cases: empty lobbies, full lobbies, missing lobbies, duplicate socket removals
  */
 
-import { GameMode } from '@common/enums';
+import { GameMode, PlayerType } from '@common/enums';
 import { Game } from '@common/game';
 import { Player } from '@common/player';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -46,6 +46,7 @@ describe('LobbyService', () => {
         isHost: false,
         winsCount: 0,
         hasAbandonned: false,
+        playerType: PlayerType.Reel,
     };
 
     beforeEach(async () => {

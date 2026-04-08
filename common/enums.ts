@@ -63,3 +63,13 @@ export enum MapSizeKey {
     Medium = 'medium',
     Large = 'large',
 }
+
+export enum PlayerType {
+    Reel = 'real',
+    Virtual = 'virtual',
+}
+
+export enum VirtualPlayerProfile {
+    Aggressive = 'aggressive',
+    Defensive = 'defensive',
+}

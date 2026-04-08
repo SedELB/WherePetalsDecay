@@ -6,6 +6,7 @@ import { Game, gameSchema } from './model/schema/game.schema';
 import { GameService } from './services/game/game.service';
 import { GameValidatorService } from './services/game/game-validator.service';
 import { LobbyService } from './services/lobby/lobby.service';
+import { VirtualPlayerService } from './services/game-logic/virtual-player.service';
 import { GameLogicService } from './services/game-logic/game-logic.service';
 import { TurnService } from './services/game-logic/turn.service';
 import { MovementService } from './services/game-logic/movement.service';
@@ -15,6 +16,7 @@ import { GameGateway } from './gateways/game/game.gateway';
 import { GamesGateway } from './gateways/games/games.gateway';
 import { JoinGateway } from './gateways/join/join.gateway';
 import { ChatGateway } from './gateways/chat/chat.gateway';
+
 @Module({
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),
@@ -27,26 +29,25 @@ import { ChatGateway } from './gateways/chat/chat.gateway';
         }),
         MongooseModule.forFeature([{ name: Game.name, schema: gameSchema }]),
     ],
-    controllers: [
-        GameController,
-    ],
+    controllers: [GameController],
     providers: [
         // Services
-        GameService, 
-        GameValidatorService, 
+        GameService,
+        GameValidatorService,
         LobbyService,
-        GameLogicService, 
-        TurnService, 
-        MovementService, 
+        GameLogicService,
+        TurnService,
+        MovementService,
         CombatService,
-        
+        VirtualPlayerService,
+
         // Gateways
-        AdminGateway, 
-        GameGateway, 
-        GamesGateway, 
-        JoinGateway, 
+        AdminGateway,
+        GameGateway,
+        GamesGateway,
+        JoinGateway,
         ChatGateway,
-        
+
         Logger,
     ],
 })

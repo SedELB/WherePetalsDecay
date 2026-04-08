@@ -24,6 +24,7 @@ export enum JoinGameEvents {
     ChatHistoryRequest = "chatHistoryRequest",
     Teleport = 'teleport',
     ToggleDebugMode = 'toogleDebugMode',
+    AddVirtualPlayer = 'addVirtualPlayer',
 
     // Response events (confirmations)
     GameHosted = 'gameHosted',
