@@ -49,11 +49,16 @@ describe('JoinGamePageComponent', () => {
         isVisible: true, createdAt: new Date('2024-01-15'), updatedAt: new Date('2024-01-15'), ...overrides,
     });
 
-    const createMockLobby = (overrides: Partial<Lobby> = {}): Lobby => ({
-        lobbyId: 'lobby-1', gameId: '1', game: createMockGame(), hostSocketId: 'socket-1',
-        playerCount: 2, isLocked: false, players: [], pendingAvatars: {}, chatHistory: [],
-        teamA: [], teamB: [], ...overrides,
-    });
+    const createMockLobby = (overrides: Partial<Lobby> = {}): Lobby => {
+        const { teamA, teamB, ...restOverrides } = overrides;
+        return {
+            lobbyId: 'lobby-1', gameId: '1', game: createMockGame(), hostSocketId: 'socket-1',
+            playerCount: 2, isLocked: false, players: [], pendingAvatars: {}, chatHistory: [],
+            ...restOverrides,
+            teamA: teamA ?? [],
+            teamB: teamB ?? [],
+        };
+    };
 
     const mockLobbies: Lobby[] = [
         createMockLobby({ lobbyId: 'lobby-1', hostSocketId: 'socket-1', playerCount: 2 }),

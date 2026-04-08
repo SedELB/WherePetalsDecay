@@ -19,6 +19,8 @@ const INITIAL_WINS_COUNT = 0;
 
 @Injectable()
 export class GameLogicService {
+    private activeGames: Map<string, ActiveGame>;
+
     constructor(
         private readonly turnService: TurnService,
         private readonly movementService: MovementService,
@@ -28,8 +30,6 @@ export class GameLogicService {
     ) {
         this.activeGames = new Map<string, ActiveGame>();
     }
-
-    private activeGames: Map<string, ActiveGame>;
 
     // Setup
 
@@ -61,7 +61,6 @@ export class GameLogicService {
         });
 
         this.gameSetupService.removeUnusedSpawns(lobby.game, shuffledSpawns, activePlayers.length);
-
         const turnOrder = this.gameSetupService.computeTurnOrder(activePlayers);
 
         const activeGame: ActiveGame = {
@@ -114,17 +113,14 @@ export class GameLogicService {
 
     endTurn(lobbyId: string): void {
         const game = this.activeGames.get(lobbyId);
-        if (game) {
-            game.totalTurns++;
-            this.turnService.endTurn(game);
-        }
+        if (!game) return;
+        game.totalTurns++;
+        this.turnService.endTurn(game);
     }
 
     incrementTotalTurns(lobbyId: string): void {
         const game = this.activeGames.get(lobbyId);
-        if (game) {
-            game.totalTurns++;
-        }
+        if (game) game.totalTurns++;
     }
 
     isPlayerTurn(lobbyId: string, socketId: string): boolean {
@@ -135,55 +131,53 @@ export class GameLogicService {
 
     // Movement methods
 
-    movePlayer(lobbyId: string, socketId: string, direction: Direction) {
+    movePlayer(lobbyId: string, socketId: string, direction: Direction): { position: Vec2; flagJustTaken: boolean } | null {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
         const targetPos = this.movementService.movePlayer(game, socketId, direction);
         if (!targetPos) return null;
 
         let flagJustTaken = false;
-        const isThereFlag = this.ctfService.isThereFlag(game, targetPos);
-        if (isThereFlag) {
+        if (this.ctfService.isThereFlag(game, targetPos)) {
             this.ctfService.removeFlagFromTile(game, targetPos);
-            const player = game.lobby.players.find(p => p.socketId === socketId);
-            player.hasFlag = true;
+            const player = game.lobby.players.find((p) => p.socketId === socketId);
+            if (player) player.hasFlag = true;
             flagJustTaken = true;
         }
 
         return { position: targetPos, flagJustTaken };
     }
 
-    teleportPlayer(lobbyId: string, socketId: string, targetPos: Vec2) {
+    teleportPlayer(lobbyId: string, socketId: string, targetPos: Vec2): { position: Vec2; flagJustTaken: boolean } | null {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
         const landingPos = this.movementService.teleportPlayer(game, socketId, targetPos);
         if (!landingPos) return null;
 
         let flagJustTaken = false;
-        const isThereFlag = this.ctfService.isThereFlag(game, landingPos);
-        if (isThereFlag) {
+        if (this.ctfService.isThereFlag(game, landingPos)) {
             this.ctfService.removeFlagFromTile(game, landingPos);
-            const player = game.lobby.players.find(p => p.socketId === socketId);
-            player.hasFlag = true;
+            const player = game.lobby.players.find((p) => p.socketId === socketId);
+            if (player) player.hasFlag = true;
             flagJustTaken = true;
         }
 
         return { position: landingPos, flagJustTaken };
     }
 
-    getReachableTilesForTeleport(lobbyId: string, socketId: string) {
+    getReachableTilesForTeleport(lobbyId: string, socketId: string): Vec2[] {
         const game = this.activeGames.get(lobbyId);
         if (!game) return [];
         return this.movementService.getReachableTilesForTeleport(game, socketId);
     }
 
-    getReachableTiles(lobbyId: string, socketId: string) {
+    getReachableTiles(lobbyId: string, socketId: string): Vec2[] {
         const game = this.activeGames.get(lobbyId);
         if (!game) return [];
         return this.movementService.getReachableTiles(game, socketId);
     }
 
-    getMovementPoints(lobbyId: string, socketId: string) {
+    getMovementPoints(lobbyId: string, socketId: string): number {
         const game = this.activeGames.get(lobbyId);
         if (!game) return 0;
         return this.movementService.getMovementPoints(game, socketId);
@@ -197,23 +191,38 @@ export class GameLogicService {
 
     // Combat methods
 
-    getAdjacentPlayers(lobbyId: string, socketId: string) {
+    getAdjacentPlayers(lobbyId: string, socketId: string): Player[] {
         const game = this.activeGames.get(lobbyId);
         if (!game) return [];
         return this.combatService.getAdjacentPlayers(game, socketId);
     }
 
-    initiateCombat(lobbyId: string, attackerId: string, defenderId: string) {
+    initiateCombat(lobbyId: string, attackerId: string, defenderId: string, consumeActionPoint = true) {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
 
-        const combatResult = this.combatService.initiateCombat(game, attackerId, defenderId);
-        const loser = combatResult.loser;
+        const diceStrategy = game.isDebugMode
+            ? { attacker: 'max' as const, defender: 'min' as const }
+            : undefined;
 
-        if (loser.hasFlag) {
-            this.ctfService.setFlagOnNearestValidTile(game, combatResult.loserOldPosition, loser.socketId);
-            loser.hasFlag = false;
+        const combatResult = this.combatService.initiateCombat(game, attackerId, defenderId, consumeActionPoint, diceStrategy);
+        if (!combatResult) return null;
+
+        const attacker = game.lobby.players.find((player) => player.socketId === attackerId);
+        const defender = game.lobby.players.find((player) => player.socketId === defenderId);
+
+        if (combatResult.attacker.killed && attacker?.hasFlag) {
+            this.ctfService.setFlagOnNearestValidTile(game, combatResult.attacker.oldPosition, attacker.socketId);
+            attacker.hasFlag = false;
             combatResult.wasFlagDropped = true;
+            combatResult.droppedFlagPosition = combatResult.attacker.oldPosition;
+        }
+
+        if (combatResult.defender.killed && defender?.hasFlag) {
+            this.ctfService.setFlagOnNearestValidTile(game, combatResult.defender.oldPosition, defender.socketId);
+            defender.hasFlag = false;
+            combatResult.wasFlagDropped = true;
+            combatResult.droppedFlagPosition = combatResult.defender.oldPosition;
         }
 
         return combatResult;
@@ -221,32 +230,28 @@ export class GameLogicService {
 
     transferFlag(lobbyId: string, giverPlayerId: string, targetPlayerId: string, payerId: string): boolean {
         const game = this.activeGames.get(lobbyId);
-        if (!game) return null;
+        if (!game) return false;
 
         const payerActionPoints = game.actionPoints.get(payerId) ?? 0;
-        if (payerActionPoints <= 0) return null;
+        if (payerActionPoints <= 0) return false;
 
         const adjacentPlayers = this.getAdjacentPlayers(lobbyId, giverPlayerId);
-        if (!adjacentPlayers.some((player) => player.socketId === targetPlayerId)) return null;
+        if (!adjacentPlayers.some((player) => player.socketId === targetPlayerId)) return false;
 
         const wasFlagTransfered = this.ctfService.wasFlagTransfered(game, giverPlayerId, targetPlayerId);
-        if (wasFlagTransfered) {
-            game.actionPoints.set(payerId, payerActionPoints - 1);
-            return true;
-        } else {
-            return false;
-        }
+        if (!wasFlagTransfered) return false;
+
+        game.actionPoints.set(payerId, payerActionPoints - 1);
+        return true;
     }
 
-    checkWinCondition(lobbyId: string, flagOwnerId?: string, flagOwnerPos?: Vec2) {
+    checkWinCondition(lobbyId: string, flagOwnerId?: string, flagOwnerPos?: Vec2): Player | null {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
 
         if (game.lobby.game.gameMode === GameMode.Classic) return this.combatService.checkWinCondition(game);
-        if (game.lobby.game.gameMode === GameMode.Ctf) {
-            if (flagOwnerId && flagOwnerPos) {
-                return this.ctfService.checkWinCondition(game, flagOwnerId, flagOwnerPos);
-            }
+        if (game.lobby.game.gameMode === GameMode.Ctf && flagOwnerId && flagOwnerPos) {
+            return this.ctfService.checkWinCondition(game, flagOwnerId, flagOwnerPos);
         }
         return null;
     }
@@ -262,9 +267,9 @@ export class GameLogicService {
 
         if (player) player.hasAbandonned = true;
 
-        if (player.hasFlag) {
+        if (player?.hasFlag) {
             player.hasFlag = false;
-            this.ctfService.setFlagOnNearestValidTile(game, playerPos, socketId);
+            if (playerPos) this.ctfService.setFlagOnNearestValidTile(game, playerPos, socketId);
         }
 
         const spawnPos = game.playerStartPositions.get(socketId);
@@ -278,7 +283,7 @@ export class GameLogicService {
 
     executePlayerAbandon(lobbyId: string, socket: Socket, server: Server): boolean {
         const game = this.activeGames.get(lobbyId);
-        if (!game) return;
+        if (!game) return false;
 
         const wasCurrentTurn = this.isPlayerTurn(lobbyId, socket.id);
         const updatedLobby = this.abandonPlayer(lobbyId, socket.id);
@@ -296,12 +301,14 @@ export class GameLogicService {
             const teamA = this.getActivePlayers(lobbyId, 'A');
             const teamB = this.getActivePlayers(lobbyId, 'B');
             if (teamA.length === 0) {
-                server.to(lobbyId).emit(JoinGameEvents.GameOver, { abandonTeam: 'A' });
+                server.to(lobbyId).emit(JoinGameEvents.GameOver, { abandonTeam: 'A', 
+                    players: [...game.lobby.players], gameStats: this.getGameStats(lobbyId) });
                 this.endGame(lobbyId);
                 return true;
-
-            } else if (teamB.length === 0) {
-                server.to(lobbyId).emit(JoinGameEvents.GameOver, { abandonTeam: 'B' });
+            }
+            if (teamB.length === 0) {
+                server.to(lobbyId).emit(JoinGameEvents.GameOver, { abandonTeam: 'B', 
+                    players: [...game.lobby.players], gameStats: this.getGameStats(lobbyId) });
                 this.endGame(lobbyId);
                 return true;
             }
@@ -310,14 +317,14 @@ export class GameLogicService {
         if (activePlayers.length <= 1) {
             const winnerId = activePlayers.length === 1 ? activePlayers[0].socketId : null;
             const gameStats = this.getGameStats(lobbyId);
-            const allPlayers = game.lobby.players ? [...game.lobby.players] : [];
+            const allPlayers = [...game.lobby.players];
             server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId, isForfeit: true, players: allPlayers, gameStats });
-
             this.endGame(lobbyId);
             server.in(lobbyId).socketsLeave(lobbyId);
-
             return true;
-        } else if (wasCurrentTurn) {
+        }
+
+        if (wasCurrentTurn) {
             this.endTurn(lobbyId);
             return false;
         }
@@ -329,19 +336,14 @@ export class GameLogicService {
         const game = this.activeGames.get(lobbyId);
         if (!game) return [];
 
-        if (team === 'A') {
-            return game.lobby.teamA.filter(player => !player.hasAbandonned);
-        } else if (team === 'B') {
-            return game.lobby.teamB.filter(player => !player.hasAbandonned);
-        } else {
-            return game.lobby.players.filter((player) => !player.hasAbandonned);
-        }
+        if (team === 'A') return game.lobby.teamA.filter((player) => !player.hasAbandonned);
+        if (team === 'B') return game.lobby.teamB.filter((player) => !player.hasAbandonned);
+        return game.lobby.players.filter((player) => !player.hasAbandonned);
     }
 
     getGameStats(lobbyId: string): GameStats | null {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
-
         return this.gameSetupService.buildGameStats(game);
     }
 
@@ -361,6 +363,4 @@ export class GameLogicService {
         });
         return positions;
     }
-
-
 }

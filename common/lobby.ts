@@ -1,6 +1,6 @@
-import { Player } from './player';
-import { Game } from './game'
 import { ChatMessage } from './chat-message';
+import { Game } from './game';
+import { Player } from './player';
 
 export interface Lobby {
     lobbyId: string,

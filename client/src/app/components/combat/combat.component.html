@@ -1,0 +1,91 @@
+﻿<div class="combat-container">
+    <section class="fighter-column">
+        <div class="profile-card">
+            <img class="pfp" [src]="player.character.avatar" [alt]="player.character.name">
+            <h3>{{ player.character.name }} (vous)</h3>
+            <p class="posture">Posture: {{ player.character.bonusPosture?.type?.toUpperCase() || 'En attente' }}</p>
+
+            <div class="stats-panel unified" [ngClass]="{ 'disabled-panel': !roundResult }">
+                <h4>Stats de combat</h4>
+                <span>HP: {{ player.character.life }}</span>
+                <span class="group-title">ATK</span>
+                <span>Base: {{ roundResult?.player?.attack?.base ?? player.character.attack }}</span>
+                <span>Bonus posture: +{{ roundResult?.player?.attack?.postureBonus ?? 0 }}</span>
+                <span>Dé: +{{ roundResult?.player?.attack?.dice ?? 0 }}</span>
+                <span>Pénalité: -{{ roundResult?.player?.attack?.penalty ?? (player.character.debuf ?? 0) }}</span>
+                <span class="total-line">Total ATK: {{ roundResult?.player?.attack?.total ?? '—' }}</span>
+
+                <span class="group-title">DEF</span>
+                <span>Base: {{ roundResult?.player?.defense?.base ?? player.character.defense }}</span>
+                <span>Bonus posture: +{{ roundResult?.player?.defense?.postureBonus ?? 0 }}</span>
+                <span>Dé: +{{ roundResult?.player?.defense?.dice ?? 0 }}</span>
+                <span>Pénalité: -{{ roundResult?.player?.defense?.penalty ?? (player.character.debuf ?? 0) }}</span>
+                <span class="total-line">Total DEF: {{ roundResult?.player?.defense?.total ?? '—' }}</span>
+            </div>
+        </div>
+    </section>
+
+    <main class="fight-panel">
+        <h1>Interface de combat</h1>
+        <p class="subtitle">
+            Round #{{ getCurrentRoundIndex() }}
+            @if (getPostureCountdown() > 0) {
+                · Choix de posture: {{ getPostureCountdown() }}s
+            }
+        </p>
+        <p class="subtitle">Les résultats détaillés restent affichés jusqu'au prochain lancé de dés.</p>
+
+        <div class="combat">
+            <app-isometric-map
+                [grid]="combatMap"
+                [players]="[player, enemy]"
+                [playerPositions]="playerPos"
+            ></app-isometric-map>
+
+            <div class="bonuses" [ngClass]="{ 'hidden': !isChoosingPosture }">
+                <h2>Choisir votre posture</h2>
+                <div class="bonus-effect">
+                    <span>Offensive: +2 ATK</span>
+                    <span>Défensive: +2 DEF</span>
+                </div>
+                <div class="choices">
+                    <app-button (click)="choosePosture('atk')">Posture offensive</app-button>
+                    <app-button (click)="choosePosture('def')">Posture défensive</app-button>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-panel" [ngClass]="{ 'disabled-panel': !roundResult }">
+            <h3>Différences ATK/DEF</h3>
+            <span>ATK vous - DEF ennemi = <b>{{ roundResult?.damageDealt ?? 0 }}</b> dégâts infligés</span>
+            <span>ATK ennemi - DEF vous = <b>{{ roundResult?.damageReceived ?? 0 }}</b> dégâts subis</span>
+            <span class="roll-tag">Dernier lancé: #{{ roundResult?.rollIndex ?? 0 }}</span>
+        </div>
+    </main>
+
+    <section class="fighter-column">
+        <div class="profile-card">
+            <img class="pfp" [src]="enemy.character.avatar" [alt]="enemy.character.name">
+            <h3>{{ enemy.character.name }}</h3>
+            <p class="posture">Posture: {{ enemy.character.bonusPosture?.type?.toUpperCase() || 'En attente' }}</p>
+
+            <div class="stats-panel unified" [ngClass]="{ 'disabled-panel': !roundResult }">
+                <h4>Stats de combat</h4>
+                <span>HP: {{ enemy.character.life }}</span>
+                <span class="group-title">ATK</span>
+                <span>Base: {{ roundResult?.enemy?.attack?.base ?? enemy.character.attack }}</span>
+                <span>Bonus posture: +{{ roundResult?.enemy?.attack?.postureBonus ?? 0 }}</span>
+                <span>Dé: +{{ roundResult?.enemy?.attack?.dice ?? 0 }}</span>
+                <span>Pénalité: -{{ roundResult?.enemy?.attack?.penalty ?? (enemy.character.debuf ?? 0) }}</span>
+                <span class="total-line">Total ATK: {{ roundResult?.enemy?.attack?.total ?? '—' }}</span>
+
+                <span class="group-title">DEF</span>
+                <span>Base: {{ roundResult?.enemy?.defense?.base ?? enemy.character.defense }}</span>
+                <span>Bonus posture: +{{ roundResult?.enemy?.defense?.postureBonus ?? 0 }}</span>
+                <span>Dé: +{{ roundResult?.enemy?.defense?.dice ?? 0 }}</span>
+                <span>Pénalité: -{{ roundResult?.enemy?.defense?.penalty ?? (enemy.character.debuf ?? 0) }}</span>
+                <span class="total-line">Total DEF: {{ roundResult?.enemy?.defense?.total ?? '—' }}</span>
+            </div>
+        </div>
+    </section>
+</div>

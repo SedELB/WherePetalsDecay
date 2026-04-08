@@ -61,7 +61,7 @@ export class LobbyService {
 
     private createTeams(lobbyId: string): { teamA: Player[], teamB: Player[] } {
         const lobby = this.getLobby(lobbyId);
-        if (lobby.game.gameMode !== GameMode.Ctf || lobby.playerCount % 2 !== 0) return null ;
+        if (lobby.game.gameMode !== GameMode.Ctf || lobby.playerCount % 2 !== 0) return null;
 
         const randomPlayers = [...lobby.players].sort(() => Math.random() - HALF_CHANCE);
         const teamA = [...randomPlayers].slice(0, randomPlayers.length / 2);
@@ -105,13 +105,14 @@ export class LobbyService {
     removePlayerFromLobby(lobbyId: string, socketId: string): void {
         const lobby = this.lobbies.get(lobbyId);
         if (lobby) {
+            const wasFullBeforeLeave = lobby.playerCount === lobby.game.maxPlayers;
             lobby.players = lobby.players.filter((player) => player.socketId !== socketId);
             delete lobby.pendingAvatars[socketId];
             lobby.playerCount = lobby.players.length;
             lobby.teamA = lobby.teamA.filter(p => p.socketId !== socketId);
             lobby.teamB = lobby.teamB.filter(p => p.socketId !== socketId);
 
-            if (lobby.playerCount < lobby.game.maxPlayers) {
+            if (wasFullBeforeLeave && lobby.playerCount < lobby.game.maxPlayers) {
                 lobby.isLocked = false;
             }
         }
@@ -160,14 +161,14 @@ export class LobbyService {
 
         if (lobby && lobby.hostSocketId === hostSocketId && lobby.playerCount >= 2) {
             if (lobby.game.gameMode === GameMode.Ctf) {
-                const { teamA, teamB } = this.createTeams(lobbyId);
-                const finalLobby = { ...lobby, teamA, teamB };
-                finalLobby.isLocked = true;
-                return finalLobby;
-            } else {
-                lobby.isLocked = true;
-                return lobby;
+                const teams = this.createTeams(lobbyId);
+                if (!teams) return null;
+                lobby.teamA = teams.teamA;
+                lobby.teamB = teams.teamB;
             }
+
+            lobby.isLocked = true;
+            return lobby;
         }
         return null;
     }
