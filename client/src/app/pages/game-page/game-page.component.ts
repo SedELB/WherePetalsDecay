@@ -1,7 +1,8 @@
-import { Component, HostListener, OnInit, computed, effect, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { ChatComponent } from '@app/components/chat/chat.component';
+import { CombatComponent } from '@app/components/combat/combat.component';
 import { IsometricMapComponent } from '@app/components/isometric-map/isometric-map.component';
 import { JournalComponent } from '@app/components/journal/journal.component';
 import { SakuraComponent } from '@app/components/sakura/sakura.component';
@@ -11,28 +12,27 @@ import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isomet
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS, KEY_TO_DIRECTION } from '@common/direction';
-import { GameMode } from '@common/enums';
+import { GameMode, TileTexture } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
 import {
-    getAttackTargets,
-    getGiveFlagTargets,
-    getPlayerAtPosition,
-    getPlayerAvatar,
-    getPlayerName,
-    getRequestFlagTargets,
-    getTeamPlayers,
-    getTimerDisplay,
-    getTimerLabel,
-} from './game-page.helper';
+    TileClickContext,
+    buildTileClickContext,
+    findPlayerAtPosition,
+    getCurrentPlayerIceDebuff,
+    getPlayerAvatarById,
+    getPlayerNameById,
+    getTeamPlayersFromLobby,
+    getTimerDisplayFromCountdown,
+    getTimerLabelForTurn,
+} from './game-page.utils';
 
-const GAME_OVER_REDIRECT_DELAY = 5000;
 const MOVE_COOLDOWN_MS = 150;
 
 @Component({
     selector: 'app-game-page',
-    imports: [ButtonComponent, SakuraComponent, ChatComponent, IsometricMapComponent, JournalComponent],
+    imports: [ButtonComponent, SakuraComponent, ChatComponent, IsometricMapComponent, JournalComponent, CombatComponent],
     templateUrl: './game-page.component.html',
     styleUrl: './game-page.component.scss',
 })
@@ -82,6 +82,8 @@ export class GamePageComponent implements OnInit {
     readonly turnNotification = computed(() => this.gameViewService.turnNotification());
     readonly currentPlayerId = computed(() => this.gameViewService.getLocalSocketId());
     readonly isFlagTaken = computed(() => this.gameViewService.isFlagTaken());
+    readonly isCombatStarted = computed(() => this.gameViewService.isCombatStarted());
+    readonly fighters = computed(() => this.gameViewService.fighters());
 
     readonly orderedPlayers = computed(() => {
         const order = this.gameViewService.turnOrder();
@@ -117,8 +119,8 @@ export class GamePageComponent implements OnInit {
     readonly isMyTurn = computed(() => this.activePlayerSocketId() === this.gameViewService.getLocalSocketId());
 
     readonly allTeams = computed(() => [
-        getTeamPlayers('A', this.lobby(), this.orderedPlayers()),
-        getTeamPlayers('B', this.lobby(), this.orderedPlayers()),
+        this.getTeamPlayers('A'),
+        this.getTeamPlayers('B'),
     ]);
 
     readonly adjacentPlayers = computed((): Player[] => {
@@ -136,57 +138,80 @@ export class GamePageComponent implements OnInit {
         });
     });
 
-    readonly attackTargets = computed((): Vec2[] =>
-        !this.isMyTurn() ? [] : getAttackTargets(this.gameViewService.getLocalSocketId(),
-        this.adjacentPlayers(), 
-        this.playerPositions(), 
-        this.allTeams()),
-    );
+    readonly attackTargets = computed((): Vec2[] => {
+        if (!this.isMyTurn()) return [];
+        const localId = this.gameViewService.getLocalSocketId();
+        const allTeams = this.allTeams();
+        return this.adjacentPlayers()
+            .filter((player) => {
+                const isSameTeam = allTeams.some((team) =>
+                    team.some((teammate) => teammate.socketId === localId) &&
+                    team.some((teammate) => teammate.socketId === player.socketId),
+                );
+                return !isSameTeam;
+            })
+            .map((player) => this.playerPositions()[player.socketId])
+            .filter((pos): pos is Vec2 => !!pos);
+    });
 
-    readonly requestFlagTargets = computed((): Vec2[] =>
-        !this.isMyTurn() ? [] : getRequestFlagTargets(this.localPlayer(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()),
-    );
+    readonly requestFlagTargets = computed((): Vec2[] => {
+        if (!this.isMyTurn()) return [];
+        const localId = this.gameViewService.getLocalSocketId();
+        const localPlayer = this.localPlayer();
+        if (!localPlayer || localPlayer.hasFlag) return [];
 
-    readonly giveFlagTargets = computed((): Vec2[] =>
-        !this.isMyTurn() ? [] : getGiveFlagTargets(this.localPlayer(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()),
-    );
+        const allTeams = this.allTeams();
+        return this.adjacentPlayers()
+            .filter((player) => {
+                const isSameTeam = allTeams.some((team) =>
+                    team.some((teammate) => teammate.socketId === localId) &&
+                    team.some((teammate) => teammate.socketId === player.socketId),
+                );
+                return isSameTeam && player.hasFlag;
+            })
+            .map((player) => this.playerPositions()[player.socketId])
+            .filter((pos): pos is Vec2 => !!pos);
+    });
+
+    readonly giveFlagTargets = computed((): Vec2[] => {
+        if (!this.isMyTurn()) return [];
+        const localId = this.gameViewService.getLocalSocketId();
+        const localPlayer = this.localPlayer();
+        if (!localPlayer?.hasFlag) return [];
+
+        const allTeams = this.allTeams();
+        return this.adjacentPlayers()
+            .filter((player) => allTeams.some((team) =>
+                team.some((teammate) => teammate.socketId === localId) &&
+                team.some((teammate) => teammate.socketId === player.socketId),
+            ))
+            .map((player) => this.playerPositions()[player.socketId])
+            .filter((pos): pos is Vec2 => !!pos);
+    });
 
     readonly actionHighlightTiles = computed((): ActionTileHighlight[] => {
-        const action = this.activeSubAction();
-        if (!this.isSubMenuOpen() || !action) return [];
-        const map: Record<ActionHighlightType, Vec2[]> = {
+        const subAction = this.activeSubAction();
+        if (!this.isSubMenuOpen() || !subAction) return [];
+        const typeMap: Record<ActionHighlightType, Vec2[]> = {
             attack: this.attackTargets(),
             requestFlag: this.requestFlagTargets(),
             giveFlag: this.giveFlagTargets(),
         };
-        return (map[action] ?? []).map((pos) => ({ pos, type: action }));
+        return (typeMap[subAction] ?? []).map((pos) => ({ pos, type: subAction }));
     });
 
     readonly hasAnyAction = computed(() =>
         this.isMyTurn() &&
         this.actionPoints() > 0 &&
-        (this.attackTargets().length > 0 || this.requestFlagTargets().length > 0 || this.giveFlagTargets().length > 0),
+        (this.attackTargets().length > 0 ||
+            this.requestFlagTargets().length > 0 ||
+            this.giveFlagTargets().length > 0),
     );
-
-    private gameOverTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor(
         protected readonly gameViewService: GameViewService,
         private readonly router: Router,
-    ) {
-        effect(() => {
-            if (this.gameOverTimeout) {
-                clearTimeout(this.gameOverTimeout);
-                this.gameOverTimeout = null;
-            }
-            if (!this.gameOver()) return;
-
-                this.gameOverTimeout = setTimeout(() => {
-                    this.gameOverTimeout = null;
-                    if (this.gameOver()) this.router.navigate([this.routes.endGame]);
-                }, GAME_OVER_REDIRECT_DELAY);
-        });
-    }
+    ) {}
 
     ngOnInit(): void {
         if (!this.lobby()) this.router.navigate([this.routes.home]);
@@ -222,7 +247,7 @@ export class GamePageComponent implements OnInit {
         this.gameViewService.sendAbandonWithoutPrompt(lobbyId);
     }
 
-    isEndTurnDisabled(): boolean  {
+    isEndTurnDisabled(): boolean {
         return !(this.isMyTurn() || (this.isDebugModeActive() && this.gameViewService.isHost()));
     }
 
@@ -262,30 +287,26 @@ export class GamePageComponent implements OnInit {
 
     onTileClick(x: number, y: number): void {
         const action = this.activeSubAction();
-        if (!this.isSubMenuOpen() || !action) return;
-
-        const lobbyId = this.lobby()?.lobbyId;
-        if (!lobbyId || this.actionPoints() <= 0) return;
-
-        const targetSocketId = this.getPlayerAtPosition(x, y);
-        if (!targetSocketId || targetSocketId === this.currentPlayerId()) return;
-
-        const isHighlighted = this.actionHighlightTiles().some((h) => h.pos.x === x && h.pos.y === y);
-        if (!isHighlighted) return;
+        const clickContext = this.resolveTileClickContext(x, y);
+        if (!action || !clickContext) return;
 
         switch (action) {
             case 'attack':
-                this.gameViewService.sendCombat(lobbyId, targetSocketId);
+                this.handleAttackAction(clickContext.lobbyId, clickContext.currentPlayer, clickContext.targetPlayer, x, y);
                 break;
             case 'giveFlag':
-                this.gameViewService.giveFlagTransfer(lobbyId, targetSocketId);
+                this.gameViewService.giveFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
                 break;
             case 'requestFlag':
-                this.gameViewService.requestFlagTransfer(lobbyId, targetSocketId);
+                this.gameViewService.requestFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
                 break;
         }
 
         this.closeSubMenu();
+    }
+
+    isOnIce(pos: Vec2): 2 | 0 {
+        return this.game()?.grid[pos.y][pos.x].type === TileTexture.Ice ? 2 : 0;
     }
 
     onRightClick(event: MouseEvent, position: Vec2): void {
@@ -300,40 +321,66 @@ export class GamePageComponent implements OnInit {
     }
 
     getTeamPlayers(team: 'A' | 'B'): Player[] {
-        return getTeamPlayers(team, this.lobby(), this.orderedPlayers());
+        return getTeamPlayersFromLobby(this.lobby(), this.orderedPlayers(), team);
     }
 
     isAdjacentPlayer(col: number, row: number): boolean {
         const playerSocketId = this.getPlayerAtPosition(col, row);
-        return !!playerSocketId && this.adjacentPlayers().some((p) => p.socketId === playerSocketId);
+        return !!playerSocketId && this.adjacentPlayers().some((player) => player.socketId === playerSocketId);
     }
 
     isReachable(col: number, row: number): boolean {
-        return this.reachableTiles().some((t) => t.x === col && t.y === row);
+        return this.reachableTiles().some((tile) => tile.x === col && tile.y === row);
     }
 
     isTeleportable(col: number, row: number): boolean {
-        return this.isDebugModeActive() && this.reachableTilesForTeleport().some((t) => t.x === col && t.y === row);
+        return this.isDebugModeActive() && this.reachableTilesForTeleport().some((tile) => tile.x === col && tile.y === row);
     }
 
     getPlayerAtPosition(x: number, y: number): string | null {
-        return getPlayerAtPosition(x, y, this.playerPositions());
+        return findPlayerAtPosition(this.playerPositions(), x, y);
     }
 
     getPlayerAvatar(socketId: string): string | undefined {
-        return getPlayerAvatar(socketId, this.lobby()?.players ?? []);
+        return getPlayerAvatarById(this.lobby()?.players ?? [], socketId);
     }
 
     getPlayerName(socketId: string): string {
-        return getPlayerName(socketId, this.lobby()?.players ?? []);
+        return getPlayerNameById(this.lobby()?.players ?? [], socketId);
     }
 
     getTimerLabel(): string {
-        return getTimerLabel(this.activePlayerSocketId() ?? null, this.gameViewService.getLocalSocketId() ?? null, this.lobby()?.players ?? []);
+        return getTimerLabelForTurn(this.activePlayerSocketId(), this.gameViewService.getLocalSocketId(), this.lobby()?.players ?? []);
     }
 
     getTimerDisplay(): string {
-        return getTimerDisplay(this.turnCountdown(), this.activePlayerSocketId() ?? null);
+        return getTimerDisplayFromCountdown(this.turnCountdown(), this.activePlayerSocketId());
+    }
+
+    private handleAttackAction(lobbyId: string, currentPlayer: Player, targetPlayer: Player, x: number, y: number): void {
+        targetPlayer.character.debuf = this.isOnIce({ x, y }) ? 2 : 0;
+        currentPlayer.character.debuf = getCurrentPlayerIceDebuff(
+            this.currentPlayerId(),
+            this.playerPositions(),
+            (position) => this.isOnIce(position),
+        );
+        this.gameViewService.sendCombat(lobbyId, currentPlayer, targetPlayer);
+    }
+
+    private resolveTileClickContext(x: number, y: number): TileClickContext | null {
+        if (!this.isSubMenuOpen()) return null;
+        const targetSocketId = this.getPlayerAtPosition(x, y);
+        const isHighlighted = this.actionHighlightTiles().some((highlightedTile) => highlightedTile.pos.x === x && highlightedTile.pos.y === y);
+
+        return buildTileClickContext({
+            lobby: this.lobby(),
+            currentSocketId: this.currentPlayerId(),
+            actionPoints: this.actionPoints(),
+            targetSocketId,
+            x,
+            y,
+            isHighlighted,
+        });
     }
 
     private closeSubMenu(): void {

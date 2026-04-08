@@ -47,6 +47,9 @@
                     (tileClick)="onTileClick($event.x, $event.y)"
                     (rightClick)="onRightClick($event.event, $event.pos)"
                 ></app-isometric-map>
+                @if (isCombatStarted()) {
+                    <app-combat [player]="this.fighters().player" [enemy]="this.fighters().enemy" ></app-combat>
+                }
             </div>
         </div>
     </section>
