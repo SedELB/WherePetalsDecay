@@ -40,6 +40,81 @@ export class JournalService {
         }
     }
 
+    addTurnStartEntry(lobbyId: string, playerName: string): void {
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.TurnStart,
+            playerNames: [playerName],
+            message: `Début du tour de ${playerName}.`,
+        });
+    }
+
+    addFlagPickedUpEntry(lobbyId: string, playerName: string): void {
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.FlagPickedUp,
+            playerNames: [playerName],
+            message: `${playerName} a ramassé le drapeau.`,
+        });
+    }
+
+    addDebugToggleEntry(lobbyId: string, hostName: string, state: boolean): void {
+        const modeLabel = state ? 'activé' : 'désactivé';
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.DebugToggle,
+            playerNames: [hostName],
+            message: `Mode de débogage ${modeLabel} par ${hostName}.`,
+        });
+    }
+
+    addCombatStartEntry(lobbyId: string, attackerName: string, defenderName: string): void {
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatStart,
+            playerNames: [attackerName, defenderName],
+            message: `Début du combat : ${attackerName} vs ${defenderName}.`,
+        });
+    }
+
+    addCombatDamageEntry(lobbyId: string, winnerName: string, loserName: string, attackerId: string, defenderId: string): void {
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatDamageResult,
+            playerNames: [winnerName, loserName],
+            message: `${winnerName} inflige des dégâts à ${loserName}.`,
+            isPrivate: true,
+            involvedPlayerIds: [attackerId, defenderId],
+        });
+    }
+
+    addCombatEndEntry(lobbyId: string, winnerName: string, loserName: string): void {
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatEnd,
+            playerNames: [winnerName, loserName],
+            message: `Fin du combat : ${winnerName} remporte le combat contre ${loserName}.`,
+        });
+    }
+
+    addFlagTransferEntry(lobbyId: string, giverName: string, receiverName: string): void {
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.FlagTransfer,
+            playerNames: [giverName, receiverName],
+            message: `${giverName} transfère son drapeau à ${receiverName}.`,
+        });
+    }
+
+    addPlayerAbandonEntry(lobbyId: string, playerName: string): void {
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.PlayerAbandon,
+            playerNames: [playerName],
+            message: `${playerName} a abandonné la partie.`,
+        });
+    }
+
+    addGameOverEntry(lobbyId: string, activeNames: string[]): void {
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.GameOver,
+            playerNames: activeNames,
+            message: `Fin de la partie. Joueurs encore actifs : ${activeNames.join(', ')}.`,
+        });
+    }
+
     getEntries(lobbyId: string): JournalEntry[] {
         return this.entries.get(lobbyId) ?? [];
     }

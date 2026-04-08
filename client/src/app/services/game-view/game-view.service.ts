@@ -310,6 +310,7 @@ export class GameViewService {
         if (this.isHost() && this.isDebugModeActive()) {
             this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.ToggleDebugMode, { lobbyId, state: this.isDebugModeActive() });
         }
+        
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.PlayerAbandon, lobbyId);
     }
 
