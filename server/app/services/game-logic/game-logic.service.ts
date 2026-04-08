@@ -10,9 +10,9 @@ import { Injectable } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { ActiveGame, TurnCallbacks } from './active-game.interface';
 import { CombatService } from './combat.service';
+import { CTFService } from './ctf.service';
 import { MovementService } from './movement.service';
 import { TurnService } from './turn.service';
-import { CTFService } from './ctf.service';
 
 const RANDOM_THRESHOLD = 0.5;
 const INITIAL_WINS_COUNT = 0;
@@ -127,7 +127,7 @@ export class GameLogicService {
             flagJustTaken = true;
         }
 
-        return {position: targetPos, flagJustTaken};
+        return { position: targetPos, flagJustTaken };
     }
 
     teleportPlayer(lobbyId: string, socketId: string, targetPos: Vec2) {
@@ -145,10 +145,10 @@ export class GameLogicService {
             flagJustTaken = true;
         }
 
-        return {position: landingPos, flagJustTaken};
+        return { position: landingPos, flagJustTaken };
     }
 
-    getReachableTilesForTeleport(lobbyId: string, socketId: string){
+    getReachableTilesForTeleport(lobbyId: string, socketId: string) {
         const game = this.activeGames.get(lobbyId);
         if (!game) return [];
         return this.movementService.getReachableTilesForTeleport(game, socketId);
@@ -187,7 +187,7 @@ export class GameLogicService {
         const combatResult = this.combatService.initiateCombat(game, attackerId, defenderId);
         const loser = combatResult.loser;
 
-        if (loser.hasFlag){
+        if (loser.hasFlag) {
             this.ctfService.setFlagOnNearestValidTile(game, combatResult.loserOldPosition, loser.socketId);
             loser.hasFlag = false;
             combatResult.wasFlagDropped = true;
@@ -205,7 +205,7 @@ export class GameLogicService {
 
         const adjacentPlayers = this.getAdjacentPlayers(lobbyId, giverPlayerId);
         if (!adjacentPlayers.some((player) => player.socketId === targetPlayerId)) return null;
-        
+
         const wasFlagTransfered = this.ctfService.wasFlagTransfered(game, giverPlayerId, targetPlayerId);
         if (wasFlagTransfered) {
             game.actionPoints.set(payerId, payerActionPoints - 1);
@@ -222,7 +222,7 @@ export class GameLogicService {
         if (game.lobby.game.gameMode === GameMode.Classic) return this.combatService.checkWinCondition(game);
         if (game.lobby.game.gameMode === GameMode.Ctf) {
             if (flagOwnerId && flagOwnerPos) {
-                 return this.ctfService.checkWinCondition(game, flagOwnerId, flagOwnerPos);
+                return this.ctfService.checkWinCondition(game, flagOwnerId, flagOwnerPos);
             }
         }
         return null;
@@ -290,7 +290,7 @@ export class GameLogicService {
 
             this.endGame(lobbyId);
             server.in(lobbyId).socketsLeave(lobbyId);
-        
+
             return true;
         } else if (wasCurrentTurn) {
             this.endTurn(lobbyId);
