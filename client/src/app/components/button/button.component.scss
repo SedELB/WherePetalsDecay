@@ -395,7 +395,7 @@ $vp-sub-size: 2.5rem;
 .vp-sub-btn {
     position: absolute;
     z-index: 5;
-    top: calc(50% - #{$vp-size / 2}); // to match the central button's top
+    top: calc(50% - ($vp-size / 2)); // to match the central button's top
     width: $vp-sub-size;
     height: $vp-sub-size;
     border-radius: 50%;

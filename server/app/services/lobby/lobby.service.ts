@@ -15,6 +15,7 @@ const ID_SUBSTRING_END = 7;
 const ID_PADDING_LENGTH = 5;
 const DUPLICATE_NAME_SUFFIX_START = 2;
 const VIRTUAL_PLAYER_ID_BASE = 1000;
+const AVATAR_ALREADY_TAKEN_ERROR = 'Avatar already taken';
 
 @Injectable()
 export class LobbyService {
@@ -73,6 +74,15 @@ export class LobbyService {
         const lobby = this.lobbies.get(lobbyId);
         if (!lobby) throw new Error('There is no lobby associated with the provided ID');
         if (lobby.isLocked) throw new Error('The lobby is locked');
+
+        const requestedAvatar = player.character?.avatar;
+        if (requestedAvatar && this.isAvatarOccupiedByAnother(lobby, requestedAvatar, player.socketId)) {
+            throw new Error(AVATAR_ALREADY_TAKEN_ERROR);
+        }
+
+        if (player.socketId) {
+            delete lobby.pendingAvatars[player.socketId];
+        }
 
         lobby.players.push(player);
         lobby.playerCount = lobby.players.length;
@@ -172,8 +182,8 @@ export class LobbyService {
         if (player) player.hasAbandonned = true;
         return lobby;
     }
-    
-    addVirtualPlayer(lobbyId: string, profile: VirtualPlayerProfile): Lobby {
+
+    addVirtualPlayerToLobby(lobbyId: string, profile: VirtualPlayerProfile): Lobby {
         const lobby = this.getLobby(lobbyId);
         if (!lobby) throw new Error('There is no lobby associated with the provided ID');
 
@@ -185,11 +195,14 @@ export class LobbyService {
         let randomAvatar: string;
 
         if (availableAvatars.length > 0) {
-            // TODO: Vérifier s'il reste des avatars disponibles, sinon lancer une erreur ou prendre un par défaut
             const randomAvatarIndex: number = Math.floor(Math.random() * availableAvatars.length);
             randomAvatar = availableAvatars[randomAvatarIndex];
         } else {
-            randomAvatar = './assets/avatars/old-hag.png';
+            const pendingAvatarEntries = Object.entries(lobby.pendingAvatars || {});
+            const randomPendingIndex = Math.floor(Math.random() * pendingAvatarEntries.length);
+            const [socketIdToUnselect, avatar] = pendingAvatarEntries[randomPendingIndex];
+            randomAvatar = avatar;
+            delete lobby.pendingAvatars[socketIdToUnselect];
         }
 
         // TODO: noms disponibles ??
@@ -204,7 +217,7 @@ export class LobbyService {
         const speedValue = BASE_STATS.speed + (!lifeBonus ? BASE_STATS.bonus : 0);
 
         const character: Character = {
-            name: finalName, 
+            name: finalName,
             avatar: randomAvatar,
             life: lifeValue,
             speed: speedValue,
@@ -226,6 +239,20 @@ export class LobbyService {
 
         const updatedLobby = this.joinLobby(lobbyId, virtualPLayer);
         return updatedLobby;
+    }
+    
+    private isAvatarOccupiedByAnother(lobby: Lobby, avatar: string, socketId: string | null): boolean {
+        const isTakenByConfirmedPlayer = lobby.players.some(
+            (existingPlayer) => existingPlayer.socketId !== socketId && existingPlayer.character?.avatar === avatar,
+        );
+        
+        if (isTakenByConfirmedPlayer) {
+            return true;
+        }
+        
+        return Object.entries(lobby.pendingAvatars || {}).some(
+            ([pendingSocketId, pendingAvatar]) => pendingSocketId !== socketId && pendingAvatar === avatar,
+        );
     }
 
     getOccupiedAvatars(lobby: Lobby): string[] {

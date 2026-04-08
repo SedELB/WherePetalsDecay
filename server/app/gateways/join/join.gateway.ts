@@ -94,7 +94,21 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         payload.player.hasAbandonned = false;
         payload.player.playerType = PlayerType.Reel;
 
-        const updatedLobby = this.lobbyService.joinLobby(payload.lobbyId, payload.player);
+        let updatedLobby: Lobby;
+        try {
+            updatedLobby = this.lobbyService.joinLobby(payload.lobbyId, payload.player);
+        } catch (error) {
+            const errorMessage = error instanceof Error && error.message === 'Avatar already taken'
+                ? "Cet avatar n'est plus disponible. Veuillez en choisir un autre."
+                : 'Impossible de rejoindre le salon.';
+            socket.emit(JoinGameEvents.LobbyError, errorMessage);
+
+            if (lobby) {
+                const allOccupiedAvatars = this.lobbyService.getOccupiedAvatars(lobby);
+                socket.emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
+            }
+            return;
+        }
 
         if (updatedLobby) {
             socket.join(updatedLobby.lobbyId);
@@ -181,7 +195,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             return;
         }
 
-        const updatedLobby = this.lobbyService.addVirtualPlayer(payload.lobbyId, payload.profile);
+        const updatedLobby = this.lobbyService.addVirtualPlayerToLobby(payload.lobbyId, payload.profile);
 
         if (updatedLobby) {
             const virtualPlayer = updatedLobby.players[updatedLobby.players.length - 1];
