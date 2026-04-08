@@ -5,4 +5,5 @@ export const ROUTES = {
     admin: '/admin',
     editor: '/editor',
     joinGame: '/join',
+    endGame: '/end-game',
 } as const;

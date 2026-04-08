@@ -181,10 +181,10 @@ export class GamePageComponent implements OnInit {
             }
             if (!this.gameOver()) return;
 
-            this.gameOverTimeout = setTimeout(() => {
-                this.gameOverTimeout = null;
-                if (this.gameOver()) this.router.navigate([this.routes.home]);
-            }, GAME_OVER_REDIRECT_DELAY);
+                this.gameOverTimeout = setTimeout(() => {
+                    this.gameOverTimeout = null;
+                    if (this.gameOver()) this.router.navigate([this.routes.endGame]);
+                }, GAME_OVER_REDIRECT_DELAY);
         });
     }
 

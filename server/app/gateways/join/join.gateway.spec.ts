@@ -70,8 +70,12 @@ describe('JoinGateway', () => {
         },
         isHost: false,
         winsCount: 0,
-        flagsCaptured: 0,
         hasAbandonned: false,
+        combatCount: 0,
+        lossCount: 0,
+        totalHpLost: 0,
+        totalHpDealt: 0,
+        visitedTilesCount: 0,
         hasFlag: false,
     });
 

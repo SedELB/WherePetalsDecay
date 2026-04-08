@@ -1,7 +1,7 @@
 import { BASE_STATS } from '@common/constants/character.constants';
 import { Direction } from '@common/direction';
-import { GameMode, TileItem } from '@common/enums';
-import { Game } from '@common/game';
+import { GameMode } from '@common/enums';
+import { GameStats } from '@common/interfaces/game-stats';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
@@ -11,10 +11,10 @@ import { Server, Socket } from 'socket.io';
 import { ActiveGame, TurnCallbacks } from './active-game.interface';
 import { CombatService } from './combat.service';
 import { CTFService } from './ctf.service';
+import { GameSetupService } from './game-setup.service';
 import { MovementService } from './movement.service';
 import { TurnService } from './turn.service';
 
-const RANDOM_THRESHOLD = 0.5;
 const INITIAL_WINS_COUNT = 0;
 
 @Injectable()
@@ -24,6 +24,7 @@ export class GameLogicService {
         private readonly movementService: MovementService,
         private readonly combatService: CombatService,
         private readonly ctfService: CTFService,
+        private readonly gameSetupService: GameSetupService,
     ) {
         this.activeGames = new Map<string, ActiveGame>();
     }
@@ -37,8 +38,8 @@ export class GameLogicService {
     }
 
     initializeGame(lobby: Lobby): ActiveGame {
-        const spawnPositions = this.extractSpawnPositions(lobby.game);
-        const shuffledSpawns = this.shuffle([...spawnPositions]);
+        const spawnPositions = this.gameSetupService.extractSpawnPositions(lobby.game);
+        const shuffledSpawns = this.gameSetupService.shuffle([...spawnPositions]);
 
         const playerPositions = new Map<string, Vec2>();
         const playerStartPositions = new Map<string, Vec2>();
@@ -59,9 +60,9 @@ export class GameLogicService {
             actionPoints.set(player.socketId, 0);
         });
 
-        this.removeUnusedSpawns(lobby.game, shuffledSpawns, activePlayers.length);
+        this.gameSetupService.removeUnusedSpawns(lobby.game, shuffledSpawns, activePlayers.length);
 
-        const turnOrder = this.computeTurnOrder(activePlayers);
+        const turnOrder = this.gameSetupService.computeTurnOrder(activePlayers);
 
         const activeGame: ActiveGame = {
             lobby,
@@ -71,7 +72,19 @@ export class GameLogicService {
             playerStartPositions,
             movementPoints,
             actionPoints,
+            visitedTilesPerPlayer: new Map(),
+            globalVisitedTiles: new Set(),
+            sanctuariesUsed: new Set(),
+            doorsInteracted: new Set(),
+            flagHolders: new Set(),
+            totalTurns: 0,
+            gameStartTime: Date.now(),
         };
+
+        for (const [socketId, pos] of playerPositions) {
+            activeGame.visitedTilesPerPlayer.set(socketId, new Set([`${pos.x},${pos.y}`]));
+            activeGame.globalVisitedTiles.add(`${pos.x},${pos.y}`);
+        }
 
         this.activeGames.set(lobby.lobbyId, activeGame);
         return activeGame;
@@ -101,7 +114,17 @@ export class GameLogicService {
 
     endTurn(lobbyId: string): void {
         const game = this.activeGames.get(lobbyId);
-        if (game) this.turnService.endTurn(game);
+        if (game) {
+            game.totalTurns++;
+            this.turnService.endTurn(game);
+        }
+    }
+
+    incrementTotalTurns(lobbyId: string): void {
+        const game = this.activeGames.get(lobbyId);
+        if (game) {
+            game.totalTurns++;
+        }
     }
 
     isPlayerTurn(lobbyId: string, socketId: string): boolean {
@@ -286,7 +309,9 @@ export class GameLogicService {
 
         if (activePlayers.length <= 1) {
             const winnerId = activePlayers.length === 1 ? activePlayers[0].socketId : null;
-            server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId, isForfeit: true });
+            const gameStats = this.getGameStats(lobbyId);
+            const allPlayers = game.lobby.players ? [...game.lobby.players] : [];
+            server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId, isForfeit: true, players: allPlayers, gameStats });
 
             this.endGame(lobbyId);
             server.in(lobbyId).socketsLeave(lobbyId);
@@ -313,10 +338,17 @@ export class GameLogicService {
         }
     }
 
+    getGameStats(lobbyId: string): GameStats | null {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return null;
+
+        return this.gameSetupService.buildGameStats(game);
+    }
+
     // Alt
 
     shufflePlayers(players: Player[]): Player[] {
-        return this.shuffle([...players]);
+        return this.gameSetupService.shuffle([...players]);
     }
 
     getPlayerPositions(lobbyId: string): Record<string, Vec2> {
@@ -330,43 +362,5 @@ export class GameLogicService {
         return positions;
     }
 
-    private removeUnusedSpawns(game: Game, shuffledSpawns: Vec2[], playerCount: number): void {
-        const usedSpawns = new Set(shuffledSpawns.slice(0, playerCount).map((s) => `${s.x},${s.y}`));
-        for (let row = 0; row < game.grid.length; row++) {
-            for (let col = 0; col < game.grid[row].length; col++) {
-                if (game.grid[row][col].item === TileItem.Spawn && !usedSpawns.has(`${col},${row}`)) {
-                    game.grid[row][col].item = null;
-                }
-            }
-        }
-    }
 
-    private extractSpawnPositions(game: Game): Vec2[] {
-        const spawns: Vec2[] = [];
-        for (let row = 0; row < game.grid.length; row++) {
-            for (let col = 0; col < game.grid[row].length; col++) {
-                if (game.grid[row][col].item === TileItem.Spawn) {
-                    spawns.push({ x: col, y: row });
-                }
-            }
-        }
-        return spawns;
-    }
-
-    private computeTurnOrder(players: Player[]): string[] {
-        const sorted = [...players].sort((a, b) => {
-            const speedDiff = b.character.speed - a.character.speed;
-            if (speedDiff !== 0) return speedDiff;
-            return Math.random() - RANDOM_THRESHOLD;
-        });
-        return sorted.map((p) => p.socketId);
-    }
-
-    private shuffle<T>(array: T[]): T[] {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-    }
 }

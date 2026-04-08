@@ -7,4 +7,9 @@ export interface Player {
     isHost: boolean;
     hasAbandonned: boolean;
     hasFlag: boolean;
+    combatCount: number;
+    lossCount: number;
+    totalHpLost: number;
+    totalHpDealt: number;
+    visitedTilesCount: number;
 }

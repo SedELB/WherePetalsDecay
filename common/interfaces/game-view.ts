@@ -2,6 +2,7 @@ import { Player } from '@common/player';
 import { Lobby } from '../lobby';
 import { Tile } from '../tile';
 import { Vec2 } from '../vec2';
+import { GameStats } from './game-stats';
 
 export interface PlayerMovedData {
     socketId: string;
@@ -39,4 +40,6 @@ export interface GameOverData {
     winnerSocketId?: string | null;
     isForfeit?: boolean;
     abandonTeam?: string;
+    players: Player[];
+    gameStats: GameStats;
 }

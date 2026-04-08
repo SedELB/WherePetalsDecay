@@ -1,9 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GameLogicService } from './game-logic.service';
-import { TurnService } from './turn.service';
-import { MovementService } from './movement.service';
 import { CombatService } from './combat.service';
 import { CTFService } from './ctf.service';
+import { GameLogicService } from './game-logic.service';
+import { GameSetupService } from './game-setup.service';
+import { MovementService } from './movement.service';
+import { TurnService } from './turn.service';
 
 describe('GameLogicService', () => {
   let service: GameLogicService;
@@ -16,6 +17,16 @@ describe('GameLogicService', () => {
         { provide: MovementService, useValue: {} },
         { provide: CombatService, useValue: {} },
         { provide: CTFService, useValue: {} },
+        {
+          provide: GameSetupService,
+          useValue: {
+            buildGameStats: jest.fn(),
+            extractSpawnPositions: jest.fn(),
+            shuffle: jest.fn(),
+            removeUnusedSpawns: jest.fn(),
+            computeTurnOrder: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
