@@ -52,4 +52,5 @@ export interface RenderBoardConfig {
   reachableTiles?: Vec2[];
   teleportableTiles?: Vec2[];
   localPlayerSocketId?: string;
+  inactiveSanctuaries?: Vec2[];
 }

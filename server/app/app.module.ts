@@ -10,6 +10,7 @@ import { GameLogicService } from './services/game-logic/game-logic.service';
 import { TurnService } from './services/game-logic/turn.service';
 import { MovementService } from './services/game-logic/movement.service';
 import { CombatService } from './services/game-logic/combat.service';
+import { SanctuaryService } from './services/game-logic/sanctuary.service';
 import { AdminGateway } from './gateways/admin/admin.gateway';
 import { GameGateway } from './gateways/game/game.gateway';
 import { GamesGateway } from './gateways/games/games.gateway';
@@ -39,6 +40,7 @@ import { ChatGateway } from './gateways/chat/chat.gateway';
         TurnService, 
         MovementService, 
         CombatService,
+        SanctuaryService,
         
         // Gateways
         AdminGateway, 

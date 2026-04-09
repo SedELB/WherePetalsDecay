@@ -302,6 +302,16 @@ export class IsometricViewService {
     const isReachable = config.reachableTiles?.some((t) => t.x === col && t.y === row);
     const isTeleportable = config.teleportableTiles?.some((t) => t.x === col && t.y === row);
 
+    const isInactiveSanctuary = config.inactiveSanctuaries?.some((t) => t.x === col && t.y === row);
+
+    if (isInactiveSanctuary) {
+      ctx.save();
+      this.buildPolygonPath(ctx, [north, east, south, west]);
+      ctx.fillStyle = 'rgba(30, 30, 30, 0.55)';
+      ctx.fill();
+      ctx.restore();
+    }
+
     // Highlight of available tiles to move to
     if (isReachable || isTeleportable) {
       ctx.save();

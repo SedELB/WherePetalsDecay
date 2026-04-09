@@ -19,3 +19,5 @@ export const DOOR_ON_GRID_BORDER = 'ne peut pas être sur le bord de la carte !'
 export const INVALID_DOOR_PLACEMENT = 'Placement de porte invalide à la position';
 export const DESC_INVALID_DOOR_PLACEMENT = 'Une porte ne doit pas être bloquée par un obstacle (porte ou mur)';
 export const FLAG_NOT_PLACED = "Le drapeau n'est pas placé !";
+export const HEALING_SANCTUARIES_NOT_PLACED = 'Le nombre requis de sanctuaires de soin est pas atteint !';
+export const COMBAT_SANCTUARIES_NOT_PLACED = 'Le nombre requis de sanctuaires de combat est pas atteint !';

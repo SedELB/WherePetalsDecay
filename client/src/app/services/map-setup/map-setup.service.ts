@@ -67,7 +67,6 @@ export class MapSetupService {
     }
 
     private applyTile(params: TileParams): void {
-        console.log("applyTile");
         const { game, rowIndex, colIndex, tileAttribute, event, counts } = params;
         const currentTile = game.grid[rowIndex]?.[colIndex];
 
@@ -75,9 +74,16 @@ export class MapSetupService {
             if ([TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed].includes(currentTile.type)) {
                 throw new Error('On ne peut pas placer cet object sur une tuile de terrain');
             }
-            if (!currentTile.item && this.tileItemCountService.verifyEnoughTileItem(counts, tileAttribute as TileItem)) {
-                currentTile.item = tileAttribute as TileItem;
-                this.tileItemCountService.decreaseTileItemCount(counts, tileAttribute as TileItem);
+            const item = tileAttribute as TileItem;
+            if (this.isSanctuary(item)) {
+                if (!this.tileItemCountService.verifyEnoughTileItem(counts, item)) return;
+                if (!this.canPlaceSanctuary(game, rowIndex, colIndex)) return;
+                this.placeSanctuary(game, rowIndex, colIndex, item, counts);
+                return;
+            }
+            if (!currentTile.item && this.tileItemCountService.verifyEnoughTileItem(counts, item)) {
+                currentTile.item = item;
+                this.tileItemCountService.decreaseTileItemCount(counts, item);
             }
         } else {
             if ([TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed].includes(tileAttribute as TileTexture) && currentTile.item) {
@@ -97,10 +103,58 @@ export class MapSetupService {
         return TileTexture.DoorClosed;
     }
 
+    private isSanctuary(item: TileItem): boolean {
+        return item === TileItem.HealingSanctuary || item === TileItem.CombatSanctuary;
+    }
+
+    private canPlaceSanctuary(game: Game, rowIndex: number, colIndex: number): boolean {
+        const rows = game.grid.length;
+        const cols = game.grid[0]?.length ?? 0;
+        if (rowIndex + 1 >= rows || colIndex + 1 >= cols) return false;
+
+        const cells = [
+            game.grid[rowIndex][colIndex],
+            game.grid[rowIndex][colIndex + 1],
+            game.grid[rowIndex + 1][colIndex],
+            game.grid[rowIndex + 1][colIndex + 1],
+        ];
+        return cells.every((tile) => tile.type === TileTexture.Floor && tile.item === null);
+    }
+
+    private placeSanctuary(game: Game, rowIndex: number, colIndex: number, item: TileItem, counts: TileItemCounts): void {
+        game.grid[rowIndex][colIndex].item = item;
+        game.grid[rowIndex][colIndex + 1].item = item;
+        game.grid[rowIndex + 1][colIndex].item = item;
+        game.grid[rowIndex + 1][colIndex + 1].item = item;
+        this.tileItemCountService.decreaseTileItemCount(counts, item);
+    }
+
+    private findSanctuaryTopLeft(game: Game, rowIndex: number, colIndex: number, item: TileItem): Vec2 {
+        let r = rowIndex;
+        let c = colIndex;
+        if (r > 0 && game.grid[r - 1]?.[c]?.item === item) r--;
+        if (c > 0 && game.grid[r]?.[c - 1]?.item === item) c--;
+        return { y: r, x: c };
+    }
+
+    private deleteSanctuary(game: Game, rowIndex: number, colIndex: number, item: TileItem, counts: TileItemCounts): void {
+        const { y: topRow, x: topCol } = this.findSanctuaryTopLeft(game, rowIndex, colIndex, item);
+        game.grid[topRow][topCol].item = null;
+        game.grid[topRow][topCol + 1].item = null;
+        game.grid[topRow + 1][topCol].item = null;
+        game.grid[topRow + 1][topCol + 1].item = null;
+        this.tileItemCountService.increaseTileItemCount(counts, item);
+    }
+
     private deleteTile(params: TileParams): void {
         const { game, rowIndex, colIndex, tileAttribute, event, counts } = params;
         const currentTile = game.grid[rowIndex]?.[colIndex];
         const currItem = currentTile.item;
+
+        if (currItem && this.isSanctuary(currItem) && event.shiftKey) {
+            this.deleteSanctuary(game, rowIndex, colIndex, currItem, counts);
+            return;
+        }
 
         // If shift key is pressed delete the item
         if (currItem && event.shiftKey) {
@@ -307,7 +361,16 @@ export class MapSetupService {
         const placedObjects: PlacedObject[] = [];
         game.grid.forEach((row, y) => {
             row.forEach((tile, x) => {
-                if (tile.item) placedObjects.push({ type: tile.item, position: { x, y } });
+                if (!tile.item) return;
+                if (this.isSanctuary(tile.item)) {
+                    const aboveHasSame = game.grid[y - 1]?.[x]?.item === tile.item;
+                    const leftHasSame = game.grid[y]?.[x - 1]?.item === tile.item;
+                    if (!aboveHasSame && !leftHasSame) {
+                        placedObjects.push({ type: tile.item, position: { x, y } });
+                    }
+                } else {
+                    placedObjects.push({ type: tile.item, position: { x, y } });
+                }
             });
         });
         return placedObjects;

@@ -4,6 +4,8 @@ import { Game } from '@common/game';
 export interface TileItemCounts {
   spawnCount: number;
   flagCount: number;
+  healingSanctuaryCount: number;
+  combatSanctuaryCount: number;
 }
 
 export interface MapSetupSelection {

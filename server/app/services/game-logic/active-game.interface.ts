@@ -15,6 +15,8 @@ export interface ActiveGame {
     playerStartPositions: Map<string, Vec2>;
     movementPoints: Map<string, number>;
     actionPoints: Map<string, number>;
+    sanctuaryCooldowns: Map<string, number>;
+    playerCombatBonusTurns: Map<string, number>;
     isDebugMode?: boolean;
 }
 

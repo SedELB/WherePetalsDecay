@@ -21,6 +21,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   @Input() reachableTiles: Vec2[] = [];
   @Input() teleportableTiles: Vec2[] = [];
   @Input() localPlayerSocketId?: string;
+  @Input() inactiveSanctuaries: Vec2[] = [];
 
   @Output() tileClick = new EventEmitter<Vec2>();
   @Output() rightClick = new EventEmitter<{event: MouseEvent, pos: Vec2}>();
@@ -222,6 +223,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
       reachableTiles: this.reachableTiles,
       teleportableTiles: this.teleportableTiles,
       localPlayerSocketId: this.localPlayerSocketId,
+      inactiveSanctuaries: this.inactiveSanctuaries,
       onRecenter: (zoom, x, y) => {
         this.zoom = zoom;
         this.cameraX = x;

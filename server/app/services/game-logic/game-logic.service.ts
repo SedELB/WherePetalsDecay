@@ -11,7 +11,10 @@ import { Server, Socket } from 'socket.io';
 import { ActiveGame, TurnCallbacks } from './active-game.interface';
 import { CombatService } from './combat.service';
 import { MovementService } from './movement.service';
+import { SanctuaryService, SanctuaryUseResult } from './sanctuary.service';
 import { TurnService } from './turn.service';
+
+export { SanctuaryUseResult };
 
 const RANDOM_THRESHOLD = 0.5;
 const INITIAL_WINS_COUNT = 0;
@@ -22,6 +25,7 @@ export class GameLogicService {
         private readonly turnService: TurnService,
         private readonly movementService: MovementService,
         private readonly combatService: CombatService,
+        private readonly sanctuaryService: SanctuaryService,
     ) {
         this.activeGames = new Map<string, ActiveGame>();
     }
@@ -69,6 +73,8 @@ export class GameLogicService {
             playerStartPositions,
             movementPoints,
             actionPoints,
+            sanctuaryCooldowns: new Map<string, number>(),
+            playerCombatBonusTurns: new Map<string, number>(),
         };
 
         this.activeGames.set(lobby.lobbyId, activeGame);
@@ -202,6 +208,26 @@ export class GameLogicService {
 
 
         return tile.type;
+    }
+
+    // Sanctuary methods
+
+    useSanctuary(lobbyId: string, socketId: string, position: Vec2, mode: 'normal' | 'doubleOrNothing'): SanctuaryUseResult | null {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return null;
+        return this.sanctuaryService.useSanctuary(game, socketId, position, mode);
+    }
+
+    decrementSanctuaryCooldowns(lobbyId: string, endedSocketId: string): string[] {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return [];
+        return this.sanctuaryService.decrementSanctuaryCooldowns(game, endedSocketId);
+    }
+
+    getInactiveSanctuaries(lobbyId: string): Vec2[] {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return [];
+        return this.sanctuaryService.computeInactiveSanctuaries(game);
     }
 
     // Abandon

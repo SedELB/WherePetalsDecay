@@ -1,7 +1,7 @@
-import { GameLogicService } from '@app/services/game-logic/game-logic.service';
+import { GameLogicService, SanctuaryUseResult } from '@app/services/game-logic/game-logic.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Direction } from '@common/direction';
-import { SocketNamespace } from '@common/enums';
+import { SocketNamespace, TileItem } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
@@ -34,6 +34,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             },
             onTurnStarted: (lobbyId: string, playerSocketId: string) => {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnStarted, playerSocketId);
+                this.server.to(lobbyId).emit(JoinGameEvents.SanctuaryStateUpdate, {
+                    inactiveSanctuaries: this.gameLogicService.getInactiveSanctuaries(lobbyId),
+                });
                 this.sendMovementPoints(lobbyId, playerSocketId);
                 this.sendActionPoints(lobbyId, playerSocketId);
                 this.sendReachableTiles(lobbyId, playerSocketId);
@@ -41,6 +44,19 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
                 this.autoEndTurnIfNoActions(lobbyId, playerSocketId);
             },
             onTurnEnded: (lobbyId: string, playerSocketId: string) => {
+                const expiredBonusPlayers = this.gameLogicService.decrementSanctuaryCooldowns(lobbyId, playerSocketId);
+                for (const sid of expiredBonusPlayers) {
+                    const game = this.gameLogicService.getActiveGame(lobbyId);
+                    const player = game?.lobby.players.find((p) => p.socketId === sid);
+                    if (player) {
+                        this.server.to(lobbyId).emit(JoinGameEvents.PlayerStatsUpdate, {
+                            socketId: sid,
+                            attack: player.character.attack,
+                            defense: player.character.defense,
+                            life: player.character.life,
+                        });
+                    }
+                }
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnEnded, playerSocketId);
             },
         });
@@ -176,7 +192,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
     @SubscribeMessage(JoinGameEvents.RequestToggleDoor) handleRequestToggleDoor(
         @ConnectedSocket() socket: Socket,
-        @MessageBody() payload: { lobbyId: string; position: Vec2 }
+        @MessageBody() payload: { lobbyId: string; position: Vec2 },
     ) {
         const { lobbyId, position } = payload;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
@@ -193,6 +209,51 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         this.sendActionPoints(lobbyId, socket.id);
         this.autoEndTurnIfNoActions(lobbyId, socket.id);
     }
+    @SubscribeMessage(JoinGameEvents.RequestUseSanctuary)
+    handleRequestUseSanctuary(
+        @ConnectedSocket() socket: Socket,
+        @MessageBody() payload: { lobbyId: string; position: { x: number; y: number }; mode: 'normal' | 'doubleOrNothing' },
+    ) {
+        const { lobbyId, position, mode } = payload;
+        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
+
+        const result: SanctuaryUseResult = this.gameLogicService.useSanctuary(lobbyId, socket.id, position, mode);
+        if (!result) return;
+
+        const game = this.gameLogicService.getActiveGame(lobbyId);
+        const player = game?.lobby.players.find((p) => p.socketId === socket.id);
+
+        this.server.to(lobbyId).emit(JoinGameEvents.SanctuaryUsed, {
+            socketId: socket.id,
+            position,
+            sanctuaryType: result.sanctuaryType,
+            mode: result.mode,
+            healAmount: result.healAmount,
+            combatBonusApplied: result.combatBonusApplied,
+            playerNewLife: result.playerNewLife,
+            playerName: result.playerName,
+            inactiveSanctuaries: result.inactiveSanctuaries,
+        });
+
+        if (result.combatBonusApplied && player) {
+            this.server.to(lobbyId).emit(JoinGameEvents.PlayerStatsUpdate, {
+                socketId: socket.id,
+                attack: player.character.attack,
+                defense: player.character.defense,
+                life: player.character.life,
+            });
+        }
+
+        const sanctuaryLabel = result.sanctuaryType === TileItem.HealingSanctuary ? 'soin' : 'combat';
+        const modeLabel = mode === 'doubleOrNothing' ? ' (double ou rien)' : '';
+        this.server.to(lobbyId).emit(JoinGameEvents.JournalEntry,
+            `${result.playerName} a utilisé un sanctuaire de ${sanctuaryLabel}${modeLabel}.`,
+        );
+
+        this.sendActionPoints(lobbyId, socket.id);
+        this.autoEndTurnIfNoActions(lobbyId, socket.id);
+    }
+
     @SubscribeMessage(JoinGameEvents.PlayerAbandon)
     handlePlayerAbandon(@ConnectedSocket() socket: Socket) {
         this.processGameDisconnect(socket);

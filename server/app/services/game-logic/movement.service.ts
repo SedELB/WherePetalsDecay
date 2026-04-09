@@ -1,5 +1,6 @@
 import { Direction, DIRECTION_OFFSETS } from '@common/direction';
 import { Game } from '@common/game';
+import { TileItem } from '@common/enums';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
@@ -61,6 +62,7 @@ export class MovementService {
                 const tile = game.lobby.game.grid[nextPos.y][nextPos.x];
                 const tileCost = TILE_COSTS[tile.type];
                 if (tileCost === Infinity) continue;
+                if (this.isSanctuaryTile(game, nextPos)) continue;
                 if (this.isTileOccupied(game, nextPos)) continue;
 
                 reachable.push(nextPos);
@@ -94,6 +96,7 @@ export class MovementService {
                 const tile = game.lobby.game.grid[nextPos.y][nextPos.x];
                 const tileCost = TILE_COSTS[tile.type];
                 if (tileCost === Infinity) continue;
+                if (this.isSanctuaryTile(game, nextPos)) continue;
 
                 const totalCost = current.cost + tileCost;
                 if (totalCost > remaining) continue;
@@ -115,6 +118,11 @@ export class MovementService {
         return game.movementPoints.get(socketId) ?? 0;
     }
 
+    private isSanctuaryTile(game: ActiveGame, pos: Vec2): boolean {
+        const tile = game.lobby.game.grid[pos.y]?.[pos.x];
+        return tile?.item === TileItem.HealingSanctuary || tile?.item === TileItem.CombatSanctuary;
+    }
+
     private isValidTeleportMove(game: ActiveGame, targetPos: Vec2): boolean {
         if (!this.isWithinBounds(game.lobby.game, targetPos)) return false;
 
@@ -122,6 +130,7 @@ export class MovementService {
         const cost = TILE_COSTS[tile.type];
 
         if (cost === Infinity) return false;
+        if (this.isSanctuaryTile(game, targetPos)) return false;
         if (this.isTileOccupied(game, targetPos)) return false;
 
         return true;
@@ -135,6 +144,7 @@ export class MovementService {
 
         if (cost === Infinity) return false;
         if (cost > game.movementPoints.get(socketId)) return false;
+        if (this.isSanctuaryTile(game, targetPos)) return false;
         if (this.isTileOccupied(game, targetPos)) return false;
 
         return true;
