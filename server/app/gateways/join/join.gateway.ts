@@ -20,6 +20,7 @@ import { Player } from '@common/player';
 import { Server, Socket } from 'socket.io';
 
 const INITIAL_WINS_COUNT = 0;
+const LOBBIES_REFRESH_DELAY_MS = 0;
 
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
@@ -59,6 +60,11 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         payload.player.winsCount = INITIAL_WINS_COUNT;
         payload.player.hasAbandonned = false;
         payload.player.playerType = PlayerType.Reel;
+        payload.player.combatCount = 0;
+        payload.player.lossCount = 0;
+        payload.player.totalHpLost = 0;
+        payload.player.totalHpDealt = 0;
+        payload.player.visitedTilesCount = 0;
         const createdLobby = this.lobbyService.createLobby(payload.game, socket.id, payload.player);
 
         if (createdLobby) {
@@ -76,6 +82,16 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         this.server.emit(JoinGameEvents.UpdatedLobbiesList, availableLobbies);
     }
 
+    @SubscribeMessage(JoinGameEvents.StartGame)
+    handleStartGameLobbiesRefresh() {
+        this.deferLobbiesRefresh();
+    }
+
+    @SubscribeMessage(JoinGameEvents.LeaveEndGame)
+    handleLeaveEndGameLobbiesRefresh() {
+        this.deferLobbiesRefresh();
+    }
+
     @SubscribeMessage(JoinGameEvents.JoinLobby)
     handleJoinLobby(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; player: Player }) {
         const lobby = this.lobbyService.getLobby(payload.lobbyId);
@@ -91,6 +107,11 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         payload.player.socketId = socket.id;
         payload.player.isHost = false;
         payload.player.winsCount = INITIAL_WINS_COUNT;
+        payload.player.combatCount = 0;
+        payload.player.lossCount = 0;
+        payload.player.totalHpLost = 0;
+        payload.player.totalHpDealt = 0;
+        payload.player.visitedTilesCount = 0;
         payload.player.hasAbandonned = false;
         payload.player.playerType = PlayerType.Reel;
 
@@ -115,7 +136,6 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             socket.emit(JoinGameEvents.LobbyJoined, updatedLobby);
             socket.broadcast.to(updatedLobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby);
             socket.broadcast.to(updatedLobby.lobbyId).emit(JoinGameEvents.PlayerJoined, payload.player);
-
             this.handleGetLobbies();
         }
     }
@@ -174,6 +194,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         const success = this.lobbyService.kickPlayer(payload.lobbyId, socket.id, payload.targetSocketId);
 
         if (success) {
+
             this.server.to(payload.targetSocketId).emit(JoinGameEvents.PlayerKicked, `Vous avez été exclu par l'organisateur.`);
             this.server.in(payload.targetSocketId).socketsLeave(payload.lobbyId);
 
@@ -215,6 +236,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             this.logger.log(`Host left. Deleting lobby: ${lobby.lobbyId}`);
             socket.to(lobby.lobbyId).emit(JoinGameEvents.GameDeleted);
             this.lobbyService.deleteLobby(lobby.lobbyId);
+            socket.leave(lobby.lobbyId);
         } else {
             const leavingPlayer = lobby.players.find(player => player.socketId === socket.id);
 
@@ -226,6 +248,8 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
                 this.logger.log(`Pending player ${socket.id} left lobby: ${lobby.lobbyId}`);
                 this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
             }
+
+            socket.leave(lobby.lobbyId);
 
             const allOccupiedAvatars = this.lobbyService.getOccupiedAvatars(lobby);
             this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
@@ -245,4 +269,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         this.leaveFromWaitingLobby(lobby, socket);
     }
 
+    private deferLobbiesRefresh() {
+        setTimeout(() => this.handleGetLobbies(), LOBBIES_REFRESH_DELAY_MS);
+    }
 }

@@ -1,10 +1,10 @@
+import { ChatMessage } from '@common/chat-message';
 import { HISTORY_MAX_MESSAGE } from '@common/constants/validation.constants';
-import { PlayerType, VirtualPlayerProfile } from '@common/enums';
+import { GameMode, PlayerType, VirtualPlayerProfile } from '@common/enums';
 import { Game } from '@common/game';
 import { Lobby } from '@common/lobby';
-import { Injectable } from '@nestjs/common';
 import { Player } from '@common/player';
-import { ChatMessage } from '@common/chat-message';
+import { Injectable } from '@nestjs/common';
 import { AVATARS_PATH, RANDOM_NAMES, BASE_STATS, RANDOM_PROBABILITY } from '@common/constants/character.constants';
 import { Character } from '@common/character';
 
@@ -16,6 +16,7 @@ const ID_PADDING_LENGTH = 5;
 const DUPLICATE_NAME_SUFFIX_START = 2;
 const VIRTUAL_PLAYER_ID_BASE = 1000;
 const AVATAR_ALREADY_TAKEN_ERROR = 'Avatar already taken';
+const HALF_CHANCE = 0.5;
 
 @Injectable()
 export class LobbyService {
@@ -52,6 +53,8 @@ export class LobbyService {
             players: [player],
             pendingAvatars: {},
             chatHistory: [],
+            teamA: [],
+            teamB: [],
         };
 
         this.lobbies.set(lobbyId, lobby);
@@ -60,6 +63,16 @@ export class LobbyService {
 
     getLobby(lobbyId: string): Lobby | undefined {
         return this.lobbies.get(lobbyId);
+    }
+
+    private createTeams(lobbyId: string): { teamA: Player[], teamB: Player[] } {
+        const lobby = this.getLobby(lobbyId);
+        if (lobby.game.gameMode !== GameMode.Ctf || lobby.playerCount % 2 !== 0) return null;
+
+        const randomPlayers = [...lobby.players].sort(() => Math.random() - HALF_CHANCE);
+        const teamA = [...randomPlayers].slice(0, randomPlayers.length / 2);
+        const teamB = [...randomPlayers].slice(randomPlayers.length / 2);
+        return { teamA, teamB };
     }
 
     getAvailableLobbies(): Lobby[] {
@@ -107,11 +120,14 @@ export class LobbyService {
     removePlayerFromLobby(lobbyId: string, socketId: string): void {
         const lobby = this.lobbies.get(lobbyId);
         if (lobby) {
+            const wasFullBeforeLeave = lobby.playerCount === lobby.game.maxPlayers;
             lobby.players = lobby.players.filter((player) => player.socketId !== socketId);
             delete lobby.pendingAvatars[socketId];
             lobby.playerCount = lobby.players.length;
+            lobby.teamA = lobby.teamA.filter(p => p.socketId !== socketId);
+            lobby.teamB = lobby.teamB.filter(p => p.socketId !== socketId);
 
-            if (lobby.playerCount < lobby.game.maxPlayers) {
+            if (wasFullBeforeLeave && lobby.playerCount < lobby.game.maxPlayers) {
                 lobby.isLocked = false;
             }
         }
@@ -155,14 +171,21 @@ export class LobbyService {
         }
     }
 
-    canStartGame(lobbyId: string, hostSocketId: string): Lobby | undefined {
+    canStartGame(lobbyId: string, hostSocketId: string): Lobby | null {
         const lobby = this.getLobby(lobbyId);
 
         if (lobby && lobby.hostSocketId === hostSocketId && lobby.playerCount >= 2) {
+            if (lobby.game.gameMode === GameMode.Ctf) {
+                const teams = this.createTeams(lobbyId);
+                if (!teams) return null;
+                lobby.teamA = teams.teamA;
+                lobby.teamB = teams.teamB;
+            }
+
             lobby.isLocked = true;
             return lobby;
         }
-        return undefined;
+        return null;
     }
 
     kickPlayer(lobbyId: string, hostSocketId: string, targetSocketId: string): boolean {
@@ -227,7 +250,7 @@ export class LobbyService {
             attackDice: attackDiceD6 ? 'D6' : 'D4',
             defenseDice: attackDiceD6 ? 'D4' : 'D6',
         };
-        const virtualPLayer: Player = {
+        const virtualPlayer: Player = {
             socketId: `virtual-${Date.now()}-${Math.floor(Math.random() * VIRTUAL_PLAYER_ID_BASE)}`,
             character,
             isHost: false,
@@ -235,9 +258,15 @@ export class LobbyService {
             hasAbandonned: false,
             playerType: PlayerType.Virtual,
             virtualProfile: profile,
+            hasFlag: false,
+            combatCount: 0,
+            lossCount: 0,
+            totalHpLost: 0,
+            totalHpDealt: 0,
+            visitedTilesCount: 0,
         };
 
-        const updatedLobby = this.joinLobby(lobbyId, virtualPLayer);
+        const updatedLobby = this.joinLobby(lobbyId, virtualPlayer);
         return updatedLobby;
     }
     

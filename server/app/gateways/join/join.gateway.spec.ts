@@ -51,10 +51,12 @@ describe('JoinGateway', () => {
         players: [],
         pendingAvatars: {},
         chatHistory: [],
+        teamA: [],
+        teamB: [],
     };
 
     const makeMockPlayer = (): Player => ({
-        socketId: null,
+        socketId: '',
         character: {
             name: 'MOCK_PLAYER',
             avatar: 'mockavatar.png',
@@ -70,6 +72,12 @@ describe('JoinGateway', () => {
         winsCount: 0,
         hasAbandonned: false,
         playerType: PlayerType.Reel,
+        hasFlag: false,
+        combatCount: 0,
+        lossCount: 0,
+        totalHpLost: 0,
+        totalHpDealt: 0,
+        visitedTilesCount: 0,
     });
 
     beforeEach(async () => {
@@ -79,6 +87,7 @@ describe('JoinGateway', () => {
             id: 'socket-123',
             emit: jest.fn(),
             join: jest.fn(),
+            leave: jest.fn(),
             to: jest.fn().mockReturnValue(mockTo),
             broadcast: { to: jest.fn().mockReturnValue(mockTo) },
         } as unknown as Socket;
@@ -186,6 +195,30 @@ describe('JoinGateway', () => {
 
             gateway.handleGetLobbies();
             expect(mockServer.emit).toHaveBeenCalledWith(JoinGameEvents.UpdatedLobbiesList, fakeLobbies);
+        });
+
+        it('should refresh lobby list after StartGame event', () => {
+            jest.useFakeTimers();
+            const lobbiesSpy = jest.spyOn(gateway, 'handleGetLobbies');
+
+            gateway.handleStartGameLobbiesRefresh();
+
+            expect(lobbiesSpy).not.toHaveBeenCalled();
+            jest.runOnlyPendingTimers();
+            expect(lobbiesSpy).toHaveBeenCalledTimes(1);
+            jest.useRealTimers();
+        });
+
+        it('should refresh lobby list after LeaveEndGame event', () => {
+            jest.useFakeTimers();
+            const lobbiesSpy = jest.spyOn(gateway, 'handleGetLobbies');
+
+            gateway.handleLeaveEndGameLobbiesRefresh();
+
+            expect(lobbiesSpy).not.toHaveBeenCalled();
+            jest.runOnlyPendingTimers();
+            expect(lobbiesSpy).toHaveBeenCalledTimes(1);
+            jest.useRealTimers();
         });
     });
 
@@ -314,6 +347,7 @@ describe('JoinGateway', () => {
             expect(mockSocket.to).toHaveBeenCalledWith('lobby-1');
             expect(mockTo.emit).toHaveBeenCalledWith(JoinGameEvents.GameDeleted);
             expect(lobbyService.deleteLobby).toHaveBeenCalledWith('lobby-1');
+            expect(mockSocket.leave).toHaveBeenCalledWith('lobby-1');
         });
 
         // EDGE CASE: NON-HOST DISCONNECT - player leaves but lobby persists
@@ -324,6 +358,7 @@ describe('JoinGateway', () => {
 
             gateway.handleDisconnect(mockSocket);
             expect(lobbyService.removePlayerFromLobby).toHaveBeenCalledWith('lobby-1', 'socket-123');
+            expect(mockSocket.leave).toHaveBeenCalledWith('lobby-1');
             expect(mockServer.to).toHaveBeenCalledWith('lobby-1');
             expect(mockTo.emit).toHaveBeenCalledWith(JoinGameEvents.UpdateOccupiedAvatars, []);
             expect(mockTo.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyUpdated, expect.any(Object));
@@ -342,6 +377,15 @@ describe('JoinGateway', () => {
             jest.spyOn(lobbyService, 'findLobbyBySocketId').mockReturnValue(null);
             gateway.handleLeaveLobby(mockSocket);
             expect(lobbyService.findLobbyBySocketId).toHaveBeenCalledWith('socket-123');
+        });
+
+        it('should leave socket room when non-host manually leaves', () => {
+            jest.spyOn(lobbyService, 'findLobbyBySocketId').mockReturnValue({ ...fakeLobby, hostSocketId: 'other-socket' });
+            jest.spyOn(lobbyService, 'getAvailableLobbies').mockReturnValue([]);
+
+            gateway.handleLeaveLobby(mockSocket);
+
+            expect(mockSocket.leave).toHaveBeenCalledWith('lobby-1');
         });
     });
 });

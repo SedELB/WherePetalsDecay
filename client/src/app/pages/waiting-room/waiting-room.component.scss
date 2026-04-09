@@ -4,9 +4,6 @@ $primary-color: #8b5cf6;
 $text-color: #ffffff;
 
 .container {
-    background-image: url('../../../assets/background.png');
-    background-size: cover;
-    background-position: center bottom;
     min-height: 100vh;
     display: flex;
     flex-direction: column;

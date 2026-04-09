@@ -7,7 +7,7 @@ import { ROUTES } from '@app/constants/routes.constants';
 import { ChatService } from '@app/services/chat/chat.service';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
-import { ButtonVariant, SocketNamespace } from '@common/enums';
+import { ButtonVariant, GameMode, SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
@@ -114,7 +114,6 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
                 },
             });
         });
-
     }
 
     ngOnDestroy(): void {
@@ -144,7 +143,13 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
 
     canStartGame = computed(() => {
         const lobby = this.currentLobby();
-        return this.isOrganizer() && (lobby?.playerCount ?? 0) >= 2;
+        const playerCount = lobby?.playerCount ?? 0;
+
+        if (lobby?.game.gameMode === GameMode.Classic) {
+            return this.isOrganizer() && playerCount >= 2;
+        } else {
+            return this.isOrganizer() && playerCount >=2 && playerCount % 2 === 0;
+        }
     });
 
     players = computed(() => {
@@ -166,6 +171,8 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
     }
 
     onStartGame(): void {
+        swal.close();
+        
         if (this.canStartGame()) {
             this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.StartGame, this.lobbyId());
         }
