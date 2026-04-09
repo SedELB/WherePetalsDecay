@@ -76,6 +76,20 @@ describe('CharacterService', () => {
         expect(typeof random.attackDiceD6).toBe('boolean');
     });
 
+    it('should generate avatar from provided avatar pool', () => {
+        const limitedPool = [AVATARS_PATH[0], AVATARS_PATH[1]];
+
+        const random = service.generateRandomCharacter(limitedPool);
+
+        expect(limitedPool).toContain(random.avatarPath);
+    });
+
+    it('should fallback to default avatars when provided pool is empty', () => {
+        const random = service.generateRandomCharacter([]);
+
+        expect(AVATARS_PATH).toContain(random.avatarPath);
+    });
+
     // Test random character generation produces different results
     it('should generate different random characters on multiple calls', () => {
         const random1 = service.generateRandomCharacter();

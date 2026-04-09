@@ -1,6 +1,6 @@
 import { BASE_STATS } from '@common/constants/character.constants';
 import { Direction } from '@common/direction';
-import { GameMode } from '@common/enums';
+import { PlayerType, GameMode } from '@common/enums';
 import { GameStats } from '@common/interfaces/game-stats';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
@@ -296,6 +296,7 @@ export class GameLogicService {
         socket.leave(lobbyId);
 
         const activePlayers = this.getActivePlayers(lobbyId);
+        const activeRealPlayers = activePlayers.filter((p) => p.playerType === PlayerType.Reel);
 
         if (game.lobby.game.gameMode === GameMode.Ctf) {
             const teamA = this.getActivePlayers(lobbyId, 'A');
@@ -314,7 +315,7 @@ export class GameLogicService {
             }
         }
 
-        if (activePlayers.length <= 1) {
+        if (activePlayers.length <= 1 || activeRealPlayers.length === 0) {
             const winnerId = activePlayers.length === 1 ? activePlayers[0].socketId : null;
             const gameStats = this.getGameStats(lobbyId);
             const allPlayers = [...game.lobby.players];

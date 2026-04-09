@@ -13,6 +13,7 @@ import { ButtonVariant } from '@common/enums';
 
 export class ButtonComponent {
     protected readonly buttonVariant = ButtonVariant;
+    isMenuOpen: boolean = false;
     @Input() color: string = 'white';
     @Input() backgroundColor: string | null = null;
     @Input() width?: number;
@@ -25,10 +26,24 @@ export class ButtonComponent {
     @Input() isVisible: boolean = false;
 
     @Output() clicked = new EventEmitter<void>();
+    @Output() profileSelected = new EventEmitter<string>();
 
     onClick(): void {
         if (!this.disabled) {
             this.clicked.emit();
+        }
+    }
+
+    toggleMenu(): void {
+        if (!this.disabled) {
+            this.isMenuOpen = !this.isMenuOpen;
+        }
+    }
+
+    onProfileSelected(profile: string): void {
+        if (!this.disabled) {
+            this.profileSelected.emit(profile);
+            this.isMenuOpen = false;
         }
     }
 

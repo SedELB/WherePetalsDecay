@@ -9,7 +9,7 @@
 
 import { GameLogicService } from '@app/services/game-logic/game-logic.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
-import { GameMode } from '@common/enums';
+import { GameMode, PlayerType } from '@common/enums';
 import { Game } from '@common/game';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
@@ -71,6 +71,7 @@ describe('JoinGateway', () => {
         isHost: false,
         winsCount: 0,
         hasAbandonned: false,
+        playerType: PlayerType.Reel,
         hasFlag: false,
         combatCount: 0,
         lossCount: 0,
@@ -100,11 +101,14 @@ describe('JoinGateway', () => {
             createLobby: jest.fn(),
             getAvailableLobbies: jest.fn(),
             getLobby: jest.fn(),
+            getLobbyValidationError: jest.fn(),
+            getValidName: jest.fn((name: string) => name),
             joinLobby: jest.fn(),
             deleteLobby: jest.fn(),
             findLobbyBySocketId: jest.fn(),
             removePlayerFromLobby: jest.fn(),
             updatePlayerAvatar: jest.fn(),
+            getOccupiedAvatars: jest.fn().mockReturnValue([]),
         };
 
         const module: TestingModule = await Test.createTestingModule({
@@ -222,6 +226,7 @@ describe('JoinGateway', () => {
         // EDGE CASE: Attempting to join non-existent lobby (deleted by host or server)
         it('should emit LobbyError if lobby does not exist', () => {
             jest.spyOn(lobbyService, 'getLobby').mockReturnValue(null);
+            jest.spyOn(lobbyService, 'getLobbyValidationError').mockReturnValue(`Ce salon n'existe plus.`);
 
             gateway.handleJoinLobby(mockSocket, { lobbyId: 'lobby-1', player: makeMockPlayer() });
             expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyError, `Ce salon n'existe plus.`);
@@ -229,6 +234,7 @@ describe('JoinGateway', () => {
 
         it('should emit LobbyError if lobby is locked', () => {
             jest.spyOn(lobbyService, 'getLobby').mockReturnValue({ ...fakeLobby, isLocked: true });
+            jest.spyOn(lobbyService, 'getLobbyValidationError').mockReturnValue('Ce salon est verrouillé !');
 
             gateway.handleJoinLobby(mockSocket, { lobbyId: 'lobby-1', player: makeMockPlayer() });
             expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyError, 'Ce salon est verrouillé !');
@@ -238,6 +244,7 @@ describe('JoinGateway', () => {
         // This prevents players from exceeding maxPlayers limit
         it('should emit LobbyError if lobby is full', () => {
             jest.spyOn(lobbyService, 'getLobby').mockReturnValue({ ...fakeLobby, playerCount: 4 });
+            jest.spyOn(lobbyService, 'getLobbyValidationError').mockReturnValue('Ce salon est plein !');
 
             gateway.handleJoinLobby(mockSocket, { lobbyId: 'lobby-1', player: makeMockPlayer() });
             expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyError, 'Ce salon est plein !');
@@ -246,6 +253,8 @@ describe('JoinGateway', () => {
         it('should join lobby and emit LobbyJoined on success', () => {
             const mockPayload = { lobbyId: 'lobby-1', player: makeMockPlayer() };
             jest.spyOn(lobbyService, 'getLobby').mockReturnValue(fakeLobby);
+            jest.spyOn(lobbyService, 'getLobbyValidationError').mockReturnValue(undefined);
+            jest.spyOn(lobbyService, 'getValidName').mockReturnValue(mockPayload.player.character.name);
             jest.spyOn(lobbyService, 'joinLobby').mockReturnValue(fakeLobby);
             jest.spyOn(lobbyService, 'getAvailableLobbies').mockReturnValue([]);
 
@@ -255,6 +264,22 @@ describe('JoinGateway', () => {
             expect(mockSocket.broadcast.to).toHaveBeenCalledWith('lobby-1');
             expect(mockTo.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyUpdated, fakeLobby);
             expect(mockTo.emit).toHaveBeenCalledWith(JoinGameEvents.PlayerJoined, mockPayload.player);
+        });
+
+        it('should emit LobbyError when join fails because avatar is already taken', () => {
+            const mockPayload = { lobbyId: 'lobby-1', player: makeMockPlayer() };
+            jest.spyOn(lobbyService, 'getLobby').mockReturnValue(fakeLobby);
+            jest.spyOn(lobbyService, 'getLobbyValidationError').mockReturnValue(undefined);
+            jest.spyOn(lobbyService, 'getValidName').mockReturnValue(mockPayload.player.character.name);
+            jest.spyOn(lobbyService, 'joinLobby').mockImplementation(() => {
+                throw new Error('Avatar already taken');
+            });
+
+            gateway.handleJoinLobby(mockSocket, mockPayload);
+            const lobbyError = "Cet avatar n'est plus disponible. Veuillez en choisir un autre.";
+            expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.LobbyError, lobbyError);
+            expect(mockSocket.emit).toHaveBeenCalledWith(JoinGameEvents.UpdateOccupiedAvatars, []);
+            expect(mockSocket.join).not.toHaveBeenCalled();
         });
     });
 
