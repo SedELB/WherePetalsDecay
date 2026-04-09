@@ -9,6 +9,8 @@ import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Vec2 } from '@common/vec2';
 
+const SANCTUARY_BLOCK_SIZE = 2;
+
 const ONE_SECOND_DELAY = 1000;
 
 @Injectable({
@@ -31,6 +33,8 @@ export class GameViewService {
     readonly tileInfo = signal<TileInfoData | null>(null);
     readonly gameOver = signal<{ winnerSocketId: string | null; isForfeit?: boolean } | null>(null);
     readonly turnNotification = signal<string | null>(null);
+    readonly inactiveSanctuaries = signal<Vec2[]>([]);
+    readonly journalEntries = signal<string[]>([]);
 
     constructor(
         private readonly webSocketService: WebSocketService,
@@ -183,6 +187,49 @@ export class GameViewService {
                 });
             },
         );
+
+        this.webSocketService.onNamespace<{ inactiveSanctuaries: Vec2[] }>(
+            this.namespace, JoinGameEvents.SanctuaryStateUpdate, (data) => {
+                this.inactiveSanctuaries.set(this.expandSanctuaryPositions(data.inactiveSanctuaries));
+            },
+        );
+
+        this.webSocketService.onNamespace<{
+            socketId: string; sanctuaryType: string; mode: string;
+            healAmount: number; combatBonusApplied: boolean;
+            playerNewLife: number; playerName: string; inactiveSanctuaries: Vec2[];
+        }>(this.namespace, JoinGameEvents.SanctuaryUsed, (data) => {
+            this.inactiveSanctuaries.set(this.expandSanctuaryPositions(data.inactiveSanctuaries));
+            if (data.healAmount > 0) {
+                this.gameLobby.update((lobby) => {
+                    if (!lobby) return lobby;
+                    const updatedPlayers = lobby.players.map((p) =>
+                        p.socketId === data.socketId
+                            ? { ...p, character: { ...p.character, life: data.playerNewLife } }
+                            : p,
+                    );
+                    return { ...lobby, players: updatedPlayers };
+                });
+            }
+        });
+
+        this.webSocketService.onNamespace<{ socketId: string; attack: number; defense: number; life: number }>(
+            this.namespace, JoinGameEvents.PlayerStatsUpdate, (data) => {
+                this.gameLobby.update((lobby) => {
+                    if (!lobby) return lobby;
+                    const updatedPlayers = lobby.players.map((p) =>
+                        p.socketId === data.socketId
+                            ? { ...p, character: { ...p.character, attack: data.attack, defense: data.defense, life: data.life } }
+                            : p,
+                    );
+                    return { ...lobby, players: updatedPlayers };
+                });
+            },
+        );
+
+        this.webSocketService.onNamespace<string>(this.namespace, JoinGameEvents.JournalEntry, (message) => {
+            this.journalEntries.update((entries) => [...entries, message]);
+        });
     }
 
     // Emit
@@ -221,6 +268,22 @@ export class GameViewService {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestToggleDoor, { lobbyId, position });
     }
 
+    sendUseSanctuary(lobbyId: string, position: Vec2, mode: 'normal' | 'doubleOrNothing'): void {
+        this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestUseSanctuary, { lobbyId, position, mode });
+    }
+
+    private expandSanctuaryPositions(topLeftList: Vec2[]): Vec2[] {
+        const expanded: Vec2[] = [];
+        for (const tl of topLeftList) {
+            for (let dy = 0; dy < SANCTUARY_BLOCK_SIZE; dy++) {
+                for (let dx = 0; dx < SANCTUARY_BLOCK_SIZE; dx++) {
+                    expanded.push({ x: tl.x + dx, y: tl.y + dy });
+                }
+            }
+        }
+        return expanded;
+    }
+
     sendTileInfoRequest(lobbyId: string, position: Vec2): void {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestTileInfo, { lobbyId, position });
     }
@@ -239,6 +302,8 @@ export class GameViewService {
         this.playerPositions.set({});
         this.turnOrder.set([]);
         this.turnNotification.set(null);
+        this.inactiveSanctuaries.set([]);
+        this.journalEntries.set([]);
     }
 
     private showNextTurnNotification(endedPlayerSocketId: string): void {

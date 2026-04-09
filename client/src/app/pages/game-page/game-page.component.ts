@@ -9,7 +9,7 @@ import { ROUTES } from '@app/constants/routes.constants';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS, KEY_TO_DIRECTION } from '@common/direction';
-import { GameMode, TileTexture } from '@common/enums';
+import { GameMode, TileItem, TileTexture } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
@@ -40,6 +40,9 @@ export class GamePageComponent implements OnInit {
     isJournalOpen = false;
     isCombatMode = false;
     isLeftPanelOpen = true;
+    showSanctuaryModal = false;
+    pendingSanctuaryPosition: Vec2 | null = null;
+    pendingSanctuaryType: TileItem | null = null;
 
     protected gameMode = GameMode;
 
@@ -93,6 +96,8 @@ export class GamePageComponent implements OnInit {
     });
 
     readonly isMyTurn = computed(() => this.activePlayerSocketId() === this.gameViewService.getLocalSocketId());
+    readonly inactiveSanctuaries = computed(() => this.gameViewService.inactiveSanctuaries());
+    readonly journalEntries = computed(() => this.gameViewService.journalEntries());
 
     readonly adjacentPlayers = computed((): Player[] => {
         if (!this.isMyTurn()) return [];
@@ -134,6 +139,16 @@ export class GamePageComponent implements OnInit {
                 }, GAME_OVER_REDIRECT_DELAY);
             }
         });
+
+        effect(() => {
+            const activeId = this.activePlayerSocketId();
+            const localId = this.gameViewService.getLocalSocketId();
+            if (activeId !== localId && this.showSanctuaryModal) {
+                this.showSanctuaryModal = false;
+                this.pendingSanctuaryPosition = null;
+                this.pendingSanctuaryType = null;
+            }
+        });
     }
 
     ngOnInit(): void {
@@ -151,7 +166,7 @@ export class GamePageComponent implements OnInit {
             return;
         }
 
-        if (!this.isMyTurn() || this.isChatFocused) return;
+        if (!this.isMyTurn() || this.isChatFocused || this.showSanctuaryModal) return;
         const direction = KEY_TO_DIRECTION[event.key];
         if (!direction) return;
 
@@ -205,29 +220,67 @@ export class GamePageComponent implements OnInit {
 
     onTileClick(col: number, row: number): void {
         const lobbyId = this.lobby()?.lobbyId;
-        if (!lobbyId) return;
+        if (!lobbyId || !this.isMyTurn()) return;
 
-        const tileType = this.game()?.grid[row][col].type;
+        const tile = this.game()?.grid[row][col];
+        const isAdjacent = this.isTileAdjacentToPlayer(col, row);
+
+        if (this.tryHandleDoorClick(lobbyId, col, row, tile?.type, isAdjacent)) return;
+        if (this.tryHandleSanctuaryClick(col, row, tile?.item as TileItem | null | undefined, isAdjacent)) return;
+        this.tryHandleCombatClick(lobbyId, col, row);
+    }
+
+    private isTileAdjacentToPlayer(col: number, row: number): boolean {
+        const localId = this.gameViewService.getLocalSocketId();
+        const myPos = localId ? this.playerPositions()[localId] : null;
+        if (!myPos) return false;
+        return Object.values(DIRECTION_OFFSETS).some((offset) => myPos.x + offset.x === col && myPos.y + offset.y === row);
+    }
+
+    private tryHandleDoorClick(lobbyId: string, col: number, row: number, tileType: TileTexture | undefined, isAdjacent: boolean): boolean {
         const isDoor = tileType === TileTexture.DoorClosed || tileType === TileTexture.DoorOpened;
-        const isAdjacentTile = Object.values(DIRECTION_OFFSETS).some((offset) => {
-            const localId = this.gameViewService.getLocalSocketId();
-            const myPos = localId ? this.playerPositions()[localId] : null;
-            return myPos && myPos.x + offset.x === col && myPos.y + offset.y === row;
-        });
+        if (!isDoor || !isAdjacent) return false;
+        this.gameViewService.sendToggleDoor(lobbyId, { x: col, y: row });
+        return true;
+    }
 
-        if (this.isMyTurn() && isDoor && isAdjacentTile) {
-            this.gameViewService.sendToggleDoor(lobbyId, { x: col, y: row });
-            return;
-        }
+    private tryHandleSanctuaryClick(col: number, row: number, tileItem: TileItem | null | undefined, isAdjacent: boolean): boolean {
+        const isSanctuary = tileItem === TileItem.HealingSanctuary || tileItem === TileItem.CombatSanctuary;
+        const isInactive = this.inactiveSanctuaries().some((p) => p.x === col && p.y === row);
+        if (!isSanctuary || !isAdjacent || isInactive) return false;
+        this.pendingSanctuaryPosition = { x: col, y: row };
+        this.pendingSanctuaryType = tileItem;
+        this.showSanctuaryModal = true;
+        return true;
+    }
 
+    private tryHandleCombatClick(lobbyId: string, col: number, row: number): void {
         if (!this.isCombatMode) return;
         const targetSocketId = this.getPlayerAtPosition(col, row);
         if (!targetSocketId) return;
         const isAdjacent = this.adjacentPlayers().some((p) => p.socketId === targetSocketId);
         if (!isAdjacent) return;
-
         this.gameViewService.sendCombat(lobbyId, targetSocketId);
         this.isCombatMode = false;
+    }
+
+    onUseSanctuary(mode: 'normal' | 'doubleOrNothing'): void {
+        const lobbyId = this.lobby()?.lobbyId;
+        if (!lobbyId || !this.pendingSanctuaryPosition) return;
+        this.gameViewService.sendUseSanctuary(lobbyId, this.pendingSanctuaryPosition, mode);
+        this.showSanctuaryModal = false;
+        this.pendingSanctuaryPosition = null;
+        this.pendingSanctuaryType = null;
+    }
+
+    onCancelSanctuary(): void {
+        this.showSanctuaryModal = false;
+        this.pendingSanctuaryPosition = null;
+        this.pendingSanctuaryType = null;
+    }
+
+    getSanctuaryLabel(): string {
+        return this.pendingSanctuaryType === TileItem.HealingSanctuary ? 'Soin (+2 PV)' : 'Combat (+1 ATK / +1 DEF)';
     }
 
     onRightClick(event: MouseEvent, position: Vec2): void {

@@ -1,13 +1,15 @@
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { Tile } from '@app/model/schema/game.schema';
 import { DESC_MAX_LENGTH, NAME_MAX_LENGTH, TEXT_MIN_LENGTH } from '@app/utils/game.constants';
-import { GameMode, TileTexture } from '@common/enums';
-import { Vec2 } from '@common/vec2';
+import { GameMode, GridSizes, SanctuaryCount, TileItem, TileTexture } from '@common/enums';
 import {
+    COMBAT_SANCTUARIES_NOT_PLACED,
+    DESC_INVALID_DOOR_PLACEMENT,
     DESCRIPTION_FIELD_EMPTY,
     DESCRIPTION_FIELD_TOO_LONG,
     DOOR_ON_GRID_BORDER,
     FLAG_NOT_PLACED,
+    HEALING_SANCTUARIES_NOT_PLACED,
     INSUFFICIENT_TERRAIN_TILES,
     INVALID_DOOR_PLACEMENT,
     NAME_FIELD_EMPTY,
@@ -15,8 +17,8 @@ import {
     NO_TERRAIN_TILES,
     SPAWN_POINTS_NOT_PLACED,
     UNREACHABLE_TILES,
-    DESC_INVALID_DOOR_PLACEMENT,
 } from '@common/error-messages';
+import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
@@ -91,9 +93,10 @@ export class GameValidatorService {
         if (!isWithinBounds) return false;
 
         const isNotWall = game.grid[y][x].type !== TileTexture.Wall;
+        const isNotSanctuary = game.grid[y][x].item !== TileItem.HealingSanctuary && game.grid[y][x].item !== TileItem.CombatSanctuary;
         const isNotVisited = !visited.has(`${y}, ${x}`);
 
-        return isNotWall && isNotVisited;
+        return isNotWall && isNotSanctuary && isNotVisited;
     }
 
     private areThereUnreachableTiles(game: CreateGameDto): boolean {
@@ -103,8 +106,11 @@ export class GameValidatorService {
         }
 
         const types = this.countByProperty(game, 'type');
+        const items = this.countByProperty(game, 'item');
+        const sanctuaryTiles = (items.healingSanctuary || 0) + (items.combatSanctuary || 0);
+
         const totalWalkable = (types.floor || 0) + (types.water || 0) + (types.ice || 0) +
-            (types.doorOpened || 0) + (types.doorClosed || 0); // Door and terrain
+            (types.doorOpened || 0) + (types.doorClosed || 0) - sanctuaryTiles; // Door and terrain
 
         const queue = [startPos];
         const visited = new Set<string>();
@@ -147,6 +153,36 @@ export class GameValidatorService {
 
         if (isInside) return true;
         return false;
+    }
+    private countSanctuaryBlocks(game: CreateGameDto, item: TileItem): number {
+        let count = 0;
+        for (let y = 0; y < game.grid.length; y++) {
+            for (let x = 0; x < game.grid[y].length; x++) {
+                if (game.grid[y][x].item === item) {
+                    const aboveHasSame = game.grid[y - 1]?.[x]?.item === item;
+                    const leftHasSame = game.grid[y]?.[x - 1]?.item === item;
+                    if (!aboveHasSame && !leftHasSame) count++;
+                }
+            }
+        }
+        return count;
+    }
+    private getRequiredSanctuaryCount(game: CreateGameDto): number {
+        if (game.size.rows === GridSizes.Small) return SanctuaryCount.Small;
+        if (game.size.rows === GridSizes.Medium) return SanctuaryCount.Medium;
+        return SanctuaryCount.Large;
+    }
+    private areSanctuariesValid(game: CreateGameDto): boolean {
+        const errors: string[] = [];
+        const required = this.getRequiredSanctuaryCount(game);
+        const healingCount = this.countSanctuaryBlocks(game, TileItem.HealingSanctuary);
+        if (healingCount !== required)
+            errors.push(HEALING_SANCTUARIES_NOT_PLACED);
+        const combatCount = this.countSanctuaryBlocks(game, TileItem.CombatSanctuary);
+        if (combatCount !== required)
+            errors.push(COMBAT_SANCTUARIES_NOT_PLACED);
+        if (errors.length > 0) throw errors;
+        return true;
     }
 
     // For type and item
@@ -220,6 +256,7 @@ export class GameValidatorService {
             () => this.isGameSurfaceValid(game),
             () => this.areAllSpawnPointsPlaced(game),
             () => this.isFlagPlaced(game),
+            () => this.areSanctuariesValid(game),
         ];
 
         for (const validation of validations) {

@@ -75,4 +75,10 @@ export enum JoinGameEvents {
     //Door
     RequestToggleDoor = 'requestToggleDoor',
     DoorToggled = 'doorToggled',
+
+    // Sanctuary
+    RequestUseSanctuary = 'requestUseSanctuary',
+    SanctuaryUsed = 'sanctuaryUsed',
+    SanctuaryStateUpdate = 'sanctuaryStateUpdate',
+    PlayerStatsUpdate = 'playerStatsUpdate',
 }
