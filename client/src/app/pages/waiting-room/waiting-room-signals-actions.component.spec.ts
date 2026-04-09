@@ -52,7 +52,7 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
             isHost: true,
             winsCount: 0,
             hasAbandonned: false,
-        playerType: PlayerType.Reel,
+            playerType: PlayerType.Reel,
             hasFlag: hasFlag ?? false,
             combatCount: 0,
             lossCount: 0,
