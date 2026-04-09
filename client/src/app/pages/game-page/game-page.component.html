@@ -85,6 +85,13 @@
                                             <span class="stats-icon">⚔️ {{ player.winsCount }}</span>
                                             @if (player.isHost) { <span class="host-indicator">👑</span> }
                                             @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator">▶</span> }
+                                            @if (player.playerType === 'virtual') {
+                                                @if (player.virtualProfile === 'aggressive') {
+                                                    <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
+                                                } @else {
+                                                    <span class="virtual-player-badge"><img src="./assets/icons/shield.svg" class="vp-icon" alt="icône bouclier"/> BOT</span>
+                                                }
+                                            }
                                         </span>
                                     </div>
                                 </li>
@@ -106,6 +113,13 @@
                                                 @if (player.hasFlag) { <span class="flag-indicator" title="Possède le drapeau">🚩</span> }
                                                 @if (player.isHost) { <span class="host-indicator">👑</span> }
                                                 @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator turn-indicator-a">▶</span> }
+                                                @if (player.playerType === 'virtual') {
+                                                    @if (player.virtualProfile === 'aggressive') {
+                                                        <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
+                                                    } @else {
+                                                        <span class="virtual-player-badge"><img src="./assets/icons/shield.svg" class="vp-icon" alt="icône bouclier"/> BOT</span>
+                                                    }
+                                                }
                                             </span>
                                         </div>
                                     </li>
@@ -127,6 +141,13 @@
                                                 @if (player.hasFlag) { <span class="flag-indicator">🚩</span> }
                                                 @if (player.isHost) { <span class="host-indicator">👑</span> }
                                                 @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator turn-indicator-b">▶</span> }
+                                                @if (player.playerType === 'virtual') {
+                                                    @if (player.virtualProfile === 'aggressive') {
+                                                        <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
+                                                    } @else {
+                                                        <span class="virtual-player-badge"><img src="./assets/icons/shield.svg" class="vp-icon" alt="icône bouclier"/> BOT</span>
+                                                    }
+                                                }
                                             </span>
                                         </div>
                                     </li>

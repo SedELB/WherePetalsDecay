@@ -2,6 +2,13 @@ import { Injectable } from '@angular/core';
 import { Character } from '@common/character';
 import { AVATARS_PATH, BASE_STATS, RANDOM_NAMES, RANDOM_PROBABILITY } from '@common/constants/character.constants';
 
+type RandomCharacter = {
+    name: string;
+    avatarPath: string;
+    lifeBonus: boolean;
+    attackDiceD6: boolean;
+};
+
 @Injectable({
     providedIn: 'root',
 })
@@ -23,19 +30,22 @@ export class CharacterService {
         };
     }
 
-    generateRandomCharacter(): { name: string; avatarPath: string; lifeBonus: boolean; attackDiceD6: boolean } {
-        const randomAvatarIndex: number = Math.floor(Math.random() * RANDOM_NAMES.length);
-        const randomNameIndex: number = Math.floor(Math.random() * RANDOM_NAMES.length);
-        const randomAvatar: string = AVATARS_PATH[randomAvatarIndex];
+    generateRandomCharacter(avatarPool: readonly string[] = AVATARS_PATH): RandomCharacter {
+        const validAvatarPool = avatarPool.length > 0 ? avatarPool : AVATARS_PATH;
         const lifeBonus: boolean = Math.random() < RANDOM_PROBABILITY;
         const attackDiceD6: boolean = Math.random() < RANDOM_PROBABILITY;
 
         return {
-            name: RANDOM_NAMES[randomNameIndex],
-            avatarPath: randomAvatar,
+            name: this.getRandomItem(RANDOM_NAMES),
+            avatarPath: this.getRandomItem(validAvatarPool),
             lifeBonus,
             attackDiceD6,
         };
+    }
+
+    private getRandomItem<T>(items: readonly T[]): T {
+        const randomIndex = Math.floor(Math.random() * items.length);
+        return items[randomIndex];
     }
 
     isValidName(name: string): boolean {
@@ -45,5 +55,4 @@ export class CharacterService {
     isValidAvatar(index: number | null): boolean {
         return index !== null && index >= 0 && index < AVATARS_PATH.length;
     }
-
 }

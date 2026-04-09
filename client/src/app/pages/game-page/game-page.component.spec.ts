@@ -8,7 +8,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { GameViewService } from '@app/services/game-view/game-view.service';
-import { GameMode } from '@common/enums';
+import { GameMode, PlayerType } from '@common/enums';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { GamePageComponent } from './game-page.component';
@@ -37,7 +37,8 @@ describe('GamePageComponent', () => {
             socketId,
             isHost: false,
             winsCount: 0,
-            hasAbandonned: false,
+            hasAbandonned: false, 
+            playerType: PlayerType.Reel,
             hasFlag: hasFlag ?? false,
             combatCount: 0,
             lossCount: 0,

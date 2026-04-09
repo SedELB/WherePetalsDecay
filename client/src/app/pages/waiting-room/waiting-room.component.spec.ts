@@ -25,7 +25,7 @@ import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { ChatService } from '@app/services/chat/chat.service';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
-import { GameMode, SocketNamespace } from '@common/enums';
+import { GameMode, PlayerType, SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
@@ -53,6 +53,7 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
             isHost: true,
             winsCount: 0,
             hasAbandonned: false,
+            playerType: PlayerType.Reel,
             hasFlag: hasFlag ?? false,
             combatCount: 0,
             lossCount: 0,

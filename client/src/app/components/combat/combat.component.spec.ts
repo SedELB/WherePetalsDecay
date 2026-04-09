@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { GameViewService } from '@app/services/game-view/game-view.service';
+import { PlayerType } from '@common/enums';
 import { Player } from '@common/player';
 
 import { CombatComponent } from './combat.component';
@@ -29,6 +30,7 @@ describe('CombatComponent', () => {
     winsCount: 0,
     isHost: false,
     hasAbandonned: false,
+    playerType: PlayerType.Reel,
     hasFlag: false,
     combatCount: 0,
     lossCount: 0,

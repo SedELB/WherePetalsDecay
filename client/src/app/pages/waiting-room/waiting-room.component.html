@@ -3,74 +3,95 @@
         <h1>Salle d'attente</h1>
 
         @if (currentLobby()) {
-            <div class="room-info">
-                <p class="room-code">Code: <strong>{{ currentLobby()?.lobbyId }}</strong></p>
-                <p class="game-name">Jeu: {{ currentLobby()?.game?.name }}</p>
-                <p class="player-count">
-                    Joueurs: {{ currentLobby()?.playerCount }} / {{ currentLobby()?.game?.maxPlayers }}
-                    @if (currentLobby()?.isLocked) {
-                        <span class="lock-badge">🔒 Verrouillée</span>
-                    }
-                </p>
-            </div>
+        <div class="room-info">
+            <p class="room-code">
+                Partie : <strong>{{ currentLobby()?.lobbyId }}</strong>
+            </p>
+            <p class="game-name">Jeu : {{ currentLobby()?.game?.name }}</p>
+            <p class="player-count">
+                Joueurs : {{ currentLobby()?.playerCount }} / {{ currentLobby()?.game?.maxPlayers }}
+                @if (currentLobby()?.isLocked) {
+                <span class="lock-badge">🔒 Verrouillée</span>
+                }
+            </p>
+        </div>
 
-            <div class="main-content">
-                <div class="left-panel">
-                    <div class="players-section">
-                        <h2>Joueurs</h2>
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="players-section">
+                    <h2>Joueurs</h2>
+                    <div class="players-area">
                         <ul class="players-list">
                             @for (player of players(); track player.socketId) {
-                                <li class="player-item" [class.organizer]="player.isHost" [class.is-me]="player.socketId === currentPlayer()?.socketId">
-                                    <img [src]="player.character.avatar" [alt]="player.character.name" class="player-avatar" />
-                                    <span class="player-name">
-                                        {{ player.character.name }}
+                            <li class="player-item" [class.organizer]="player.isHost" [class.is-me]="player.socketId === currentPlayer()?.socketId">
+                                <img [src]="player.character.avatar" [alt]="player.character.name" class="player-avatar" />
+                                <div class="player-info">
+                                    <span class="player-line1">
+                                        <span class="player-name">{{ player.character.name }}</span>
                                         @if(player.socketId === currentPlayer()?.socketId){
                                             <span class="me-badge">(Vous)</span>
                                         }
-
+                                    </span>
+                                    <span class="player-line2">
                                         @if (player.isHost) {
-                                            <span>👑 Organisateur</span>
+                                            <span class="organizer-badge">👑 Organisateur</span>
+                                        }
+                                        @if (player.playerType === 'virtual') {
+                                            @if (player.virtualProfile === 'aggressive') {
+                                                <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
+                                            } @else {
+                                                <span class="virtual-player-badge"><img src="./assets/icons/shield.svg" class="vp-icon" alt="icône bouclier"/> BOT</span>
+                                            }
                                         }
                                     </span>
+                                </div>
 
-                                    @if (isOrganizer() && !player.isHost) {
-                                        <button class="kick-btn" (click)="onKickPlayer(player.socketId)">Exclure</button>
-                                    }
-                                </li>
+                                @if (isOrganizer() && !player.isHost) {
+                                <button class="kick-btn" (click)="onKickPlayer(player.socketId)">Exclure</button>
+                                }
+                            </li>
                             }
                         </ul>
                     </div>
 
-                    <div class="actions">
-                        @if (isOrganizer()) {
-                            <app-button (clicked)="onStartGame()" [disabled]="!canStartGame()">
-                                Démarrer la partie
-                            </app-button>
-                            <app-button (clicked)="onToggleLock()" [disabled]="currentLobby()?.playerCount === currentLobby()?.game?.maxPlayers">
-                                {{ currentLobby()?.isLocked ? 'Déverrouiller' : 'Verrouiller' }}
-                            </app-button>
-                        }
-                        <app-button (clicked)="leaveLobby()">
-                            {{ isOrganizer() ? 'Annuler la partie' : 'Quitter' }}
-                        </app-button>
-                    </div>
+                    @if (isOrganizer()) {
+                        <div class="vp-footer">
+                            <div class="add-vp-container">
+                                <app-button
+                                    [variant]="buttonVariant.AddVirtualPlayer"
+                                    [disabled]="currentLobby()?.playerCount === currentLobby()?.game?.maxPlayers"
+                                    (profileSelected)="onAddVirtualPlayer($event)">
+                                </app-button>
+                            </div>
+                        </div>
+                    }
                 </div>
 
-                <div class="right-panel">
-                    <h2>Chat</h2>
-                    <div class="chat-wrapper">
-                        <app-chat
-                            [lobbyId]="currentLobby()?.lobbyId ?? ''"
-                            [playerName]="currentPlayer()?.character?.name ?? ''"
-                        ></app-chat>
-                    </div>
+                <div class="actions">
+                    @if (isOrganizer()) {
+                    <app-button (clicked)="onStartGame()" [disabled]="!canStartGame()"> Démarrer la partie </app-button>
+                    <app-button (clicked)="onToggleLock()" [disabled]="currentLobby()?.playerCount === currentLobby()?.game?.maxPlayers">
+                        {{ currentLobby()?.isLocked ? 'Déverrouiller' : 'Verrouiller' }}
+                    </app-button>
+                    }
+                    <app-button (clicked)="leaveLobby()">
+                        {{ isOrganizer() ? 'Annuler la partie' : 'Quitter' }}
+                    </app-button>
                 </div>
             </div>
-        } @else {
-            <p>Chargement de la salle...</p>
-            <div class="actions">
-                <app-button [route]="'/home'" (clicked)="leaveLobby()">Retour à la vue initiale</app-button>
+
+            <div class="right-panel">
+                <h2>Chat</h2>
+                <div class="chat-wrapper">
+                    <app-chat [lobbyId]="currentLobby()?.lobbyId ?? ''" [playerName]="currentPlayer()?.character?.name ?? ''"></app-chat>
+                </div>
             </div>
+        </div>
+        } @else {
+        <p>Chargement de la salle...</p>
+        <div class="actions">
+            <app-button [route]="'/home'" (clicked)="leaveLobby()">Retour à la vue initiale</app-button>
+        </div>
         }
     </div>
 </div>
