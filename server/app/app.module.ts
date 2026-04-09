@@ -12,11 +12,16 @@ import { TurnService } from './services/game-logic/turn.service';
 import { MovementService } from './services/game-logic/movement.service';
 import { CombatService } from './services/game-logic/combat.service';
 import { AdminGateway } from './gateways/admin/admin.gateway';
+import { ChatGateway } from './gateways/chat/chat.gateway';
+import { GameTurnSyncService } from './gateways/game/game-turn-sync.service';
 import { GameGateway } from './gateways/game/game.gateway';
 import { GamesGateway } from './gateways/games/games.gateway';
 import { JoinGateway } from './gateways/join/join.gateway';
-import { ChatGateway } from './gateways/chat/chat.gateway';
-
+import { JournalGateway } from './gateways/journal/journal.gateway';
+import { CTFService } from './services/game-logic/ctf.service';
+import { GameSetupService } from './services/game-logic/game-setup.service';
+import { GameStatsService } from './services/game-logic/game-stats.service';
+import { JournalService } from './services/journal/journal.service';
 @Module({
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),
@@ -35,10 +40,15 @@ import { ChatGateway } from './gateways/chat/chat.gateway';
         GameService,
         GameValidatorService,
         LobbyService,
-        GameLogicService,
         TurnService,
         MovementService,
         CombatService,
+        CTFService,
+        GameSetupService,
+        GameStatsService,
+        GameLogicService,
+        JournalService,
+        GameTurnSyncService,
         VirtualPlayerService,
 
         // Gateways
@@ -47,6 +57,7 @@ import { ChatGateway } from './gateways/chat/chat.gateway';
         GamesGateway,
         JoinGateway,
         ChatGateway,
+        JournalGateway,
 
         Logger,
     ],

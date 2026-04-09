@@ -46,60 +46,81 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
     const PLAYER_SOCKET_ID = 'player-socket-2';
     const LOBBY_ID = 'ABCDE';
 
-    const createMockPlayer = (overrides: Partial<Player> = {}): Player => ({
-        socketId: HOST_SOCKET_ID,
-        isHost: true,
-        winsCount: 0,
-        hasAbandonned: false,
-        playerType: PlayerType.Reel,
-        character: {
-            name: 'TestPlayer',
-            avatar: './assets/avatars/archer.png',
-            life: 8,
-            speed: 6,
-            attack: 4,
-            defense: 4,
-            lifeBonus: true,
-            attackDice: 'D6',
-            defenseDice: 'D4',
-        },
-        ...overrides,
-    });
+    const createMockPlayer = (overrides: Partial<Player> = {}): Player => {
+        const { hasFlag, ...restOverrides } = overrides;
+        return {
+            socketId: HOST_SOCKET_ID,
+            isHost: true,
+            winsCount: 0,
+            hasAbandonned: false,
+            playerType: PlayerType.Reel,
+            hasFlag: hasFlag ?? false,
+            combatCount: 0,
+            lossCount: 0,
+            totalHpLost: 0,
+            totalHpDealt: 0,
+            visitedTilesCount: 0,
+            character: {
+                name: 'TestPlayer',
+                avatar: './assets/avatars/archer.png',
+                life: 8,
+                speed: 6,
+                attack: 4,
+                defense: 4,
+                lifeBonus: true,
+                attackDice: 'D6',
+                defenseDice: 'D4',
+            },
+            ...restOverrides,
+        };
+    };
 
-    const createMockLobby = (overrides: Partial<Lobby> = {}): Lobby => ({
-        lobbyId: LOBBY_ID,
-        gameId: 'game-1',
-        hostSocketId: HOST_SOCKET_ID,
-        playerCount: 2,
-        isLocked: false,
-        pendingAvatars: {},
-        players: [
-            createMockPlayer(),
-            createMockPlayer({
-                socketId: PLAYER_SOCKET_ID, isHost: false,
-                character: {
-                    name: 'Player2', avatar: './assets/avatars/mage.png',
-                    life: 6, speed: 8, attack: 4, defense: 4,
-                    lifeBonus: false, attackDice: 'D4', defenseDice: 'D6',
-                },
-            }),
-        ],
-        game: {
-            _id: 'game-1',
-            name: 'Test Game',
-            description: 'A test game',
-            size: { rows: 10, cols: 10 },
-            gameMode: GameMode.Classic,
-            thumbnail: 'thumb.png',
-            maxPlayers: 4,
-            grid: [],
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            isVisible: true,
-        },
-        chatHistory: [],
-        ...overrides,
-    });
+    const createMockLobby = (overrides: Partial<Lobby> = {}): Lobby => {
+        const { teamA, teamB, ...restOverrides } = overrides;
+        return {
+            lobbyId: LOBBY_ID,
+            gameId: 'game-1',
+            hostSocketId: HOST_SOCKET_ID,
+            playerCount: 2,
+            isLocked: false,
+            pendingAvatars: {},
+            players: [
+                createMockPlayer(),
+                createMockPlayer({
+                    socketId: PLAYER_SOCKET_ID,
+                    isHost: false,
+                    character: {
+                        name: 'Player2',
+                        avatar: './assets/avatars/mage.png',
+                        life: 6,
+                        speed: 8,
+                        attack: 4,
+                        defense: 4,
+                        lifeBonus: false,
+                        attackDice: 'D4',
+                        defenseDice: 'D6',
+                    },
+                }),
+            ],
+            game: {
+                _id: 'game-1',
+                name: 'Test Game',
+                description: 'A test game',
+                size: { rows: 10, cols: 10 },
+                gameMode: GameMode.Classic,
+                thumbnail: 'thumb.png',
+                maxPlayers: 4,
+                grid: [],
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                isVisible: true,
+            },
+            chatHistory: [],
+            ...restOverrides,
+            teamA: teamA ?? [],
+            teamB: teamB ?? [],
+        };
+    };
 
     const capturedCallbacks = new Map<string, (...args: unknown[]) => void>();
     const createWebSocketMock = () => {
@@ -175,11 +196,13 @@ describe('WaitingRoomComponent - Initialization & Listeners', () => {
                 providers: [
                     provideRouter([{ path: 'home', component: DummyRouteComponent }]),
                     { provide: WebSocketService, useValue: createWebSocketMock() },
-                    { provide: ChatService, useValue: (() => {
-                        const m = jasmine.createSpyObj('ChatService', ['requestHistory', 'roomMessages$', 'sendMessage']);
-                        m['roomMessages$'].and.returnValue({ subscribe: () => ({ unsubscribe: () => undefined }) });
-                        return m;
-                    })() },
+                    {
+                        provide: ChatService, useValue: (() => {
+                            const m = jasmine.createSpyObj('ChatService', ['requestHistory', 'roomMessages$', 'sendMessage']);
+                            m['roomMessages$'].and.returnValue({ subscribe: () => ({ unsubscribe: () => undefined }) });
+                            return m;
+                        })(),
+                    },
                     { provide: GameViewService, useValue: jasmine.createSpyObj('GameViewService', ['setLobby']) },
                     { provide: ActivatedRoute, useValue: noIdRoute },
                 ],

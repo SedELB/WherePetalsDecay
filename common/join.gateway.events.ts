@@ -1,4 +1,4 @@
-// Events (language) for communicating between the client and the server.
+// Events for communicating between the client and the server
 export enum JoinGameEvents {
     // Broadcast events
     UpdatedLobbiesList = 'updatedLobbiesList',
@@ -25,6 +25,11 @@ export enum JoinGameEvents {
     Teleport = 'teleport',
     ToggleDebugMode = 'toogleDebugMode',
     AddVirtualPlayer = 'addVirtualPlayer',
+    TransferFlag = 'transferFlag',
+    GiveFlagRequest = 'giveFlagRequest',
+    RequestFlagRequest = 'requestFlagRequest',
+    StartCombat = 'startCombat',
+    SendPosture = 'sendPosture',
 
     // Response events (confirmations)
     GameHosted = 'gameHosted',
@@ -39,8 +44,14 @@ export enum JoinGameEvents {
     PlayerKicked = 'playerKicked',
     ReceivedChatMessage = 'receivedChatMessage',
     ReachableTilesForTeleport = 'reachableTilesForTeleport',
+    FlagTransferred = 'flagTransferred',
+    GiveFlagResponse = 'giveFlagResponse',
+    RequestFlagResponse = 'requestFlagResponse',
+    FlagTransferResponse = 'flagTransferResponse',
+    CombatStarted = 'combatStarted',
+    PostureReceived = 'postureReceived',
 
-    //--------Game-View-Events--------
+    // Game Events
     GameStarted = 'gameStarted',
     TurnCountdown = 'turnCountdown',
     TurnStarted = 'turnStarted',
@@ -49,6 +60,7 @@ export enum JoinGameEvents {
     PlayerAbandon = 'playerAbandon',
     PlayerAbandoned = 'playerAbandoned',
     GameOver = 'gameOver',
+    LeaveEndGame = 'leaveEndGame',
 
     // Movement
     RequestMove = 'requestMove',
@@ -59,11 +71,20 @@ export enum JoinGameEvents {
 
     // Combat
     RequestCombat = 'requestCombat',
+    CombatRoundStarted = 'combatRoundStarted',
+    CombatRoundCountdown = 'combatRoundCountdown',
+    CombatRoundResolved = 'combatRoundResolved',
     CombatResult = 'combatResult',
+    CombatEnded = 'combatEnded',
 
     // Info
     RequestTileInfo = 'requestTileInfo',
     TileInfo = 'tileInfo',
     GameLobbyUpdated = 'gameLobbyUpdated',
     ChatHistorySent = "chatHistorySent",
+
+    // Journal
+    JournalEntry = 'journalEntry',
+    JournalHistoryRequest = 'journalHistoryRequest',
+    JournalHistorySent = 'journalHistorySent',
 }

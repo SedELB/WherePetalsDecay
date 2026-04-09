@@ -41,6 +41,7 @@ export enum SocketNamespace {
     Admin = '/admin',
     Games = '/game',
     Join = '/join',
+    Combat = '/combat',
 }
 
 export enum ButtonVariant {

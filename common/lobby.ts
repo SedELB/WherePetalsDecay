@@ -1,6 +1,6 @@
-import { Player } from './player';
-import { Game } from './game'
 import { ChatMessage } from './chat-message';
+import { Game } from './game';
+import { Player } from './player';
 
 export interface Lobby {
     lobbyId: string,
@@ -12,6 +12,8 @@ export interface Lobby {
     players: Player[],
     pendingAvatars: Record<string, string>,
     chatHistory: ChatMessage[],
+    teamA: Player[],
+    teamB: Player[],
 };
 
 

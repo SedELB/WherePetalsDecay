@@ -1,19 +1,22 @@
 
-<main>
+<main class="page-background">
 
     <app-button id="back-button" [variant]="buttonVariant.Back" [route]="'/home'"></app-button>
 
     <h2>Administrer les jeux</h2>
     <p>Créez, modifiez ou supprimez un jeu</p>
-    <div class="list-container">
-        @for(game of gameCards; track game.name){
-            <app-game-card [game]="game">
-                <app-button [variant]="buttonVariant.Edit" (clicked)="navigateToGameEditor(game.name)">Modifier</app-button>
-                <app-button [variant]="buttonVariant.ToggleVisibility" [isVisible]="game.isVisible" (clicked)="changeVisibility(game.name)">{{ game.isVisible ? 'Cacher' : 'Afficher' }}</app-button>
-                <app-button [variant]="buttonVariant.DeleteGame" [height]="50" (clicked)="removeGame(game.name)"></app-button>
-            </app-game-card>
-        }
-    </div>
+    <app-loading [isLoading]="isLoading" (hidden)="isReady = true" />
+    @if (isReady && gameCards.length > 0) {
+        <div class="list-container">
+            @for(game of gameCards; track game.name){
+                <app-game-card [game]="game">
+                    <app-button [variant]="buttonVariant.Edit" (clicked)="navigateToGameEditor(game.name)">Modifier</app-button>
+                    <app-button [variant]="buttonVariant.ToggleVisibility" [isVisible]="game.isVisible" (clicked)="changeVisibility(game.name)">{{ game.isVisible ? 'Cacher' : 'Afficher' }}</app-button>
+                    <app-button [variant]="buttonVariant.DeleteGame" [height]="50" (clicked)="removeGame(game.name)"></app-button>
+                </app-game-card>
+            }
+        </div>
+    }
 
     <app-button [width]="200" class="add-button" [route]="'./create'">
         Créer

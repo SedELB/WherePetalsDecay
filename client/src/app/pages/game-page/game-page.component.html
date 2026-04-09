@@ -1,4 +1,4 @@
-<div class="page-bg"></div>
+<div class="page-bg page-background"></div>
 <app-sakura class="sakura-layer"></app-sakura>
 
 <main class="container" (contextmenu)="$event.preventDefault()">
@@ -27,6 +27,9 @@
                     <div class="panel-right"></div>
                 </div>
                 <div class="timer-display">
+                    @if (activePlayer()?.character?.avatar) {
+                        <img [src]="activePlayer()?.character?.avatar" alt="Avatar actif" style="width: 2rem; height: 2rem; border-radius: 25%; object-fit: cover;" />
+                    }
                     <span class="timer-label">{{ getTimerLabel() }}</span>
                     <span class="timer-countdown">{{ getTimerDisplay() }}</span>
                 </div>
@@ -37,9 +40,16 @@
                     [reachableTiles]="reachableTiles()"
                     [teleportableTiles]="isDebugModeActive() ? reachableTilesForTeleport() : []"
                     [localPlayerSocketId]="localPlayer()?.socketId"
+                    [isCTF]="game()?.gameMode === gameMode.Ctf"
+                    [teamA]="lobby()?.teamA ?? []"
+                    [teamB]="lobby()?.teamB ?? []"
+                    [actionHighlightTiles]="actionHighlightTiles()"
                     (tileClick)="onTileClick($event.x, $event.y)"
                     (rightClick)="onRightClick($event.event, $event.pos)"
                 ></app-isometric-map>
+                @if (isCombatStarted()) {
+                    <app-combat [player]="this.fighters().player" [enemy]="this.fighters().enemy" ></app-combat>
+                }
             </div>
         </div>
     </section>
@@ -57,30 +67,74 @@
                         <li>Taille du jeu : <span>{{ game()?.size?.rows }}X{{ game()?.size?.cols }}</span></li>
                         <li>Mode de jeu : <span>{{ game()?.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</span></li>
                         <li>Nombre de joueurs : <span>{{ lobby()?.playerCount }}</span></li>
-                        <li>Joueur actif : <span>{{ activePlayer()?.character?.name }}</span></li>
                     </ul>
                 </div>
             </section>
 
             <section class="players-list">
                 <h3 class="section-title">Ordre des tours</h3>
-                <div class="list">
-                    <ul>
-                        @for (player of orderedPlayers(); track player.socketId) {
-                            <li [class.active]="player.socketId === activePlayerSocketId()"
-                                [class.abandonned]="player.hasAbandonned">
-                                <div class="player-info">
-                                    <span class="info">
-                                        <span class="name">{{ player.character.name }}</span>
-                                        @if (player.isHost) { <span class="host-indicator">👑</span> }
-                                        @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator">▶</span> }
-                                    </span>
-                                    <p>Combats gagnés : <span class="wins">{{ player.winsCount }}</span></p>
-                                </div>
-                            </li>
-                        }
-                    </ul>
-                </div>
+                @if (game()?.gameMode === gameMode.Classic){
+                    <div class="list">
+                        <ul>
+                            @for (player of orderedPlayers(); track player.socketId) {
+                                <li [class.active]="player.socketId === activePlayerSocketId()"
+                                    [class.abandonned]="player.hasAbandonned">
+                                    <div class="player-info">
+                                        <span class="info">
+                                            <span class="name" title="{{ player.character.name }}">{{ player.character.name }}</span>
+                                            <span class="stats-icon">⚔️ {{ player.winsCount }}</span>
+                                            @if (player.isHost) { <span class="host-indicator">👑</span> }
+                                            @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator">▶</span> }
+                                        </span>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                } @else {
+                    <!-- Mode CTF -->
+                    <div class="team-section team-a-section">
+                        <h4 class="section-title team-title" style="color: #3b82f6;">Équipe A</h4>
+                        <div class="list">
+                            <ul>
+                                @for (player of getTeamPlayers('A'); track player.socketId) {
+                                    <li [class.active]="player.socketId === activePlayerSocketId()"
+                                        [class.abandonned]="player.hasAbandonned">
+                                        <div class="player-info">
+                                            <span class="info">
+                                                <span class="name" title="{{ player.character.name }}">{{ player.character.name }}</span>
+                                                @if (player.hasFlag) { <span class="flag-indicator" title="Possède le drapeau">🚩</span> }
+                                                @if (player.isHost) { <span class="host-indicator">👑</span> }
+                                                @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator turn-indicator-a">▶</span> }
+                                            </span>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="team-section team-b-section">
+                        <h4 class="section-title team-title" style="color: #ef4444;">Équipe B</h4>
+                        <div class="list">
+                            <ul>
+                                @for (player of getTeamPlayers('B'); track player.socketId) {
+                                    <li [class.active]="player.socketId === activePlayerSocketId()"
+                                        [class.abandonned]="player.hasAbandonned">
+                                        <div class="player-info">
+                                            <span class="info">
+                                                <span class="name" title="{{ player.character.name }}">{{ player.character.name }}</span>
+                                                @if (player.hasFlag) { <span class="flag-indicator">🚩</span> }
+                                                @if (player.isHost) { <span class="host-indicator">👑</span> }
+                                                @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator turn-indicator-b">▶</span> }
+                                            </span>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
             </section>
         </aside>
 
@@ -91,11 +145,9 @@
                     <button class="tab-btn" [class.active]="isJournalOpen" (click)="isJournalOpen = true">Journal</button>
                 </div>
                 @if (isJournalOpen) {
-                    <div class="journal-container">
-                        <div class="journal-messages">
-                            <div class="chat-empty">Aucun événement pour l'instant.</div>
-                        </div>
-                    </div>
+                    <app-journal
+                        [lobbyId]="lobby()?.lobbyId ?? ''"
+                    ></app-journal>
                 } @else {
                     <app-chat
                         [lobbyId]="lobby()?.lobbyId ?? ''"
@@ -122,9 +174,41 @@
                 </div>
             </section>
 
+            <div class="sub-action-panel" [class.open]="isSubMenuOpen()">
+                @if (attackTargets().length > 0) {
+                    <button
+                        id="sub-action-attack"
+                        class="sub-action-btn attack"
+                        [class.selected]="activeSubAction() === 'attack'"
+                        (click)="selectSubAction('attack')"
+                    >Attaquer</button>
+                }
+                @if (requestFlagTargets().length > 0) {
+                    <button
+                        id="sub-action-request-flag"
+                        class="sub-action-btn flag-req"
+                        [class.selected]="activeSubAction() === 'requestFlag'"
+                        (click)="selectSubAction('requestFlag')"
+                    >Demander drapeau</button>
+                }
+                @if (giveFlagTargets().length > 0) {
+                    <button
+                        id="sub-action-give-flag"
+                        class="sub-action-btn flag-give"
+                        [class.selected]="activeSubAction() === 'giveFlag'"
+                        (click)="selectSubAction('giveFlag')"
+                    >Donner drapeau</button>
+                }
+            </div>
+
             <div class="action-bar">
-                <app-button (click)="toggleCombatMode()" [class.combat-active]="isCombatMode" [disabled]="adjacentPlayers().length === 0 || !isMyTurn()">
-                    {{ isCombatMode ? 'Annuler action' : 'Action' }}
+                <app-button
+                    id="action-toggle-btn"
+                    (click)="toggleSubMenu()"
+                    [disabled]="!hasAnyAction()"
+                    [class.active-action]="isSubMenuOpen()"
+                >
+                    {{ isSubMenuOpen() ? 'Annuler' : 'Action' }}
                 </app-button>
                 <app-button (click)="onEndTurn()" [disabled]="this.disableEndTurn() || isEndTurnDisabled()">Finir Tour</app-button>
             </div>
@@ -140,20 +224,29 @@
     @if (gameOver(); as over) {
         <div class="game-over-overlay">
             <div class="game-over-message">
-                @if (over.winnerSocketId === localPlayer()?.socketId) {
-                    @if (over.isForfeit) {
-                        <p>Vous avez gagné car tous les autres joueurs ont quitté !</p>
+                <h2>Partie terminée</h2>
+
+                @if (over.isForfeit && over.winnerSocketId === localPlayer()?.socketId) {
+                    <p>Vous avez gagné car tous les autres joueurs ont quitté !</p>
+                }
+                @else if (over.winnerSocketId) {
+                    @if (over.winnerSocketId === localPlayer()?.socketId) {
+                        @if (game()?.gameMode === gameMode.Ctf) {
+                            <p>Félicitations ! Vous avez gagné en ramenant le drapeau à votre base !</p>
+                        } @else {
+                            <p>Félicitations ! Vous avez gagné la partie avec 3 victoires !</p>
+                        }
                     } @else {
-                        <p>Vous avez gagné la partie avec 3 victoires !</p>
+                        @if (game()?.gameMode === gameMode.Ctf) {
+                            <p>{{ getPlayerName(over.winnerSocketId) }} a ramené le drapeau et fait gagner son équipe !</p>
+                        } @else {
+                            <p>{{ getPlayerName(over.winnerSocketId) }} a atteint 3 victoires et remporte la partie.</p>
+                        }
                     }
-
-                } @else if (over.winnerSocketId) {
-                    <p>{{ getPlayerName(over.winnerSocketId) }} a atteint 3 victoires et remporte la partie.</p>
-
-                } @else {
-                    <h2>Partie terminée</h2>
-                    <p>La partie s'est terminée sans gagnant.</p>
-                    <p>Tous les joueurs ont abandonné.</p>
+                }
+                @else if (over.abandonTeam) {
+                    <p>L'équipe {{ over.abandonTeam }} a abandonné la partie.</p>
+                    <p>Redirection vers le menu principal...</p>
                 }
             </div>
         </div>
@@ -164,6 +257,9 @@
             <div class="tile-info-content">
                 <p>Type : <span>{{ tileNames[info.tile.type] || info.tile.type }}</span></p>
                 <p>Coût : <span>{{ info.cost === null || info.cost === costInfinity ? 'N/A' : info.cost }}</span></p>
+                @if (info.tile.item) {
+                    <p>Objet : <span>{{ itemNames[info.tile.item] || info.tile.item }}</span></p>
+                }
                 @if (info.player) {
                     <p>Joueur : <span>{{ info.player.name }}</span></p>
                     <img [src]="info.player.avatar" alt="avatar" class="tile-info-avatar" />
