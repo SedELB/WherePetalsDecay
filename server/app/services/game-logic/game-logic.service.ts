@@ -113,9 +113,9 @@ export class GameLogicService {
 
     endTurn(lobbyId: string): void {
         const game = this.activeGames.get(lobbyId);
-        if (!game) return;
-        game.totalTurns++;
-        this.turnService.endTurn(game);
+        if (game) {
+            this.turnService.endTurn(game);
+        }
     }
 
     incrementTotalTurns(lobbyId: string): void {
@@ -321,7 +321,6 @@ export class GameLogicService {
             const allPlayers = [...game.lobby.players];
             server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId, isForfeit: true, players: allPlayers, gameStats });
             this.endGame(lobbyId);
-            server.in(lobbyId).socketsLeave(lobbyId);
             return true;
         }
 

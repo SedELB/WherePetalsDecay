@@ -21,14 +21,16 @@ export class TurnService {
     }
 
     endTurn(game: ActiveGame): void {
-        const lobbyId = game.lobby.lobbyId;
-        this.clearTimers(lobbyId);
+    const lobbyId = game.lobby.lobbyId;
+    this.clearTimers(lobbyId);
 
-        const currentSocketId = game.turnOrder[game.currentTurnIndex];
-        this.callbacks.onTurnEnded(lobbyId, currentSocketId);
+    game.totalTurns++;
 
-        this.advanceToNextPlayer(game);
-        this.startCountdown(game);
+    const currentSocketId = game.turnOrder[game.currentTurnIndex];
+    this.callbacks.onTurnEnded(lobbyId, currentSocketId);
+
+    this.advanceToNextPlayer(game);
+    this.startCountdown(game);
     }
 
     isPlayerTurn(game: ActiveGame, socketId: string): boolean {
