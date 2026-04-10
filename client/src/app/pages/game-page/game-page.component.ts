@@ -222,7 +222,7 @@ export class GamePageComponent implements OnInit {
         const lobbyId = this.lobby()?.lobbyId;
         if (!lobbyId || !this.isMyTurn()) return;
 
-        const tile = this.game()?.grid[row][col];
+        const tile = this.game()?.grid[row]?.[col];
         const isAdjacent = this.isTileAdjacentToPlayer(col, row);
 
         if (this.tryHandleDoorClick(lobbyId, col, row, tile?.type, isAdjacent)) return;
