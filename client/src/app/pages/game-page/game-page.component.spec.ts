@@ -68,6 +68,8 @@ describe('GamePageComponent', () => {
         turnNotification: signal<string | null>(null),
         tileInfo: signal<unknown>(null),
         gameOver: signal<{ winnerSocketId: string | null; isForfeit?: boolean } | null>(null),
+        inactiveSanctuaries: signal<{ x: number; y: number }[]>([]),
+        journalEntries: signal<string[]>([]),
         getLocalSocketId: jasmine.createSpy('getLocalSocketId').and.returnValue(LOCAL_SOCKET),
         isHost: jasmine.createSpy('isHost').and.returnValue(false),
         sendMove: jasmine.createSpy('sendMove'),
@@ -76,6 +78,8 @@ describe('GamePageComponent', () => {
         sendAbandonWithoutPrompt: jasmine.createSpy('sendAbandonWithoutPrompt'),
         sendCombat: jasmine.createSpy('sendCombat'),
         sendTileInfoRequest: jasmine.createSpy('sendTileInfoRequest'),
+        sendToggleDoor: jasmine.createSpy('sendToggleDoor'),
+        sendUseSanctuary: jasmine.createSpy('sendUseSanctuary'),
         toggleDebugMode: jasmine.createSpy('toggleDebugMode'),
         teleportMove: jasmine.createSpy('teleportMove'),
         setLobby: jasmine.createSpy('setLobby'),
@@ -97,9 +101,12 @@ describe('GamePageComponent', () => {
         mockGameViewService.turnNotification.set(null);
         mockGameViewService.tileInfo.set(null);
         mockGameViewService.gameOver.set(null);
+        mockGameViewService.inactiveSanctuaries.set([]);
+        mockGameViewService.journalEntries.set([]);
         [mockGameViewService.sendMove, mockGameViewService.sendEndTurn,
          mockGameViewService.sendAbandon, mockGameViewService.sendAbandonWithoutPrompt,
          mockGameViewService.sendCombat, mockGameViewService.sendTileInfoRequest,
+         mockGameViewService.sendToggleDoor, mockGameViewService.sendUseSanctuary,
          mockGameViewService.toggleDebugMode, mockGameViewService.teleportMove,
          mockGameViewService.isHost].forEach((s) => s.calls.reset());
     };
