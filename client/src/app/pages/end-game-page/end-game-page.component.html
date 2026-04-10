@@ -123,9 +123,9 @@
                     </div>
                     <div class="chat-wrapper list-container">
                         @if (isJournalOpen) {
-                            <div class="journal-placeholder">
-                                <p>Aucun événement pour l'instant.</p>
-                            </div>
+                            <app-journal
+                                [lobbyId]="lobby()?.lobbyId ?? ''"
+                            ></app-journal>
                         } @else {
                             <app-chat
                                 [lobbyId]="lobby()?.lobbyId ?? ''"

@@ -1,9 +1,10 @@
 /* eslint-disable max-lines */
 import { GameLogicService } from '@app/services/game-logic/game-logic.service';
+import { JournalService } from '@app/services/journal/journal.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Posture } from '@common/character';
 import { Direction } from '@common/direction';
-import { GameMode, SocketNamespace } from '@common/enums';
+import { GameMode, SocketNamespace, TileItem, TileTexture } from '@common/enums';
 import {
     CombatEndedData,
     CombatResult,
@@ -14,6 +15,7 @@ import {
     PostureReceivedData,
 } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
+import { JournalEventType } from '@common/journal-entry';
 import { Player } from '@common/player';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
@@ -62,6 +64,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         private readonly gameLogicService: GameLogicService,
         private readonly lobbyService: LobbyService,
         private readonly gameTurnSyncService: GameTurnSyncService,
+        private readonly journalService: JournalService,
     ) {}
 
     afterInit(): void {
@@ -76,6 +79,10 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             onTurnStarted: (lobbyId: string, playerSocketId: string) => {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnStarted, playerSocketId);
                 this.gameTurnSyncService.syncPlayerTurnState(this.server, lobbyId, playerSocketId);
+
+                const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+                const playerName = activeGame?.lobby.players.find((p) => p.socketId === playerSocketId)?.character?.name ?? 'Joueur inconnu';
+                this.journalService.addTurnStartEntry(lobbyId, playerName);
             },
             onTurnEnded: (lobbyId: string, playerSocketId: string) => {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnEnded, playerSocketId);
@@ -124,6 +131,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             flagTaken: result.flagJustTaken,
         });
 
+        this.handlePostMoveJournalEntries(lobbyId, socket.id, result.position, result.flagJustTaken);
+
         this.gameTurnSyncService.refreshPlayerNavigationState(this.server, lobbyId, socket.id);
 
         if (this.lobbyService.getLobby(lobbyId).game.gameMode === GameMode.Ctf) {
@@ -131,6 +140,25 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             if (winner) {
                 this.handleGameOver(lobbyId, winner.socketId);
             }
+        }
+    }
+
+    private handlePostMoveJournalEntries(lobbyId: string, socketId: string, position: Vec2, flagJustTaken: boolean): void {
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        if (!activeGame) return;
+
+        const playerName = activeGame.lobby.players.find((p) => p.socketId === socketId)?.character?.name ?? 'Joueur';
+
+        if (flagJustTaken) {
+            this.journalService.addFlagPickedUpEntry(lobbyId, playerName);
+        }
+
+        const tile = activeGame.lobby.game.grid[position.y]?.[position.x];
+        if (tile?.type === TileTexture.DoorOpened) {
+            this.journalService.addDoorOpenEntry(lobbyId, playerName);
+        }
+        if (tile?.item === TileItem.HealingSanctuary || tile?.item === TileItem.CombatSanctuary) {
+            this.journalService.addSanctuaryUsedEntry(lobbyId, playerName);
         }
     }
 
@@ -159,6 +187,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
         activeGame.isDebugMode = !state;
         this.server.to(lobbyId).emit(JoinGameEvents.DebugToggled, !state);
+
+        const hostName = activeGame.lobby.players.find((p) => p.socketId === socket.id)?.character?.name ?? 'Hôte';
+        this.journalService.addDebugToggleEntry(lobbyId, hostName, activeGame.isDebugMode);
 
         if (!activeGame.isDebugMode) {
             const currentSocketId = activeGame.turnOrder[activeGame.currentTurnIndex];
@@ -232,6 +263,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const combatStartedData: CombatStartedData = { player: attacker, enemy: defender, roomId };
         this.server.to(roomId).emit(JoinGameEvents.CombatStarted, combatStartedData);
 
+        this.journalService.addCombatStartEntry(lobbyId, attacker.character.name, defender.character.name);
+
         const combatSession: CombatSession = {
             lobbyId,
             roomId,
@@ -287,22 +320,26 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (!this.gameLogicService.isPlayerTurn(lobbyId, requesterId)) return;
 
         if (!isRequest) {
-            const wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, requesterId, socket.id, requesterId);
-            if (!wasFlagTransfered) return;
-            this.sendActionPoints(lobbyId, requesterId);
-            this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, {
-                giverPlayerId: requesterId,
-                targetPlayerId: socket.id,
-            });
+            this.executeFlagTransfer(lobbyId, requesterId, socket.id, requesterId);
         } else {
-            const wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, socket.id, requesterId, requesterId);
-            if (!wasFlagTransfered) return;
-            this.sendActionPoints(lobbyId, requesterId);
-            this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, {
-                giverPlayerId: socket.id,
-                targetPlayerId: requesterId,
-            });
+            this.executeFlagTransfer(lobbyId, socket.id, requesterId, requesterId);
         }
+    }
+
+    private executeFlagTransfer(lobbyId: string, giverId: string, receiverId: string, actionPointUpdaterId: string): void {
+        const wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, giverId, receiverId, actionPointUpdaterId);
+        if (!wasFlagTransfered) return;
+
+        this.sendActionPoints(lobbyId, actionPointUpdaterId);
+        this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, {
+            giverPlayerId: giverId,
+            targetPlayerId: receiverId,
+        });
+
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        const giverName = activeGame?.lobby.players.find((p) => p.socketId === giverId)?.character?.name ?? 'Joueur';
+        const receiverName = activeGame?.lobby.players.find((p) => p.socketId === receiverId)?.character?.name ?? 'Joueur';
+        this.journalService.addFlagTransferEntry(lobbyId, giverName, receiverName);
     }
 
     @SubscribeMessage(JoinGameEvents.RequestTileInfo)
@@ -336,16 +373,21 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const activeGame = this.gameLogicService.findActiveGameBySocketId(socket.id);
         if (!activeGame) return;
 
+        const lobbyId = activeGame.lobby.lobbyId;
+        const abandoningPlayer = activeGame.lobby.players.find((p) => p.socketId === socket.id);
+        if (abandoningPlayer) {
+            this.journalService.addPlayerAbandonEntry(lobbyId, abandoningPlayer.character.name);
+        }
+
         const combatSession = this.findCombatSessionByPlayer(socket.id);
         if (combatSession) {
             const winnerId = combatSession.attackerId === socket.id ? combatSession.defenderId : combatSession.attackerId;
             this.resolveCombatByAbandon(combatSession, socket.id, winnerId);
         }
 
-        const isGameOver = this.gameLogicService.executePlayerAbandon(activeGame.lobby.lobbyId, socket, this.server);
+        const isGameOver = this.gameLogicService.executePlayerAbandon(lobbyId, socket, this.server);
         if (!isGameOver) return;
 
-        const lobbyId = activeGame.lobby.lobbyId;
         const remainingPlayers = activeGame.lobby.players
             .filter((player) => !player.hasAbandonned)
             .map((player) => player.socketId);
@@ -358,6 +400,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const players = activeGame ? [...activeGame.lobby.players] : [];
         const socketIds = new Set(players.map((player) => player.socketId));
         this.endGamePlayers.set(lobbyId, socketIds);
+
+        const activeNames = players.filter((p) => !p.hasAbandonned).map((p) => p.character.name);
+        this.journalService.addGameOverEntry(lobbyId, activeNames);
 
         this.server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId, isForfeit: false, players, gameStats });
         this.gameLogicService.endGame(lobbyId);
@@ -441,6 +486,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundResolved, roundResolvedData);
         this.server.to(session.lobbyId).emit(JoinGameEvents.CombatResult, combatResult);
 
+        this.emitCombatJournalEntries(session, combatResult);
+
         const isFightOver = combatResult.attacker.killed || combatResult.defender.killed;
         if (!isFightOver) {
             session.consumeActionPointOnNextRound = false;
@@ -449,6 +496,17 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             }, COMBAT_ROUND_DELAY_MS);
             return;
         }
+
+        this.handleCombatEnd(session, combatResult);
+    }
+
+    private handleCombatEnd(session: CombatSession, combatResult: CombatResult): void {
+        const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
+        const attackerName = activeGame?.lobby.players.find((p) => p.socketId === session.attackerId)?.character?.name ?? 'Attaquant';
+        const defenderName = activeGame?.lobby.players.find((p) => p.socketId === session.defenderId)?.character?.name ?? 'Défenseur';
+        const winnerName = combatResult.winnerId === session.attackerId ? attackerName : defenderName;
+        const loserName = combatResult.winnerId === session.attackerId ? defenderName : attackerName;
+        this.journalService.addCombatEndEntry(session.lobbyId, winnerName, loserName);
 
         const combatEndedData: CombatEndedData = {
             roomId: session.roomId,
@@ -614,5 +672,79 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     private sendActionPoints(lobbyId: string, socketId: string): void {
         const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
         this.server.to(lobbyId).emit(JoinGameEvents.ActionPoints, { socketId, actionPoints });
+    }
+
+    private emitCombatJournalEntries(session: CombatSession, combatResult: CombatResult): void {
+        const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
+        if (!activeGame) return;
+
+        const attackerName = activeGame.lobby.players.find((p) => p.socketId === session.attackerId)?.character?.name ?? 'Attaquant';
+        const defenderName = activeGame.lobby.players.find((p) => p.socketId === session.defenderId)?.character?.name ?? 'Défenseur';
+
+        const atkAtk = combatResult.attacker.attack;
+        const atkDef = combatResult.attacker.defense;
+        const defAtk = combatResult.defender.attack;
+        const defDef = combatResult.defender.defense;
+
+        // Attacker's attack detail
+        this.journalService.addEntry(session.lobbyId, {
+            eventType: JournalEventType.CombatAttackDetail,
+            playerNames: [attackerName],
+            message: `Attaque de ${attackerName} : base=${atkAtk.base}, posture=+${atkAtk.postureBonus}, ` +
+                `dé=+${atkAtk.diceBonus}, malus=-${atkAtk.penalty}, total=${atkAtk.total}`,
+            isPrivate: true,
+            involvedPlayerIds: [session.attackerId, session.defenderId],
+        });
+
+        // Attacker's defense detail
+        this.journalService.addEntry(session.lobbyId, {
+            eventType: JournalEventType.CombatDefenseDetail,
+            playerNames: [attackerName],
+            message: `Défense de ${attackerName} : base=${atkDef.base}, posture=+${atkDef.postureBonus}, ` +
+                `dé=+${atkDef.diceBonus}, malus=-${atkDef.penalty}, total=${atkDef.total}`,
+            isPrivate: true,
+            involvedPlayerIds: [session.attackerId, session.defenderId],
+        });
+
+        // Defender's attack detail
+        this.journalService.addEntry(session.lobbyId, {
+            eventType: JournalEventType.CombatAttackDetail,
+            playerNames: [defenderName],
+            message: `Attaque de ${defenderName} : base=${defAtk.base}, posture=+${defAtk.postureBonus}, ` +
+                `dé=+${defAtk.diceBonus}, malus=-${defAtk.penalty}, total=${defAtk.total}`,
+            isPrivate: true,
+            involvedPlayerIds: [session.attackerId, session.defenderId],
+        });
+
+        // Defender's defense detail
+        this.journalService.addEntry(session.lobbyId, {
+            eventType: JournalEventType.CombatDefenseDetail,
+            playerNames: [defenderName],
+            message: `Défense de ${defenderName} : base=${defDef.base}, posture=+${defDef.postureBonus}, ` +
+                `dé=+${defDef.diceBonus}, malus=-${defDef.penalty}, total=${defDef.total}`,
+            isPrivate: true,
+            involvedPlayerIds: [session.attackerId, session.defenderId],
+        });
+
+        // Damage differences
+        const dmgToDefender = combatResult.attacker.damageDealt;
+        const dmgToAttacker = combatResult.defender.damageDealt;
+
+        this.journalService.addEntry(session.lobbyId, {
+            eventType: JournalEventType.CombatDamageResult,
+            playerNames: [attackerName, defenderName],
+            message: `${attackerName} attaque(${atkAtk.total}) - ${defenderName} défense(${defDef.total}) = ${dmgToDefender} dégât(s). ` +
+                `${defenderName} attaque(${defAtk.total}) - ${attackerName} défense(${atkDef.total}) = ${dmgToAttacker} dégât(s).`,
+            isPrivate: true,
+            involvedPlayerIds: [session.attackerId, session.defenderId],
+        });
+
+        // Round damage result
+        if (dmgToDefender > 0) {
+            this.journalService.addCombatDamageEntry(session.lobbyId, attackerName, defenderName, session.attackerId, session.defenderId);
+        }
+        if (dmgToAttacker > 0) {
+            this.journalService.addCombatDamageEntry(session.lobbyId, defenderName, attackerName, session.attackerId, session.defenderId);
+        }
     }
 }
