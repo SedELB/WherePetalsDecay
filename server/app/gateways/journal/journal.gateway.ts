@@ -25,7 +25,6 @@ export class JournalGateway implements OnGatewayInit {
 
     @SubscribeMessage(JoinGameEvents.JournalHistoryRequest)
     handleJournalHistoryRequest(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string): void {
-        if (!socket.rooms.has(lobbyId)) return;
 
         const localSocketId = socket.id;
         const allEntries = this.journalService.getEntries(lobbyId);
