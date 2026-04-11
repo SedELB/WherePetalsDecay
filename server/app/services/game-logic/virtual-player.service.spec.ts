@@ -1,18 +1,38 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { GameLogicService } from './game-logic.service';
+import { VirtualPlayerPathfindingService } from './virtual-player-pathfinding.service';
 import { VirtualPlayerService } from './virtual-player.service';
 
 describe('VirtualPlayerService', () => {
-  let service: VirtualPlayerService;
+    let service: VirtualPlayerService;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [VirtualPlayerService],
-    }).compile();
+    const mockPathfindingService: Partial<VirtualPlayerPathfindingService> = {
+        computeFullDijkstra: jest.fn(),
+        reconstructPath: jest.fn(),
+        findFurthestReachablePositionOnPath: jest.fn(),
+        getReachableTilesWithinBudget: jest.fn(),
+        isTileOccupiedByAnotherPlayer: jest.fn().mockReturnValue(false),
+        positionKey: jest.fn((pos) => `${pos.x},${pos.y}`),
+    };
 
-    service = module.get<VirtualPlayerService>(VirtualPlayerService);
-  });
+    const mockGameLogicService: Partial<GameLogicService> = {
+        endTurn: jest.fn(),
+        checkWinCondition: jest.fn().mockReturnValue(null),
+    };
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
+    beforeEach(async () => {
+        const module: TestingModule = await Test.createTestingModule({
+            providers: [
+                VirtualPlayerService,
+                { provide: VirtualPlayerPathfindingService, useValue: mockPathfindingService },
+                { provide: GameLogicService, useValue: mockGameLogicService },
+            ],
+        }).compile();
+
+        service = module.get<VirtualPlayerService>(VirtualPlayerService);
+    });
+
+    it('should be defined', () => {
+        expect(service).toBeDefined();
+    });
 });

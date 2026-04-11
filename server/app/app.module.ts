@@ -7,6 +7,8 @@ import { GameService } from './services/game/game.service';
 import { GameValidatorService } from './services/game/game-validator.service';
 import { LobbyService } from './services/lobby/lobby.service';
 import { VirtualPlayerService } from './services/game-logic/virtual-player.service';
+import { VirtualPlayerPathfindingService } from './services/game-logic/virtual-player-pathfinding.service';
+import { VirtualPlayerScannerService } from './services/game-logic/virtual-player-scanner.service';
 import { GameLogicService } from './services/game-logic/game-logic.service';
 import { TurnService } from './services/game-logic/turn.service';
 import { MovementService } from './services/game-logic/movement.service';
@@ -50,6 +52,8 @@ import { JournalService } from './services/journal/journal.service';
         JournalService,
         GameTurnSyncService,
         VirtualPlayerService,
+        VirtualPlayerPathfindingService,
+        VirtualPlayerScannerService,
 
         // Gateways
         AdminGateway,
