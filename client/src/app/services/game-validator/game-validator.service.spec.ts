@@ -37,6 +37,8 @@ const baseObjects = (mode: GameMode): PlacedObject[] => {
     const objects: PlacedObject[] = [
         { type: TileItem.Spawn, position: { x: 0, y: 0 } },
         { type: TileItem.Spawn, position: { x: 1, y: 0 } },
+        { type: TileItem.HealingSanctuary, position: { x: 3, y: 0 } },
+        { type: TileItem.CombatSanctuary, position: { x: 4, y: 0 } },
     ];
 
     if (mode === GameMode.Ctf) {
