@@ -1,7 +1,7 @@
-import { NAME_MAX_LENGTH, DESC_MAX_LENGTH, TEXT_MIN_LENGTH } from '@common/constants/validation.constants';
+import { DESC_MAX_LENGTH, NAME_MAX_LENGTH, TEXT_MIN_LENGTH } from '@common/constants/validation.constants';
 import { TileItem, TileTexture } from '@common/enums';
 
-export { NAME_MAX_LENGTH, DESC_MAX_LENGTH, TEXT_MIN_LENGTH };
+export { DESC_MAX_LENGTH, NAME_MAX_LENGTH, TEXT_MIN_LENGTH };
 export const MIN_PLAYERS_DTO = 2;
 export const MAX_PLAYERS_DTO = 6;
 export const BASE_10 = 10;
@@ -43,7 +43,8 @@ export const CUSTOM_GRID_CLASSIC_SMALL = [
         { type: TileTexture.Floor, item: null },
     ],
     [
-        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: TileItem.HealingSanctuary },
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
+        { type: TileTexture.Floor, item: TileItem.HealingSanctuary },
         { type: TileTexture.Floor, item: TileItem.CombatSanctuary }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Ice, item: null },
         { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: TileItem.Spawn },
         { type: TileTexture.Floor, item: null },
