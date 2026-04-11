@@ -1,9 +1,60 @@
+import { Posture } from '@common/character';
+import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS } from '@common/direction';
+import { TileTexture } from '@common/enums';
+import { CombatResult } from '@common/interfaces/game-view';
 import { Player } from '@common/player';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
-import { ActiveGame, CombatResult, VICTORIES_TO_WIN } from './active-game.interface';
+import { ActiveGame, VICTORIES_TO_WIN } from './active-game.interface';
+
+const POSTURE_BONUS_VALUE = 2;
+const ICE_PENALTY_VALUE = 2;
+const DICE_FACE_INDEX = 1;
+const DICE_MIN_VALUE = 1;
+
+type DiceRollMode = 'random' | 'max' | 'min';
+
+interface CombatDiceStrategy {
+    attacker: DiceRollMode;
+    defender: DiceRollMode;
+}
+
+interface CombatParticipants {
+    attacker: Player;
+    defender: Player;
+    attackerOldPosition: Vec2;
+    defenderOldPosition: Vec2;
+}
+
+interface CombatStatValue {
+    base: number;
+    postureBonus: number;
+    diceBonus: number;
+    penalty: number;
+    total: number;
+}
+
+interface CombatStatsSnapshot {
+    attackerAttack: CombatStatValue;
+    attackerDefense: CombatStatValue;
+    defenderAttack: CombatStatValue;
+    defenderDefense: CombatStatValue;
+    damageToDefender: number;
+    damageToAttacker: number;
+    attackerLifeBefore: number;
+    defenderLifeBefore: number;
+}
+
+interface CombatDeathResolution {
+    attackerKilled: boolean;
+    defenderKilled: boolean;
+    winnerId: string | null;
+    loserId: string | null;
+    attackerNewPosition: Vec2 | null;
+    defenderNewPosition: Vec2 | null;
+}
 
 @Injectable()
 export class CombatService {
@@ -23,10 +74,62 @@ export class CombatService {
         });
     }
 
-    initiateCombat(game: ActiveGame, attackerId: string, defenderId: string): CombatResult | null {
-        const actionPoints = game.actionPoints.get(attackerId) ?? 0;
-        if (actionPoints <= 0) return null;
+    initiateCombat(
+        game: ActiveGame,
+        attackerId: string,
+        defenderId: string,
+        consumeActionPoint = true,
+        diceStrategy?: CombatDiceStrategy,
+    ): CombatResult | null {
+        if (!this.tryConsumeActionPoint(game, attackerId, consumeActionPoint)) return null;
 
+        const participants = this.getCombatParticipants(game, attackerId, defenderId);
+        if (!participants) return null;
+
+        const statsSnapshot = this.computeCombatStats(game, participants, diceStrategy);
+        this.applyCombatDamageAndTracking(participants, statsSnapshot);
+
+        const deathResolution = this.resolveCombatDeaths(game, participants, attackerId, defenderId);
+
+        return {
+            attacker: {
+                socketId: attackerId,
+                attack: statsSnapshot.attackerAttack,
+                defense: statsSnapshot.attackerDefense,
+                damageDealt: statsSnapshot.damageToDefender,
+                lifeBefore: statsSnapshot.attackerLifeBefore,
+                lifeAfter: participants.attacker.character.life,
+                killed: deathResolution.attackerKilled,
+                oldPosition: participants.attackerOldPosition,
+                newPosition: deathResolution.attackerNewPosition,
+            },
+            defender: {
+                socketId: defenderId,
+                attack: statsSnapshot.defenderAttack,
+                defense: statsSnapshot.defenderDefense,
+                damageDealt: statsSnapshot.damageToAttacker,
+                lifeBefore: statsSnapshot.defenderLifeBefore,
+                lifeAfter: participants.defender.character.life,
+                killed: deathResolution.defenderKilled,
+                oldPosition: participants.defenderOldPosition,
+                newPosition: deathResolution.defenderNewPosition,
+            },
+            winnerId: deathResolution.winnerId,
+            loserId: deathResolution.loserId,
+        };
+    }
+
+    private tryConsumeActionPoint(game: ActiveGame, attackerId: string, consumeActionPoint: boolean): boolean {
+        if (!consumeActionPoint) return true;
+
+        const actionPoints = game.actionPoints.get(attackerId) ?? 0;
+        if (actionPoints <= 0) return false;
+
+        game.actionPoints.set(attackerId, actionPoints - 1);
+        return true;
+    }
+
+    private getCombatParticipants(game: ActiveGame, attackerId: string, defenderId: string): CombatParticipants | null {
         const adjacentPlayers = this.getAdjacentPlayers(game, attackerId);
         if (!adjacentPlayers.some((player) => player.socketId === defenderId)) return null;
 
@@ -34,18 +137,136 @@ export class CombatService {
         const defender = game.lobby.players.find((player) => player.socketId === defenderId);
         if (!attacker || !defender) return null;
 
-        game.actionPoints.set(attackerId, actionPoints - 1);
-        attacker.winsCount++;
-
-        const loserNewPosition = this.resetLoserPosition(game, defenderId);
+        const attackerOldPosition = game.playerPositions.get(attackerId);
+        const defenderOldPosition = game.playerPositions.get(defenderId);
+        if (!attackerOldPosition || !defenderOldPosition) return null;
 
         return {
-            winnerId: attackerId,
-            loserId: defenderId,
-            damage: defender.character.life,
-            loserHpLeft: defender.character.life,
-            killed: true,
-            loserNewPosition,
+            attacker,
+            defender,
+            attackerOldPosition,
+            defenderOldPosition,
+        };
+    }
+
+    private computeCombatStats(
+        game: ActiveGame,
+        participants: CombatParticipants,
+        diceStrategy?: CombatDiceStrategy,
+    ): CombatStatsSnapshot {
+        const attackerPenalty = this.getIcePenalty(game, participants.attacker.socketId);
+        const defenderPenalty = this.getIcePenalty(game, participants.defender.socketId);
+
+        participants.attacker.character.debuf = attackerPenalty;
+        participants.defender.character.debuf = defenderPenalty;
+
+        const attackerDiceMode = diceStrategy?.attacker ?? 'random';
+        const defenderDiceMode = diceStrategy?.defender ?? 'random';
+
+        const attackerAttack = this.buildStat(
+            participants.attacker.character.attack,
+            this.getPostureBonus(participants.attacker.character.bonusPosture, 'atk'),
+            this.rollDice(participants.attacker.character.attackDice, attackerDiceMode),
+            attackerPenalty,
+        );
+
+        const attackerDefense = this.buildStat(
+            participants.attacker.character.defense,
+            this.getPostureBonus(participants.attacker.character.bonusPosture, 'def'),
+            this.rollDice(participants.attacker.character.defenseDice, attackerDiceMode),
+            attackerPenalty,
+        );
+
+        const defenderAttack = this.buildStat(
+            participants.defender.character.attack,
+            this.getPostureBonus(participants.defender.character.bonusPosture, 'atk'),
+            this.rollDice(participants.defender.character.attackDice, defenderDiceMode),
+            defenderPenalty,
+        );
+
+        const defenderDefense = this.buildStat(
+            participants.defender.character.defense,
+            this.getPostureBonus(participants.defender.character.bonusPosture, 'def'),
+            this.rollDice(participants.defender.character.defenseDice, defenderDiceMode),
+            defenderPenalty,
+        );
+
+        const damageToAttacker = Math.max(defenderAttack.total - attackerDefense.total, 0);
+        let damageToDefender = Math.max(attackerAttack.total - defenderDefense.total, 0);
+
+        if (damageToDefender === 0 && damageToAttacker === 0) {
+            damageToDefender = 1;
+        }
+
+        return {
+            attackerAttack,
+            attackerDefense,
+            defenderAttack,
+            defenderDefense,
+            damageToDefender,
+            damageToAttacker,
+            attackerLifeBefore: participants.attacker.character.life,
+            defenderLifeBefore: participants.defender.character.life,
+        };
+    }
+
+    private applyCombatDamageAndTracking(participants: CombatParticipants, statsSnapshot: CombatStatsSnapshot): void {
+        participants.attacker.character.life = Math.max(statsSnapshot.attackerLifeBefore - statsSnapshot.damageToAttacker, 0);
+        participants.defender.character.life = Math.max(statsSnapshot.defenderLifeBefore - statsSnapshot.damageToDefender, 0);
+
+        participants.attacker.combatCount++;
+        participants.defender.combatCount++;
+
+        participants.attacker.totalHpDealt += statsSnapshot.damageToDefender;
+        participants.attacker.totalHpLost += statsSnapshot.damageToAttacker;
+        participants.defender.totalHpDealt += statsSnapshot.damageToAttacker;
+        participants.defender.totalHpLost += statsSnapshot.damageToDefender;
+    }
+
+    private resolveCombatDeaths(
+        game: ActiveGame,
+        participants: CombatParticipants,
+        attackerId: string,
+        defenderId: string,
+    ): CombatDeathResolution {
+        const attackerKilled = participants.attacker.character.life <= 0;
+        const defenderKilled = participants.defender.character.life <= 0;
+
+        let attackerNewPosition: Vec2 | null = null;
+        let defenderNewPosition: Vec2 | null = null;
+
+        if (attackerKilled) {
+            participants.attacker.lossCount++;
+            attackerNewPosition = this.resetLoserPosition(game, attackerId);
+            participants.attacker.character.life = this.getMaxLife(participants.attacker);
+        }
+
+        if (defenderKilled) {
+            participants.defender.lossCount++;
+            defenderNewPosition = this.resetLoserPosition(game, defenderId);
+            participants.defender.character.life = this.getMaxLife(participants.defender);
+        }
+
+        let winnerId: string | null = null;
+        let loserId: string | null = null;
+
+        if (attackerKilled && !defenderKilled) {
+            winnerId = defenderId;
+            loserId = attackerId;
+            participants.defender.winsCount++;
+        } else if (defenderKilled && !attackerKilled) {
+            winnerId = attackerId;
+            loserId = defenderId;
+            participants.attacker.winsCount++;
+        }
+
+        return {
+            attackerKilled,
+            defenderKilled,
+            winnerId,
+            loserId,
+            attackerNewPosition,
+            defenderNewPosition,
         };
     }
 
@@ -106,5 +327,42 @@ export class CombatService {
             if (playerPos.x === pos.x && playerPos.y === pos.y) return true;
         }
         return false;
+    }
+
+    private getPostureBonus(posture: Posture | undefined, postureType: 'atk' | 'def'): number {
+        if (!posture || !posture.type) return 0;
+        return posture.type === postureType ? POSTURE_BONUS_VALUE : 0;
+    }
+
+    private rollDice(dice: string, mode: DiceRollMode = 'random'): number {
+        const faces = Number(dice[DICE_FACE_INDEX]);
+        if (mode === 'max') return faces;
+        if (mode === 'min') return DICE_MIN_VALUE;
+        return Math.floor(Math.random() * faces) + DICE_MIN_VALUE;
+    }
+
+    private getIcePenalty(game: ActiveGame, socketId: string): 2 | 0 {
+        const position = game.playerPositions.get(socketId);
+        if (!position) return 0;
+
+        const tile = game.lobby.game.grid[position.y]?.[position.x];
+        if (!tile) return 0;
+
+        return tile.type === TileTexture.Ice ? (ICE_PENALTY_VALUE as 2) : 0;
+    }
+
+    private buildStat(base: number, postureBonus: number, diceBonus: number, penalty: number) {
+        const total = Math.max(base + postureBonus + diceBonus - penalty, 0);
+        return {
+            base,
+            postureBonus,
+            diceBonus,
+            penalty,
+            total,
+        };
+    }
+
+    private getMaxLife(player: Player): number {
+        return player.character.lifeBonus ? BASE_STATS.life + BASE_STATS.bonus : BASE_STATS.life;
     }
 }

@@ -1,0 +1,257 @@
+﻿@use "src/styles.scss" as *;
+
+.combat-container {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    pointer-events: auto;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 1rem;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+%panel-base {
+    background-color: $transparent-background;
+    border-radius: 0.75rem;
+    padding: 0.9rem 1rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.fighter-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    min-width: 280px;
+    max-width: 320px;
+}
+
+.profile-card {
+    @extend %panel-base;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.35rem;
+
+    h3 {
+        margin: 0;
+        color: $text-color;
+    }
+
+    .pfp {
+        width: 110px;
+        height: 110px;
+        border-radius: 0.5rem;
+        object-fit: cover;
+    }
+}
+
+.posture {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.9rem;
+}
+
+.fight-panel {
+    @extend %panel-base;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.8rem;
+    min-width: 540px;
+
+    h1 {
+        margin: 0;
+        color: $text-color;
+    }
+}
+
+.subtitle {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.stats-panel {
+    @extend %panel-base;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    
+    h4 {
+        margin: 0 0 0.35rem 0;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+        padding-bottom: 0.3rem;
+        color: $text-color;
+    }
+
+    span {
+        color: $text-color;
+        font-size: 0.92rem;
+    }
+}
+
+.stats-panel.unified {
+    width: 100%;
+}
+
+.group-title {
+    margin-top: 0.45rem;
+    font-weight: 700;
+    color: #93c5fd !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.16);
+    padding-top: 0.35rem;
+}
+
+.total-line {
+    margin-top: 0.35rem;
+    font-weight: 700;
+    color: #d8b4fe !important;
+}
+
+app-isometric-map {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+}
+
+.combat {
+    position: relative;
+    width: 520px;
+    height: 430px;
+    transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+
+    .bonuses {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 2;
+        box-sizing: border-box;
+    }
+
+    app-isometric-map {
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    .combat-map-overlays {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        pointer-events: none;
+    }
+}
+
+.hit-marker {
+    position: absolute;
+    transform: translate(-50%, -120%);
+    font-size: 1.3rem;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+    animation: hit-pop 260ms ease-out;
+}
+
+@keyframes hit-pop {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -95%) scale(0.75);
+    }
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -120%) scale(1);
+    }
+}
+
+.bonuses {
+    @extend %panel-base;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    width: 360px;
+    padding: 0.9rem;
+    transition: all 0.3s ease;
+
+    h2 {
+        color: $text-color;
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    .choices {
+        display: flex;
+        flex-direction: row;
+        gap: 0.75rem;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .bonus-effect {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+        width: 100%;
+        background: rgba(0,0,0,0.3);
+        padding: 0.65rem;
+        border-radius: 0.5rem;
+
+        span {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+    }
+
+    .timer {
+        color: #FF5252;
+        font-size: 1rem;
+        font-weight: bold;
+        margin-top: 0.5rem;
+    }
+}
+
+.result-panel {
+    @extend %panel-base;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+
+    h3 {
+        margin: 0 0 0.25rem 0;
+        color: $text-color;
+        font-size: 1rem;
+    }
+
+    span {
+        color: rgba(255, 255, 255, 0.92);
+        font-size: 0.95rem;
+    }
+}
+
+.roll-tag {
+    color: #93c5fd !important;
+    font-weight: 700;
+}
+
+.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.disabled-panel {
+    opacity: 0.75;
+}

@@ -22,6 +22,15 @@ export const RENDER_CONSTANTS = {
   itemFloatAmplitude: 0.10,
   itemFloatBaseOffset: 0.4,
   itemWidthRatio: 0.5,
+  itemVerticalOffset: -0.25,
+
+  itemShadowRadiusXRatio: 0.2,
+  itemShadowRadiusYRatio: 0.08,
+  itemShadowOffsetYRatio: 0.35,
+  itemShadowScaleMin: 0.65,
+  itemShadowScaleRange: 0.35,
+  itemShadowAlphaMin: 0.12,
+  itemShadowAlphaRange: 0.22,
 
   playerWidthRatio: 0.75,
   playerHeightAdjustment: 0.9,
@@ -30,6 +39,11 @@ export const RENDER_CONSTANTS = {
   shadowOffsetYRatio: 0.05,
   shadowRadiusXRatio: 0.4,
   shadowRadiusYRatio: 0.1,
+
+  actionPulseBase: 0.38,
+  actionPulseAmplitude: 0.22,
+  actionPulseSpeed: 300,
+  actionGlowLineWidth: 2.5,
 };
 
 

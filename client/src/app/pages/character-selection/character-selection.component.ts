@@ -236,17 +236,17 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
     }
 
     generateRandomCharacter(): void {
-        let random = this.characterService.generateRandomCharacter();
-
-        while (this.currentlySelectedAvatars.includes(random.avatarPath)) {
-            random = this.characterService.generateRandomCharacter();
-        }
+        const occupiedByOthers = new Set(this.currentlySelectedAvatars.filter((avatar) => avatar !== this.selectedAvatar));
+        const availableAvatars = AVATARS_PATH.filter((avatar) => !occupiedByOthers.has(avatar) && avatar !== this.selectedAvatar);
+        const random = this.characterService.generateRandomCharacter(availableAvatars);
 
         this.characterName = random.name;
         this.lifeBonusSelected = random.lifeBonus;
         this.attackDiceD6 = random.attackDiceD6;
 
-        this.selectAvatar(random.avatarPath);
+        if (availableAvatars.length > 0) {
+            this.selectAvatar(random.avatarPath);
+        }
     }
 
     goBack(): void {

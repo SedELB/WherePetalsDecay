@@ -22,7 +22,7 @@ export class ChatGateway {
         if (!socket.rooms.has(lobbyId)) return;
 
         const rawMessage = payload.message;
-        const message = rawMessage.trim().slice(0, MAX_MESSAGE_LENGTH);
+        const message = rawMessage.slice(0, MAX_MESSAGE_LENGTH);
         if (!message) return;
 
         const lobby = this.lobbyService.getLobby(lobbyId);
@@ -41,8 +41,6 @@ export class ChatGateway {
 
     @SubscribeMessage(JoinGameEvents.ChatHistoryRequest)
     handleChatHistoryRequest(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string): void {
-        if (!socket.rooms.has(lobbyId)) return;
-
         const lobby = this.lobbyService.getLobby(lobbyId);
         if (!lobby) return;
 

@@ -1,0 +1,8 @@
+<!-- Loader inspired by https://uiverse.io/fateself/tricky-crab-38 -->
+@if (visible) {
+<div class="loader" [class.hiding]="hiding">
+    @for (item of dots; track $index) {
+        <span [style.--i]="$index"></span>
+    }
+</div>
+}

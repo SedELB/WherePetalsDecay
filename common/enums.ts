@@ -41,6 +41,7 @@ export enum SocketNamespace {
     Admin = '/admin',
     Games = '/game',
     Join = '/join',
+    Combat = '/combat',
 }
 
 export enum ButtonVariant {
@@ -50,6 +51,7 @@ export enum ButtonVariant {
     DeleteGame = 'delete-game',
     Edit = 'edit',
     ToggleVisibility = 'toggle-visibility',
+    AddVirtualPlayer = 'add-virtual-player',
 }
 
 export enum MapSetupMode {
@@ -61,4 +63,14 @@ export enum MapSizeKey {
     Small = 'small',
     Medium = 'medium',
     Large = 'large',
+}
+
+export enum PlayerType {
+    Reel = 'real',
+    Virtual = 'virtual',
+}
+
+export enum VirtualPlayerProfile {
+    Aggressive = 'aggressive',
+    Defensive = 'defensive',
 }

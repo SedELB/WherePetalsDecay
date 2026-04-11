@@ -18,6 +18,13 @@ export interface ActiveGame {
     sanctuaryCooldowns: Map<string, number>;
     playerCombatBonusTurns: Map<string, number>;
     isDebugMode?: boolean;
+    visitedTilesPerPlayer: Map<string, Set<string>>;
+    globalVisitedTiles: Set<string>;
+    sanctuariesUsed: Set<string>;
+    doorsInteracted: Set<string>;
+    flagHolders: Set<string>;
+    totalTurns: number;
+    gameStartTime: number;
 }
 
 export interface TurnCallbacks {
@@ -25,13 +32,4 @@ export interface TurnCallbacks {
     onTurnCountdown: (lobbyId: string, secondsLeft: number) => void;
     onTurnStarted: (lobbyId: string, playerSocketId: string) => void;
     onTurnEnded: (lobbyId: string, playerSocketId: string) => void;
-}
-
-export interface CombatResult {
-    winnerId: string;
-    loserId: string;
-    damage: number;
-    loserHpLeft: number;
-    killed: boolean;
-    loserNewPosition: Vec2 | null;
 }
