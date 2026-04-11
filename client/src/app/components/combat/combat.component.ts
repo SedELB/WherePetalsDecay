@@ -1,19 +1,29 @@
-import { Component, Input, OnChanges, OnInit } from '@angular/core';
+import { NgClass, NgStyle } from '@angular/common';
+import { Component, effect, Input, OnChanges, OnDestroy, OnInit } from '@angular/core';
 import { ButtonComponent } from '@app/components/button/button.component';
-import { NgClass } from '@angular/common';
-import { Tile } from '@common/tile';
-import { TileTexture } from '@common/enums';
 import { IsometricMapComponent } from '@app/components/isometric-map/isometric-map.component';
 import { GameViewService } from '@app/services/game-view/game-view.service';
-import { Vec2 } from '@common/vec2';
-import { Player } from '@common/player';
 import { Posture } from '@common/character';
+import { TileTexture } from '@common/enums';
+import { CombatAttackAnimationData } from '@common/interfaces/game-view';
+import { Player } from '@common/player';
+import { Tile } from '@common/tile';
+import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
 
 const POSTURE_BONUS = 2;
 const TOAST_DEFAULT_TIMER = 2200;
 const START_TOAST_TIMER = 3600;
 const ROUND_RESULT_TOAST_TIMER = 4200;
+const COMBAT_ATTACK_ANIMATION_DEFAULT_MS = 1000;
+const COMBAT_ANIMATION_PHASE_COUNT = 6;
+const COMBAT_ANIMATION_DEFENDER_STEP_MULTIPLIER = 3;
+const COMBAT_ANIMATION_DEFENDER_HIT_MULTIPLIER = 4;
+const COMBAT_ANIMATION_DEFENDER_BACK_MULTIPLIER = 5;
+const COMBAT_ANIMATION_RESET_MULTIPLIER = 6;
+const COMBAT_ANIMATION_MIN_STEP_MS = 80;
+const TILE_CENTER_OFFSET = 0.5;
+const TO_PERCENT = 100;
 
 type TypePosture = 'atk' | 'def' | null;
 
@@ -40,19 +50,20 @@ interface RoundDetailedResult {
 
 @Component({
   selector: 'app-combat',
-  imports: [ButtonComponent, IsometricMapComponent, NgClass],
+  imports: [ButtonComponent, IsometricMapComponent, NgClass, NgStyle],
   templateUrl: './combat.component.html',
   styleUrl: './combat.component.scss',
 })
 
-export class CombatComponent implements OnChanges, OnInit {
+export class CombatComponent implements OnChanges, OnInit, OnDestroy {
 
   @Input() player!: Player;
   @Input() enemy!: Player;
-  
+
   playerPos: Record<string, Vec2> = {};
   isChoosingPosture = false;
   roundResult: RoundDetailedResult | null = null;
+  activeHitTargetSocketId: string | null = null;
 
   private duelKey = '';
   private hasShownStartPopup = false;
@@ -60,13 +71,26 @@ export class CombatComponent implements OnChanges, OnInit {
   private lastEnemyPostureType: TypePosture = null;
   private rollCount = 0;
   private lastAppliedResultKey = '';
+  private lastAttackAnimationSequence = 0;
+  private queuedAttackAnimation: CombatAttackAnimationData | null = null;
+  private attackAnimationTimeouts: ReturnType<typeof setTimeout>[] = [];
   readonly combatMap: Tile[][] = [
     [{ type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null }],
     [{ type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null }],
     [{ type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null }],
   ];
 
-  constructor(private readonly gameViewService: GameViewService) {}
+  constructor(private readonly gameViewService: GameViewService) {
+    effect(() => {
+      const payload = this.gameViewService.combatAttackAnimation();
+      if (!payload) return;
+      if (payload.sequence === this.lastAttackAnimationSequence) return;
+
+      this.lastAttackAnimationSequence = payload.sequence;
+      this.queuedAttackAnimation = payload.data;
+      this.tryPlayQueuedAttackAnimation();
+    });
+  }
 
   getCurrentRoundIndex(): number {
     return this.gameViewService.combatRoundIndex();
@@ -80,15 +104,16 @@ export class CombatComponent implements OnChanges, OnInit {
     this.isChoosingPosture = true;
   }
 
+  ngOnDestroy(): void {
+    this.clearAttackAnimationTimeouts();
+  }
+
   ngOnChanges(): void {
     if (!this.player?.socketId || !this.enemy?.socketId) return;
 
     this.initializeDuelIfNeeded();
 
-    this.playerPos = {
-      [this.enemy.socketId]: { x: 1, y: 0 },
-      [this.player.socketId]: { x: 1, y: 2 },
-    };
+    this.playerPos = this.getBaseCombatPositions();
 
     this.isChoosingPosture = !this.hasChosenPosture(this.player);
     if (this.isChoosingPosture) {
@@ -103,6 +128,7 @@ export class CombatComponent implements OnChanges, OnInit {
       this.lastEnemyPostureType = enemyPostureType;
     }
 
+    this.tryPlayQueuedAttackAnimation();
     this.applyLatestServerResult();
   }
 
@@ -134,6 +160,7 @@ export class CombatComponent implements OnChanges, OnInit {
     this.hasShownWaitingPopup = false;
     this.lastEnemyPostureType = this.enemy.character.bonusPosture?.type ?? null;
     this.roundResult = null;
+    this.activeHitTargetSocketId = null;
     this.rollCount = 0;
     this.lastAppliedResultKey = '';
 
@@ -156,6 +183,128 @@ export class CombatComponent implements OnChanges, OnInit {
 
   private hasChosenPosture(fighter: Player): boolean {
     return Boolean(fighter.character.bonusPosture?.type);
+  }
+
+  private tryPlayQueuedAttackAnimation(): void {
+    const animation = this.queuedAttackAnimation;
+    if (!animation || !this.player?.socketId || !this.enemy?.socketId) return;
+
+    const isCurrentDuel = [this.player.socketId, this.enemy.socketId].includes(animation.attackerSocketId) &&
+      [this.player.socketId, this.enemy.socketId].includes(animation.defenderSocketId);
+    if (!isCurrentDuel) {
+      this.queuedAttackAnimation = null;
+      return;
+    }
+
+    const basePositions = this.getBaseCombatPositions();
+    const attackerBasePosition = basePositions[animation.attackerSocketId];
+    const defenderBasePosition = basePositions[animation.defenderSocketId];
+    if (!attackerBasePosition || !defenderBasePosition) {
+      this.queuedAttackAnimation = null;
+      return;
+    }
+
+    const attackerLungePosition = this.computeLungePosition(attackerBasePosition, defenderBasePosition);
+    const defenderLungePosition = this.computeLungePosition(defenderBasePosition, attackerBasePosition);
+    const totalDurationMs = animation.durationMs > 0 ? animation.durationMs : COMBAT_ATTACK_ANIMATION_DEFAULT_MS;
+    const stepDurationMs = Math.max(COMBAT_ANIMATION_MIN_STEP_MS, Math.floor(totalDurationMs / COMBAT_ANIMATION_PHASE_COUNT));
+
+    this.clearAttackAnimationTimeouts();
+    this.activeHitTargetSocketId = null;
+
+    this.playerPos = {
+      ...basePositions,
+      [animation.attackerSocketId]: attackerLungePosition,
+    };
+
+    const attackerHitTimeout = setTimeout(() => {
+      this.activeHitTargetSocketId = animation.defenderSocketId;
+    }, stepDurationMs);
+
+    const attackerBackTimeout = setTimeout(() => {
+      this.activeHitTargetSocketId = null;
+      this.playerPos = { ...basePositions };
+    }, stepDurationMs * 2);
+
+    const defenderStepTimeout = setTimeout(() => {
+      this.playerPos = {
+        ...basePositions,
+        [animation.defenderSocketId]: defenderLungePosition,
+      };
+    }, stepDurationMs * COMBAT_ANIMATION_DEFENDER_STEP_MULTIPLIER);
+
+    const defenderHitTimeout = setTimeout(() => {
+      this.activeHitTargetSocketId = animation.attackerSocketId;
+    }, stepDurationMs * COMBAT_ANIMATION_DEFENDER_HIT_MULTIPLIER);
+
+    const defenderBackTimeout = setTimeout(() => {
+      this.activeHitTargetSocketId = null;
+      this.playerPos = { ...basePositions };
+    }, stepDurationMs * COMBAT_ANIMATION_DEFENDER_BACK_MULTIPLIER);
+
+    const resetTimeout = setTimeout(() => {
+      this.playerPos = this.getBaseCombatPositions();
+      this.activeHitTargetSocketId = null;
+      this.attackAnimationTimeouts = [];
+    }, stepDurationMs * COMBAT_ANIMATION_RESET_MULTIPLIER);
+
+    this.attackAnimationTimeouts.push(
+      attackerHitTimeout,
+      attackerBackTimeout,
+      defenderStepTimeout,
+      defenderHitTimeout,
+      defenderBackTimeout,
+      resetTimeout,
+    );
+
+    this.queuedAttackAnimation = null;
+  }
+
+  private getBaseCombatPositions(): Record<string, Vec2> {
+    return {
+      [this.enemy.socketId]: { x: 1, y: 0 },
+      [this.player.socketId]: { x: 1, y: 2 },
+    };
+  }
+
+  private computeLungePosition(attackerPosition: Vec2, defenderPosition: Vec2): Vec2 {
+    const deltaX = defenderPosition.x - attackerPosition.x;
+    const deltaY = defenderPosition.y - attackerPosition.y;
+
+    if (Math.abs(deltaX) >= Math.abs(deltaY)) {
+      return {
+        x: attackerPosition.x + Math.sign(deltaX),
+        y: attackerPosition.y,
+      };
+    }
+
+    return {
+      x: attackerPosition.x,
+      y: attackerPosition.y + Math.sign(deltaY),
+    };
+  }
+
+  private clearAttackAnimationTimeouts(): void {
+    if (this.attackAnimationTimeouts.length === 0) return;
+    this.attackAnimationTimeouts.forEach((timeout) => clearTimeout(timeout));
+    this.attackAnimationTimeouts = [];
+  }
+
+  getOverlayStyle(socketId: string): Record<string, string> {
+    const position = this.playerPos[socketId] ?? this.getBaseCombatPositions()[socketId];
+    if (!position) {
+      return { left: '50%', top: '50%' };
+    }
+
+    const rowCount = this.combatMap.length;
+    const colCount = this.combatMap[0]?.length ?? 1;
+    const left = ((position.x + TILE_CENTER_OFFSET) / colCount) * TO_PERCENT;
+    const top = ((position.y + TILE_CENTER_OFFSET) / rowCount) * TO_PERCENT;
+
+    return {
+      left: `${left}%`,
+      top: `${top}%`,
+    };
   }
 
   private applyLatestServerResult(): void {
