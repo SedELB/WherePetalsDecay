@@ -43,8 +43,8 @@ export const CUSTOM_GRID_CLASSIC_SMALL = [
         { type: TileTexture.Floor, item: null },
     ],
     [
-        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null },
-        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Ice, item: null },
+        { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: TileItem.HealingSanctuary },
+        { type: TileTexture.Floor, item: TileItem.CombatSanctuary }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Ice, item: null },
         { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Floor, item: TileItem.Spawn },
         { type: TileTexture.Floor, item: null },
     ],
