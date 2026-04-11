@@ -3,6 +3,7 @@ import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Debuf, Posture } from '@common/character';
 import { SocketNamespace, TileItem } from '@common/enums';
 import {
+    CombatAttackAnimationData,
     CombatEndedData,
     CombatResult,
     CombatRoundCountdownData,
@@ -36,12 +37,14 @@ export class GameViewCombatService {
     readonly isCombatStarted = signal<boolean>(false);
     readonly combatRoundIndex = signal<number>(1);
     readonly combatPostureCountdown = signal<number>(0);
+    readonly combatAttackAnimation = signal<{ data: CombatAttackAnimationData; sequence: number } | null>(null);
     readonly fighters = signal<CombatStartedData>({ player: {} as Player, enemy: {} as Player, roomId: '' });
     readonly lastCombatResult = signal<CombatResult | null>(null);
 
     private webSocketService: WebSocketService | null = null;
     private namespace: SocketNamespace | null = null;
     private listenersRegistered = false;
+    private combatAttackAnimationSequence = 0;
 
     setupListeners(webSocketService: WebSocketService, namespace: SocketNamespace, dependencies: CombatListenerDependencies): void {
         this.webSocketService = webSocketService;
@@ -56,6 +59,7 @@ export class GameViewCombatService {
         this.registerCombatRoundStartedListener();
         this.registerCombatRoundCountdownListener();
         this.registerCombatRoundResolvedListener(dependencies);
+        this.registerCombatAttackAnimationListener(dependencies);
         this.registerPostureReceivedListener();
     }
 
@@ -76,6 +80,7 @@ export class GameViewCombatService {
         this.isCombatStarted.set(false);
         this.combatRoundIndex.set(1);
         this.combatPostureCountdown.set(0);
+        this.combatAttackAnimation.set(null);
         this.fighters.set({ player: {} as Player, enemy: {} as Player, roomId: '' });
         this.lastCombatResult.set(null);
     }
@@ -263,7 +268,16 @@ export class GameViewCombatService {
 
         this.webSocketService.onNamespace<CombatStartedData>(this.namespace, JoinGameEvents.CombatStarted, (data) => {
             const localId = dependencies.getLocalSocketId();
-            const localPlayerData = data.player.socketId === localId
+            if (!localId) return;
+
+            const isLocalAttacker = data.player.socketId === localId;
+            const isLocalDefender = data.enemy.socketId === localId;
+            if (!isLocalAttacker && !isLocalDefender) {
+                this.completeCombatOverlay();
+                return;
+            }
+
+            const localPlayerData = isLocalAttacker
                 ? data
                 : { player: data.enemy, enemy: data.player, roomId: data.roomId };
 
@@ -338,6 +352,24 @@ export class GameViewCombatService {
                 showConfirmButton: false,
                 timer: COMBAT_END_NOTIFICATION_DELAY,
                 timerProgressBar: true,
+            });
+        });
+    }
+
+    private registerCombatAttackAnimationListener(dependencies: CombatListenerDependencies): void {
+        if (!this.webSocketService || !this.namespace) return;
+
+        this.webSocketService.onNamespace<CombatAttackAnimationData>(this.namespace, JoinGameEvents.CombatAttackAnimation, (data) => {
+            const localId = dependencies.getLocalSocketId();
+            if (!localId) return;
+
+            const isParticipant = localId === data.attackerSocketId || localId === data.defenderSocketId;
+            if (!isParticipant) return;
+
+            this.combatAttackAnimationSequence++;
+            this.combatAttackAnimation.set({
+                data,
+                sequence: this.combatAttackAnimationSequence,
             });
         });
     }

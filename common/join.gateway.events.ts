@@ -76,6 +76,8 @@ export enum JoinGameEvents {
     CombatRoundResolved = 'combatRoundResolved',
     CombatResult = 'combatResult',
     CombatEnded = 'combatEnded',
+    CombatLockStateChanged = 'combatLockStateChanged',
+    CombatAttackAnimation = 'combatAttackAnimation',
 
     // Info
     RequestTileInfo = 'requestTileInfo',
