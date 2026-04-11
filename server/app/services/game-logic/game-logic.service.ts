@@ -1,6 +1,6 @@
 import { BASE_STATS } from '@common/constants/character.constants';
 import { Direction } from '@common/direction';
-import { PlayerType, GameMode } from '@common/enums';
+import { GameMode, PlayerType } from '@common/enums';
 import { GameStats } from '@common/interfaces/game-stats';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
@@ -116,6 +116,16 @@ export class GameLogicService {
         if (game) {
             this.turnService.endTurn(game);
         }
+    }
+
+    pauseTurnCycle(lobbyId: string): boolean {
+        return this.turnService.pauseTurnCycle(lobbyId);
+    }
+
+    resumeTurnCycle(lobbyId: string): boolean {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return false;
+        return this.turnService.resumeTurnCycle(game);
     }
 
     incrementTotalTurns(lobbyId: string): void {
@@ -302,14 +312,18 @@ export class GameLogicService {
             const teamA = this.getActivePlayers(lobbyId, 'A');
             const teamB = this.getActivePlayers(lobbyId, 'B');
             if (teamA.length === 0) {
-                server.to(lobbyId).emit(JoinGameEvents.GameOver, { abandonTeam: 'A', 
-                    players: [...game.lobby.players], gameStats: this.getGameStats(lobbyId) });
+                server.to(lobbyId).emit(JoinGameEvents.GameOver, {
+                    abandonTeam: 'A',
+                    players: [...game.lobby.players], gameStats: this.getGameStats(lobbyId),
+                });
                 this.endGame(lobbyId);
                 return true;
             }
             if (teamB.length === 0) {
-                server.to(lobbyId).emit(JoinGameEvents.GameOver, { abandonTeam: 'B', 
-                    players: [...game.lobby.players], gameStats: this.getGameStats(lobbyId) });
+                server.to(lobbyId).emit(JoinGameEvents.GameOver, {
+                    abandonTeam: 'B',
+                    players: [...game.lobby.players], gameStats: this.getGameStats(lobbyId),
+                });
                 this.endGame(lobbyId);
                 return true;
             }

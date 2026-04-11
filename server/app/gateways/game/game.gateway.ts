@@ -6,7 +6,9 @@ import { Posture } from '@common/character';
 import { Direction } from '@common/direction';
 import { GameMode, SocketNamespace, TileItem, TileTexture } from '@common/enums';
 import {
+    CombatAttackAnimationData,
     CombatEndedData,
+    CombatLockStateData,
     CombatResult,
     CombatRoundCountdownData,
     CombatRoundResolvedData,
@@ -35,6 +37,7 @@ import { GameTurnSyncService } from './game-turn-sync.service';
 const COMBAT_ROUND_DELAY_MS = 2000;
 const COMBAT_POSTURE_TIMEOUT_MS = 10000;
 const COUNTDOWN_TICK_MS = 1000;
+const ATTACK_ANIMATION_DURATION_MS = 2000;
 const DEFAULT_POSTURE: Posture = { type: null, bonus: 0 };
 
 interface CombatSession {
@@ -118,6 +121,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     @SubscribeMessage(JoinGameEvents.RequestMove)
     handleRequestMove(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; direction: Direction }): void {
         const { lobbyId, direction } = payload;
+        if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
         const result = this.gameLogicService.movePlayer(lobbyId, socket.id, direction);
@@ -165,6 +169,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     @SubscribeMessage(JoinGameEvents.Teleport)
     handleTeleportMove(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; position: Vec2 }): void {
         const { lobbyId, position } = payload;
+        if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
         const newPosition = this.gameLogicService.teleportPlayer(lobbyId, socket.id, position);
@@ -201,6 +206,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
     @SubscribeMessage(JoinGameEvents.EndTurn)
     handleEndTurn(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string): void {
+        if (this.hasActiveCombatInLobby(lobbyId)) return;
+
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
         if (!activeGame) return;
 
@@ -245,6 +252,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const roomId = `fight${this.fightCounter}`;
 
         const { lobbyId, enemy } = payload;
+        if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
@@ -260,11 +268,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         socket.join(roomId);
         enemySocket.join(roomId);
 
-        const combatStartedData: CombatStartedData = { player: attacker, enemy: defender, roomId };
-        this.server.to(roomId).emit(JoinGameEvents.CombatStarted, combatStartedData);
-
-        this.journalService.addCombatStartEntry(lobbyId, attacker.character.name, defender.character.name);
-
         const combatSession: CombatSession = {
             lobbyId,
             roomId,
@@ -277,12 +280,25 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         };
 
         this.combatSessions.set(roomId, combatSession);
+        this.gameLogicService.pauseTurnCycle(lobbyId);
+        this.emitCombatLockState({
+            lobbyId,
+            isLocked: true,
+            roomId,
+            attackerSocketId: socket.id,
+            defenderSocketId: defender.socketId,
+        });
+
+        const combatStartedData: CombatStartedData = { player: attacker, enemy: defender, roomId };
+        this.server.to(roomId).emit(JoinGameEvents.CombatStarted, combatStartedData);
+        this.journalService.addCombatStartEntry(lobbyId, attacker.character.name, defender.character.name);
         this.startCombatRoundAwaitingPostures(combatSession);
     }
 
     @SubscribeMessage(JoinGameEvents.GiveFlagRequest)
     handleGiveFlagRequest(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; targetSocketId: string }): void {
         const { lobbyId, targetSocketId } = payload;
+        if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
         const requesterName = this.gameLogicService.getActiveGame(lobbyId)
@@ -298,6 +314,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     @SubscribeMessage(JoinGameEvents.RequestFlagRequest)
     handleRequestFlagRequest(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; targetSocketId: string }): void {
         const { lobbyId, targetSocketId } = payload;
+        if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
         const requesterName = this.gameLogicService.getActiveGame(lobbyId)
@@ -316,6 +333,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         @MessageBody() payload: { lobbyId: string; requesterId: string; accepted: boolean; isRequest?: boolean },
     ): void {
         const { lobbyId, requesterId, accepted, isRequest } = payload;
+        if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!accepted) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, requesterId)) return;
 
@@ -443,6 +461,13 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
         const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
         if (!activeGame) {
+            this.emitCombatLockState({
+                lobbyId: session.lobbyId,
+                isLocked: false,
+                roomId: session.roomId,
+                attackerSocketId: session.attackerId,
+                defenderSocketId: session.defenderId,
+            });
             this.cleanupCombatSession(session.roomId);
             return;
         }
@@ -450,6 +475,13 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const attacker = activeGame.lobby.players.find((player) => player.socketId === session.attackerId);
         const defender = activeGame.lobby.players.find((player) => player.socketId === session.defenderId);
         if (!attacker || !defender) {
+            this.emitCombatLockState({
+                lobbyId: session.lobbyId,
+                isLocked: false,
+                roomId: session.roomId,
+                attackerSocketId: session.attackerId,
+                defenderSocketId: session.defenderId,
+            });
             this.cleanupCombatSession(session.roomId);
             return;
         }
@@ -458,7 +490,20 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         defender.character.bonusPosture = session.postures.get(session.defenderId) ?? { ...DEFAULT_POSTURE };
 
         session.awaitingPostures = false;
-        this.executeCombatRound(session.roomId, session.consumeActionPointOnNextRound, timedOutSocketIds);
+        const attackAnimationData: CombatAttackAnimationData = {
+            lobbyId: session.lobbyId,
+            attackerSocketId: session.attackerId,
+            defenderSocketId: session.defenderId,
+            durationMs: ATTACK_ANIMATION_DURATION_MS,
+        };
+        this.server.to(session.roomId).emit(JoinGameEvents.CombatAttackAnimation, attackAnimationData);
+
+        session.timeoutHandle = setTimeout(() => {
+            const activeSession = this.combatSessions.get(session.roomId);
+            if (!activeSession) return;
+
+            this.executeCombatRound(activeSession.roomId, activeSession.consumeActionPointOnNextRound, timedOutSocketIds);
+        }, ATTACK_ANIMATION_DURATION_MS);
     }
 
     private executeCombatRound(roomId: string, consumeActionPoint: boolean, timedOutSocketIds: string[] = []): void {
@@ -473,6 +518,14 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         ) as CombatResult | null;
 
         if (!combatResult) {
+            this.emitCombatLockState({
+                lobbyId: session.lobbyId,
+                isLocked: false,
+                roomId: session.roomId,
+                attackerSocketId: session.attackerId,
+                defenderSocketId: session.defenderId,
+            });
+            this.gameLogicService.resumeTurnCycle(session.lobbyId);
             this.cleanupCombatSession(session.roomId);
             return;
         }
@@ -534,6 +587,13 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
     private finalizeCombatSession(session: CombatSession, finalResult: CombatResult): void {
         this.clearCombatSessionTimers(session);
+        this.emitCombatLockState({
+            lobbyId: session.lobbyId,
+            isLocked: false,
+            roomId: session.roomId,
+            attackerSocketId: session.attackerId,
+            defenderSocketId: session.defenderId,
+        });
 
         const winner = this.gameLogicService.checkWinCondition(session.lobbyId);
         if (winner) {
@@ -543,6 +603,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         }
 
         if (finalResult.winnerId === session.attackerId) {
+            this.gameLogicService.resumeTurnCycle(session.lobbyId);
             this.sendActionPoints(session.lobbyId, session.attackerId);
             this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
         } else {
@@ -559,6 +620,13 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     private resolveCombatByAbandon(session: CombatSession, loserId: string, winnerId: string): void {
         const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
         if (!activeGame) {
+            this.emitCombatLockState({
+                lobbyId: session.lobbyId,
+                isLocked: false,
+                roomId: session.roomId,
+                attackerSocketId: session.attackerId,
+                defenderSocketId: session.defenderId,
+            });
             this.cleanupCombatSession(session.roomId);
             return;
         }
@@ -578,6 +646,14 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         this.server.to(session.roomId).emit(JoinGameEvents.CombatEnded, combatEndedData);
 
         const winner = this.gameLogicService.checkWinCondition(session.lobbyId);
+        this.emitCombatLockState({
+            lobbyId: session.lobbyId,
+            isLocked: false,
+            roomId: session.roomId,
+            attackerSocketId: session.attackerId,
+            defenderSocketId: session.defenderId,
+        });
+
         if (winner) {
             this.handleGameOver(session.lobbyId, winner.socketId);
             this.cleanupCombatSession(session.roomId);
@@ -585,6 +661,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         }
 
         if (winnerId === session.attackerId) {
+            this.gameLogicService.resumeTurnCycle(session.lobbyId);
             this.sendActionPoints(session.lobbyId, session.attackerId);
             this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
         }
@@ -597,6 +674,14 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (session) this.clearCombatSessionTimers(session);
         this.server.in(roomId).socketsLeave(roomId);
         this.combatSessions.delete(roomId);
+    }
+
+    private hasActiveCombatInLobby(lobbyId: string): boolean {
+        return Array.from(this.combatSessions.values()).some((session) => session.lobbyId === lobbyId);
+    }
+
+    private emitCombatLockState(data: CombatLockStateData): void {
+        this.server.to(data.lobbyId).emit(JoinGameEvents.CombatLockStateChanged, data);
     }
 
     private normalizePosture(posture: Posture | null | undefined): Posture {
