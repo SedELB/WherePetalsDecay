@@ -1,4 +1,4 @@
-import { SocketNamespace } from '@common/enums';
+import { PlayerType, SocketNamespace, VirtualPlayerProfile } from '@common/enums';
 import { Game } from '@common/game';
 import { Injectable, Logger } from '@nestjs/common';
 import {
@@ -20,7 +20,7 @@ import { Player } from '@common/player';
 import { Server, Socket } from 'socket.io';
 
 const INITIAL_WINS_COUNT = 0;
-const DUPLICATE_NAME_SUFFIX_START = 2;
+const LOBBIES_REFRESH_DELAY_MS = 0;
 
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
@@ -58,6 +58,13 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         payload.player.socketId = socket.id;
         payload.player.isHost = true;
         payload.player.winsCount = INITIAL_WINS_COUNT;
+        payload.player.hasAbandonned = false;
+        payload.player.playerType = PlayerType.Reel;
+        payload.player.combatCount = 0;
+        payload.player.lossCount = 0;
+        payload.player.totalHpLost = 0;
+        payload.player.totalHpDealt = 0;
+        payload.player.visitedTilesCount = 0;
         const createdLobby = this.lobbyService.createLobby(payload.game, socket.id, payload.player);
 
         if (createdLobby) {
@@ -75,39 +82,60 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         this.server.emit(JoinGameEvents.UpdatedLobbiesList, availableLobbies);
     }
 
+    @SubscribeMessage(JoinGameEvents.StartGame)
+    handleStartGameLobbiesRefresh() {
+        this.deferLobbiesRefresh();
+    }
+
+    @SubscribeMessage(JoinGameEvents.LeaveEndGame)
+    handleLeaveEndGameLobbiesRefresh() {
+        this.deferLobbiesRefresh();
+    }
+
     @SubscribeMessage(JoinGameEvents.JoinLobby)
     handleJoinLobby(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; player: Player }) {
         const lobby = this.lobbyService.getLobby(payload.lobbyId);
-        if (!lobby) {
-            socket.emit(JoinGameEvents.LobbyError, `Ce salon n'existe plus.`);
+        const lobbyError = this.lobbyService.getLobbyValidationError(lobby);
+        if (lobbyError) {
+            socket.emit(JoinGameEvents.LobbyError, lobbyError);
             return;
         }
 
-        if (lobby.playerCount >= lobby.game.maxPlayers) {
-            socket.emit(JoinGameEvents.LobbyError, 'Ce salon est plein !');
-            return;
-        }
-
-        if (lobby.isLocked) {
-            socket.emit(JoinGameEvents.LobbyError, 'Ce salon est verrouillé !');
-            return;
-        }
-
-        const finalPlayerName = this.getValidName(payload.player.character.name, lobby);
+        const finalPlayerName = this.lobbyService.getValidName(payload.player.character.name, lobby);
 
         payload.player.character.name = finalPlayerName;
         payload.player.socketId = socket.id;
         payload.player.isHost = false;
         payload.player.winsCount = INITIAL_WINS_COUNT;
+        payload.player.combatCount = 0;
+        payload.player.lossCount = 0;
+        payload.player.totalHpLost = 0;
+        payload.player.totalHpDealt = 0;
+        payload.player.visitedTilesCount = 0;
+        payload.player.hasAbandonned = false;
+        payload.player.playerType = PlayerType.Reel;
 
-        const updatedLobby = this.lobbyService.joinLobby(payload.lobbyId, payload.player);
+        let updatedLobby: Lobby;
+        try {
+            updatedLobby = this.lobbyService.joinLobby(payload.lobbyId, payload.player);
+        } catch (error) {
+            const errorMessage = error instanceof Error && error.message === 'Avatar already taken'
+                ? "Cet avatar n'est plus disponible. Veuillez en choisir un autre."
+                : 'Impossible de rejoindre le salon.';
+            socket.emit(JoinGameEvents.LobbyError, errorMessage);
+
+            if (lobby) {
+                const allOccupiedAvatars = this.lobbyService.getOccupiedAvatars(lobby);
+                socket.emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
+            }
+            return;
+        }
 
         if (updatedLobby) {
             socket.join(updatedLobby.lobbyId);
             socket.emit(JoinGameEvents.LobbyJoined, updatedLobby);
             socket.broadcast.to(updatedLobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby);
             socket.broadcast.to(updatedLobby.lobbyId).emit(JoinGameEvents.PlayerJoined, payload.player);
-
             this.handleGetLobbies();
         }
     }
@@ -136,7 +164,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         if (!lobby) return;
         this.lobbyService.updatePlayerAvatar(lobbyId, socket.id, avatar);
 
-        const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
+        const allOccupiedAvatars = this.lobbyService.getOccupiedAvatars(lobby);
         this.server.to(lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
     }
 
@@ -145,7 +173,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         const lobby = this.lobbyService.getLobby(lobbyId);
         if (lobby) {
             socket.join(lobbyId);
-            const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
+            const allOccupiedAvatars = this.lobbyService.getOccupiedAvatars(lobby);
             socket.emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
         } else {
             this.logger.log(`Lobby not found for ${lobbyId} (handleJoinAvatarRoom)`);
@@ -166,36 +194,41 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         const success = this.lobbyService.kickPlayer(payload.lobbyId, socket.id, payload.targetSocketId);
 
         if (success) {
+
             this.server.to(payload.targetSocketId).emit(JoinGameEvents.PlayerKicked, `Vous avez été exclu par l'organisateur.`);
             this.server.in(payload.targetSocketId).socketsLeave(payload.lobbyId);
 
             const updatedLobby = this.lobbyService.getLobby(payload.lobbyId);
             this.server.to(payload.lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby);
 
-            const allOccupiedAvatars = this.getOccupiedAvatars(updatedLobby);
+            const allOccupiedAvatars = this.lobbyService.getOccupiedAvatars(updatedLobby);
             this.server.to(payload.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
             this.handleGetLobbies();
         }
     }
 
-    private getOccupiedAvatars(lobby: Lobby): string[] {
-        const confirmedAvatars = lobby.players
-            .map((player) => player.character?.avatar)
-            .filter((avat) => avat !== undefined && avat !== null && avat !== '');
-
-        const pendingAvatars = Object.values(lobby.pendingAvatars || {});
-        return [...confirmedAvatars, ...pendingAvatars];
-    }
-
-    private getValidName(name: string, lobby: Lobby): string {
-        let finalName = name;
-        let counter = DUPLICATE_NAME_SUFFIX_START;
-        while (lobby.players.some((player) => player.character.name === finalName)) {
-            finalName = `${name}-${counter}`;
-            counter++;
+    @SubscribeMessage(JoinGameEvents.AddVirtualPlayer)
+    handleAddVirtualPlayer(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; profile: VirtualPlayerProfile }) {
+        const lobby = this.lobbyService.getLobby(payload.lobbyId);
+        const lobbyError = this.lobbyService.getLobbyValidationError(lobby);
+        if (lobbyError) {
+            socket.emit(JoinGameEvents.LobbyError, lobbyError);
+            return;
         }
 
-        return finalName;
+        const updatedLobby = this.lobbyService.addVirtualPlayerToLobby(payload.lobbyId, payload.profile);
+
+        if (updatedLobby) {
+            const virtualPlayer = updatedLobby.players[updatedLobby.players.length - 1];
+
+            this.server.to(updatedLobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, updatedLobby);
+            this.server.to(updatedLobby.lobbyId).emit(JoinGameEvents.PlayerJoined, virtualPlayer);
+
+            const allOccupiedAvatars = this.lobbyService.getOccupiedAvatars(updatedLobby);
+            this.server.to(updatedLobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
+
+            this.handleGetLobbies();
+        }
     }
 
     private leaveFromWaitingLobby(lobby: Lobby, socket: Socket) {
@@ -203,6 +236,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
             this.logger.log(`Host left. Deleting lobby: ${lobby.lobbyId}`);
             socket.to(lobby.lobbyId).emit(JoinGameEvents.GameDeleted);
             this.lobbyService.deleteLobby(lobby.lobbyId);
+            socket.leave(lobby.lobbyId);
         } else {
             const leavingPlayer = lobby.players.find(player => player.socketId === socket.id);
 
@@ -215,7 +249,9 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
                 this.lobbyService.removePlayerFromLobby(lobby.lobbyId, socket.id);
             }
 
-            const allOccupiedAvatars = this.getOccupiedAvatars(lobby);
+            socket.leave(lobby.lobbyId);
+
+            const allOccupiedAvatars = this.lobbyService.getOccupiedAvatars(lobby);
             this.server.to(lobby.lobbyId).emit(JoinGameEvents.UpdateOccupiedAvatars, allOccupiedAvatars);
             this.server.to(lobby.lobbyId).emit(JoinGameEvents.LobbyUpdated, lobby);
         }
@@ -231,5 +267,9 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
         if (isGameActive) return;
 
         this.leaveFromWaitingLobby(lobby, socket);
+    }
+
+    private deferLobbiesRefresh() {
+        setTimeout(() => this.handleGetLobbies(), LOBBIES_REFRESH_DELAY_MS);
     }
 }

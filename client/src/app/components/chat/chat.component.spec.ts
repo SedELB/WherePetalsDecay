@@ -161,15 +161,15 @@ describe('ChatComponent', () => {
 
     // Message Sending Tests
 
-    // These tests verify the sendMessage flow: delegation to ChatService with trimmed
-    // content, draft clearing after dispatch, and guard enforcement at the method level
-    // to prevent bypassing UI programmatically.
+    // These tests verify the sendMessage flow: delegation to ChatService preserving
+    // leading/trailing spaces, draft clearing after dispatch, and guard enforcement at
+    // the method level to prevent bypassing UI programmatically.
 
     describe('Message Sending', () => {
-        it('should delegate to ChatService with trimmed content', () => {
+        it('should delegate to ChatService without stripping spaces', () => {
             component.draftMessage = '  Hello world  ';
             component.sendMessage();
-            expect(chatServiceSpy.sendMessage).toHaveBeenCalledWith(TEST_LOBBY_ID, TEST_PLAYER_NAME, 'Hello world');
+            expect(chatServiceSpy.sendMessage).toHaveBeenCalledWith(TEST_LOBBY_ID, TEST_PLAYER_NAME, '  Hello world  ');
         });
 
         it('should clear the draft after sending', () => {

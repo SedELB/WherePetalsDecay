@@ -3,6 +3,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { GameCardComponent } from '@app/components/game-card/game-card.component';
+import { LoadingComponent } from '@app/components/loading/loading.component';
 import { GameCard } from '@app/interfaces/game-card';
 import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { CommunicationService } from '@app/services/communication/communication.service';
@@ -13,7 +14,7 @@ import swal from 'sweetalert2';
 
 @Component({
     selector: 'app-admin-page',
-    imports: [GameCardComponent, ButtonComponent],
+    imports: [GameCardComponent, ButtonComponent, LoadingComponent],
     templateUrl: './admin-page.component.html',
     styleUrl: './admin-page.component.scss',
 })
@@ -21,6 +22,8 @@ export class AdminPageComponent implements OnInit, OnDestroy {
     protected readonly buttonVariant = ButtonVariant;
     private games: Game[] = [];
     gameCards: GameCard[] = [];
+    isLoading = true;
+    isReady = false;
 
     private subscription?: Subscription;
 
@@ -32,8 +35,12 @@ export class AdminPageComponent implements OnInit, OnDestroy {
 
     ngOnInit(): void {
         this.adminGameService.fetchAllGames().subscribe({
-            next: (games) => this.adminGameService.setGames(games),
+            next: (games) => {
+                this.adminGameService.setGames(games);
+                this.isLoading = false;
+            },
             error: (error: HttpErrorResponse) => {
+                this.isLoading = false;
                 const errorMessage = error.error || 'Erreur lors de la récupération des jeux';
                 swal.fire({
                     title: `Erreur`,

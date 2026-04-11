@@ -39,7 +39,12 @@
     justify-content: center;
     box-shadow: 0px 0px 0px 0.25rem rgba(255, 255, 255, 0.253);
     cursor: pointer;
-    transition: width 0.3s ease, border-radius 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    transition:
+        width 0.3s ease,
+        border-radius 0.3s ease,
+        transform 0.3s ease,
+        box-shadow 0.3s ease,
+        background-color 0.3s ease;
     overflow: hidden;
     position: relative;
     padding: 0;
@@ -48,7 +53,9 @@
         width: 1.5rem;
         height: 1.5rem;
         filter: invert(1);
-        transition: transform 0.3s ease, opacity 0.3s ease;
+        transition:
+            transform 0.3s ease,
+            opacity 0.3s ease;
         position: absolute;
         left: 50%;
         top: 50%;
@@ -61,7 +68,9 @@
         color: white;
         font-size: 0.8125rem;
         opacity: 0;
-        transition: opacity 0.3s ease, transform 0.3s ease;
+        transition:
+            opacity 0.3s ease,
+            transform 0.3s ease;
         transform: translateX(1.25rem);
     }
 
@@ -115,7 +124,9 @@
     cursor: pointer;
     border-radius: 0.625rem;
     box-shadow: 0 0.3125rem 0 rgba(0, 0, 0, 0.25);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease;
 
     &:hover:not(:disabled) {
         box-shadow: 0 0.1875rem 0 rgba(0, 0, 0, 0.25);
@@ -140,7 +151,12 @@
     justify-content: center;
     box-shadow: 0px 0px 1.25rem rgba(0, 0, 0, 0.164);
     cursor: pointer;
-    transition: width 0.3s ease, border-radius 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    transition:
+        width 0.3s ease,
+        border-radius 0.3s ease,
+        transform 0.3s ease,
+        box-shadow 0.3s ease,
+        background-color 0.3s ease;
     overflow: hidden;
     position: relative;
     padding: 0;
@@ -148,7 +164,9 @@
     .trash {
         width: 1.125rem;
         filter: invert(1);
-        transition: width 0.3s ease, transform 0.3s ease;
+        transition:
+            width 0.3s ease,
+            transform 0.3s ease;
         // z-index: 2;
     }
 
@@ -158,7 +176,10 @@
         top: -1.25rem;
         color: white;
         font-size: 0.8125rem;
-        transition: opacity 0.3s ease, top 0.3s ease, transform 0.3s ease;
+        transition:
+            opacity 0.3s ease,
+            top 0.3s ease,
+            transform 0.3s ease;
         opacity: 0;
     }
 
@@ -174,7 +195,7 @@
         }
 
         &::before {
-            top: 0.625rem; 
+            top: 0.625rem;
             opacity: 1;
             transform: translateY(0.1875rem);
         }
@@ -200,7 +221,10 @@
     cursor: pointer;
     border-radius: 0.625rem;
     box-shadow: 0 0.3125rem 0 rgba(0, 0, 0, 0.25);
-    transition: transform 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease,
+        color 0.3s ease;
 
     .pencil {
         width: 1.5625rem;
@@ -244,7 +268,10 @@
     cursor: pointer;
     border-radius: 0.625rem;
     box-shadow: 0 0.3125rem 0 rgba(0, 0, 0, 0.25);
-    transition: transform 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease,
+        color 0.3s ease;
 
     .eye-icon {
         width: 1.5625rem;
@@ -277,4 +304,180 @@
     background-color: #78bc75;
     border: 0.125rem solid #78bc75;
     box-shadow: none;
+}
+
+// Add Virtual Player button
+$vp-color: #8b5cf6;
+$vp-hover: #7c3aed;
+$vp-size: 3.5rem;
+$vp-sub-size: 2.5rem;
+
+.vp-menu {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 15rem; // 13rem
+    height: 6rem;
+
+    &.disabled {
+        opacity: 0.4;
+        pointer-events: none;
+    }
+
+    &.open .vp-sub-left {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateX(-4.5rem) scale(1);
+    }
+
+    &.open .vp-sub-right {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateX(4.5rem) scale(1);
+    }
+
+    &.open .vp-label {
+        opacity: 1;
+    }
+
+    // Hide the main label when sub-buttons are open
+    &.open .vp-main-label {
+        opacity: 0;
+    }
+
+    &.open .vp-main-btn svg {
+        transform: rotate(45deg);
+    }
+}
+
+.vp-main-btn {
+    position: relative;
+    z-index: 10;
+    width: $vp-size;
+    height: $vp-size;
+    border-radius: 50%;
+    border: none;
+    background: $vp-color;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: visible;
+    box-shadow: 0 0rem 1.5rem rgba($vp-color, 0.5);
+    transition:
+        transform 0.3s ease,
+        background 0.3s ease,
+        box-shadow 0.3s ease;
+
+    svg {
+        width: 1.6rem;
+        height: 1.6rem;
+        transition: transform 0.5s ease;
+    }
+
+    &:hover:not(:disabled) {
+        background: $vp-hover;
+        transform: scale(1.1);
+        box-shadow: 0 0rem 2rem rgba($vp-color, 0.7);
+    }
+
+    &:active:not(:disabled) {
+        transform: scale(0.95);
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+    }
+}
+
+.vp-sub-btn {
+    position: absolute;
+    z-index: 5;
+    top: calc(50% - ($vp-size / 2)); // to match the central button's top
+    width: $vp-sub-size;
+    height: $vp-sub-size;
+    border-radius: 50%;
+    border: none;
+    background: #fff;
+    color: #6b7280;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    pointer-events: none;
+    opacity: 0;
+    transform-origin: top center;
+    transform: translateX(0) scale(0.5);
+    transition:
+        opacity 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55),
+        transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    box-shadow: 0 0.3rem 1rem rgba(0, 0, 0, 0.2);
+
+    .vp-icon {
+        width: 1.2rem;
+        height: 1.2rem;
+        filter: grayscale(1) brightness(0.2);
+        transition: filter 0.3s ease;
+    }
+
+    .vp-menu.open &:hover:not(:disabled) {
+        background: #f3f4f6;
+        transform: translateX(var(--menu-offset-x)) scale(1.1);
+
+        .vp-icon {
+            // Create $vp-color with filter
+            filter: brightness(0) saturate(100%) invert(34%) sepia(82%) saturate(1209%) hue-rotate(243deg) brightness(97%) contrast(93%);
+        }
+    }
+
+    .vp-menu.open &:active:not(:disabled) {
+        transform: translateX(var(--menu-offset-x)) scale(0.95);
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+    }
+}
+
+.vp-sub-left {
+    --menu-offset-x: -4.5rem;
+    transition-delay: 40ms;
+}
+
+.vp-sub-right {
+    --menu-offset-x: 4.5rem;
+    transition-delay: 80ms;
+}
+
+.vp-label {
+    position: absolute;
+    bottom: -1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.3s ease 0.25s;
+    pointer-events: none;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.vp-main-label {
+    position: absolute;
+    bottom: -1.4rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.65);
+    white-space: nowrap;
+    opacity: 1;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }

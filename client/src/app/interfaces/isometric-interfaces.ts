@@ -1,8 +1,14 @@
-import { Vec2 } from '@common/vec2';
-import { Tile } from '@common/tile';
 import { Player } from '@common/player';
+import { Tile } from '@common/tile';
+import { Vec2 } from '@common/vec2';
 
-// Moved here from isometric.constants.ts so it can be shared across service methods
+export type ActionHighlightType = 'attack' | 'giveFlag' | 'requestFlag';
+
+export interface ActionTileHighlight {
+  pos: Vec2;
+  type: ActionHighlightType;
+}
+
 export interface TileColorSet {
   top: string;
   left: string;
@@ -16,7 +22,6 @@ export interface GridCorners {
   bottomRight: Vec2;
 }
 
-// Slimmed down: only the 4 vertices, tile, and ctx. Wall/grid-position info is handled separately.
 export interface TileRenderParams {
   context: CanvasRenderingContext2D;
   tile: Tile;
@@ -26,7 +31,6 @@ export interface TileRenderParams {
   surfaceBottomRight: Vec2;
 }
 
-// Separate, minimal interface for wall-drop rendering (only what drawTileDepth actually needs)
 export interface TileDepthParams {
   context: CanvasRenderingContext2D;
   thickness: number;
@@ -51,6 +55,10 @@ export interface RenderBoardConfig {
   onRecenter: (zoom: number, x: number, y: number) => void;
   reachableTiles?: Vec2[];
   teleportableTiles?: Vec2[];
+  actionHighlightTiles?: ActionTileHighlight[];
   localPlayerSocketId?: string;
   inactiveSanctuaries?: Vec2[];
+  isCTF?: boolean;
+  teamA?: Player[];
+  teamB?: Player[];
 }

@@ -4,6 +4,7 @@ import { Tile } from '@common/tile';
 import { Player } from '@common/player';
 import { IsometricViewService } from '@app/services/isometric-view/isometric-view.service';
 import { MIN_ZOOM, MAX_ZOOM, ZOOM_SPEED, MIN_TILE_W, TILE_RATIO, TILE_THICKNESS } from '@app/constants/isometric.constants';
+import { ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
 
 @Component({
   selector: 'app-isometric-map',
@@ -20,8 +21,12 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   @Input() playerPositions: Record<string, Vec2> = {};
   @Input() reachableTiles: Vec2[] = [];
   @Input() teleportableTiles: Vec2[] = [];
+  @Input() actionHighlightTiles: ActionTileHighlight[] = [];
   @Input() localPlayerSocketId?: string;
   @Input() inactiveSanctuaries: Vec2[] = [];
+  @Input() isCTF: boolean = false;
+  @Input() teamA: Player[] = [];
+  @Input() teamB: Player[] = [];
 
   @Output() tileClick = new EventEmitter<Vec2>();
   @Output() rightClick = new EventEmitter<{event: MouseEvent, pos: Vec2}>();
@@ -55,12 +60,13 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   constructor(private isometricViewService: IsometricViewService) {}
 
   ngOnChanges(): void {
-    this.needsRecenter = true;
+    this.needsRecenter = false;
     this.render();
   }
 
   ngAfterViewInit(): void {
     const canvas = this.canvasRef.nativeElement;
+    this.needsRecenter = true;
     canvas.addEventListener('mousedown', this.boundOnMouseDown);
     canvas.addEventListener('mousemove', this.boundOnMouseMove);
     canvas.addEventListener('mouseup', this.boundOnMouseUp);
@@ -109,12 +115,19 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   }
 
   private onMouseMove(e: MouseEvent): void {
-    if (!this.isDragging) return;
-    const dx = e.clientX - this.dragStartX;
-    const dy = e.clientY - this.dragStartY;
-    this.cameraX = this.cameraStartX + dx / this.zoom;
-    this.cameraY = this.cameraStartY + dy / this.zoom;
-    this.render();
+    if (this.isDragging) {
+      const dx = e.clientX - this.dragStartX;
+      const dy = e.clientY - this.dragStartY;
+      this.cameraX = this.cameraStartX + dx / this.zoom;
+      this.cameraY = this.cameraStartY + dy / this.zoom;
+      this.render();
+      return;
+    }
+    
+    const pos = this.getOriginalGridPosition(e);
+    const isActionTarget = pos !== null &&
+      this.actionHighlightTiles.some(h => h.pos.x === pos.x && h.pos.y === pos.y);
+    this.canvasRef.nativeElement.style.cursor = isActionTarget ? 'pointer' : 'default';
   }
 
   private onMouseUp(): void {
@@ -222,8 +235,12 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
       needsRecenter: this.needsRecenter,
       reachableTiles: this.reachableTiles,
       teleportableTiles: this.teleportableTiles,
+      actionHighlightTiles: this.actionHighlightTiles,
       localPlayerSocketId: this.localPlayerSocketId,
       inactiveSanctuaries: this.inactiveSanctuaries,
+      isCTF: this.isCTF,
+      teamA: this.teamA,
+      teamB: this.teamB,
       onRecenter: (zoom, x, y) => {
         this.zoom = zoom;
         this.cameraX = x;

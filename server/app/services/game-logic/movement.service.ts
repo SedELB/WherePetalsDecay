@@ -1,6 +1,6 @@
 import { Direction, DIRECTION_OFFSETS } from '@common/direction';
+import { TileItem, TileTexture } from '@common/enums';
 import { Game } from '@common/game';
-import { TileItem } from '@common/enums';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
@@ -11,7 +11,6 @@ export class MovementService {
     movePlayer(game: ActiveGame, socketId: string, direction: Direction): Vec2 | null {
         const currentPos = game.playerPositions.get(socketId);
         if (!currentPos) return null;
-
         const offset = DIRECTION_OFFSETS[direction];
         const targetPos: Vec2 = { x: currentPos.x + offset.x, y: currentPos.y + offset.y };
 
@@ -23,6 +22,8 @@ export class MovementService {
         const remaining = game.movementPoints.get(socketId) - cost;
         game.movementPoints.set(socketId, remaining);
         game.playerPositions.set(socketId, targetPos);
+
+        this.trackTileVisit(game, socketId, targetPos, tile.type, tile.item);
 
         return targetPos;
     }
@@ -38,7 +39,7 @@ export class MovementService {
         return targetPos;
     }
 
-    getReachableTilesForTeleport(game: ActiveGame, socketId: string) : Vec2[] {
+    getReachableTilesForTeleport(game: ActiveGame, socketId: string): Vec2[] {
         const startPos = game.playerPositions.get(socketId);
         if (!startPos) return [];
 
@@ -63,6 +64,7 @@ export class MovementService {
                 const tileCost = TILE_COSTS[tile.type];
                 if (tileCost === Infinity) continue;
                 if (this.isSanctuaryTile(game, nextPos)) continue;
+                if (tile.item === TileItem.Spawn) continue;
                 if (this.isTileOccupied(game, nextPos)) continue;
 
                 reachable.push(nextPos);
@@ -78,20 +80,27 @@ export class MovementService {
         if (!startPos) return [];
 
         const remaining = game.movementPoints.get(socketId);
-        const reachable: Vec2[] = [];
-        const visited = new Map<string, number>();
+        const bestCost = new Map<string, number>();
         const queue: { pos: Vec2; cost: number }[] = [{ pos: startPos, cost: 0 }];
 
-        visited.set(this.posKey(startPos), 0);
+        bestCost.set(this.posKey(startPos), 0);
 
         while (queue.length > 0) {
-            const current = queue.shift();
+            let minIndex = 0;
+            for (let i = 1; i < queue.length; i++) {
+                if (queue[i].cost < queue[minIndex].cost) minIndex = i;
+            }
+            const current = queue.splice(minIndex, 1)[0];
+
+            const currentKey = this.posKey(current.pos);
+            if (current.cost > bestCost.get(currentKey)) continue;
 
             for (const offset of Object.values(DIRECTION_OFFSETS)) {
                 const nextPos: Vec2 = { x: current.pos.x + offset.x, y: current.pos.y + offset.y };
-                const key = this.posKey(nextPos);
 
                 if (!this.isWithinBounds(game.lobby.game, nextPos)) continue;
+
+                if (this.isTileOccupied(game, nextPos)) continue;
 
                 const tile = game.lobby.game.grid[nextPos.y][nextPos.x];
                 const tileCost = TILE_COSTS[tile.type];
@@ -100,14 +109,23 @@ export class MovementService {
 
                 const totalCost = current.cost + tileCost;
                 if (totalCost > remaining) continue;
-                if (this.isTileOccupied(game, nextPos)) continue;
 
-                const previousCost = visited.get(key);
+                const key = this.posKey(nextPos);
+                const previousCost = bestCost.get(key);
                 if (previousCost !== undefined && previousCost <= totalCost) continue;
 
-                visited.set(key, totalCost);
-                reachable.push(nextPos);
+                bestCost.set(key, totalCost);
                 queue.push({ pos: nextPos, cost: totalCost });
+            }
+        }
+
+        bestCost.delete(this.posKey(startPos));
+
+        const reachable: Vec2[] = [];
+        for (const key of bestCost.keys()) {
+            const [x, y] = key.split(',').map(Number);
+            if (!this.isTileOccupied(game, { x, y })) {
+                reachable.push({ x, y });
             }
         }
 
@@ -131,6 +149,7 @@ export class MovementService {
 
         if (cost === Infinity) return false;
         if (this.isSanctuaryTile(game, targetPos)) return false;
+        if (tile.item === TileItem.Spawn) return false;
         if (this.isTileOccupied(game, targetPos)) return false;
 
         return true;
@@ -159,6 +178,31 @@ export class MovementService {
             if (playerPos.x === pos.x && playerPos.y === pos.y) return true;
         }
         return false;
+    }
+
+    private trackTileVisit(game: ActiveGame, socketId: string, pos: Vec2, tileType: TileTexture, tileItem: TileItem | null): void {
+        const key = this.posKey(pos);
+
+        const isTerrainTile = tileType === TileTexture.Floor || tileType === TileTexture.Water || tileType === TileTexture.Ice;
+        if (isTerrainTile) {
+            if (!game.visitedTilesPerPlayer.has(socketId)) {
+                game.visitedTilesPerPlayer.set(socketId, new Set());
+            }
+            game.visitedTilesPerPlayer.get(socketId).add(key);
+            game.globalVisitedTiles.add(key);
+        }
+
+        if (tileItem === TileItem.HealingSanctuary || tileItem === TileItem.CombatSanctuary) {
+            game.sanctuariesUsed.add(key);
+        }
+
+        if (tileType === TileTexture.DoorOpened) {
+            game.doorsInteracted.add(key);
+        }
+
+        if (tileItem === TileItem.Flag) {
+            game.flagHolders.add(socketId);
+        }
     }
 
     private posKey(pos: Vec2): string {
