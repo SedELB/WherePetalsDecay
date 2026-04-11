@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { Component, HostListener, OnInit, computed, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
@@ -84,6 +85,29 @@ export class GamePageComponent implements OnInit {
     readonly isFlagTaken = computed(() => this.gameViewService.isFlagTaken());
     readonly isCombatStarted = computed(() => this.gameViewService.isCombatStarted());
     readonly fighters = computed(() => this.gameViewService.fighters());
+    readonly combatLockState = computed(() => this.gameViewService.combatLockState());
+    readonly isLocalCombatParticipant = computed(() => {
+        const localId = this.currentPlayerId();
+        if (!localId) return false;
+
+        const fighterData = this.fighters();
+        return fighterData.player?.socketId === localId || fighterData.enemy?.socketId === localId;
+    });
+    readonly isCombatOverlayVisible = computed(() => this.isCombatStarted() && this.isLocalCombatParticipant());
+    readonly showCombatInProgressModal = computed(() => {
+        const lockState = this.combatLockState();
+        const localId = this.currentPlayerId();
+        if (!lockState?.isLocked || !localId) return false;
+        return localId !== lockState.attackerSocketId && localId !== lockState.defenderSocketId;
+    });
+    readonly combatInProgressMessage = computed(() => {
+        const lockState = this.combatLockState();
+        if (!lockState?.isLocked) return '';
+
+        const attackerName = lockState.attackerSocketId ? this.getPlayerName(lockState.attackerSocketId) : 'Un joueur';
+        const defenderName = lockState.defenderSocketId ? this.getPlayerName(lockState.defenderSocketId) : 'Un joueur';
+        return `${attackerName} affronte ${defenderName}. La partie reprendra à la fin du combat.`;
+    });
 
     readonly orderedPlayers = computed(() => {
         const order = this.gameViewService.turnOrder();
@@ -220,6 +244,8 @@ export class GamePageComponent implements OnInit {
     @HostListener('window:keyup', ['$event'])
     onKeyUp(event: KeyboardEvent): void {
         const lobbyId = this.lobby()?.lobbyId;
+        if (this.showCombatInProgressModal()) return;
+
         if (event.key === 'm' || event.key === 'M') {
             if (lobbyId) this.gameViewService.toggleDebugMode(lobbyId);
             return;
@@ -248,6 +274,7 @@ export class GamePageComponent implements OnInit {
     }
 
     isEndTurnDisabled(): boolean {
+        if (this.showCombatInProgressModal()) return true;
         return !(this.isMyTurn() || (this.isDebugModeActive() && this.gameViewService.isHost()));
     }
 
@@ -286,6 +313,8 @@ export class GamePageComponent implements OnInit {
     }
 
     onTileClick(x: number, y: number): void {
+        if (this.showCombatInProgressModal()) return;
+
         const action = this.activeSubAction();
         const clickContext = this.resolveTileClickContext(x, y);
         if (!action || !clickContext) return;
