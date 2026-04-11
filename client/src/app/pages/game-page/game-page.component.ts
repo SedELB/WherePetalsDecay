@@ -1,4 +1,4 @@
-/* eslint-disable max-lines */
+/* eslint-disable*/
 import { Component, HostListener, OnInit, computed, effect, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';

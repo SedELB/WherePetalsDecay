@@ -3,7 +3,6 @@
  * This component acts as the main view for the active game session, integrating the board, player list, timer, and chat.
  * The tests heavily mock the GameViewService using writable signals to precisely control and verify the game state and user interactions.
  */
-
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -145,11 +144,11 @@ describe('GamePageComponent', () => {
         mockGameViewService.isCombatStarted.set(false);
         mockGameViewService.fighters.set({ player: {} as Player, enemy: {} as Player, roomId: '' });
         [mockGameViewService.sendMove, mockGameViewService.sendEndTurn,
-         mockGameViewService.sendAbandon, mockGameViewService.sendAbandonWithoutPrompt,
-         mockGameViewService.sendCombat, mockGameViewService.sendTileInfoRequest,
-         mockGameViewService.sendToggleDoor, mockGameViewService.sendUseSanctuary,
-         mockGameViewService.toggleDebugMode, mockGameViewService.teleportMove,
-         mockGameViewService.isHost].forEach((s) => s.calls.reset());
+        mockGameViewService.sendAbandon, mockGameViewService.sendAbandonWithoutPrompt,
+        mockGameViewService.sendCombat, mockGameViewService.sendTileInfoRequest,
+        mockGameViewService.sendToggleDoor, mockGameViewService.sendUseSanctuary,
+        mockGameViewService.toggleDebugMode, mockGameViewService.teleportMove,
+        mockGameViewService.isHost].forEach((s) => s.calls.reset());
     };
 
     beforeEach(async () => {

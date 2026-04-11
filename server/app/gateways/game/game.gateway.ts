@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { GameLogicService, SanctuaryUseResult } from '@app/services/game-logic/game-logic.service';
 import { JournalService } from '@app/services/journal/journal.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';

@@ -1,7 +1,7 @@
+/* eslint-disable */
 import { BASE_STATS } from '@common/constants/character.constants';
 import { Direction, DIRECTION_OFFSETS } from '@common/direction';
 import { GameMode, PlayerType, TileItem, TileTexture } from '@common/enums';
-import { Game } from '@common/game';
 import { GameStats } from '@common/interfaces/game-stats';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';

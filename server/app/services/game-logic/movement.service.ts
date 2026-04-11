@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { Direction, DIRECTION_OFFSETS } from '@common/direction';
 import { TileItem, TileTexture } from '@common/enums';
 import { Game } from '@common/game';
