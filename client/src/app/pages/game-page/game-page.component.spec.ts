@@ -37,7 +37,7 @@ describe('GamePageComponent', () => {
             socketId,
             isHost: false,
             winsCount: 0,
-            hasAbandonned: false, 
+            hasAbandonned: false,
             playerType: PlayerType.Reel,
             hasFlag: hasFlag ?? false,
             combatCount: 0,
@@ -104,6 +104,9 @@ describe('GamePageComponent', () => {
         isDebugModeActive: signal<boolean>(false),
         tileInfo: signal<unknown>(null),
         gameOver: signal<{ winnerSocketId: string | null; isForfeit?: boolean } | null>(null),
+        combatLockState: signal<{ isLocked: boolean; attackerSocketId?: string; defenderSocketId?: string } | null>(null),
+        isCombatStarted: signal<boolean>(false),
+        fighters: signal({ player: {} as Player, enemy: {} as Player, roomId: '' }),
         getLocalSocketId: jasmine.createSpy('getLocalSocketId').and.returnValue(LOCAL_SOCKET),
         isHost: jasmine.createSpy('isHost').and.returnValue(false),
         sendMove: jasmine.createSpy('sendMove'),
@@ -132,6 +135,9 @@ describe('GamePageComponent', () => {
         mockGameViewService.isDebugModeActive.set(false);
         mockGameViewService.tileInfo.set(null);
         mockGameViewService.gameOver.set(null);
+        mockGameViewService.combatLockState.set(null);
+        mockGameViewService.isCombatStarted.set(false);
+        mockGameViewService.fighters.set({ player: {} as Player, enemy: {} as Player, roomId: '' });
         [mockGameViewService.sendMove, mockGameViewService.sendEndTurn,
         mockGameViewService.sendAbandon, mockGameViewService.sendAbandonWithoutPrompt,
         mockGameViewService.sendCombat, mockGameViewService.sendTileInfoRequest,
