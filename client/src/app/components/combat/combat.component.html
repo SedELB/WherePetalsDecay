@@ -42,6 +42,12 @@
                 [playerPositions]="playerPos"
             ></app-isometric-map>
 
+            <div class="combat-map-overlays">
+                @if (activeHitTargetSocketId; as targetId) {
+                    <div class="hit-marker" [ngStyle]="getOverlayStyle(targetId)">⚔️</div>
+                }
+            </div>
+
             <div class="bonuses" [ngClass]="{ 'hidden': !isChoosingPosture }">
                 <h2>Choisir votre posture</h2>
                 <div class="bonus-effect">

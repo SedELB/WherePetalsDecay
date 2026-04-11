@@ -146,6 +146,32 @@ app-isometric-map {
         z-index: 1;
         pointer-events: none;
     }
+
+    .combat-map-overlays {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        pointer-events: none;
+    }
+}
+
+.hit-marker {
+    position: absolute;
+    transform: translate(-50%, -120%);
+    font-size: 1.3rem;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+    animation: hit-pop 260ms ease-out;
+}
+
+@keyframes hit-pop {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -95%) scale(0.75);
+    }
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -120%) scale(1);
+    }
 }
 
 .bonuses {

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
@@ -6,7 +7,13 @@ import { Posture } from '@common/character';
 import { Direction } from '@common/direction';
 import { SocketNamespace } from '@common/enums';
 import { GameStats } from '@common/interfaces/game-stats';
-import { GameStartedData, PlayerMovedData, TileInfoData, GameOverEventData } from '@common/interfaces/game-view';
+import {
+    CombatLockStateData,
+    GameOverEventData,
+    GameStartedData,
+    PlayerMovedData,
+    TileInfoData,
+} from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
@@ -24,7 +31,6 @@ const END_GAME_REDIRECT_DELAY = 5000;
 export class GameViewService {
     private readonly namespace = SocketNamespace.Join;
     private closeFlagTransferSwal: (() => void) | null = null;
-
     readonly isDebugModeActive = signal<boolean>(false);
     readonly disableEndTurn = signal<boolean>(false);
     readonly gameLobby = signal<Lobby | null>(null);
@@ -41,13 +47,13 @@ export class GameViewService {
     readonly gameOver = signal<GameOverEventData | null>(null);
     readonly turnNotification = signal<string | null>(null);
     readonly isFlagTaken = signal<boolean>(false);
-
+    readonly combatLockState = signal<CombatLockStateData | null>(null);
     readonly isCombatStarted = this.gameViewCombatService.isCombatStarted;
     readonly combatRoundIndex = this.gameViewCombatService.combatRoundIndex;
     readonly combatPostureCountdown = this.gameViewCombatService.combatPostureCountdown;
+    readonly combatAttackAnimation = this.gameViewCombatService.combatAttackAnimation;
     readonly fighters = this.gameViewCombatService.fighters;
     readonly lastCombatResult = this.gameViewCombatService.lastCombatResult;
-
     private readonly endGamePlayersSignal = signal<Player[]>([]);
     private readonly endGameStatsSignal = signal<GameStats | null>(null);
 
@@ -62,6 +68,7 @@ export class GameViewService {
     private setupWebSocketListeners(): void {
         this.webSocketService.onNamespace(this.namespace, JoinGameEvents.LeftLobby, () => {
             this.setLobby(null);
+            this.combatLockState.set(null);
             this.router.navigate([ROUTES.home]);
         });
 
@@ -199,19 +206,25 @@ export class GameViewService {
             ({ requesterId, requesterName, lobbyId }) => this.promptFlagTransfer(requesterId, requesterName, lobbyId, true),
         );
 
-        this.webSocketService.onNamespace<{ socketId: string; updatedLobby: Lobby }>(this.namespace, 
+        this.webSocketService.onNamespace<{ socketId: string; updatedLobby: Lobby }>(this.namespace,
             JoinGameEvents.PlayerAbandoned, ({ socketId, updatedLobby }) => {
-            this.playerPositions.update((positions) => {
-                const updated = { ...positions };
-                delete updated[socketId];
-                return updated;
+                this.playerPositions.update((positions) => {
+                    const updated = { ...positions };
+                    delete updated[socketId];
+                    return updated;
+                });
+                this.setLobby(updatedLobby);
             });
-            this.setLobby(updatedLobby);
-        });
 
         this.webSocketService.onNamespace<GameOverEventData>(this.namespace, JoinGameEvents.GameOver, (data) => {
             this.handleGameOverEvent(data);
         });
+
+        this.webSocketService.onNamespace<CombatLockStateData>(
+            this.namespace,
+            JoinGameEvents.CombatLockStateChanged,
+            (data) => this.combatLockState.set(data.isLocked ? data : null),
+        );
 
         this.webSocketService.onNamespace<TileInfoData>(this.namespace, JoinGameEvents.TileInfo, (data) => {
             this.tileInfo.set(data);
@@ -376,6 +389,7 @@ export class GameViewService {
         this.turnOrder.set([]);
         this.turnNotification.set(null);
         this.isFlagTaken.set(false);
+        this.combatLockState.set(null);
         this.gameViewCombatService.resetCombatState();
         this.endGamePlayersSignal.set([]);
         this.endGameStatsSignal.set(null);
