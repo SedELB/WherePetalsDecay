@@ -110,7 +110,7 @@ export class GameValidatorService {
         const sanctuaryTiles = (items.healingSanctuary || 0) + (items.combatSanctuary || 0);
 
         const totalWalkable = (types.floor || 0) + (types.water || 0) + (types.ice || 0) +
-            (types.doorOpened || 0) + (types.doorClosed || 0) - sanctuaryTiles; // Door and terrain
+            (types.doorOpened || 0) - (types.doorClosed || 0) - sanctuaryTiles; // Door and terrain
 
         const queue = [startPos];
         const visited = new Set<string>();
