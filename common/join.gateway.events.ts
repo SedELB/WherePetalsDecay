@@ -89,4 +89,14 @@ export enum JoinGameEvents {
     JournalEntry = 'journalEntry',
     JournalHistoryRequest = 'journalHistoryRequest',
     JournalHistorySent = 'journalHistorySent',
+
+    //Door
+    RequestToggleDoor = 'requestToggleDoor',
+    DoorToggled = 'doorToggled',
+
+    // Sanctuary
+    RequestUseSanctuary = 'requestUseSanctuary',
+    SanctuaryUsed = 'sanctuaryUsed',
+    SanctuaryStateUpdate = 'sanctuaryStateUpdate',
+    PlayerStatsUpdate = 'playerStatsUpdate',
 }

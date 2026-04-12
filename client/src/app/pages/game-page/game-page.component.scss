@@ -815,3 +815,50 @@
         display: none !important;
     }
 }
+
+.sanctuary-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.65);
+}
+
+.sanctuary-modal {
+    background: rgba(12, 14, 34, 0.97);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 1rem;
+    padding: 2rem 2.5rem;
+    color: white;
+    text-align: center;
+    min-width: 20rem;
+    box-shadow: 0 0 30px rgba(0, 200, 255, 0.25);
+
+    .sanctuary-title {
+        font-size: 1.4rem;
+        margin-bottom: 0.75rem;
+        color: aqua;
+    }
+
+    .sanctuary-effect {
+        color: #ccc;
+        margin-bottom: 1.5rem;
+        font-size: 1rem;
+    }
+
+    .sanctuary-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+}
+
+.journal-entry {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.85rem;
+    color: #c8e6c9;
+    word-break: break-word;
+}

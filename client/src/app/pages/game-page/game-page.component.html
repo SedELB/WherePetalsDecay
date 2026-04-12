@@ -40,6 +40,7 @@
                     [reachableTiles]="reachableTiles()"
                     [teleportableTiles]="isDebugModeActive() ? reachableTilesForTeleport() : []"
                     [localPlayerSocketId]="localPlayer()?.socketId"
+                    [inactiveSanctuaries]="inactiveSanctuaries()"
                     [isCTF]="game()?.gameMode === gameMode.Ctf"
                     [teamA]="lobby()?.teamA ?? []"
                     [teamB]="lobby()?.teamB ?? []"
@@ -302,6 +303,20 @@
     @if (isDebugModeActive()){
         <div class="debug-text-frame" [class.debug-background]="this.isDebugModeActive()">
             <h1 class="debug-text">MODE DE DÉBOGAGE ACTIVÉ</h1>
+        </div>
+    }
+
+    @if (showSanctuaryModal) {
+        <div class="sanctuary-modal-overlay">
+            <div class="sanctuary-modal">
+                <h2 class="sanctuary-title">Sanctuaire {{ pendingSanctuaryType === 'healingSanctuary' ? 'de Soin' : 'de Combat' }}</h2>
+                <p class="sanctuary-effect">Effet : {{ getSanctuaryLabel() }}</p>
+                <div class="sanctuary-actions">
+                    <app-button (click)="onUseSanctuary('normal')">Normal</app-button>
+                    <app-button (click)="onUseSanctuary('doubleOrNothing')">Double ou Rien (50%)</app-button>
+                    <app-button (click)="onCancelSanctuary()">Annuler</app-button>
+                </div>
+            </div>
         </div>
     }
 

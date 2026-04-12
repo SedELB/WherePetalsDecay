@@ -2,15 +2,6 @@ import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { GameController } from './controllers/game/game.controller';
-import { Game, gameSchema } from './model/schema/game.schema';
-import { GameService } from './services/game/game.service';
-import { GameValidatorService } from './services/game/game-validator.service';
-import { LobbyService } from './services/lobby/lobby.service';
-import { VirtualPlayerService } from './services/game-logic/virtual-player.service';
-import { GameLogicService } from './services/game-logic/game-logic.service';
-import { TurnService } from './services/game-logic/turn.service';
-import { MovementService } from './services/game-logic/movement.service';
-import { CombatService } from './services/game-logic/combat.service';
 import { AdminGateway } from './gateways/admin/admin.gateway';
 import { ChatGateway } from './gateways/chat/chat.gateway';
 import { GameTurnSyncService } from './gateways/game/game-turn-sync.service';
@@ -18,10 +9,20 @@ import { GameGateway } from './gateways/game/game.gateway';
 import { GamesGateway } from './gateways/games/games.gateway';
 import { JoinGateway } from './gateways/join/join.gateway';
 import { JournalGateway } from './gateways/journal/journal.gateway';
+import { Game, gameSchema } from './model/schema/game.schema';
+import { CombatService } from './services/game-logic/combat.service';
 import { CTFService } from './services/game-logic/ctf.service';
+import { GameLogicService } from './services/game-logic/game-logic.service';
 import { GameSetupService } from './services/game-logic/game-setup.service';
 import { GameStatsService } from './services/game-logic/game-stats.service';
+import { MovementService } from './services/game-logic/movement.service';
+import { SanctuaryService } from './services/game-logic/sanctuary.service';
+import { TurnService } from './services/game-logic/turn.service';
+import { VirtualPlayerService } from './services/game-logic/virtual-player.service';
+import { GameValidatorService } from './services/game/game-validator.service';
+import { GameService } from './services/game/game.service';
 import { JournalService } from './services/journal/journal.service';
+import { LobbyService } from './services/lobby/lobby.service';
 @Module({
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),
@@ -43,6 +44,8 @@ import { JournalService } from './services/journal/journal.service';
         TurnService,
         MovementService,
         CombatService,
+        SanctuaryService,
+
         CTFService,
         GameSetupService,
         GameStatsService,
