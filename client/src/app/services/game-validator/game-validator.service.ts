@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
-import { NAME_MAX_LENGTH, DESC_MAX_LENGTH, TEXT_MIN_LENGTH, FLAG_REQUIRED, FLAG_NONE } from '@common/constants/validation.constants';
-import { GameMode, GridSizes, MaxPlayers, TileItem, TileTexture } from '@common/enums';
+import { DESC_MAX_LENGTH, FLAG_NONE, FLAG_REQUIRED, NAME_MAX_LENGTH, TEXT_MIN_LENGTH } from '@common/constants/validation.constants';
+import { GameMode, GridSizes, MaxPlayers, SanctuaryCount, TileItem, TileTexture } from '@common/enums';
 import { PlacedObject } from '@common/game';
 import { GameDraftForValidation, GameValidationResult } from '@common/interfaces/game-validation';
 import { GridSize } from '@common/interfaces/grid-size';
 
-export { NAME_MAX_LENGTH, DESC_MAX_LENGTH };
+export { DESC_MAX_LENGTH, NAME_MAX_LENGTH };
+
 
 @Injectable({
     providedIn: 'root',
@@ -191,11 +192,13 @@ export class GameValidatorService {
         const spawnCount =
             mapSize === GridSizes.Small ? MaxPlayers.Small : mapSize === GridSizes.Medium ? MaxPlayers.Medium : MaxPlayers.Large;
         const flagCount = mode === GameMode.Ctf ? FLAG_REQUIRED : FLAG_NONE;
+        const sanctuaryCount =
+            mapSize === GridSizes.Small ? SanctuaryCount.Small : mapSize === GridSizes.Medium ? SanctuaryCount.Medium : SanctuaryCount.Large;
 
         return {
             [TileItem.Spawn]: spawnCount,
-            [TileItem.HealingSanctuary]: 0,
-            [TileItem.CombatSanctuary]: 0,
+            [TileItem.HealingSanctuary]: sanctuaryCount,
+            [TileItem.CombatSanctuary]: sanctuaryCount,
             [TileItem.Flag]: flagCount,
         };
     }
@@ -231,4 +234,5 @@ export class GameValidatorService {
                 return 'item';
         }
     }
+
 }

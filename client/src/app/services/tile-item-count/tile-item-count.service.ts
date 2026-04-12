@@ -18,14 +18,14 @@ export class TileItemCountService {
     throw new Error('Le mode de jeu n’est pas actuellement supporté (GameMode)');
   }
 
-  private getRequiredHealingSanctuaryCount(game: Game): number {
+  getRequiredHealingSanctuaryCount(game: Game): number {
     if (game.size.rows === GridSizes.Small) return SanctuaryCount.Small;
     if (game.size.rows === GridSizes.Medium) return SanctuaryCount.Medium;
     if (game.size.rows === GridSizes.Large) return SanctuaryCount.Large;
     throw new Error('La taille sélectionnée n’est pas actuellement supportée (HealingSanctuary)');
   }
 
-  private getRequiredCombatSanctuaryCount(game: Game): number {
+  getRequiredCombatSanctuaryCount(game: Game): number {
     if (game.size.rows === GridSizes.Small) return SanctuaryCount.Small;
     if (game.size.rows === GridSizes.Medium) return SanctuaryCount.Medium;
     if (game.size.rows === GridSizes.Large) return SanctuaryCount.Large;
@@ -36,6 +36,8 @@ export class TileItemCountService {
     return {
       spawnCount: this.getRequiredSpawnCount(game),
       flagCount: this.getRequiredFlagCount(game),
+      healingSanctuaryCount: this.getRequiredHealingSanctuaryCount(game),
+      combatSanctuaryCount: this.getRequiredCombatSanctuaryCount(game),
     };
   }
 
@@ -45,6 +47,19 @@ export class TileItemCountService {
     return count;
   }
 
+  private countSanctuaryBlocks(game: Game, item: TileItem): number {
+    let count = 0;
+    game.grid.forEach((row, y) => {
+      row.forEach((tile, x) => {
+        if (tile.item === item) {
+          const aboveHasSame = game.grid[y - 1]?.[x]?.item === item;
+          const leftHasSame = game.grid[y]?.[x - 1]?.item === item;
+          if (!aboveHasSame && !leftHasSame) count++;
+        }
+      });
+    });
+    return count;
+  }
   countTileTexture(game: Game, tileTexture: TileTexture): number {
     let count = 0;
     game.grid.forEach((row) => (count += row.filter((tile) => tile.type === tileTexture).length));
@@ -54,6 +69,8 @@ export class TileItemCountService {
   adjustCountsForExistingItems(game: Game, counts: TileItemCounts): void {
     counts.spawnCount -= this.countTileItem(game, TileItem.Spawn);
     counts.flagCount -= this.countTileItem(game, TileItem.Flag);
+    counts.healingSanctuaryCount -= this.countSanctuaryBlocks(game, TileItem.HealingSanctuary);
+    counts.combatSanctuaryCount -= this.countSanctuaryBlocks(game, TileItem.CombatSanctuary);
   }
 
   getPlacedSpawnCount(game: Game): number {
@@ -65,11 +82,11 @@ export class TileItemCountService {
   }
 
   getPlacedHealingSanctuaryCount(game: Game): number {
-    return this.countTileItem(game, TileItem.HealingSanctuary);
+    return this.countSanctuaryBlocks(game, TileItem.HealingSanctuary);
   }
 
   getPlacedCombatSanctuaryCount(game: Game): number {
-    return this.countTileItem(game, TileItem.CombatSanctuary);
+    return this.countSanctuaryBlocks(game, TileItem.CombatSanctuary);
   }
 
   isObjectTypeComplete(game: Game, type: TileItem): boolean {
@@ -94,6 +111,10 @@ export class TileItemCountService {
         return counts.spawnCount > 0;
       case TileItem.Flag:
         return counts.flagCount > 0;
+      case TileItem.HealingSanctuary:
+        return counts.healingSanctuaryCount > 0;
+      case TileItem.CombatSanctuary:
+        return counts.combatSanctuaryCount > 0;
       default:
         return false;
     }
@@ -107,6 +128,12 @@ export class TileItemCountService {
       case TileItem.Flag:
         counts.flagCount--;
         break;
+      case TileItem.HealingSanctuary:
+        counts.healingSanctuaryCount--;
+        break;
+      case TileItem.CombatSanctuary:
+        counts.combatSanctuaryCount--;
+        break;
     }
   }
 
@@ -117,6 +144,12 @@ export class TileItemCountService {
         break;
       case TileItem.Flag:
         counts.flagCount++;
+        break;
+      case TileItem.HealingSanctuary:
+        counts.healingSanctuaryCount++;
+        break;
+      case TileItem.CombatSanctuary:
+        counts.combatSanctuaryCount++;
         break;
     }
   }
