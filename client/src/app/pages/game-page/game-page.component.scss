@@ -591,6 +591,18 @@
             box-shadow: 0 0 10px rgba(50, 255, 110, 0.5);
         }
     }
+
+    &.door {
+        background: rgba(243, 156, 18, 0.15);
+        border-color: rgba(243, 156, 18, 0.55);
+        color: #f5c75a;
+
+        &.selected {
+            background: rgba(243, 156, 18, 0.4);
+            border-color: rgba(243, 156, 18, 0.9);
+            box-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
+        }
+    }
 }
 
 .cell--teleportable {

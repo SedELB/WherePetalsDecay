@@ -44,6 +44,7 @@ export const RENDER_CONSTANTS = {
   actionPulseAmplitude: 0.22,
   actionPulseSpeed: 300,
   actionGlowLineWidth: 2.5,
+  oneSecondMs: 1000,
 };
 
 

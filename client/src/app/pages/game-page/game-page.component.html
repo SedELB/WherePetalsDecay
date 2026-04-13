@@ -40,6 +40,7 @@
                     [reachableTiles]="reachableTiles()"
                     [teleportableTiles]="isDebugModeActive() ? reachableTilesForTeleport() : []"
                     [localPlayerSocketId]="localPlayer()?.socketId"
+                    [isLocalPlayerTurn]="isMyTurn()"
                     [inactiveSanctuaries]="inactiveSanctuaries()"
                     [isCTF]="game()?.gameMode === gameMode.Ctf"
                     [teamA]="lobby()?.teamA ?? []"
@@ -214,6 +215,13 @@
                         [class.selected]="activeSubAction() === 'attack'"
                         (click)="selectSubAction('attack')"
                     >Attaquer</button>
+                }
+                @if (adjacentDoorTiles().length > 0) {
+                    <button
+                        id="sub-action-door"
+                        class="sub-action-btn door"
+                    (click)="selectSubAction('toggleDoor')"
+                    >{{ doorActionLabel() }}</button>
                 }
                 @if (requestFlagTargets().length > 0) {
                     <button

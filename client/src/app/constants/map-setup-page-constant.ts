@@ -62,7 +62,7 @@ export const TILE_TOOLS: Record<TileTexture, TileTool> = {
         type: TileTexture.Wall,
         label: 'Mur',
         description: 'Bloque le passage des joueurs.',
-        image: './assets/tiles/wallEdit.png',
+        image: './assets/tiles/wall.png',
     },
     [TileTexture.Water]: {
         type: TileTexture.Water,

@@ -2,6 +2,7 @@
 import { Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
+import { IsometricViewService } from '@app/services/isometric-view/isometric-view.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Posture } from '@common/character';
 import { Direction } from '@common/direction';
@@ -65,6 +66,7 @@ export class GameViewService {
         private readonly webSocketService: WebSocketService,
         private readonly router: Router,
         private readonly gameViewCombatService: GameViewCombatService,
+        private readonly isometricViewService: IsometricViewService,
     ) {
         this.setupWebSocketListeners();
     }
@@ -236,6 +238,7 @@ export class GameViewService {
 
         this.webSocketService.onNamespace<{ position: Vec2; newType: TileTexture }>(
             this.namespace, JoinGameEvents.DoorToggled, (data) => {
+                this.isometricViewService.triggerDoorAnimation(data.position.x, data.position.y, data.newType);
                 this.gameLobby.update((lobby) => {
                     if (!lobby) return lobby;
                     const updatedGrid = lobby.game.grid.map((row, y) =>
