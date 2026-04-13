@@ -313,6 +313,10 @@ describe('GameValidator', () => {
         validGame.grid[0][1].item = TileItem.Spawn;
         validGame.grid[1][0].item = TileItem.Spawn;
         validGame.grid[1][1].item = TileItem.Spawn;
+        validGame.grid[0][2].item = TileItem.HealingSanctuary;
+        validGame.grid[2][2].item = TileItem.HealingSanctuary;
+        validGame.grid[0][4].item = TileItem.CombatSanctuary;
+        validGame.grid[2][4].item = TileItem.CombatSanctuary;
 
         const spyIsTextLengthValid = jest.spyOn(gameValidatorService as object as Record<string, jest.Mock>, 'isTextLengthValid');
         const spyIsDoorsPlacementValid = jest.spyOn(gameValidatorService as object as Record<string, jest.Mock>, 'isDoorsPlacementValid');

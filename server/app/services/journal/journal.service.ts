@@ -115,6 +115,30 @@ export class JournalService {
         });
     }
 
+    addDoorOpenEntry(lobbyId: string, playerName: string): void {
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.DoorOpen,
+            playerNames: [playerName],
+            message: `${playerName} a ouvert une porte.`,
+        });
+    }
+
+    addDoorCloseEntry(lobbyId: string, playerName: string): void {
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.DoorClose,
+            playerNames: [playerName],
+            message: `${playerName} a fermé une porte.`,
+        });
+    }
+
+    addSanctuaryUsedEntry(lobbyId: string, playerName: string): void {
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.SanctuaryUsed,
+            playerNames: [playerName],
+            message: `${playerName} a utilisé un sanctuaire.`,
+        });
+    }
+
     getEntries(lobbyId: string): JournalEntry[] {
         return this.entries.get(lobbyId) ?? [];
     }

@@ -1,12 +1,15 @@
 /* eslint-disable max-lines */
-import { GameLogicService } from '@app/services/game-logic/game-logic.service';
+import { GameLogicService, SanctuaryUseResult } from '@app/services/game-logic/game-logic.service';
 import { VirtualPlayerService } from '@app/services/game-logic/virtual-player.service';
+import { JournalService } from '@app/services/journal/journal.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Posture } from '@common/character';
 import { Direction } from '@common/direction';
-import { GameMode, PlayerType, SocketNamespace, VirtualPlayerProfile } from '@common/enums';
+import { GameMode, PlayerType, SocketNamespace, VirtualPlayerProfile, TileItem, TileTexture } from '@common/enums';
 import {
+    CombatAttackAnimationData,
     CombatEndedData,
+    CombatLockStateData,
     CombatResult,
     CombatRoundCountdownData,
     CombatRoundResolvedData,
@@ -15,10 +18,11 @@ import {
     PostureReceivedData,
 } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
+import { JournalEventType } from '@common/journal-entry';
 import { Player } from '@common/player';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
     ConnectedSocket,
     MessageBody,
@@ -34,6 +38,7 @@ import { GameTurnSyncService } from './game-turn-sync.service';
 const COMBAT_ROUND_DELAY_MS = 2000;
 const COMBAT_POSTURE_TIMEOUT_MS = 10000;
 const COUNTDOWN_TICK_MS = 1000;
+const ATTACK_ANIMATION_DURATION_MS = 2000;
 const DEFAULT_POSTURE: Posture = { type: null, bonus: 0 };
 const VP_POSTURE_MAX_DELAY_MS = 9000;
 
@@ -56,15 +61,16 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     @WebSocketServer() private server: Server;
 
     private fightCounter = 0;
+    @Inject(Logger) private readonly logger: Logger;
     private readonly endGamePlayers = new Map<string, Set<string>>();
     private readonly combatSessions = new Map<string, CombatSession>();
-
+    
     constructor(
-        private readonly logger: Logger,
         private readonly gameLogicService: GameLogicService,
         private readonly lobbyService: LobbyService,
         private readonly gameTurnSyncService: GameTurnSyncService,
         private readonly virtualPlayerService: VirtualPlayerService,
+        private readonly journalService: JournalService,
     ) {}
 
     afterInit(): void {
@@ -80,8 +86,28 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnStarted, playerSocketId);
                 this.gameTurnSyncService.syncPlayerTurnState(this.server, lobbyId, playerSocketId);
                 this.triggerVirtualPlayerTurnIfNeeded(lobbyId, playerSocketId);
+                this.server.to(lobbyId).emit(JoinGameEvents.SanctuaryStateUpdate, {
+                    inactiveSanctuaries: this.gameLogicService.getInactiveSanctuaries(lobbyId),
+                });
+
+                const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+                const playerName = activeGame?.lobby.players.find((p) => p.socketId === playerSocketId)?.character?.name ?? 'Joueur inconnu';
+                this.journalService.addTurnStartEntry(lobbyId, playerName);
             },
             onTurnEnded: (lobbyId: string, playerSocketId: string) => {
+                const expiredBonusPlayers = this.gameLogicService.decrementSanctuaryCooldowns(lobbyId, playerSocketId);
+                for (const sid of expiredBonusPlayers) {
+                    const game = this.gameLogicService.getActiveGame(lobbyId);
+                    const player = game?.lobby.players.find((p) => p.socketId === sid);
+                    if (player) {
+                        this.server.to(lobbyId).emit(JoinGameEvents.PlayerStatsUpdate, {
+                            socketId: sid,
+                            attack: player.character.attack,
+                            defense: player.character.defense,
+                            life: player.character.life,
+                        });
+                    }
+                }
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnEnded, playerSocketId);
             },
         });
@@ -115,6 +141,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     @SubscribeMessage(JoinGameEvents.RequestMove)
     handleRequestMove(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; direction: Direction }): void {
         const { lobbyId, direction } = payload;
+        if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
         const result = this.gameLogicService.movePlayer(lobbyId, socket.id, direction);
@@ -128,6 +155,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             flagTaken: result.flagJustTaken,
         });
 
+        this.handlePostMoveJournalEntries(lobbyId, socket.id, result.position, result.flagJustTaken);
+
         this.gameTurnSyncService.refreshPlayerNavigationState(this.server, lobbyId, socket.id);
 
         if (this.lobbyService.getLobby(lobbyId).game.gameMode === GameMode.Ctf) {
@@ -138,9 +167,29 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         }
     }
 
+    private handlePostMoveJournalEntries(lobbyId: string, socketId: string, position: Vec2, flagJustTaken: boolean): void {
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        if (!activeGame) return;
+
+        const playerName = activeGame.lobby.players.find((p) => p.socketId === socketId)?.character?.name ?? 'Joueur';
+
+        if (flagJustTaken) {
+            this.journalService.addFlagPickedUpEntry(lobbyId, playerName);
+        }
+
+        const tile = activeGame.lobby.game.grid[position.y]?.[position.x];
+        if (tile?.type === TileTexture.DoorOpened) {
+            this.journalService.addDoorOpenEntry(lobbyId, playerName);
+        }
+        if (tile?.item === TileItem.HealingSanctuary || tile?.item === TileItem.CombatSanctuary) {
+            this.journalService.addSanctuaryUsedEntry(lobbyId, playerName);
+        }
+    }
+
     @SubscribeMessage(JoinGameEvents.Teleport)
     handleTeleportMove(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; position: Vec2 }): void {
         const { lobbyId, position } = payload;
+        if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
         const newPosition = this.gameLogicService.teleportPlayer(lobbyId, socket.id, position);
@@ -164,6 +213,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         activeGame.isDebugMode = !state;
         this.server.to(lobbyId).emit(JoinGameEvents.DebugToggled, !state);
 
+        const hostName = activeGame.lobby.players.find((p) => p.socketId === socket.id)?.character?.name ?? 'Hôte';
+        this.journalService.addDebugToggleEntry(lobbyId, hostName, activeGame.isDebugMode);
+
         if (!activeGame.isDebugMode) {
             const currentSocketId = activeGame.turnOrder[activeGame.currentTurnIndex];
             if (currentSocketId) {
@@ -174,6 +226,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
     @SubscribeMessage(JoinGameEvents.EndTurn)
     handleEndTurn(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string): void {
+        if (this.hasActiveCombatInLobby(lobbyId)) return;
+
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
         if (!activeGame) return;
 
@@ -218,6 +272,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const roomId = `fight${this.fightCounter}`;
 
         const { lobbyId, enemy } = payload;
+        if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
@@ -237,8 +292,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             enemySocket.join(roomId);
         }
 
-        const combatStartedData: CombatStartedData = { player: attacker, enemy: defender, roomId };
-        this.server.to(roomId).emit(JoinGameEvents.CombatStarted, combatStartedData);
 
         const combatSession: CombatSession = {
             lobbyId,
@@ -252,12 +305,25 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         };
 
         this.combatSessions.set(roomId, combatSession);
+        this.gameLogicService.pauseTurnCycle(lobbyId);
+        this.emitCombatLockState({
+            lobbyId,
+            isLocked: true,
+            roomId,
+            attackerSocketId: socket.id,
+            defenderSocketId: defender.socketId,
+        });
+
+        const combatStartedData: CombatStartedData = { player: attacker, enemy: defender, roomId };
+        this.server.to(roomId).emit(JoinGameEvents.CombatStarted, combatStartedData);
+        this.journalService.addCombatStartEntry(lobbyId, attacker.character.name, defender.character.name);
         this.startCombatRoundAwaitingPostures(combatSession);
     }
 
     @SubscribeMessage(JoinGameEvents.GiveFlagRequest)
     handleGiveFlagRequest(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; targetSocketId: string }): void {
         const { lobbyId, targetSocketId } = payload;
+        if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
@@ -280,6 +346,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     @SubscribeMessage(JoinGameEvents.RequestFlagRequest)
     handleRequestFlagRequest(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; targetSocketId: string }): void {
         const { lobbyId, targetSocketId } = payload;
+        if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
@@ -305,26 +372,31 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         @MessageBody() payload: { lobbyId: string; requesterId: string; accepted: boolean; isRequest?: boolean },
     ): void {
         const { lobbyId, requesterId, accepted, isRequest } = payload;
+        if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!accepted) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, requesterId)) return;
 
         if (!isRequest) {
-            const wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, requesterId, socket.id, requesterId);
-            if (!wasFlagTransfered) return;
-            this.sendActionPoints(lobbyId, requesterId);
-            this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, {
-                giverPlayerId: requesterId,
-                targetPlayerId: socket.id,
-            });
+            this.executeFlagTransfer(lobbyId, requesterId, socket.id, requesterId);
         } else {
-            const wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, socket.id, requesterId, requesterId);
-            if (!wasFlagTransfered) return;
-            this.sendActionPoints(lobbyId, requesterId);
-            this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, {
-                giverPlayerId: socket.id,
-                targetPlayerId: requesterId,
-            });
+            this.executeFlagTransfer(lobbyId, socket.id, requesterId, requesterId);
         }
+    }
+
+    private executeFlagTransfer(lobbyId: string, giverId: string, receiverId: string, actionPointUpdaterId: string): void {
+        const wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, giverId, receiverId, actionPointUpdaterId);
+        if (!wasFlagTransfered) return;
+
+        this.sendActionPoints(lobbyId, actionPointUpdaterId);
+        this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, {
+            giverPlayerId: giverId,
+            targetPlayerId: receiverId,
+        });
+
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        const giverName = activeGame?.lobby.players.find((p) => p.socketId === giverId)?.character?.name ?? 'Joueur';
+        const receiverName = activeGame?.lobby.players.find((p) => p.socketId === receiverId)?.character?.name ?? 'Joueur';
+        this.journalService.addFlagTransferEntry(lobbyId, giverName, receiverName);
     }
 
     @SubscribeMessage(JoinGameEvents.RequestTileInfo)
@@ -348,6 +420,70 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         });
     }
 
+    @SubscribeMessage(JoinGameEvents.RequestToggleDoor) handleRequestToggleDoor(
+        @ConnectedSocket() socket: Socket,
+        @MessageBody() payload: { lobbyId: string; position: Vec2 },
+    ) {
+        const { lobbyId, position } = payload;
+        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
+
+        const result = this.gameLogicService.toggleDoor(lobbyId, socket.id, position);
+        if (!result) return;
+
+        const game = this.gameLogicService.getActiveGame(lobbyId);
+        this.server.to(lobbyId).emit(JoinGameEvents.DoorToggled, {
+            position,
+            newType: game.lobby.game.grid[position.y][position.x].type,
+        });
+
+        this.sendActionPoints(lobbyId, socket.id);
+        this.autoEndTurnIfNoActions(lobbyId, socket.id);
+    }
+    @SubscribeMessage(JoinGameEvents.RequestUseSanctuary)
+    handleRequestUseSanctuary(
+        @ConnectedSocket() socket: Socket,
+        @MessageBody() payload: { lobbyId: string; position: { x: number; y: number }; mode: 'normal' | 'doubleOrNothing' },
+    ) {
+        const { lobbyId, position, mode } = payload;
+        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
+
+        const result: SanctuaryUseResult = this.gameLogicService.useSanctuary(lobbyId, socket.id, position, mode);
+        if (!result) return;
+
+        const game = this.gameLogicService.getActiveGame(lobbyId);
+        const player = game?.lobby.players.find((p) => p.socketId === socket.id);
+
+        this.server.to(lobbyId).emit(JoinGameEvents.SanctuaryUsed, {
+            socketId: socket.id,
+            position,
+            sanctuaryType: result.sanctuaryType,
+            mode: result.mode,
+            healAmount: result.healAmount,
+            combatBonusApplied: result.combatBonusApplied,
+            playerNewLife: result.playerNewLife,
+            playerName: result.playerName,
+            inactiveSanctuaries: result.inactiveSanctuaries,
+        });
+
+        if (result.combatBonusApplied && player) {
+            this.server.to(lobbyId).emit(JoinGameEvents.PlayerStatsUpdate, {
+                socketId: socket.id,
+                attack: player.character.attack,
+                defense: player.character.defense,
+                life: player.character.life,
+            });
+        }
+
+        const sanctuaryLabel = result.sanctuaryType === TileItem.HealingSanctuary ? 'soin' : 'combat';
+        const modeLabel = mode === 'doubleOrNothing' ? ' (double ou rien)' : '';
+        this.server.to(lobbyId).emit(JoinGameEvents.JournalEntry,
+            `${result.playerName} a utilisé un sanctuaire de ${sanctuaryLabel}${modeLabel}.`,
+        );
+
+        this.sendActionPoints(lobbyId, socket.id);
+        this.autoEndTurnIfNoActions(lobbyId, socket.id);
+    }
+
     @SubscribeMessage(JoinGameEvents.PlayerAbandon)
     handlePlayerAbandon(@ConnectedSocket() socket: Socket): void {
         this.processGameDisconnect(socket);
@@ -358,16 +494,21 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const activeGame = this.gameLogicService.findActiveGameBySocketId(socket.id);
         if (!activeGame) return;
 
+        const lobbyId = activeGame.lobby.lobbyId;
+        const abandoningPlayer = activeGame.lobby.players.find((p) => p.socketId === socket.id);
+        if (abandoningPlayer) {
+            this.journalService.addPlayerAbandonEntry(lobbyId, abandoningPlayer.character.name);
+        }
+
         const combatSession = this.findCombatSessionByPlayer(socket.id);
         if (combatSession) {
             const winnerId = combatSession.attackerId === socket.id ? combatSession.defenderId : combatSession.attackerId;
             this.resolveCombatByAbandon(combatSession, socket.id, winnerId);
         }
 
-        const isGameOver = this.gameLogicService.executePlayerAbandon(activeGame.lobby.lobbyId, socket, this.server);
+        const isGameOver = this.gameLogicService.executePlayerAbandon(lobbyId, socket, this.server);
         if (!isGameOver) return;
 
-        const lobbyId = activeGame.lobby.lobbyId;
         const remainingPlayers = activeGame.lobby.players
             .filter((player) => !player.hasAbandonned)
             .map((player) => player.socketId);
@@ -380,6 +521,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const players = activeGame ? [...activeGame.lobby.players] : [];
         const socketIds = new Set(players.map((player) => player.socketId));
         this.endGamePlayers.set(lobbyId, socketIds);
+
+        const activeNames = players.filter((p) => !p.hasAbandonned).map((p) => p.character.name);
+        this.journalService.addGameOverEntry(lobbyId, activeNames);
 
         this.server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId, isForfeit: false, players, gameStats });
         this.gameLogicService.endGame(lobbyId);
@@ -452,6 +596,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
         const combatStartedData: CombatStartedData = { player: attacker, enemy: defender, roomId };
         this.server.to(roomId).emit(JoinGameEvents.CombatStarted, combatStartedData);
+        this.journalService.addCombatStartEntry(lobbyId, attacker.character.name, defender.character.name);
 
         const combatSession: CombatSession = {
             lobbyId,
@@ -465,6 +610,14 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         };
 
         this.combatSessions.set(roomId, combatSession);
+        this.gameLogicService.pauseTurnCycle(lobbyId);
+        this.emitCombatLockState({
+            lobbyId,
+            isLocked: true,
+            roomId,
+            attackerSocketId: attackerId,
+            defenderSocketId: defenderId,
+        });
         this.startCombatRoundAwaitingPostures(combatSession);
     }
 
@@ -535,6 +688,13 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
         const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
         if (!activeGame) {
+            this.emitCombatLockState({
+                lobbyId: session.lobbyId,
+                isLocked: false,
+                roomId: session.roomId,
+                attackerSocketId: session.attackerId,
+                defenderSocketId: session.defenderId,
+            });
             this.cleanupCombatSession(session.roomId);
             return;
         }
@@ -542,6 +702,13 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const attacker = activeGame.lobby.players.find((player) => player.socketId === session.attackerId);
         const defender = activeGame.lobby.players.find((player) => player.socketId === session.defenderId);
         if (!attacker || !defender) {
+            this.emitCombatLockState({
+                lobbyId: session.lobbyId,
+                isLocked: false,
+                roomId: session.roomId,
+                attackerSocketId: session.attackerId,
+                defenderSocketId: session.defenderId,
+            });
             this.cleanupCombatSession(session.roomId);
             return;
         }
@@ -550,7 +717,20 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         defender.character.bonusPosture = session.postures.get(session.defenderId) ?? { ...DEFAULT_POSTURE };
 
         session.awaitingPostures = false;
-        this.executeCombatRound(session.roomId, session.consumeActionPointOnNextRound, timedOutSocketIds);
+        const attackAnimationData: CombatAttackAnimationData = {
+            lobbyId: session.lobbyId,
+            attackerSocketId: session.attackerId,
+            defenderSocketId: session.defenderId,
+            durationMs: ATTACK_ANIMATION_DURATION_MS,
+        };
+        this.server.to(session.roomId).emit(JoinGameEvents.CombatAttackAnimation, attackAnimationData);
+
+        session.timeoutHandle = setTimeout(() => {
+            const activeSession = this.combatSessions.get(session.roomId);
+            if (!activeSession) return;
+
+            this.executeCombatRound(activeSession.roomId, activeSession.consumeActionPointOnNextRound, timedOutSocketIds);
+        }, ATTACK_ANIMATION_DURATION_MS);
     }
 
     private executeCombatRound(roomId: string, consumeActionPoint: boolean, timedOutSocketIds: string[] = []): void {
@@ -565,6 +745,14 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         ) as CombatResult | null;
 
         if (!combatResult) {
+            this.emitCombatLockState({
+                lobbyId: session.lobbyId,
+                isLocked: false,
+                roomId: session.roomId,
+                attackerSocketId: session.attackerId,
+                defenderSocketId: session.defenderId,
+            });
+            this.gameLogicService.resumeTurnCycle(session.lobbyId);
             this.cleanupCombatSession(session.roomId);
             return;
         }
@@ -578,6 +766,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundResolved, roundResolvedData);
         this.server.to(session.lobbyId).emit(JoinGameEvents.CombatResult, combatResult);
 
+        this.emitCombatJournalEntries(session, combatResult);
+
         const isFightOver = combatResult.attacker.killed || combatResult.defender.killed;
         if (!isFightOver) {
             session.consumeActionPointOnNextRound = false;
@@ -586,6 +776,17 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             }, COMBAT_ROUND_DELAY_MS);
             return;
         }
+
+        this.handleCombatEnd(session, combatResult);
+    }
+
+    private handleCombatEnd(session: CombatSession, combatResult: CombatResult): void {
+        const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
+        const attackerName = activeGame?.lobby.players.find((p) => p.socketId === session.attackerId)?.character?.name ?? 'Attaquant';
+        const defenderName = activeGame?.lobby.players.find((p) => p.socketId === session.defenderId)?.character?.name ?? 'Défenseur';
+        const winnerName = combatResult.winnerId === session.attackerId ? attackerName : defenderName;
+        const loserName = combatResult.winnerId === session.attackerId ? defenderName : attackerName;
+        this.journalService.addCombatEndEntry(session.lobbyId, winnerName, loserName);
 
         const combatEndedData: CombatEndedData = {
             roomId: session.roomId,
@@ -613,6 +814,13 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
     private finalizeCombatSession(session: CombatSession, finalResult: CombatResult): void {
         this.clearCombatSessionTimers(session);
+        this.emitCombatLockState({
+            lobbyId: session.lobbyId,
+            isLocked: false,
+            roomId: session.roomId,
+            attackerSocketId: session.attackerId,
+            defenderSocketId: session.defenderId,
+        });
 
         const winner = this.gameLogicService.checkWinCondition(session.lobbyId);
         if (winner) {
@@ -622,6 +830,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         }
 
         if (finalResult.winnerId === session.attackerId) {
+            this.gameLogicService.resumeTurnCycle(session.lobbyId);
             this.sendActionPoints(session.lobbyId, session.attackerId);
             this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
         } else {
@@ -638,6 +847,13 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     private resolveCombatByAbandon(session: CombatSession, loserId: string, winnerId: string): void {
         const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
         if (!activeGame) {
+            this.emitCombatLockState({
+                lobbyId: session.lobbyId,
+                isLocked: false,
+                roomId: session.roomId,
+                attackerSocketId: session.attackerId,
+                defenderSocketId: session.defenderId,
+            });
             this.cleanupCombatSession(session.roomId);
             return;
         }
@@ -657,6 +873,14 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         this.server.to(session.roomId).emit(JoinGameEvents.CombatEnded, combatEndedData);
 
         const winner = this.gameLogicService.checkWinCondition(session.lobbyId);
+        this.emitCombatLockState({
+            lobbyId: session.lobbyId,
+            isLocked: false,
+            roomId: session.roomId,
+            attackerSocketId: session.attackerId,
+            defenderSocketId: session.defenderId,
+        });
+
         if (winner) {
             this.handleGameOver(session.lobbyId, winner.socketId);
             this.cleanupCombatSession(session.roomId);
@@ -664,6 +888,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         }
 
         if (winnerId === session.attackerId) {
+            this.gameLogicService.resumeTurnCycle(session.lobbyId);
             this.sendActionPoints(session.lobbyId, session.attackerId);
             this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
         }
@@ -676,6 +901,14 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (session) this.clearCombatSessionTimers(session);
         this.server.in(roomId).socketsLeave(roomId);
         this.combatSessions.delete(roomId);
+    }
+
+    private hasActiveCombatInLobby(lobbyId: string): boolean {
+        return Array.from(this.combatSessions.values()).some((session) => session.lobbyId === lobbyId);
+    }
+
+    private emitCombatLockState(data: CombatLockStateData): void {
+        this.server.to(data.lobbyId).emit(JoinGameEvents.CombatLockStateChanged, data);
     }
 
     private normalizePosture(posture: Posture | null | undefined): Posture {
@@ -754,5 +987,79 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     private sendActionPoints(lobbyId: string, socketId: string): void {
         const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
         this.server.to(lobbyId).emit(JoinGameEvents.ActionPoints, { socketId, actionPoints });
+    }
+
+    private emitCombatJournalEntries(session: CombatSession, combatResult: CombatResult): void {
+        const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
+        if (!activeGame) return;
+
+        const attackerName = activeGame.lobby.players.find((p) => p.socketId === session.attackerId)?.character?.name ?? 'Attaquant';
+        const defenderName = activeGame.lobby.players.find((p) => p.socketId === session.defenderId)?.character?.name ?? 'Défenseur';
+
+        const atkAtk = combatResult.attacker.attack;
+        const atkDef = combatResult.attacker.defense;
+        const defAtk = combatResult.defender.attack;
+        const defDef = combatResult.defender.defense;
+
+        // Attacker's attack detail
+        this.journalService.addEntry(session.lobbyId, {
+            eventType: JournalEventType.CombatAttackDetail,
+            playerNames: [attackerName],
+            message: `Attaque de ${attackerName} : base=${atkAtk.base}, posture=+${atkAtk.postureBonus}, ` +
+                `dé=+${atkAtk.diceBonus}, malus=-${atkAtk.penalty}, total=${atkAtk.total}`,
+            isPrivate: true,
+            involvedPlayerIds: [session.attackerId, session.defenderId],
+        });
+
+        // Attacker's defense detail
+        this.journalService.addEntry(session.lobbyId, {
+            eventType: JournalEventType.CombatDefenseDetail,
+            playerNames: [attackerName],
+            message: `Défense de ${attackerName} : base=${atkDef.base}, posture=+${atkDef.postureBonus}, ` +
+                `dé=+${atkDef.diceBonus}, malus=-${atkDef.penalty}, total=${atkDef.total}`,
+            isPrivate: true,
+            involvedPlayerIds: [session.attackerId, session.defenderId],
+        });
+
+        // Defender's attack detail
+        this.journalService.addEntry(session.lobbyId, {
+            eventType: JournalEventType.CombatAttackDetail,
+            playerNames: [defenderName],
+            message: `Attaque de ${defenderName} : base=${defAtk.base}, posture=+${defAtk.postureBonus}, ` +
+                `dé=+${defAtk.diceBonus}, malus=-${defAtk.penalty}, total=${defAtk.total}`,
+            isPrivate: true,
+            involvedPlayerIds: [session.attackerId, session.defenderId],
+        });
+
+        // Defender's defense detail
+        this.journalService.addEntry(session.lobbyId, {
+            eventType: JournalEventType.CombatDefenseDetail,
+            playerNames: [defenderName],
+            message: `Défense de ${defenderName} : base=${defDef.base}, posture=+${defDef.postureBonus}, ` +
+                `dé=+${defDef.diceBonus}, malus=-${defDef.penalty}, total=${defDef.total}`,
+            isPrivate: true,
+            involvedPlayerIds: [session.attackerId, session.defenderId],
+        });
+
+        // Damage differences
+        const dmgToDefender = combatResult.attacker.damageDealt;
+        const dmgToAttacker = combatResult.defender.damageDealt;
+
+        this.journalService.addEntry(session.lobbyId, {
+            eventType: JournalEventType.CombatDamageResult,
+            playerNames: [attackerName, defenderName],
+            message: `${attackerName} attaque(${atkAtk.total}) - ${defenderName} défense(${defDef.total}) = ${dmgToDefender} dégât(s). ` +
+                `${defenderName} attaque(${defAtk.total}) - ${attackerName} défense(${atkDef.total}) = ${dmgToAttacker} dégât(s).`,
+            isPrivate: true,
+            involvedPlayerIds: [session.attackerId, session.defenderId],
+        });
+
+        // Round damage result
+        if (dmgToDefender > 0) {
+            this.journalService.addCombatDamageEntry(session.lobbyId, attackerName, defenderName, session.attackerId, session.defenderId);
+        }
+        if (dmgToAttacker > 0) {
+            this.journalService.addCombatDamageEntry(session.lobbyId, defenderName, attackerName, session.attackerId, session.defenderId);
+        }
     }
 }

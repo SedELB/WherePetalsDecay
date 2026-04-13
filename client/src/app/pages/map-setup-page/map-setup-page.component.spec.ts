@@ -46,6 +46,8 @@ const makeGame = (): Game => ({
 const makeCounts = () => ({
     spawnCount: 2,
     flagCount: 0,
+    healingSanctuaryCount: 0,
+    combatSanctuaryCount: 0,
 });
 
 const mockSwalResult: SweetAlertResult = {

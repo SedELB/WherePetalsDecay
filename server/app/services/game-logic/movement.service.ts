@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { Direction, DIRECTION_OFFSETS } from '@common/direction';
 import { TileItem, TileTexture } from '@common/enums';
 import { Game } from '@common/game';
@@ -63,6 +64,7 @@ export class MovementService {
                 const tile = game.lobby.game.grid[nextPos.y][nextPos.x];
                 const tileCost = TILE_COSTS[tile.type];
                 if (tileCost === Infinity) continue;
+                if (this.isSanctuaryTile(game, nextPos)) continue;
                 if (tile.item === TileItem.Spawn) continue;
                 if (this.isTileOccupied(game, nextPos)) continue;
 
@@ -104,6 +106,7 @@ export class MovementService {
                 const tile = game.lobby.game.grid[nextPos.y][nextPos.x];
                 const tileCost = TILE_COSTS[tile.type];
                 if (tileCost === Infinity) continue;
+                if (this.isSanctuaryTile(game, nextPos)) continue;
 
                 const totalCost = current.cost + tileCost;
                 if (totalCost > remaining) continue;
@@ -134,13 +137,21 @@ export class MovementService {
         return game.movementPoints.get(socketId) ?? 0;
     }
 
+    private isSanctuaryTile(game: ActiveGame, pos: Vec2): boolean {
+        const tile = game.lobby.game.grid[pos.y]?.[pos.x];
+        return tile?.item === TileItem.HealingSanctuary || tile?.item === TileItem.CombatSanctuary;
+    }
+
     private isValidTeleportMove(game: ActiveGame, targetPos: Vec2): boolean {
         if (!this.isWithinBounds(game.lobby.game, targetPos)) return false;
 
         const tile = game.lobby.game.grid[targetPos.y][targetPos.x];
         const cost = TILE_COSTS[tile.type];
 
-        if (cost === Infinity || tile.item === TileItem.Spawn || this.isTileOccupied(game, targetPos)) return false;
+        if (cost === Infinity) return false;
+        if (this.isSanctuaryTile(game, targetPos)) return false;
+        if (tile.item === TileItem.Spawn) return false;
+        if (this.isTileOccupied(game, targetPos)) return false;
 
         return true;
     }
@@ -153,6 +164,7 @@ export class MovementService {
 
         if (cost === Infinity) return false;
         if (cost > game.movementPoints.get(socketId)) return false;
+        if (this.isSanctuaryTile(game, targetPos)) return false;
         if (this.isTileOccupied(game, targetPos)) return false;
 
         return true;
