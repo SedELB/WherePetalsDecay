@@ -832,6 +832,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (finalResult.winnerId === session.attackerId) {
             this.gameLogicService.resumeTurnCycle(session.lobbyId);
             this.sendActionPoints(session.lobbyId, session.attackerId);
+            this.triggerVirtualPlayerTurnIfNeeded(session.lobbyId, session.attackerId);
             this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
         } else {
             this.gameLogicService.endTurn(session.lobbyId);
@@ -890,6 +891,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (winnerId === session.attackerId) {
             this.gameLogicService.resumeTurnCycle(session.lobbyId);
             this.sendActionPoints(session.lobbyId, session.attackerId);
+            this.triggerVirtualPlayerTurnIfNeeded(session.lobbyId, session.attackerId);
             this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
         }
 
