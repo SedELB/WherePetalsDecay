@@ -14,6 +14,9 @@ export class IsometricViewService {
   private imageCache: Map<string, HTMLImageElement> = new Map();
   private players: Player[] = [];
   private playerPositions: Record<string, Vec2> = {};
+  private doorAnimations = new Map<string, { current: number; target: number; lastTime: number }>();
+
+  private static readonly doorAnimSpeed = 4;
 
   private getImage = (src: string): HTMLImageElement | null => {
     if (!src) return null;
@@ -23,6 +26,30 @@ export class IsometricViewService {
     this.imageCache.set(src, img);
     return img;
   };
+
+  triggerDoorAnimation(x: number, y: number, newType: TileTexture): void {
+    const key = `${x},${y}`;
+    const existing = this.doorAnimations.get(key);
+    const target = newType === TileTexture.DoorClosed ? 1 : 0;
+    this.doorAnimations.set(key, { current: existing?.current ?? (1 - target), target, lastTime: Date.now() });
+  }
+
+  private getDoorProgress(col: number, row: number, tile: Tile): number {
+    const key = `${col},${row}`;
+    const anim = this.doorAnimations.get(key);
+    if (!anim) return tile.type === TileTexture.DoorClosed ? 1 : 0;
+
+    const now = Date.now();
+    const dt = (now - anim.lastTime) / RENDER_CONSTANTS.oneSecondMs;
+    anim.lastTime = now;
+
+    const step = IsometricViewService.doorAnimSpeed * dt;
+    if (anim.current < anim.target) anim.current = Math.min(anim.current + step, anim.target);
+    else anim.current = Math.max(anim.current - step, anim.target);
+
+    if (anim.current === anim.target) this.doorAnimations.delete(key);
+    return anim.current;
+  }
 
   renderBoard(config: RenderBoardConfig): void {
     if (!config.grid?.length || !config.grid[0]?.length) return;
@@ -78,10 +105,11 @@ export class IsometricViewService {
 
         // 3. Draw Portcullis Bars (top layer)
         if (tile.type === TileTexture.DoorClosed || tile.type === TileTexture.DoorOpened) {
+            const progress = this.getDoorProgress(col, row, tile);
             drawPortcullisBars(
             config.ctx, 
             { north: params.surfaceTopLeft, east: params.surfaceTopRight, south: params.surfaceBottomRight, west: params.surfaceBottomLeft }, 
-            tile.type === TileTexture.DoorClosed,
+            progress,
           );
         }
       }
@@ -150,18 +178,7 @@ export class IsometricViewService {
 
     const charX = data.cx - imgW / 2;
     const charY = data.cy - imgH + (data.tileH * RENDER_CONSTANTS.playerDepthOffset);
-    const isLocal = playerAtTile.socketId === config.localPlayerSocketId;
-    let glowColor: string | null = null;
-
-    if (config.isCTF) {
-        const isTeamA = config.teamA?.some(p => p.socketId === playerAtTile.socketId);
-        const isTeamB = config.teamB?.some(p => p.socketId === playerAtTile.socketId);
-
-        if (isTeamA) glowColor = '#3b82f6'; 
-        else if (isTeamB) glowColor = '#ef4444';
-    } else if (isLocal) {
-        glowColor = '#00f2fe';
-    }
+    const glowColor = this.getPlayerGlowColor(playerAtTile, config);
 
     if (glowColor) {
         data.ctx.save();
@@ -174,6 +191,23 @@ export class IsometricViewService {
     } else {
         data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
     }
+  }
+
+  private getPlayerGlowColor(player: Player, config: RenderBoardConfig): string | null {
+    const isLocal = player.socketId === config.localPlayerSocketId;
+    let glowColor: string | null = null;
+
+    if (config.isCTF) {
+        const isTeamA = config.teamA?.some((p) => p.socketId === player.socketId);
+        const isTeamB = config.teamB?.some((p) => p.socketId === player.socketId);
+        if (isTeamA) glowColor = '#3b82f6';
+        else if (isTeamB) glowColor = '#ef4444';
+    }
+
+    if (isLocal) {
+        glowColor = config.isLocalPlayerTurn ? '#ffffff' : (glowColor ?? '#00f2fe');
+    }
+    return glowColor;
   }
 
   private drawItemShadow(

@@ -2,7 +2,7 @@ import { Player } from '@common/player';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
 
-export type ActionHighlightType = 'attack' | 'giveFlag' | 'requestFlag';
+export type ActionHighlightType = 'attack' | 'giveFlag' | 'requestFlag' | 'toggleDoor';
 
 export interface ActionTileHighlight {
   pos: Vec2;
@@ -57,6 +57,7 @@ export interface RenderBoardConfig {
   teleportableTiles?: Vec2[];
   actionHighlightTiles?: ActionTileHighlight[];
   localPlayerSocketId?: string;
+  isLocalPlayerTurn?: boolean;
   inactiveSanctuaries?: Vec2[];
   isCTF?: boolean;
   teamA?: Player[];

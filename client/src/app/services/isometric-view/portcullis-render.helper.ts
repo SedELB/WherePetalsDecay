@@ -20,9 +20,9 @@ function drawPoly(ctx: CanvasRenderingContext2D, points: Vec2[], fill: string, s
 export function drawPortcullisBars(
     ctx: CanvasRenderingContext2D,
     corners: { north: Vec2; east: Vec2; south: Vec2; west: Vec2 },
-    closed: boolean,
+    progress: number,
   ): void {
-  if (!closed) return;
+  if (progress <= 0) return;
   const { north, east, south, west } = corners;
 
   const BAR_COUNT = 4;
@@ -32,7 +32,7 @@ export function drawPortcullisBars(
   const BAR_WIDTH_RATIO = 0.06;
   const BAR_THICKNESS_RATIO = 0.04;
 
-  const BAR_HEIGHT = tileW * BAR_HEIGHT_RATIO;
+  const BAR_HEIGHT = tileW * BAR_HEIGHT_RATIO * progress;
   const BAR_WIDTH = tileW * BAR_WIDTH_RATIO; 
   const BAR_THICKNESS = tileW * BAR_THICKNESS_RATIO; 
 

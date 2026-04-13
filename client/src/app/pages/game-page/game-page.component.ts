@@ -228,17 +228,43 @@ export class GamePageComponent implements OnInit {
             attack: this.attackTargets(),
             requestFlag: this.requestFlagTargets(),
             giveFlag: this.giveFlagTargets(),
+            toggleDoor: this.adjacentDoorTiles(),
         };
         return (typeMap[subAction] ?? []).map((pos) => ({ pos, type: subAction }));
     });
 
-    readonly hasAnyAction = computed(() =>
-        this.isMyTurn() &&
-        this.actionPoints() > 0 &&
-        (this.attackTargets().length > 0 ||
+    readonly hasAnyAction = computed(() => {
+        if (!this.isMyTurn() || this.actionPoints() <= 0) return false;
+        const hasTargets = this.attackTargets().length > 0 ||
             this.requestFlagTargets().length > 0 ||
-            this.giveFlagTargets().length > 0),
-    );
+            this.giveFlagTargets().length > 0;
+        if (hasTargets) return true;
+        return this.adjacentDoorTiles().length > 0;
+    });
+
+    readonly adjacentDoorTiles = computed((): Vec2[] => {
+        if (!this.isMyTurn()) return [];
+        const localId = this.gameViewService.getLocalSocketId();
+        const myPos = localId ? this.playerPositions()[localId] : null;
+        if (!myPos || !this.game()) return [];
+        const grid = this.game()!.grid;
+        return Object.values(DIRECTION_OFFSETS)
+            .map((offset) => ({ x: myPos.x + offset.x, y: myPos.y + offset.y }))
+            .filter(({ x, y }) => {
+                const type = grid[y]?.[x]?.type;
+                return type === TileTexture.DoorClosed || type === TileTexture.DoorOpened;
+            });
+    });
+
+    readonly doorActionLabel = computed(() => {
+        const tiles = this.adjacentDoorTiles();
+        if (tiles.length === 0) return 'Porte';
+        const firstDoor = tiles[0];
+        const grid = this.game()?.grid;
+        if (!grid) return 'Porte';
+        const isClosed = grid[firstDoor.y]?.[firstDoor.x]?.type === TileTexture.DoorClosed;
+        return isClosed ? 'Ouvrir porte' : 'Fermer porte';
+    });
 
     constructor(
         protected readonly gameViewService: GameViewService,
@@ -359,6 +385,17 @@ export class GamePageComponent implements OnInit {
 
         const action = this.activeSubAction();
         const clickContext = this.resolveTileClickContext(x, y);
+
+        if (action === 'toggleDoor') {
+            const doorType = this.game()?.grid[y]?.[x]?.type;
+            const isDoor = doorType === TileTexture.DoorClosed || doorType === TileTexture.DoorOpened;
+            if (isDoor && isAdjacent) {
+                this.gameViewService.sendToggleDoor(lobbyId, { x, y });
+                this.closeSubMenu();
+            }
+            return;
+        }
+
         if (!action || !clickContext) return;
 
         switch (action) {
@@ -391,6 +428,7 @@ export class GamePageComponent implements OnInit {
         const isDoor = tileType === TileTexture.DoorClosed || tileType === TileTexture.DoorOpened;
         if (!isDoor || !isAdjacent) return false;
         this.gameViewService.sendToggleDoor(lobbyId, { x: col, y: row });
+        this.closeSubMenu();
         return true;
     }
 
@@ -409,6 +447,7 @@ export class GamePageComponent implements OnInit {
         if (!lobbyId || !this.pendingSanctuaryPosition) return;
         this.gameViewService.sendUseSanctuary(lobbyId, this.pendingSanctuaryPosition, mode);
         this.showSanctuaryModal = false;
+        this.closeSubMenu();
         this.pendingSanctuaryPosition = null;
         this.pendingSanctuaryType = null;
     }
