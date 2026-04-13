@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
-import { Vec2 } from '@common/vec2';
+import { ISO_ITEM_ASSETS, RENDER_CONSTANTS, STROKE_COLOR, TILE_LINE_WIDTH, TILE_THICKNESS } from '@app/constants/isometric.constants';
+import { RenderBoardConfig, TileDepthParams, TileRenderParams } from '@app/interfaces/isometric-interfaces';
+import { TileItem, TileTexture } from '@common/enums';
 import { Player } from '@common/player';
-import { TileRenderParams, RenderBoardConfig, TileDepthParams } from '@app/interfaces/isometric-interfaces';
 import { Tile } from '@common/tile';
-import { TileTexture } from '@common/enums';
-import { ISO_ITEM_ASSETS, RENDER_CONSTANTS, TILE_LINE_WIDTH, STROKE_COLOR, TILE_THICKNESS } from '@app/constants/isometric.constants';
-import { calculateAutoZoom, buildViewConfig, buildVertexMap, applyCameraTransform } from './isometric-camera.helper';
+import { Vec2 } from '@common/vec2';
+import { applyCameraTransform, buildVertexMap, buildViewConfig, calculateAutoZoom } from './isometric-camera.helper';
 import { drawIsometricTileBase } from './isometric-terrain.helper';
+import { drawSanctuarySprite } from './sanctuary-render.helper';
 import { drawPortcullisBars } from './portcullis-render.helper';
 
 @Injectable({ providedIn: 'root' })
@@ -86,7 +87,7 @@ export class IsometricViewService {
           surfaceBottomRight: vertices[row + 1][col + 1],
           surfaceBottomLeft: vertices[row + 1][col],
         };
-        
+
         const depthParams: TileDepthParams = {
           context: config.ctx,
           thickness: TILE_THICKNESS,
@@ -96,29 +97,59 @@ export class IsometricViewService {
           surfaceBottomRight: vertices[row + 1][col + 1],
           surfaceBottomLeft: vertices[row + 1][col],
         };
-        
+
         // 1. Draw base tile and depth
         drawIsometricTileBase(params, depthParams, config, this.getImage);
 
         // 2. Draw Entities
         this.drawAssetsOnTile(params, col, row, config);
 
-        // 3. Draw Portcullis Bars (top layer)
-        if (tile.type === TileTexture.DoorClosed || tile.type === TileTexture.DoorOpened) {
-            const progress = this.getDoorProgress(col, row, tile);
-            drawPortcullisBars(
-            config.ctx, 
-            { north: params.surfaceTopLeft, east: params.surfaceTopRight, south: params.surfaceBottomRight, west: params.surfaceBottomLeft }, 
-            progress,
-          );
-        }
+        // 3. Render Special Structures
+        this.renderPortcullis(tile, col, row, config, params);
+        this.renderSanctuary(tile, col, row, config, vertices);
       }
     }
   }
 
+  private renderPortcullis(tile: Tile, col: number, row: number, config: RenderBoardConfig, params: TileRenderParams): void {
+    if (tile.type !== TileTexture.DoorClosed && tile.type !== TileTexture.DoorOpened) return;
+    const progress = this.getDoorProgress(col, row, tile);
+    drawPortcullisBars(
+      config.ctx,
+      { north: params.surfaceTopLeft, east: params.surfaceTopRight, south: params.surfaceBottomRight, west: params.surfaceBottomLeft },
+      progress,
+    );
+  }
+
+  private renderSanctuary(
+    tile: Tile,
+    col: number,
+    row: number,
+    config: RenderBoardConfig,
+    vertices: Vec2[][],
+  ): void {
+    const isSanctuary = tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary;
+    if (!isSanctuary) return;
+
+    const totalRows = config.grid.length;
+    const totalCols = config.grid[0].length;
+
+    const isBottomRight = (col + 1 >= totalCols || config.grid[row]?.[col + 1]?.item !== tile.item)
+      && (row + 1 >= totalRows || config.grid[row + 1]?.[col]?.item !== tile.item);
+
+    if (isBottomRight && row >= 1 && col >= 1 && tile.item) {
+      drawSanctuarySprite(config.ctx, tile.item, {
+        north: vertices[row - 1][col - 1],
+        east: vertices[row - 1][col + 1],
+        south: vertices[row + 1][col + 1],
+        west: vertices[row + 1][col - 1],
+      }, this.getImage);
+    }
+  }
+
   private drawAssetsOnTile(params: TileRenderParams, col: number, row: number, config: RenderBoardConfig): void {
-    const { context: ctx, surfaceTopLeft: north, surfaceTopRight: east, 
-            surfaceBottomRight: south, surfaceBottomLeft: west } = params;
+    const { context: ctx, surfaceTopLeft: north, surfaceTopRight: east,
+      surfaceBottomRight: south, surfaceBottomLeft: west } = params;
 
     const cx = (west.x + east.x) / 2;
     const cy = (north.y + south.y) / 2;
@@ -133,7 +164,8 @@ export class IsometricViewService {
 
   private drawItemAt(tile: Tile, data: { ctx: CanvasRenderingContext2D; cx: number; cy: number; tileW: number; tileH: number }): void {
     if (tile.item == null) return;
-    
+    if (tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary) return;
+
     const imageSrc = ISO_ITEM_ASSETS[tile.item];
     if (!imageSrc) return;
 
@@ -145,8 +177,8 @@ export class IsometricViewService {
     const imgH = imgW / aspect;
 
     const floatOffset = Math.sin(Date.now() / RENDER_CONSTANTS.itemFloatSpeed) *
-        (data.tileH * RENDER_CONSTANTS.itemFloatAmplitude) -
-        (data.tileH * RENDER_CONSTANTS.itemFloatBaseOffset);
+      (data.tileH * RENDER_CONSTANTS.itemFloatAmplitude) -
+      (data.tileH * RENDER_CONSTANTS.itemFloatBaseOffset);
 
     const verticalShift = data.tileH * RENDER_CONSTANTS.itemVerticalOffset;
 
@@ -155,14 +187,14 @@ export class IsometricViewService {
   }
 
   private drawPlayerAt(
-     col: number, row: number, 
-     data: { ctx: CanvasRenderingContext2D; cx: number; cy: number; tileW: number; tileH: number }, 
-     config: RenderBoardConfig,
-    ): void {
-      
+    col: number, row: number,
+    data: { ctx: CanvasRenderingContext2D; cx: number; cy: number; tileW: number; tileH: number },
+    config: RenderBoardConfig,
+  ): void {
+
     const playerAtTile = this.players.find(p => {
-        const pos = this.playerPositions[p.socketId];
-        return pos?.x === col && pos?.y === row;
+      const pos = this.playerPositions[p.socketId];
+      return pos?.x === col && pos?.y === row;
     });
 
     if (!playerAtTile?.character?.avatar) return;
@@ -181,15 +213,15 @@ export class IsometricViewService {
     const glowColor = this.getPlayerGlowColor(playerAtTile, config);
 
     if (glowColor) {
-        data.ctx.save();
-        data.ctx.shadowColor = glowColor;
-        data.ctx.shadowBlur = 30; data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-        data.ctx.shadowBlur = 18; data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-        data.ctx.shadowBlur = 8; data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-        data.ctx.shadowBlur = 0; data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-        data.ctx.restore();
+      data.ctx.save();
+      data.ctx.shadowColor = glowColor;
+      data.ctx.shadowBlur = 30; data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
+      data.ctx.shadowBlur = 18; data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
+      data.ctx.shadowBlur = 8; data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
+      data.ctx.shadowBlur = 0; data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
+      data.ctx.restore();
     } else {
-        data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
+      data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
     }
   }
 
@@ -198,14 +230,14 @@ export class IsometricViewService {
     let glowColor: string | null = null;
 
     if (config.isCTF) {
-        const isTeamA = config.teamA?.some((p) => p.socketId === player.socketId);
-        const isTeamB = config.teamB?.some((p) => p.socketId === player.socketId);
-        if (isTeamA) glowColor = '#3b82f6';
-        else if (isTeamB) glowColor = '#ef4444';
+      const isTeamA = config.teamA?.some((p) => p.socketId === player.socketId);
+      const isTeamB = config.teamB?.some((p) => p.socketId === player.socketId);
+      if (isTeamA) glowColor = '#3b82f6';
+      else if (isTeamB) glowColor = '#ef4444';
     }
 
     if (isLocal) {
-        glowColor = config.isLocalPlayerTurn ? '#ffffff' : (glowColor ?? '#00f2fe');
+      glowColor = config.isLocalPlayerTurn ? '#ffffff' : (glowColor ?? '#00f2fe');
     }
     return glowColor;
   }

@@ -96,7 +96,6 @@
                                             <span class="name" title="{{ player.character.name }}">{{ player.character.name }}</span>
                                             <span class="stats-icon">⚔️ {{ player.winsCount }}</span>
                                             @if (player.isHost) { <span class="host-indicator">👑</span> }
-                                            @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator">▶</span> }
                                             @if (player.playerType === 'virtual') {
                                                 @if (player.virtualProfile === 'aggressive') {
                                                     <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
@@ -124,7 +123,6 @@
                                                 <span class="name" title="{{ player.character.name }}">{{ player.character.name }}</span>
                                                 @if (player.hasFlag) { <span class="flag-indicator" title="Possède le drapeau">🚩</span> }
                                                 @if (player.isHost) { <span class="host-indicator">👑</span> }
-                                                @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator turn-indicator-a">▶</span> }
                                                 @if (player.playerType === 'virtual') {
                                                     @if (player.virtualProfile === 'aggressive') {
                                                         <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
@@ -152,7 +150,6 @@
                                                 <span class="name" title="{{ player.character.name }}">{{ player.character.name }}</span>
                                                 @if (player.hasFlag) { <span class="flag-indicator">🚩</span> }
                                                 @if (player.isHost) { <span class="host-indicator">👑</span> }
-                                                @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator turn-indicator-b">▶</span> }
                                                 @if (player.playerType === 'virtual') {
                                                     @if (player.virtualProfile === 'aggressive') {
                                                         <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
