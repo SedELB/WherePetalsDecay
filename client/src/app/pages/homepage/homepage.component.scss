@@ -35,8 +35,10 @@
 }
 
 .team-info {
-    margin-top: 3.75rem;
-    border-top: 1px solid #eee;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
 
     h3 {
         margin-bottom: 0.5rem;

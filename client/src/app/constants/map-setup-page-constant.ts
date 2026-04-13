@@ -40,13 +40,13 @@ export const OBJECT_PLACEMENT_TOOL: Record<TileItem, ObjectPlacementTool> = {
     [TileItem.HealingSanctuary]: {
         type: TileItem.HealingSanctuary,
         label: 'Relique de soin',
-        description: 'Emplacement où un joueur peut placer une relic de soin.',
+        description: 'Emplacement où un joueur peut placer un sanctuaire de soin.',
         image: './assets/icons/healingSanctuary.svg',
     },
     [TileItem.CombatSanctuary]: {
         type: TileItem.CombatSanctuary,
         label: 'Relique de combat',
-        description: 'Emplacement où un joueur peut placer une relic de combat.',
+        description: 'Emplacement où un joueur peut placer un sanctuaire de combat.',
         image: './assets/icons/combatSanctuary.svg',
     },
 };
@@ -62,7 +62,7 @@ export const TILE_TOOLS: Record<TileTexture, TileTool> = {
         type: TileTexture.Wall,
         label: 'Mur',
         description: 'Bloque le passage des joueurs.',
-        image: './assets/tiles/wall.png',
+        image: './assets/tiles/editorWall.jpg',
     },
     [TileTexture.Water]: {
         type: TileTexture.Water,

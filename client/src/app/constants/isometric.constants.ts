@@ -68,7 +68,7 @@ export const ISO_TEXTURE_ASSETS: Record<TileTexture, string> = {
   [TileTexture.Floor]: './assets/tiles/default3.png',
   [TileTexture.Water]: './assets/tiles/water.png',
   [TileTexture.Ice]: './assets/tiles/ice.png',
-  [TileTexture.Wall]: './assets/tiles/wall.png',
+  [TileTexture.Wall]: './assets/tiles/wall.jpg',
   [TileTexture.DoorClosed]: '',
   [TileTexture.DoorOpened]: '',
 };
