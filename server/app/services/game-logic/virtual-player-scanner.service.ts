@@ -126,6 +126,50 @@ export class VirtualPlayerScannerService {
         return result;
     }
 
+    findNearestTileAdjacentToHealingSanctuary(game: ActiveGame, virtualPlayer: Player, vpPos: Vec2): Vec2 | null {
+        const candidates = new Map<string, Vec2>();
+        const { grid } = game.lobby.game;
+        
+        for (let row = 0; row < grid.length; row++) {
+            for (let col = 0; col < grid[row].length; col++) {
+                if (grid[row][col].item !== TileItem.HealingSanctuary) continue;
+
+                for (const offset of Object.values(DIRECTION_OFFSETS)) {
+                    const borderPos: Vec2 = { x: col + offset.x, y: row + offset.y };
+                    if (!this.isInsideBounds(grid, borderPos)) continue;
+
+                    const borderTile = grid[borderPos.y][borderPos.x];
+                    if (borderTile.item === TileItem.HealingSanctuary || borderTile.item === TileItem.CombatSanctuary) continue;
+                    if (TILE_COSTS[borderTile.type] === Infinity) continue;
+                    if (this.pathfindingService.isTileOccupiedByAnotherPlayer(game, borderPos, virtualPlayer.socketId)) continue;
+
+                    candidates.set(this.pathfindingService.positionKey(borderPos), borderPos);
+                }
+            }
+        }
+        
+        const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, vpPos);
+        let nearestCost = Infinity;
+        let nearestPos: Vec2 | null = null;
+        for (const pos of candidates.values()) {
+            const cost = costToPosition.get(this.pathfindingService.positionKey(pos)) ?? Infinity;
+            if (cost < nearestCost) {
+                nearestCost = cost;
+                nearestPos = pos;
+            }
+        }
+
+        return nearestPos;
+    }
+
+    isTileAdjacentToHealingSanctuary(game: ActiveGame, pos: Vec2): boolean {
+        const { grid } = game.lobby.game;
+        return Object.values(DIRECTION_OFFSETS).some((offset) => {
+            const neighbour: Vec2 = { x: pos.x + offset.x, y: pos.y + offset.y };
+            return this.isInsideBounds(grid, neighbour) && grid[neighbour.y][neighbour.x].item === TileItem.HealingSanctuary;
+        });
+    }
+
     findFlagOnMap(game: ActiveGame): Vec2 | null {
         const { grid } = game.lobby.game;
         for (let row = 0; row < grid.length; row++) { // TODO : can add extractFlags method in game-setup to avoid iterating over entire grid each time
@@ -162,5 +206,9 @@ export class VirtualPlayerScannerService {
         }
 
         return null;
+    }
+
+    private isInsideBounds(grid: ActiveGame['lobby']['game']['grid'], pos: Vec2): boolean {
+        return pos.y >= 0 && pos.y < grid.length && pos.x >= 0 && pos.x < grid[0].length;
     }
 }

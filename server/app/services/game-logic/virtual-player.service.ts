@@ -1,4 +1,5 @@
 import { Posture } from '@common/character';
+import { BASE_STATS } from '@common/constants/character.constants';
 import { GameMode, TileItem, VirtualPlayerProfile } from '@common/enums';
 import { Player } from '@common/player';
 import { TILE_COSTS } from '@common/tile-costs';
@@ -76,7 +77,6 @@ export class VirtualPlayerService {
 
     // ------------
     // Classic mode
-    // ------------
 
     private runClassicTurn(context: TurnContext, currentPos: Vec2): void {
         if (context.virtualPlayer.virtualProfile === VirtualPlayerProfile.Aggressive) {
@@ -88,6 +88,12 @@ export class VirtualPlayerService {
 
     // Aggressive : attack? -> chase nearest enemy -> attack again
     private runAggressiveClassicTurn(context: TurnContext, currentPos: Vec2): void {
+        const actionPoints = context.game.actionPoints.get(context.virtualPlayer.socketId) ?? 0;
+        if (actionPoints <= 0) {
+            this.runAggressivePostCombatMovement(context, currentPos);
+            return;
+        }
+
         if (this.tryAttackAdjacentEnemy(context)) return;
 
         const nearestEnemy = this.scanner.findNearestEnemy(context.game, context.virtualPlayer, currentPos);
@@ -97,18 +103,40 @@ export class VirtualPlayerService {
         }
 
         this.moveTowardThenAct(context, currentPos, nearestEnemy.position, () => {
-            this.tryAttackAdjacentEnemy(context);
-            this.endVirtualPlayerTurn(context.lobbyId);
+            const hasStartedCombat = this.tryAttackAdjacentEnemy(context);
+            if (!hasStartedCombat) this.endVirtualPlayerTurn(context.lobbyId);
         });
+    }
+
+    private runAggressivePostCombatMovement(context: TurnContext, currentPos: Vec2): void {
+        const { game, virtualPlayer, lobbyId } = context;
+        const sanctuaryBorderTile = this.scanner.findNearestTileAdjacentToHealingSanctuary(game, virtualPlayer, currentPos);
+        if (sanctuaryBorderTile) {
+            this.moveTowardThenAct(context, currentPos, sanctuaryBorderTile, () => this.endVirtualPlayerTurn(lobbyId));
+            return;
+        }
+
+        const nearestEnemy = this.scanner.findNearestEnemy(game, virtualPlayer, currentPos);
+        if (!nearestEnemy) {
+            this.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
+
+        this.moveTowardThenAct(context, currentPos, nearestEnemy.position, () => this.endVirtualPlayerTurn(lobbyId));
     }
 
     // Defensive : always flee all enemies -> attack if cornered -> head to sanctuary
     private runDefensiveClassicTurn(context: TurnContext, currentPos: Vec2): void {
         const { game, virtualPlayer, lobbyId } = context;
+        const isInjured = virtualPlayer.character.life < this.getMaxLife(virtualPlayer);
 
         const fleeTarget = this.scanner.chooseFleeTile(game, virtualPlayer, currentPos);
         if (fleeTarget) {
-            this.moveTowardThenAct(context, currentPos, fleeTarget, () => {
+            const retreatTarget = isInjured
+                ? this.findHealingSanctuaryBorderOnRetreatPath(context, currentPos, fleeTarget) ?? fleeTarget
+                : fleeTarget;
+
+            this.moveTowardThenAct(context, currentPos, retreatTarget, () => {
                 this.tryAttackAdjacentEnemy(context); // TODO : can defensive atk someone ?
                 this.endVirtualPlayerTurn(lobbyId);
             });
@@ -116,18 +144,31 @@ export class VirtualPlayerService {
         }
 
         if (this.tryAttackAdjacentEnemy(context)) {
-            this.endVirtualPlayerTurn(lobbyId);
             return;
         }
 
         this.endVirtualPlayerTurn(lobbyId);
     }
 
+    private findHealingSanctuaryBorderOnRetreatPath(context: TurnContext, currentPos: Vec2, fleeTarget: Vec2): Vec2 | null {
+        const { game } = context;
+        const dijkstraResult = this.pathfindingService.computeFullDijkstra(game, currentPos);
+        const fleePath = this.pathfindingService.reconstructPath(fleeTarget, dijkstraResult.predecessorKey);
+        if (!fleePath) return null;
+
+        for (const pathStep of fleePath) {
+            if (this.scanner.isTileAdjacentToHealingSanctuary(game, pathStep)) {
+                return pathStep;
+            }
+        }
+
+        return null;
+    }
+
     // --------
     // CTF mode
-    // --------
 
-// TODO : if we are in ctf and the VP is defensive, maybe we can use the 10s delay and make the choice in a random time
+    // TODO : if we are in ctf and the VP is defensive, maybe we can use the 10s delay and make the choice in a random time
 
     private runCtfTurn(context: TurnContext, currentPos: Vec2): void {
         const { game, virtualPlayer, lobbyId } = context;
@@ -177,8 +218,8 @@ export class VirtualPlayerService {
         if (virtualPlayer.virtualProfile === VirtualPlayerProfile.Aggressive) {
             // Chase and attack the carrier.
             this.moveTowardThenAct(context, currentPos, carrierPos, () => {
-                this.tryAttackAdjacentEnemy(context);
-                this.endVirtualPlayerTurn(lobbyId);
+                const hasStartedCombat = this.tryAttackAdjacentEnemy(context);
+                if (!hasStartedCombat) this.endVirtualPlayerTurn(lobbyId);
             });
         } else {
             // Block the carrier's start position.
@@ -188,15 +229,14 @@ export class VirtualPlayerService {
                 : null;
 
             this.moveTowardThenAct(context, currentPos, blockadeTarget ?? carrierPos, () => {
-                this.tryAttackAdjacentEnemy(context);
-                this.endVirtualPlayerTurn(lobbyId);
+                const hasStartedCombat = this.tryAttackAdjacentEnemy(context);
+                if (!hasStartedCombat) this.endVirtualPlayerTurn(lobbyId);
             });
         }
     }
 
     // --------
     // Movement
-    // --------
 
     // Computes Dijkstra to 'targetPos' and steps as far as the VP's
     // movement points allows, then calls 'onDone'
@@ -296,7 +336,6 @@ export class VirtualPlayerService {
 
     // ------
     // Combat
-    // ------
 
     // Picks the best adjacent opponent and delegates combat to the gateway.
     // Returns 'true' if combat was initiated.
@@ -340,9 +379,12 @@ export class VirtualPlayerService {
         return profile === VirtualPlayerProfile.Aggressive ? AGGRESSIVE_POSTURE : DEFENSIVE_POSTURE;
     }
 
+    private getMaxLife(player: Player): number {
+        return player.character.lifeBonus ? BASE_STATS.life + BASE_STATS.bonus : BASE_STATS.life;
+    }
+
     // -------------------------------------------
     // Statistics (MovementService.trackTileVisit)
-    // -------------------------------------------
 
     private trackTileVisitStats(game: ActiveGame, socketId: string, pos: Vec2): void {
         const tile = game.lobby.game.grid[pos.y]?.[pos.x];
@@ -366,7 +408,6 @@ export class VirtualPlayerService {
 
     // --------
     // Turn end
-    // --------
 
     private endVirtualPlayerTurn(lobbyId: string): void {
         setTimeout(() => this.gameLogicService.endTurn(lobbyId), VP_MIN_ACTION_DELAY_MS);
