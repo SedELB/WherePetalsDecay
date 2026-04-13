@@ -49,7 +49,7 @@ export const RENDER_CONSTANTS = {
 
 
 export const TILE_COLORS: Record<string, TileColorSet> = {
-  [TileTexture.Floor]: { top: '#6F9545', left: '#6F9545', right: '#6F9545' },
+  [TileTexture.Floor]: { top: '#6C6C6C', left: '#6C6C6C', right: '#6C6C6C' },
   [TileTexture.Water]: { top: '#46A8CF', left: '#46A8CF', right: '#46A8CF' },
   [TileTexture.Ice]: { top: '#BEE2F3', left: '#BEE2F3', right: '#BEE2F3' },
   [TileTexture.Wall]: { top: '#8C897F', left: '#8C897F', right: '#8C897F' },
@@ -59,18 +59,18 @@ export const TILE_COLORS: Record<string, TileColorSet> = {
 
 export const ISO_ITEM_ASSETS: Record<TileItem, string> = {
   [TileItem.Spawn]: './assets/icons/spawnPoint.svg',
-  [TileItem.Flag]: './assets/icons/blackflag.svg',
+  [TileItem.Flag]: './assets/icons/japFlagStick.svg',
   [TileItem.HealingSanctuary]: './assets/icons/healingSanctuary.svg',
   [TileItem.CombatSanctuary]: './assets/icons/combatSanctuary.svg',
 };
 
 export const ISO_TEXTURE_ASSETS: Record<TileTexture, string> = {
-  [TileTexture.Floor]: './assets/tiles/default.png',
+  [TileTexture.Floor]: './assets/tiles/default3.png',
   [TileTexture.Water]: './assets/tiles/water.png',
   [TileTexture.Ice]: './assets/tiles/ice.png',
   [TileTexture.Wall]: './assets/tiles/wall.png',
-  [TileTexture.DoorClosed]: './assets/tiles/closed_door.png',
-  [TileTexture.DoorOpened]: './assets/tiles/opened_door.png',
+  [TileTexture.DoorClosed]: '',
+  [TileTexture.DoorOpened]: '',
 };
 
 export const DEFAULT_COLOR: TileColorSet = {
