@@ -41,8 +41,6 @@ export class ChatGateway {
 
     @SubscribeMessage(JoinGameEvents.ChatHistoryRequest)
     handleChatHistoryRequest(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string): void {
-        if (!socket.rooms.has(lobbyId)) return;
-
         const lobby = this.lobbyService.getLobby(lobbyId);
         if (!lobby) return;
 

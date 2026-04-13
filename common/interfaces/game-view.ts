@@ -28,6 +28,21 @@ export interface CombatEndedData {
     reason: 'death' | 'abandon';
 }
 
+export interface CombatLockStateData {
+    lobbyId: string;
+    isLocked: boolean;
+    roomId?: string;
+    attackerSocketId?: string;
+    defenderSocketId?: string;
+}
+
+export interface CombatAttackAnimationData {
+    lobbyId: string;
+    attackerSocketId: string;
+    defenderSocketId: string;
+    durationMs: number;
+}
+
 export interface PostureReceivedData {
     socketId: string;
     posture: Posture;

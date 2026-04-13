@@ -23,6 +23,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   @Input() teleportableTiles: Vec2[] = [];
   @Input() actionHighlightTiles: ActionTileHighlight[] = [];
   @Input() localPlayerSocketId?: string;
+  @Input() inactiveSanctuaries: Vec2[] = [];
   @Input() isCTF: boolean = false;
   @Input() teamA: Player[] = [];
   @Input() teamB: Player[] = [];
@@ -236,6 +237,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
       teleportableTiles: this.teleportableTiles,
       actionHighlightTiles: this.actionHighlightTiles,
       localPlayerSocketId: this.localPlayerSocketId,
+      inactiveSanctuaries: this.inactiveSanctuaries,
       isCTF: this.isCTF,
       teamA: this.teamA,
       teamB: this.teamB,

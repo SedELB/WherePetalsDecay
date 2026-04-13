@@ -2,6 +2,7 @@ import { Component, OnDestroy, computed, signal, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { ChatComponent } from '@app/components/chat/chat.component';
+import { JournalComponent } from '@app/components/journal/journal.component';
 import { ROUTES } from '@app/constants/routes.constants';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { PERCENT } from '@common/constants/game-stats.constants';
@@ -21,7 +22,7 @@ type SortColumn =
 @Component({
     selector: 'app-end-game-page',
     standalone: true,
-    imports: [ButtonComponent, ChatComponent],
+    imports: [ButtonComponent, ChatComponent, JournalComponent],
     templateUrl: './end-game-page.component.html',
     styleUrl: './end-game-page.component.scss',
 })
