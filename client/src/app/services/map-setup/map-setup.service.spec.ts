@@ -189,18 +189,22 @@ describe('MapSetupService', () => {
     // Test removeBlockingItemIfNeeded
     it('should remove item when placing blocking texture', () => {
         const counts = { spawnCount: 0, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
-        const tile: Tile = { type: TileTexture.Floor, item: TileItem.Spawn };
+        const game = gameFactory(1, 1);
+        game.grid[0][0].item = TileItem.Spawn;
+        const tile = game.grid[0][0];
 
-        service['removeBlockingItemIfNeeded'](tile, TileTexture.Wall, counts);
+        service['removeBlockingItemIfNeeded'](game, 0, 0, TileTexture.Wall, counts);
         expect(tile.item).toBeNull();
         expect(counts.spawnCount).toBe(1);
     });
 
     it('should remove item when placing door texture', () => {
         const counts = { spawnCount: 0, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
-        const tile: Tile = { type: TileTexture.Floor, item: TileItem.Flag };
+        const game = gameFactory(1, 1);
+        game.grid[0][0].item = TileItem.Flag;
+        const tile = game.grid[0][0];
 
-        service['removeBlockingItemIfNeeded'](tile, TileTexture.DoorOpened, counts);
+        service['removeBlockingItemIfNeeded'](game, 0, 0, TileTexture.DoorOpened, counts);
         expect(tile.item).toBeNull();
         expect(counts.flagCount).toBe(1);
     });
