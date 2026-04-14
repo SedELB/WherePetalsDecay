@@ -30,7 +30,6 @@ import {
 } from './game-page.utils';
 
 const MOVE_COOLDOWN_MS = 150;
-const GAME_OVER_REDIRECT_DELAY = 5000;
 
 @Component({
     selector: 'app-game-page',
@@ -65,7 +64,6 @@ export class GamePageComponent implements OnInit {
     pendingSanctuaryType: TileItem | null = null;
 
     isChatFocused = false;
-    private gameOverTimeout: ReturnType<typeof setTimeout> | null = null;
     private isMoveCoolingDown = false;
     isJournalOpen = false;
     isLeftPanelOpen = true;
@@ -244,19 +242,6 @@ export class GamePageComponent implements OnInit {
         protected readonly gameViewService: GameViewService,
         private readonly router: Router,
     ) {
-        effect(() => {
-            const over = this.gameOver();
-            if (this.gameOverTimeout) {
-                clearTimeout(this.gameOverTimeout);
-                this.gameOverTimeout = null;
-            }
-            if (over) {
-                this.gameOverTimeout = setTimeout(() => {
-                    this.gameOverTimeout = null;
-                }, GAME_OVER_REDIRECT_DELAY);
-            }
-        });
-
         effect(() => {
             const activeId = this.activePlayerSocketId();
             const localId = this.gameViewService.getLocalSocketId();
