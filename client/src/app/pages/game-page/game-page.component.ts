@@ -1,18 +1,17 @@
 import { Component, HostListener, OnInit, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
+import { CharacterSheetComponent } from '@app/components/character-sheet/character-sheet.component';
 import { ChatComponent } from '@app/components/chat/chat.component';
 import { CombatComponent } from '@app/components/combat/combat.component';
+import { GameOverOverlayComponent } from '@app/components/game-over-overlay/game-over-overlay.component';
 import { IsometricMapComponent } from '@app/components/isometric-map/isometric-map.component';
 import { JournalComponent } from '@app/components/journal/journal.component';
-import { SakuraComponent } from '@app/components/sakura/sakura.component';
-import { CharacterSheetComponent } from '@app/components/character-sheet/character-sheet.component';
-import { GameOverOverlayComponent } from '@app/components/game-over-overlay/game-over-overlay.component';
 import { PlayersListComponent } from '@app/components/players-list/players-list.component';
+import { SakuraComponent } from '@app/components/sakura/sakura.component';
 import { SanctuaryModalComponent } from '@app/components/sanctuary-modal/sanctuary-modal.component';
 import { OBJECT_PLACEMENT_TOOL } from '@app/constants/map-setup-page-constant';
 import { ROUTES } from '@app/constants/routes.constants';
-import { ActionHighlightType } from '@app/interfaces/isometric-interfaces';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { DIRECTION_OFFSETS, KEY_TO_DIRECTION } from '@common/direction';
 import { GameMode, TileItem, TileTexture } from '@common/enums';
@@ -23,8 +22,8 @@ import { GamePageSignalsService } from './game-page-signals.service';
 import {
     TileClickContext,
     buildTileClickContext,
-    getPlayerAtPosition as helperGetPlayerAtPosition,
     getCurrentPlayerIceDebuff,
+    getPlayerAtPosition as helperGetPlayerAtPosition,
     getPlayerName as helperGetPlayerName,
     getTimerDisplay as helperGetTimerDisplay,
     getTimerLabel as helperGetTimerLabel,
@@ -80,7 +79,6 @@ export class GamePageComponent implements OnInit {
     private isMoveCoolingDown = false;
     isJournalOpen = false;
     isLeftPanelOpen = true;
-    readonly toggleDoorAction: ActionHighlightType = 'toggleDoor';
 
     constructor(
         readonly gameViewService: GameViewService,
@@ -163,6 +161,22 @@ export class GamePageComponent implements OnInit {
     }
 
 
+    onSelectSanctuaryAction(): void {
+        const targets = this.gamePageSignalService.sanctuaryTargets();
+        if (targets.length === 1) {
+            const pos = targets[0];
+            const tileItem = this.gamePageSignalService.game()?.grid[pos.y]?.[pos.x]?.item as TileItem | null | undefined;
+            if (tileItem === TileItem.HealingSanctuary || tileItem === TileItem.CombatSanctuary) {
+                this.pendingSanctuaryPosition = pos;
+                this.pendingSanctuaryType = tileItem;
+                this.showSanctuaryModal = true;
+                this.gamePageSignalService.closeSubMenu();
+                return;
+            }
+        }
+        this.gamePageSignalService.selectSubAction('sanctuary');
+    }
+
     onTileClick(x: number, y: number): void {
         if (this.gamePageSignalService.showCombatInProgressModal()) return;
         const lobbyId = this.gamePageSignalService.lobby()?.lobbyId;
@@ -172,14 +186,17 @@ export class GamePageComponent implements OnInit {
         const isAdjacent = this.isTileAdjacentToPlayer(x, y);
 
         if (this.tryHandleDoorClick(lobbyId, x, y, tile?.type, isAdjacent)) return;
-        if (this.tryHandleSanctuaryClick(x, y, tile?.item as TileItem | null | undefined, isAdjacent)) return;
 
         this.handleSubActionClick(x, y, lobbyId, isAdjacent);
     }
 
     private handleSubActionClick(x: number, y: number, lobbyId: string, isAdjacent: boolean): void {
         const action = this.gamePageSignalService.activeSubAction();
-        const clickContext = this.resolveTileClickContext(x, y);
+
+        if (action === 'sanctuary') {
+            this.handleSanctuarySubAction(x, y);
+            return;
+        }
 
         if (action === 'toggleDoor') {
             const doorType = this.gamePageSignalService.game()?.grid[y]?.[x]?.type;
@@ -191,6 +208,7 @@ export class GamePageComponent implements OnInit {
             return;
         }
 
+        const clickContext = this.resolveTileClickContext(x, y);
         if (!action || !clickContext) return;
 
         if (action === 'attack') {
@@ -201,6 +219,21 @@ export class GamePageComponent implements OnInit {
             this.gameViewService.requestFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
         }
 
+        this.gamePageSignalService.closeSubMenu();
+    }
+
+    private handleSanctuarySubAction(x: number, y: number): void {
+        const isHighlighted = this.gamePageSignalService.actionHighlightTiles().some(
+            (t) => t.pos.x === x && t.pos.y === y && t.type === 'sanctuary');
+        if (!isHighlighted) return;
+
+        const tileItem = this.gamePageSignalService.game()?.grid[y]?.[x]?.item as TileItem | null | undefined;
+        const isSanctuary = tileItem === TileItem.HealingSanctuary || tileItem === TileItem.CombatSanctuary;
+        if (!isSanctuary) return;
+
+        this.pendingSanctuaryPosition = { x, y };
+        this.pendingSanctuaryType = tileItem;
+        this.showSanctuaryModal = true;
         this.gamePageSignalService.closeSubMenu();
     }
 
@@ -222,17 +255,6 @@ export class GamePageComponent implements OnInit {
         this.gamePageSignalService.closeSubMenu();
         return true;
     }
-
-    private tryHandleSanctuaryClick(col: number, row: number, tileItem: TileItem | null | undefined, isAdjacent: boolean): boolean {
-        const isSanctuary = tileItem === TileItem.HealingSanctuary || tileItem === TileItem.CombatSanctuary;
-        const isInactive = this.gamePageSignalService.inactiveSanctuaries().some((p) => p.x === col && p.y === row);
-        if (!isSanctuary || !isAdjacent || isInactive) return false;
-        this.pendingSanctuaryPosition = { x: col, y: row };
-        this.pendingSanctuaryType = tileItem;
-        this.showSanctuaryModal = true;
-        return true;
-    }
-
     onUseSanctuary(mode: 'normal' | 'doubleOrNothing'): void {
         const lobbyId = this.gamePageSignalService.lobby()?.lobbyId;
         if (!lobbyId || !this.pendingSanctuaryPosition) return;
@@ -269,8 +291,8 @@ export class GamePageComponent implements OnInit {
     }
 
     isTeleportable(col: number, row: number): boolean {
-        return this.gamePageSignalService.isDebugModeActive() 
-        && this.gamePageSignalService.reachableTilesForTeleport().some((tile) => tile.x === col && tile.y === row);
+        return this.gamePageSignalService.isDebugModeActive()
+            && this.gamePageSignalService.reachableTilesForTeleport().some((tile) => tile.x === col && tile.y === row);
     }
 
     getPlayerAtPosition(x: number, y: number): string | null {
@@ -282,9 +304,9 @@ export class GamePageComponent implements OnInit {
     }
 
     getTimerLabel(): string {
-        return helperGetTimerLabel(this.gamePageSignalService.activePlayerSocketId(), 
-        this.gameViewService.getLocalSocketId(), 
-        this.gamePageSignalService.lobby()?.players ?? []);
+        return helperGetTimerLabel(this.gamePageSignalService.activePlayerSocketId(),
+            this.gameViewService.getLocalSocketId(),
+            this.gamePageSignalService.lobby()?.players ?? []);
     }
 
     getTimerDisplay(): string {

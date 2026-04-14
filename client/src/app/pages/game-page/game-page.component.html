@@ -135,8 +135,8 @@
                     <button
                         id="sub-action-door"
                         class="sub-action-btn door"
-                        [class.selected]="gamePageSignalService.activeSubAction() === toggleDoorAction"
-                        (click)="gamePageSignalService.selectSubAction(toggleDoorAction)"
+                        [class.selected]="gamePageSignalService.activeSubAction() === 'toggleDoor'"
+                        (click)="gamePageSignalService.selectSubAction('toggleDoor')"
                     >{{ gamePageSignalService.doorActionLabel() }}</button>
                 }
                 @if (gamePageSignalService.requestFlagTargets().length > 0) {
@@ -154,6 +154,14 @@
                         [class.selected]="gamePageSignalService.activeSubAction() === 'giveFlag'"
                         (click)="gamePageSignalService.selectSubAction('giveFlag')"
                     >Donner drapeau</button>
+                }
+                @if (gamePageSignalService.sanctuaryTargets().length > 0) {
+                    <button
+                        id="sub-action-sanctuary"
+                        class="sub-action-btn sanctuary"
+                        [class.selected]="gamePageSignalService.activeSubAction() === 'sanctuary'"
+                        (click)="onSelectSanctuaryAction()"
+                    >Utiliser sanctuaire</button>
                 }
             </div>
 
