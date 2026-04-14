@@ -1,0 +1,23 @@
+.game-over-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.game-over-message {
+    background: rgba(12, 14, 34, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.875rem;
+    padding: 2rem 3rem;
+    text-align: center;
+    color: white;
+    box-shadow: 0 1rem 2.125rem rgba(0, 0, 0, 0.5);
+
+    h2 {
+        margin-bottom: 0.5rem;
+    }
+}

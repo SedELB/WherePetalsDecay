@@ -37,6 +37,11 @@
             "styles": [
               "src/styles.scss"
             ],
+            "stylePreprocessorOptions": {
+              "includePaths": [
+                "."
+              ]
+            },
             "scripts": [],
             "browser": "src/main.ts"
           },
@@ -51,7 +56,7 @@
                 {
                   "type": "anyComponentStyle",
                   "maximumWarning": "5kb",
-                  "maximumError": "15kb"  
+                  "maximumError": "15kb"
                 }
               ],
               "fileReplacements": [
@@ -106,6 +111,11 @@
             "styles": [
               "src/styles.scss"
             ],
+            "stylePreprocessorOptions": {
+              "includePaths": [
+                "."
+              ]
+            },
             "scripts": [],
             "codeCoverageExclude": [
               "src/environments/**/*.ts",

@@ -6,6 +6,10 @@
 
             <div class="stats-panel compact unified">
                 <h4>Stats de combat</h4>
+                <div class="bonus-legend" aria-label="Légende des bonus">
+                    <span class="bonus-badge bonus-badge--posture">Bonus posture</span>
+                    <span class="bonus-badge bonus-badge--dice">Bonus dé</span>
+                </div>
                 <div class="stat-row">
                     <span class="stat-label">❤️ HP</span>
                     <span class="stat-value">{{ player.character.life }}</span>
@@ -33,11 +37,11 @@
             </div>
 
             <div class="posture-status">
-                @if (shouldShowPosturePendingSpinner(player)) {
-                    <span class="posture-status__text">Choix en cours</span>
+                @if (isPosturePending(player)) {
+                    <span class="posture-status__text">Posture en attente</span>
                     <span class="loading-spinner" aria-label="Chargement posture"></span>
                 } @else {
-                    <span class="posture-status__text">Posture</span>
+                    <span class="posture-status__text">Posture choisie</span>
                     <span class="posture-status__value">{{ getPostureStatusValue(player) }}</span>
                 }
             </div>
@@ -49,16 +53,18 @@
         <p class="subtitle">
             Round #{{ getCurrentRoundIndex() }}
         </p>
-        @if (shouldShowAttackAnnouncement()) {
-            <p class="attack-announcement">{{ getAttackAnnouncementMessage() }}</p>
-        } @else if (isPostureCountdownVisible()) {
-            <div class="posture-timer">
-                <span class="timer-text">Choix de posture: {{ getPostureCountdown() }}s</span>
-                <div class="timer-line">
-                    <div class="timer-line-fill" [style.width.%]="getPostureCountdownProgressPercent()"></div>
+        <div class="combat-status-slot">
+            @if (shouldShowAttackAnnouncement()) {
+                <p class="attack-announcement">{{ getAttackAnnouncementMessage() }}</p>
+            } @else if (isPostureCountdownVisible()) {
+                <div class="posture-timer">
+                    <span class="timer-text">Choix de posture: {{ getPostureCountdown() }}s</span>
+                    <div class="timer-line">
+                        <div class="timer-line-fill" [style.width.%]="getPostureCountdownProgressPercent()"></div>
+                    </div>
                 </div>
-            </div>
-        }
+            }
+        </div>
         @if (diceRollDisplay; as roll) {
             <div class="dice-roll-panel" [ngClass]="{ 'is-final': roll.isFinal }">
                 <p class="dice-roll-title">{{ roll.isFinal ? '🎲 Résultat des dés' : '🎲 Lancer des dés en cours' }}</p>
@@ -115,7 +121,7 @@
             } @else if (postureResultPopup) {
                 <div class="damage-popup-overlay">
                     <div class="damage-popup damage-popup--posture">
-                        <h3>Résultat des postures — Manche #{{ postureResultPopup.roundIndex }}</h3>
+                        <h3>Bonus appliqués — Manche #{{ postureResultPopup.roundIndex }}</h3>
                         <p><b>Votre posture :</b> {{ postureResultPopup.playerPosture }}</p>
                         <p><b>Posture adverse :</b> {{ postureResultPopup.enemyPosture }}</p>
                     </div>
@@ -159,6 +165,10 @@
 
             <div class="stats-panel compact unified">
                 <h4>Stats de combat</h4>
+                <div class="bonus-legend" aria-label="Légende des bonus">
+                    <span class="bonus-badge bonus-badge--posture">Bonus posture</span>
+                    <span class="bonus-badge bonus-badge--dice">Bonus dé</span>
+                </div>
                 <div class="stat-row">
                     <span class="stat-label">❤️ HP</span>
                     <span class="stat-value">{{ enemy.character.life }}</span>
@@ -186,11 +196,11 @@
             </div>
 
             <div class="posture-status">
-                @if (shouldShowPosturePendingSpinner(enemy)) {
-                    <span class="posture-status__text">Choix en cours</span>
+                @if (isPosturePending(enemy)) {
+                    <span class="posture-status__text">Posture en attente</span>
                     <span class="loading-spinner" aria-label="Chargement posture"></span>
                 } @else {
-                    <span class="posture-status__text">Posture</span>
+                    <span class="posture-status__text">Posture choisie</span>
                     <span class="posture-status__value">{{ getPostureStatusValue(enemy) }}</span>
                 }
             </div>

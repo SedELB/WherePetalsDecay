@@ -5,23 +5,7 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 import { SAKURA_FRAGMENT_SHADER, SAKURA_VERTEX_SHADER } from './sakura.constants';
 
-interface Vec3 { x: number; y: number; z: number }
-
-class Petal {
-    pos = [0, 0, 0];
-    vel = [0, 0, 0];
-    euler = [0, 0, 0];
-    spin = [0, 0, 0];
-    size = 1;
-    zkey = 0;
-
-    update(dt: number): void {
-        for (let i = 0; i < this.pos.length; i++) {
-            this.pos[i] += this.vel[i] * dt;
-            this.euler[i] += this.spin[i] * dt;
-        }
-    }
-}
+import { Petal, Vec3, buildLookAtMatrix, buildProjectionMatrix } from '@app/components/sakura/sakura.helper';
 
 @Component({
     selector: 'app-sakura',
@@ -57,7 +41,7 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
     private readonly maxDeltaTime = 0.05;  // Max frame delta time cap (prevents large jumps)
     private readonly msPerSec = 1000;  // Milliseconds per second
     private readonly mat4Size = 16;    // Elements in a 4x4 matrix
-    private readonly normalizeEps = 1e-5;  // Epsilon for vector normalization
+
     private readonly degPerRotation = 360;   // Degrees in a full rotation
     private readonly floatsPerPetal = 8;     // Floats per petal in the GPU buffer (3 pos + 3 euler + 2 misc)
     private readonly posComponents = 3;     // Floats per position/euler vector
@@ -223,7 +207,7 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
         const gl = this.gl;
         const PI2 = Math.PI * 2;
 
-        this.viewMatrix = this.buildLookAt(this.camPos, { x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 });
+        this.viewMatrix = buildLookAtMatrix(this.camPos, { x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 });
 
         const limits = [this.areaX, this.areaY, this.areaZ];
         for (const p of this.petals) {
@@ -312,54 +296,8 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
         this.camPos.z = this.areaZ + this.nearPlane;
 
         const angle = Math.atan2(this.areaY, this.camPos.z + this.areaZ) * this.degPerRotation / Math.PI;
-        this.projMatrix = this.buildProjection(w / h, angle, this.nearPlane, this.farPlane);
+        this.projMatrix = buildProjectionMatrix(w / h, angle, this.nearPlane, this.farPlane);
     }
 
-    // ── Math utilities ──────────────────────────────────────────────────────
 
-    private normalize(v: Vec3): void {
-        let l = v.x * v.x + v.y * v.y + v.z * v.z;
-        if (l > this.normalizeEps) {
-            l = 1 / Math.sqrt(l);
-            v.x *= l; v.y *= l; v.z *= l;
-        }
-    }
-
-    private cross(out: Vec3, a: Vec3, b: Vec3): void {
-        out.x = a.y * b.z - a.z * b.y;
-        out.y = a.z * b.x - a.x * b.z;
-        out.z = a.x * b.y - a.y * b.x;
-    }
-
-    private buildProjection(aspect: number, vdeg: number, near: number, far: number): Float32Array<ArrayBuffer> {
-        const h = near * Math.tan(vdeg * Math.PI / this.degPerRotation) * 2;
-        const w = h * aspect;
-        const m = new Float32Array(this.mat4Size);
-        m[0] = 2 * near / w;
-        m[5] = 2 * near / h;
-        m[10] = -(far + near) / (far - near);
-        m[11] = -1;
-        m[14] = -(2 * far * near / (far - near));
-        return m;
-    }
-
-    private buildLookAt(vpos: Vec3, vlook: Vec3, vup: Vec3): Float32Array<ArrayBuffer> {
-        const front: Vec3 = { x: vpos.x - vlook.x, y: vpos.y - vlook.y, z: vpos.z - vlook.z };
-        this.normalize(front);
-        const side: Vec3 = { x: 1, y: 0, z: 0 };
-        this.cross(side, vup, front);
-        this.normalize(side);
-        const top: Vec3 = { x: 1, y: 0, z: 0 };
-        this.cross(top, front, side);
-        this.normalize(top);
-        const m = new Float32Array(this.mat4Size);
-        m[0] = side.x; m[1] = top.x; m[2] = front.x;
-        m[4] = side.y; m[5] = top.y; m[6] = front.y;
-        m[8] = side.z; m[9] = top.z; m[10] = front.z;
-        m[12] = -(vpos.x * m[0] + vpos.y * m[4] + vpos.z * m[8]);
-        m[13] = -(vpos.x * m[1] + vpos.y * m[5] + vpos.z * m[9]);
-        m[14] = -(vpos.x * m[2] + vpos.y * m[6] + vpos.z * m[10]);
-        m[15] = 1;
-        return m;
-    }
 }

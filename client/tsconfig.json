@@ -2,7 +2,6 @@
 {
     "compileOnSave": false,
     "compilerOptions": {
-      "baseUrl": "./",
       "rootDir": "..",
       "outDir": "./dist/out-tsc",
       "forceConsistentCasingInFileNames": true,
@@ -24,6 +23,9 @@
       "target": "ES2022",
       "module": "es2020",
       "paths": {
+        "src/*": [
+          "./src/*"
+        ],
         "@app/*": [
           "./src/app/*"
         ],
