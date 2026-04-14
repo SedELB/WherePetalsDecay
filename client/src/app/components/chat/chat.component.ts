@@ -81,12 +81,18 @@ export class ChatComponent implements OnInit, OnDestroy, OnChanges, AfterViewChe
         const lobbyId = this.lobbyId?.trim();
         if (!lobbyId) return;
 
+        let isFirstLoad = true;
         this.messagesSub = this.chatService.roomMessages$(lobbyId).subscribe((msgs) => {
             if (msgs.length > this.lastMessageCount) {
                 this.shouldScroll = true;
             }
             this.lastMessageCount = msgs.length;
             this.messages = msgs;
+
+            if (isFirstLoad && msgs.length > 0) {
+                isFirstLoad = false;
+                setTimeout(() => this.scrollToBottom(), 0);
+            }
         });
     }
 

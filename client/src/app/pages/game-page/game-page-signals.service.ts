@@ -13,6 +13,7 @@ import {
     getGiveFlagTargets,
     getAdjacentDoorTiles,
     getDoorActionLabel,
+    getSanctuaryTargets,
     getActionHighlightTiles,
     checkHasAnyAction,
     getPlayerName,
@@ -112,6 +113,16 @@ export class GamePageSignalsService {
 
     readonly doorActionLabel = computed(() => getDoorActionLabel(this.adjacentDoorTiles(), this.game()?.grid));
 
+    readonly sanctuaryTargets = computed((): Vec2[] => {
+        if (!this.isMyTurn()) return [];
+        return getSanctuaryTargets(
+            this.gameViewService.getLocalSocketId(),
+            this.playerPositions(),
+            this.game()?.grid ?? [],
+            this.inactiveSanctuaries(),
+        );
+    });
+
     readonly actionHighlightTiles = computed((): ActionTileHighlight[] => getActionHighlightTiles({
         isSubMenuOpen: this.isSubMenuOpen(),
         activeSubAction: this.activeSubAction(),
@@ -119,6 +130,7 @@ export class GamePageSignalsService {
         requestFlagTargets: this.requestFlagTargets(),
         giveFlagTargets: this.giveFlagTargets(),
         adjacentDoorTiles: this.adjacentDoorTiles(),
+        sanctuaryTargets: this.sanctuaryTargets(),
     }));
 
     readonly hasAnyAction = computed(() => checkHasAnyAction({
@@ -128,6 +140,7 @@ export class GamePageSignalsService {
         requestFlagTargets: this.requestFlagTargets(),
         giveFlagTargets: this.giveFlagTargets(),
         adjacentDoorTiles: this.adjacentDoorTiles(),
+        sanctuaryTargets: this.sanctuaryTargets(),
     }));
 
     constructor(private readonly gameViewService: GameViewService) {}

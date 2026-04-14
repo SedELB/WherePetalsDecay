@@ -19,7 +19,7 @@ import { Game } from '@common/game';
 import { Tile } from '@common/tile';
 import { BehaviorSubject, of } from 'rxjs';
 import swal, { SweetAlertResult } from 'sweetalert2';
-import { MapSetupPageComponent } from './map-setup-page.component';
+import { MapSetupPageComponent } from '@app/pages/map-setup-page/map-setup-page.component';
 
 const makeGrid = (rows: number, cols: number): Tile[][] =>
     Array.from({ length: rows }, () =>

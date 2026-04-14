@@ -10,7 +10,7 @@ import { GameViewService } from '@app/services/game-view/game-view.service';
 import { GameMode, PlayerType } from '@common/enums';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
-import { GamePageComponent } from './game-page.component';
+import { GamePageComponent } from '@app/pages/game-page/game-page.component';
 
 @Component({ template: '', standalone: true })
 class DummyComponent {}
@@ -22,7 +22,6 @@ describe('GamePageComponent', () => {
 
     const LOCAL_SOCKET = 'local-socket';
     const OTHER_SOCKET = 'other-socket';
-
 
     const DEFAULT_LIFE = 6;
     const BONUS_LIFE = 8;
@@ -143,12 +142,11 @@ describe('GamePageComponent', () => {
         mockGameViewService.combatLockState.set(null);
         mockGameViewService.isCombatStarted.set(false);
         mockGameViewService.fighters.set({ player: {} as Player, enemy: {} as Player, roomId: '' });
-        [mockGameViewService.sendMove, mockGameViewService.sendEndTurn,
-        mockGameViewService.sendAbandon, mockGameViewService.sendAbandonWithoutPrompt,
-        mockGameViewService.sendCombat, mockGameViewService.sendTileInfoRequest,
-        mockGameViewService.sendToggleDoor, mockGameViewService.sendUseSanctuary,
-        mockGameViewService.toggleDebugMode, mockGameViewService.teleportMove,
-        mockGameViewService.isHost].forEach((s) => s.calls.reset());
+        [mockGameViewService.getLocalSocketId, mockGameViewService.isHost, mockGameViewService.sendMove, mockGameViewService.sendEndTurn,
+        mockGameViewService.sendAbandon, mockGameViewService.sendAbandonWithoutPrompt, mockGameViewService.sendCombat,
+        mockGameViewService.sendTileInfoRequest, mockGameViewService.sendToggleDoor, mockGameViewService.sendUseSanctuary,
+        mockGameViewService.toggleDebugMode, mockGameViewService.teleportMove, mockGameViewService.setLobby,
+        mockGameViewService.resetGameState].forEach((spy) => spy.calls.reset());
     };
 
     beforeEach(async () => {

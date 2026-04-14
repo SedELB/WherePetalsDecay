@@ -62,6 +62,7 @@ export class CombatInitiationGateway {
             roundIndex: 1,
             awaitingPostures: false,
             consumeActionPointOnNextRound: true,
+            vpPostureHandles: [],
         };
 
         this.combatSessionService.createSession(combatSession);
@@ -109,6 +110,7 @@ export class CombatInitiationGateway {
             roundIndex: 1,
             awaitingPostures: false,
             consumeActionPointOnNextRound: true,
+            vpPostureHandles: [],
         };
 
         this.combatSessionService.createSession(combatSession);

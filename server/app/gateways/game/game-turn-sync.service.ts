@@ -1,4 +1,5 @@
 import { GameLogicService } from '@app/services/game-logic/game-logic.service';
+import { PlayerType } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Injectable } from '@nestjs/common';
 import { Server } from 'socket.io';
@@ -11,6 +12,13 @@ export class GameTurnSyncService {
         this.emitMovementPoints(server, lobbyId, socketId);
         this.emitActionPoints(server, lobbyId, socketId);
         this.refreshPlayerNavigationState(server, lobbyId, socketId);
+    }
+
+    syncPlayerTurnStateWithoutAutoEnd(server: Server, lobbyId: string, socketId: string): void {
+        this.emitMovementPoints(server, lobbyId, socketId);
+        this.emitActionPoints(server, lobbyId, socketId);
+        this.emitReachableTiles(server, lobbyId, socketId);
+        this.emitReachableTilesForTeleport(server, lobbyId, socketId);
     }
 
     refreshPlayerNavigationState(server: Server, lobbyId: string, socketId: string): void {
@@ -49,14 +57,18 @@ export class GameTurnSyncService {
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
         if (activeGame?.isDebugMode) return;
 
+        const player = activeGame?.lobby.players.find((p) => p.socketId === socketId);
+        if (player?.playerType === PlayerType.Virtual) return;
+
         const reachableTiles = this.gameLogicService.getReachableTiles(lobbyId, socketId);
-        if (reachableTiles.length > 0) return;
+        const canMove = reachableTiles.length > 0;
 
         const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
         const adjacentPlayers = this.gameLogicService.getAdjacentPlayers(lobbyId, socketId);
         const canAttack = actionPoints > 0 && adjacentPlayers.length > 0;
+        const canToggleDoor = this.gameLogicService.canToggleAdjacentDoor(lobbyId, socketId);
 
-        if (!canAttack) {
+        if (!canMove && !canAttack && !canToggleDoor) {
             this.gameLogicService.endTurn(lobbyId);
         }
     }

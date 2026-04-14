@@ -1,7 +1,9 @@
+/* eslint-disable max-lines */
 import { Posture } from '@common/character';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { GameMode, TileItem, VirtualPlayerProfile } from '@common/enums';
 import { Player } from '@common/player';
+import { SanctuaryType } from '@common/tile';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
@@ -14,6 +16,7 @@ import { VirtualPlayerScannerService } from './virtual-player-scanner.service';
 const VP_MIN_ACTION_DELAY_MS = 1000;
 const VP_EXTRA_ACTION_DELAY_MS = 2000;
 const VP_STEP_DELAY_MS = 300;
+const HEALING_SANCTUARY_MIN_MISSING_HP = 2;
 
 const AGGRESSIVE_POSTURE: Posture = { type: 'atk', bonus: 2 };
 const DEFENSIVE_POSTURE: Posture = { type: 'def', bonus: 2 };
@@ -79,66 +82,184 @@ export class VirtualPlayerService {
     // Classic mode
 
     private runClassicTurn(context: TurnContext, currentPos: Vec2): void {
-        if (context.virtualPlayer.virtualProfile === VirtualPlayerProfile.Aggressive) {
+        const { game, virtualPlayer } = context;
+        const isInjured = virtualPlayer.character.life <= this.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
+        const hasCombatBonus = this.hasCombatBonus(game, virtualPlayer.socketId);
+
+        // Always attempt to use a sanctuary at current position first
+        // If injured: healing sanctuary takes priority over combat sanctuary
+        if (isInjured && this.tryUseSanctuaryAtCurrentPosition(context, TileItem.HealingSanctuary)) {
+            this.continueTurnAfterSanctuary(context);
+            return;
+        }
+        // Only try combat sanctuary if VP doesn't already have the bonus
+        if (!hasCombatBonus && this.tryUseSanctuaryAtCurrentPosition(context, TileItem.CombatSanctuary)) {
+            this.continueTurnAfterSanctuary(context);
+            return;
+        }
+        // Fallback: healing sanctuary if injured and combat wasn't applicable
+        if (isInjured && this.tryUseSanctuaryAtCurrentPosition(context, TileItem.HealingSanctuary)) {
+            this.continueTurnAfterSanctuary(context);
+            return;
+        }
+
+        if (virtualPlayer.virtualProfile === VirtualPlayerProfile.Aggressive) {
             this.runAggressiveClassicTurn(context, currentPos);
         } else {
             this.runDefensiveClassicTurn(context, currentPos);
         }
     }
 
-    // Aggressive : attack? -> chase nearest enemy -> attack again
+    // Aggressive :
+    //   1. Combat sanctuary reachable this turn (only if no combat bonus yet) -> go use it
+    //   2. Healing sanctuary reachable if injured -> go use it
+    //   3. Enemy adjacent -> attack
+    //   4. Neither reachable -> compare distances, go toward the closest
     private runAggressiveClassicTurn(context: TurnContext, currentPos: Vec2): void {
-        const actionPoints = context.game.actionPoints.get(context.virtualPlayer.socketId) ?? 0;
+        const { game, virtualPlayer, lobbyId } = context;
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
         if (actionPoints <= 0) {
             this.runAggressivePostCombatMovement(context, currentPos);
             return;
         }
 
+        const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, currentPos);
+        const isInjured = virtualPlayer.character.life <= this.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
+        const hasCombatBonus = this.hasCombatBonus(game, virtualPlayer.socketId);
+
+        // Priority 1
+        if (!hasCombatBonus && this.tryGoToCombatSanctuaryThisTurn(context, currentPos, costToPosition)) return;
+
+        // Priority 2
+        if (isInjured && this.tryMoveAndUseSanctuary(context, currentPos, TileItem.HealingSanctuary)) return;
+
+        // Priority 3
         if (this.tryAttackAdjacentEnemy(context)) return;
 
-        const nearestEnemy = this.scanner.findNearestEnemy(context.game, context.virtualPlayer, currentPos);
-        if (!nearestEnemy) {
-            this.endVirtualPlayerTurn(context.lobbyId);
+        // Priority 4
+        const nearestEnemy = this.scanner.findNearestEnemy(game, virtualPlayer, currentPos);
+        if (!hasCombatBonus && this.tryGoToCloserCombatSanctuary(context, currentPos, costToPosition, nearestEnemy)) return;
+
+        if (nearestEnemy) {
+            this.moveTowardThenAct(context, currentPos, nearestEnemy.position, () => {
+                const hasStartedCombat = this.tryAttackAdjacentEnemy(context);
+                if (!hasStartedCombat) this.endVirtualPlayerTurn(lobbyId);
+            });
             return;
         }
 
-        this.moveTowardThenAct(context, currentPos, nearestEnemy.position, () => {
-            const hasStartedCombat = this.tryAttackAdjacentEnemy(context);
-            if (!hasStartedCombat) this.endVirtualPlayerTurn(context.lobbyId);
-        });
+        this.endVirtualPlayerTurn(lobbyId);
     }
 
+    // Moves toward a combat sanctuary border reachable this turn, returns true if one was found
+    private tryGoToCombatSanctuaryThisTurn(context: TurnContext, currentPos: Vec2, costToPosition: Map<string, number>): boolean {
+        const { game, virtualPlayer } = context;
+        const border = this.scanner.findNearestTileAdjacentToSanctuary(game, virtualPlayer, currentPos, {
+            sanctuaryType: TileItem.CombatSanctuary,
+            reachableThisTurn: true,
+            precomputedCostToPosition: costToPosition,
+        });
+        if (!border) return false;
+
+        this.moveTowardThenAct(context, currentPos, border, () => {
+            this.tryUseSanctuaryAtCurrentPosition(context, TileItem.CombatSanctuary);
+            this.continueTurnAfterSanctuary(context);
+        });
+        return true;
+    }
+
+    // Compares distance to nearest combat sanctuary vs nearest enemy. Goes toward sanctuary if closer.
+    private tryGoToCloserCombatSanctuary(
+        context: TurnContext,
+        currentPos: Vec2,
+        costToPosition: Map<string, number>,
+        nearestEnemy: { player: Player; position: Vec2 } | null,
+    ): boolean {
+        const { game, virtualPlayer } = context;
+        const border = this.scanner.findNearestTileAdjacentToSanctuary(game, virtualPlayer, currentPos, {
+            sanctuaryType: TileItem.CombatSanctuary,
+            precomputedCostToPosition: costToPosition,
+        });
+        if (!border) return false;
+
+        const enemyCost = nearestEnemy
+            ? (costToPosition.get(this.pathfindingService.positionKey(nearestEnemy.position)) ?? Infinity)
+            : Infinity;
+        const sanctuaryCost = costToPosition.get(this.pathfindingService.positionKey(border)) ?? Infinity;
+        if (sanctuaryCost > enemyCost) return false;
+
+        this.moveTowardThenAct(context, currentPos, border, () => {
+            this.tryUseSanctuaryAtCurrentPosition(context, TileItem.CombatSanctuary);
+            this.continueTurnAfterSanctuary(context);
+        });
+        return true;
+    }
+
+    // After combat (no AP left): healing sanctuary > combat sanctuary > nearest enemy
     private runAggressivePostCombatMovement(context: TurnContext, currentPos: Vec2): void {
         const { game, virtualPlayer, lobbyId } = context;
-        const sanctuaryBorderTile = this.scanner.findNearestTileAdjacentToHealingSanctuary(game, virtualPlayer, currentPos);
-        if (sanctuaryBorderTile) {
-            this.moveTowardThenAct(context, currentPos, sanctuaryBorderTile, () => this.endVirtualPlayerTurn(lobbyId));
-            return;
+        const isInjured = virtualPlayer.character.life <= this.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
+        const dijkstraResult = this.pathfindingService.computeFullDijkstra(game, currentPos);
+        const { costToPosition } = dijkstraResult;
+
+        // Healing sanctuary takes priority when injured
+        if (isInjured) {
+            const healingBorder = this.scanner.findNearestTileAdjacentToSanctuary(game, virtualPlayer, currentPos, {
+                sanctuaryType: TileItem.HealingSanctuary,
+                precomputedCostToPosition: costToPosition,
+            });
+            if (healingBorder) {
+                this.moveTowardThenAct(context, currentPos, healingBorder, () => this.endVirtualPlayerTurn(lobbyId));
+                return;
+            }
         }
 
+        const combatBorder = this.scanner.findNearestTileAdjacentToSanctuary(game, virtualPlayer, currentPos, {
+            sanctuaryType: TileItem.CombatSanctuary,
+            precomputedCostToPosition: costToPosition,
+        });
         const nearestEnemy = this.scanner.findNearestEnemy(game, virtualPlayer, currentPos);
-        if (!nearestEnemy) {
-            this.endVirtualPlayerTurn(lobbyId);
+
+        const combatCost = combatBorder
+            ? (costToPosition.get(this.pathfindingService.positionKey(combatBorder)) ?? Infinity)
+            : Infinity;
+        const enemyCost = nearestEnemy
+            ? (costToPosition.get(this.pathfindingService.positionKey(nearestEnemy.position)) ?? Infinity)
+            : Infinity;
+
+        if (combatBorder && combatCost <= enemyCost) {
+            this.moveTowardThenAct(context, currentPos, combatBorder, () => this.endVirtualPlayerTurn(lobbyId));
             return;
         }
 
-        this.moveTowardThenAct(context, currentPos, nearestEnemy.position, () => this.endVirtualPlayerTurn(lobbyId));
+        if (nearestEnemy) {
+            this.moveTowardThenAct(context, currentPos, nearestEnemy.position, () => this.endVirtualPlayerTurn(lobbyId));
+            return;
+        }
+
+        this.endVirtualPlayerTurn(lobbyId);
     }
 
-    // Defensive : always flee all enemies -> attack if cornered -> head to sanctuary
+    // Defensive : flee all enemies → if a sanctuary is on the flee path, use it and continue
+    //   - Prioritize healing sanctuary if injured, otherwise take combat sanctuary if on path
+    //   - If cornered, attack
     private runDefensiveClassicTurn(context: TurnContext, currentPos: Vec2): void {
         const { game, virtualPlayer, lobbyId } = context;
         const isInjured = virtualPlayer.character.life < this.getMaxLife(virtualPlayer);
 
         const fleeTarget = this.scanner.chooseFleeTile(game, virtualPlayer, currentPos);
         if (fleeTarget) {
-            const retreatTarget = isInjured
-                ? this.findHealingSanctuaryBorderOnRetreatPath(context, currentPos, fleeTarget) ?? fleeTarget
-                : fleeTarget;
-
+            const retreatTarget = this.chooseBestRetreatTarget(context, currentPos, fleeTarget, isInjured);
             this.moveTowardThenAct(context, currentPos, retreatTarget, () => {
-                this.tryAttackAdjacentEnemy(context); // TODO : can defensive atk someone ?
-                this.endVirtualPlayerTurn(lobbyId);
+                // After reaching retreat target, try to use whichever sanctuary we're now adjacent to
+                const usedSanctuary =
+                    (isInjured && this.tryUseSanctuaryAtCurrentPosition(context, TileItem.HealingSanctuary)) ||
+                    this.tryUseSanctuaryAtCurrentPosition(context, TileItem.CombatSanctuary);
+                if (usedSanctuary) {
+                    this.continueTurnAfterSanctuary(context);
+                } else {
+                    this.endVirtualPlayerTurn(lobbyId);
+                }
             });
             return;
         }
@@ -150,19 +271,107 @@ export class VirtualPlayerService {
         this.endVirtualPlayerTurn(lobbyId);
     }
 
-    private findHealingSanctuaryBorderOnRetreatPath(context: TurnContext, currentPos: Vec2, fleeTarget: Vec2): Vec2 | null {
+    // Chooses the best tile to retreat to on the flee path:
+    // Prefers a sanctuary border tile along the path (healing if injured, otherwise combat)
+    private chooseBestRetreatTarget(context: TurnContext, currentPos: Vec2, fleeTarget: Vec2, isInjured: boolean): Vec2 {
         const { game } = context;
         const dijkstraResult = this.pathfindingService.computeFullDijkstra(game, currentPos);
         const fleePath = this.pathfindingService.reconstructPath(fleeTarget, dijkstraResult.predecessorKey);
-        if (!fleePath) return null;
+        if (!fleePath) return fleeTarget;
+
+        // Scan path for sanctuary border tiles — healing takes priority over combat
+        let healingBorderOnPath: Vec2 | null = null;
+        let combatBorderOnPath: Vec2 | null = null;
 
         for (const pathStep of fleePath) {
-            if (this.scanner.isTileAdjacentToHealingSanctuary(game, pathStep)) {
-                return pathStep;
+            if (!healingBorderOnPath && this.scanner.isTileAdjacentToSanctuary(game, pathStep, TileItem.HealingSanctuary)) {
+                healingBorderOnPath = pathStep;
+            }
+            if (!combatBorderOnPath && this.scanner.isTileAdjacentToSanctuary(game, pathStep, TileItem.CombatSanctuary)) {
+                combatBorderOnPath = pathStep;
             }
         }
 
+        if (isInjured && healingBorderOnPath) return healingBorderOnPath;
+        if (combatBorderOnPath) return combatBorderOnPath;
+        if (isInjured && healingBorderOnPath) return healingBorderOnPath;
+        return fleeTarget;
+    }
+
+    private tryUseSanctuaryAtCurrentPosition(context: TurnContext, sanctuaryType: SanctuaryType): boolean {
+        const { game, virtualPlayer, lobbyId } = context;
+
+        if (sanctuaryType === TileItem.HealingSanctuary) {
+            const isInjured = virtualPlayer.character.life <= this.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
+            if (!isInjured) return false;
+        }
+
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
+        if (actionPoints <= 0) return false;
+
+        const currentPos = game.playerPositions.get(virtualPlayer.socketId);
+        if (!currentPos) return false;
+
+        const sanctuaryPos = this.findAdjacentSanctuaryPosition(game, currentPos, sanctuaryType);
+        if (!sanctuaryPos) return false;
+
+        const useResult = this.gameLogicService.useSanctuary(lobbyId, virtualPlayer.socketId, sanctuaryPos, 'normal');
+        return Boolean(useResult);
+    }
+
+    private tryMoveAndUseSanctuary(context: TurnContext, currentPos: Vec2, sanctuaryType: SanctuaryType): boolean {
+        const { game, virtualPlayer } = context;
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
+        if (actionPoints <= 0) return false;
+
+        if (sanctuaryType === TileItem.HealingSanctuary) {
+            const isInjured = virtualPlayer.character.life <= this.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
+            if (!isInjured) return false;
+        }
+
+        const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, currentPos);
+
+        // TODO: check later if we can delete this
+        // if (!this.scanner.findNearestReachableSanctuary(game, virtualPlayer, currentPos, [sanctuaryType], costToPosition)) return false;
+
+        const border = this.scanner.findNearestTileAdjacentToSanctuary(game, virtualPlayer, currentPos, {
+            sanctuaryType,
+            reachableThisTurn: true,
+            precomputedCostToPosition: costToPosition,
+        });
+        if (!border) return false;
+
+        this.moveTowardThenAct(context, currentPos, border, () => {
+            this.tryUseSanctuaryAtCurrentPosition(context, sanctuaryType);
+            this.continueTurnAfterSanctuary(context);
+        });
+        return true;
+    }
+
+    private findAdjacentSanctuaryPosition(game: ActiveGame, currentPos: Vec2, sanctuaryType: SanctuaryType): Vec2 | null {
+        const candidatesPos: Vec2[] = [
+            { x: currentPos.x, y: currentPos.y - 1 },
+            { x: currentPos.x - 1, y: currentPos.y },
+            { x: currentPos.x, y: currentPos.y + 1 },
+            { x: currentPos.x + 1, y: currentPos.y },
+        ];
+
+        for (const pos of candidatesPos) {
+            const tile = game.lobby.game.grid[pos.y]?.[pos.x];
+            if (tile?.item === sanctuaryType) return pos;
+        }
+
         return null;
+    }
+
+    private continueTurnAfterSanctuary(context: TurnContext): void {
+        const remainingMovement = context.game.movementPoints.get(context.virtualPlayer.socketId) ?? 0;
+        if (remainingMovement <= 0) {
+            this.endVirtualPlayerTurn(context.lobbyId);
+            return;
+        }
+
+        setTimeout(() => this.runDecisionCycle(context), VP_STEP_DELAY_MS);
     }
 
     // --------
@@ -312,6 +521,8 @@ export class VirtualPlayerService {
         const moveCost = TILE_COSTS[tile.type];
         if (moveCost === Infinity) return false;
 
+        if (this.pathfindingService.isSanctuaryTile(game, targetPos)) return false;
+
         const currentMvtPts = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
         if (moveCost > currentMvtPts) return false;
 
@@ -381,6 +592,12 @@ export class VirtualPlayerService {
 
     private getMaxLife(player: Player): number {
         return player.character.lifeBonus ? BASE_STATS.life + BASE_STATS.bonus : BASE_STATS.life;
+    }
+
+    // Returns true if the VP already has an active combat sanctuary bonus
+    // (prevents seeking or using a second combat sanctuary for a double effect)
+    private hasCombatBonus(game: ActiveGame, socketId: string): boolean {
+        return game.playerCombatBonusTurns.has(socketId);
     }
 
     // -------------------------------------------

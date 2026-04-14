@@ -1,6 +1,8 @@
-﻿@use "src/styles.scss" as *;
+﻿@use "@src/styles.scss" as *;
 
 .combat-container {
+    --combat-height: 450px;
+
     position: absolute;
     inset: 0;
     z-index: 10;
@@ -8,10 +10,11 @@
     justify-content: center;
     pointer-events: auto;
     flex-direction: row;
-    align-items: stretch;
+    align-items: center;
     gap: 1rem;
     padding: 1rem;
     box-sizing: border-box;
+    transform: translateY(40px);
 }
 
 %panel-base {
@@ -26,6 +29,7 @@
 .fighter-column {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: 0.9rem;
     min-width: 280px;
     max-width: 320px;
@@ -66,7 +70,6 @@
     align-items: center;
     justify-content: flex-start;
     gap: 0.8rem;
-    min-width: 540px;
 
     h1 {
         margin: 0;
@@ -81,8 +84,108 @@
     text-align: center;
 }
 
+.combat-status-slot {
+    width: min(420px, 100%);
+    min-height: 2.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dice-roll-panel {
+    width: min(420px, 100%);
+    border-radius: 0.65rem;
+    border: 1px solid rgba(96, 165, 250, 0.6);
+    background: rgba(15, 23, 42, 0.72);
+    padding: 0.55rem 0.8rem;
+    box-shadow: 0 0 0.9rem rgba(59, 130, 246, 0.3);
+
+    .dice-roll-title {
+        margin: 0 0 0.35rem 0;
+        text-align: center;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #bfdbfe;
+    }
+
+    .dice-roll-values {
+        display: flex;
+        justify-content: center;
+        gap: 0.9rem;
+        color: rgba(255, 255, 255, 0.95);
+        font-size: 0.9rem;
+
+        b {
+            color: #fbbf24;
+        }
+
+        &.dice-roll-values--stack {
+            flex-direction: column;
+            gap: 0.45rem;
+            align-items: center;
+            text-align: center;
+        }
+    }
+
+    &.is-final {
+        border-color: rgba(34, 197, 94, 0.65);
+        box-shadow: 0 0 0.9rem rgba(34, 197, 94, 0.25);
+
+        .dice-roll-title {
+            color: #86efac;
+        }
+    }
+}
+
+.attack-announcement {
+    margin: 0;
+    padding: 0.4rem 0.95rem;
+    border-radius: 999px;
+    width: 100%;
+    text-align: center;
+    color: #fbbf24;
+    font-size: 0.95rem;
+    font-weight: 800;
+    background: rgba(127, 29, 29, 0.35);
+    border: 1px solid rgba(251, 191, 36, 0.7);
+    box-shadow: 0 0 0.65rem rgba(251, 191, 36, 0.35);
+}
+
+.posture-timer {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+
+    .timer-text {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.88rem;
+        font-weight: 600;
+    }
+
+    .timer-line {
+        width: 100%;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.18);
+        overflow: hidden;
+    }
+
+    .timer-line-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #22c55e 0%, #86efac 100%);
+        transition: width 0.2s linear;
+    }
+}
+
+.posture-timer--panel {
+    width: 100%;
+}
+
 .stats-panel {
-    @extend %panel-base;
+    padding: 0.9rem 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
@@ -102,6 +205,126 @@
 
 .stats-panel.unified {
     width: 100%;
+}
+
+.stats-panel.compact {
+    gap: 0.55rem;
+
+    .bonus-legend {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        margin-top: -0.15rem;
+        padding-bottom: 5px;
+        border-bottom: black solid 1px;
+    }
+
+    .stat-row {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .stat-row--hp {
+        margin-bottom: 0.05rem;
+    }
+
+    .life-bar {
+        width: 100%;
+        height: 0.5rem;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.35);
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        overflow: hidden;
+        margin: -0.15rem 0 0.25rem;
+    }
+
+    .life-bar-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #ef4444 0%, #f59e0b 45%, #22c55e 100%);
+        transition: width 0.35s ease;
+    }
+
+    .stat-label {
+        color: rgba(255, 255, 255, 0.95);
+        font-size: 0.9rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .stat-bonuses {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.35rem;
+        min-height: 1.35rem;
+    }
+
+    .bonus-badge {
+        background: rgba(34, 197, 94, 0.2);
+        border: 1px solid rgba(34, 197, 94, 0.55);
+        color: #86efac;
+        font-size: 0.76rem;
+        font-weight: 700;
+        padding: 0.1rem 0.35rem;
+        border-radius: 999px;
+
+        &.bonus-badge--posture {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: rgba(34, 197, 94, 0.55);
+            color: #86efac;
+        }
+
+        &.bonus-badge--dice {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(96, 165, 250, 0.7);
+            color: #bfdbfe;
+        }
+    }
+
+    .stat-value {
+        justify-self: end;
+        font-size: 0.96rem;
+        font-weight: 800;
+        color: #e9d5ff;
+    }
+}
+
+.posture-status {
+    width: 100%;
+    margin-top: 0.45rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 0.55rem;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(15, 23, 42, 0.5);
+
+    .posture-status__text {
+        color: rgba(255, 255, 255, 0.92);
+        font-size: 0.82rem;
+        font-weight: 600;
+    }
+
+    .posture-status__value {
+        color: #fcd34d;
+        font-size: 0.82rem;
+        font-weight: 800;
+    }
+
+    .loading-spinner {
+        width: 0.9rem;
+        height: 0.9rem;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.25);
+        border-top-color: #22c55e;
+        animation: posture-spin 0.85s linear infinite;
+    }
 }
 
 .group-title {
@@ -127,7 +350,8 @@ app-isometric-map {
 .combat {
     position: relative;
     width: 520px;
-    height: 430px;
+    height: var(--combat-height);
+    margin-top: -0.45rem;
     transition: opacity 0.3s ease, visibility 0s linear 0.3s;
     opacity: 1;
     visibility: visible;
@@ -135,9 +359,9 @@ app-isometric-map {
 
     .bonuses {
         position: absolute;
-        top: 50%;
         left: 50%;
-        transform: translate(-50%, -50%);
+        bottom: 0.5rem;
+        transform: translateX(-50%);
         z-index: 2;
         box-sizing: border-box;
     }
@@ -153,14 +377,76 @@ app-isometric-map {
         z-index: 2;
         pointer-events: none;
     }
-}
 
-.hit-marker {
-    position: absolute;
-    transform: translate(-50%, -120%);
-    font-size: 1.3rem;
-    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
-    animation: hit-pop 260ms ease-out;
+    .damage-popup-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 0 0.75rem 0.75rem;
+        pointer-events: none;
+    }
+
+    .damage-popup {
+        @extend %panel-base;
+        min-width: 20rem;
+        max-width: min(28rem, calc(100% - 2rem));
+        text-align: center;
+        border-color: rgba(0, 255, 255, 0.35);
+        background: rgba(12, 14, 34, 0.95);
+
+        h3 {
+            margin: 0 0 0.55rem 0;
+            color: aqua;
+        }
+
+        p {
+            margin: 0.35rem 0;
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        &.damage-popup--info {
+            border-color: rgba(251, 191, 36, 0.55);
+
+            h3 {
+                color: #fbbf24;
+            }
+        }
+
+        &.damage-popup--end {
+            border-color: rgba(248, 113, 113, 0.55);
+
+            h3 {
+                color: #fca5a5;
+            }
+        }
+
+        &.damage-popup--announcement {
+            border-color: rgba(147, 197, 253, 0.6);
+
+            h3 {
+                color: #93c5fd;
+            }
+        }
+
+        &.damage-popup--posture {
+            border-color: rgba(134, 239, 172, 0.6);
+
+            h3 {
+                color: #86efac;
+            }
+        }
+
+        &.damage-popup--status {
+            border-color: rgba(196, 181, 253, 0.6);
+
+            h3 {
+                color: #c4b5fd;
+            }
+        }
+    }
 }
 
 @keyframes hit-pop {
@@ -181,7 +467,7 @@ app-isometric-map {
     align-items: center;
     gap: 0.75rem;
     width: 360px;
-    padding: 0.9rem;
+    padding: 0.9rem 0.9rem 0.9rem 0;
     transition: all 0.3s ease;
 
     h2 {
@@ -196,21 +482,36 @@ app-isometric-map {
         gap: 0.75rem;
         width: 100%;
         justify-content: center;
-    }
 
-    .bonus-effect {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.35rem;
-        width: 100%;
-        background: rgba(0,0,0,0.3);
-        padding: 0.65rem;
-        border-radius: 0.5rem;
+        .posture-choice {
+            position: relative;
+            display: inline-flex;
 
-        span {
-            color: #4CAF50;
-            font-weight: bold;
+            &::after {
+                content: attr(data-tooltip);
+                position: absolute;
+                left: 50%;
+                bottom: calc(100% + 0.45rem);
+                transform: translate(-50%, 0.25rem);
+                opacity: 0;
+                white-space: nowrap;
+                pointer-events: none;
+                background: rgba(12, 14, 34, 0.96);
+                color: #86efac;
+                border: 1px solid rgba(34, 197, 94, 0.65);
+                border-radius: 0.45rem;
+                padding: 0.25rem 0.45rem;
+                font-size: 0.75rem;
+                font-weight: 700;
+                box-shadow: 0 0.35rem 0.9rem rgba(0, 0, 0, 0.38);
+                transition: opacity 0.2s ease, transform 0.2s ease;
+            }
+
+            &:hover::after,
+            &:focus-within::after {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
         }
     }
 
@@ -254,4 +555,13 @@ app-isometric-map {
 
 .disabled-panel {
     opacity: 0.75;
+}
+
+@keyframes posture-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }

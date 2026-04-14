@@ -27,11 +27,18 @@
                     <div class="panel-right"></div>
                 </div>
                 <div class="timer-display">
-                    @if (gamePageSignalService.activePlayer()?.character?.avatar) {
-                        <img [src]="gamePageSignalService.activePlayer()?.character?.avatar" alt="Avatar actif" style="width: 2rem; height: 2rem; border-radius: 25%; object-fit: cover;" />
-                    }
-                    <span class="timer-label">{{ getTimerLabel() }}</span>
-                    <span class="timer-countdown">{{ getTimerDisplay() }}</span>
+                    <div class="timer-row">
+                        @if (activePlayer()?.character?.avatar) {
+                            <img [src]="activePlayer()?.character?.avatar" alt="Avatar actif" style="width: 1.2rem; height: 1.2rem; border-radius: 25%; object-fit: cover;" />
+                        }
+                        <span class="timer-label">{{ getTimerLabel() }}</span>
+                        <span class="timer-countdown">{{ getTimerDisplay() }}</span>
+                        @if (activePlayerSocketId()) {
+                            <div class="timer-line">
+                                <div class="timer-line-fill" [style.width.%]="getTurnCountdownProgressPercent()"></div>
+                            </div>
+                        }
+                    </div>
                 </div>
                 <app-isometric-map 
                     [grid]="gamePageSignalService.game()?.grid ?? []"
@@ -70,8 +77,8 @@
         <button class="panel-toggle-btn" (click)="isLeftPanelOpen = !isLeftPanelOpen">
             {{ isLeftPanelOpen ? '▶' : '◀' }} Info
         </button>
-        <aside class="side-panel left" [class.collapsed]="!isLeftPanelOpen" [class.debug-background]="this.gamePageSignalService.isDebugModeActive()">
-            <section class="game-stats">
+        <aside class="side-panel left" [class.collapsed]="!isLeftPanelOpen || shouldCollapseGameInfo()" [class.debug-background]="this.isDebugModeActive()">
+            <section class="game-stats" [class.collapsed]="shouldCollapseGameInfo()">
                 <h3 class="section-title">Informations de partie</h3>
                 <div class="game-info">
                     <ul>
@@ -135,8 +142,8 @@
                     <button
                         id="sub-action-door"
                         class="sub-action-btn door"
-                        [class.selected]="gamePageSignalService.activeSubAction() === toggleDoorAction"
-                        (click)="gamePageSignalService.selectSubAction(toggleDoorAction)"
+                        [class.selected]="gamePageSignalService.activeSubAction() === 'toggleDoor'"
+                        (click)="gamePageSignalService.selectSubAction('toggleDoor')"
                     >{{ gamePageSignalService.doorActionLabel() }}</button>
                 }
                 @if (gamePageSignalService.requestFlagTargets().length > 0) {
@@ -154,6 +161,14 @@
                         [class.selected]="gamePageSignalService.activeSubAction() === 'giveFlag'"
                         (click)="gamePageSignalService.selectSubAction('giveFlag')"
                     >Donner drapeau</button>
+                }
+                @if (gamePageSignalService.sanctuaryTargets().length > 0) {
+                    <button
+                        id="sub-action-sanctuary"
+                        class="sub-action-btn sanctuary"
+                        [class.selected]="gamePageSignalService.activeSubAction() === 'sanctuary'"
+                        (click)="onSelectSanctuaryAction()"
+                    >Utiliser sanctuaire</button>
                 }
             </div>
 
