@@ -6,7 +6,7 @@ import { Game } from '@common/game';
 import { GameVisibilityPayload } from '@common/interfaces/admin';
 import { AdminGameEvents } from '@common/socket-events/admin.gateway.events';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { environment } from 'src/environments/environment';
+import { environment } from '@src/environments/environment';
 
 @Injectable({
     providedIn: 'root',

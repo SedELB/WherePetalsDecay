@@ -1,10 +1,29 @@
-import { AfterViewInit, Component, ElementRef, HostListener, Input, OnChanges, OnDestroy, ViewChild, Output, EventEmitter } from '@angular/core';
-import { Vec2 } from '@common/vec2';
-import { Tile } from '@common/tile';
-import { Player } from '@common/player';
-import { IsometricViewService } from '@app/services/isometric-view/isometric-view.service';
-import { MIN_ZOOM, MAX_ZOOM, ZOOM_SPEED, MIN_TILE_W, TILE_RATIO, TILE_THICKNESS } from '@app/constants/isometric.constants';
+import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, OnDestroy, Output, ViewChild } from '@angular/core';
+import { MAX_ZOOM, MIN_TILE_W, MIN_ZOOM, TILE_RATIO, TILE_THICKNESS, ZOOM_SPEED } from '@app/constants/isometric.constants';
 import { ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
+import { IsometricViewService } from '@app/services/isometric-view/isometric-view.service';
+import { Player } from '@common/player';
+import { Tile } from '@common/tile';
+import { Vec2 } from '@common/vec2';
+
+const PLAYER_MOVE_BASE_DURATION_MS = 180;
+const PLAYER_MOVE_MIN_DURATION_MS = 120;
+const PLAYER_MOVE_MAX_DURATION_MS = 260;
+const PLAYER_TELEPORT_SNAP_DISTANCE = 1.5;
+const PLAYER_POSITION_EPSILON = 0.001;
+const EASE_IN_OUT_SWITCH_POINT = 0.5;
+const EASE_ACCELERATION_FACTOR = 4;
+const EASE_DECELERATION_FACTOR = -2;
+const EASE_POWER = 3;
+const EASE_DECELERATION_OFFSET = 2;
+const EASE_DECELERATION_DIVISOR = 2;
+
+interface PlayerMotionState {
+  from: Vec2;
+  to: Vec2;
+  startTimeMs: number;
+  durationMs: number;
+}
 
 @Component({
   selector: 'app-isometric-map',
@@ -31,7 +50,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   @Input() teamB: Player[] = [];
 
   @Output() tileClick = new EventEmitter<Vec2>();
-  @Output() rightClick = new EventEmitter<{event: MouseEvent, pos: Vec2}>();
+  @Output() rightClick = new EventEmitter<{ event: MouseEvent, pos: Vec2 }>();
 
 
   // Camera state
@@ -49,6 +68,8 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
 
   // Animation and Cache
   private animationFrameId = 0;
+  private playerMotionStates = new Map<string, PlayerMotionState>();
+  private animatedPlayerPositions: Record<string, Vec2> = {};
 
   // Bound event handlers (for cleanup)
   private boundOnMouseDown = this.onMouseDown.bind(this);
@@ -62,6 +83,9 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   constructor(private isometricViewService: IsometricViewService) {}
 
   ngOnChanges(): void {
+    const frameTimestampMs = performance.now();
+    this.syncPlayerMotionStates(frameTimestampMs);
+    this.updateAnimatedPlayerPositions(frameTimestampMs);
     this.needsRecenter = false;
     this.render();
   }
@@ -76,6 +100,10 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
     canvas.addEventListener('wheel', this.boundOnWheel, { passive: false });
     canvas.addEventListener('click', this.boundOnClick);
     canvas.addEventListener('contextmenu', this.boundOnContextMenu);
+
+    const frameTimestampMs = performance.now();
+    this.syncPlayerMotionStates(frameTimestampMs);
+    this.updateAnimatedPlayerPositions(frameTimestampMs);
 
 
     // main loop at 60 fps
@@ -97,7 +125,118 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
     canvas.removeEventListener('wheel', this.boundOnWheel);
     canvas.removeEventListener('click', this.boundOnClick);
     canvas.removeEventListener('contextmenu', this.boundOnContextMenu);
+    this.playerMotionStates.clear();
+    this.animatedPlayerPositions = {};
 
+  }
+
+  private syncPlayerMotionStates(frameTimestampMs: number): void {
+    const incomingSocketIds = new Set(Object.keys(this.playerPositions));
+
+    for (const [socketId, targetPosition] of Object.entries(this.playerPositions)) {
+      const existingMotionState = this.playerMotionStates.get(socketId);
+      if (!existingMotionState) {
+        this.playerMotionStates.set(socketId, {
+          from: { ...targetPosition },
+          to: { ...targetPosition },
+          startTimeMs: frameTimestampMs,
+          durationMs: 0,
+        });
+        continue;
+      }
+
+      if (this.arePositionsClose(existingMotionState.to, targetPosition)) continue;
+
+      const currentPosition = this.getMotionPosition(existingMotionState, frameTimestampMs);
+      const distance = this.getDistance(currentPosition, targetPosition);
+      const shouldSmooth = this.shouldSmoothMovement(currentPosition, targetPosition, distance);
+
+      this.playerMotionStates.set(socketId, {
+        from: currentPosition,
+        to: { ...targetPosition },
+        startTimeMs: frameTimestampMs,
+        durationMs: shouldSmooth ? this.getMovementDurationMs(distance) : 0,
+      });
+    }
+
+    for (const socketId of Array.from(this.playerMotionStates.keys())) {
+      if (incomingSocketIds.has(socketId)) continue;
+      this.playerMotionStates.delete(socketId);
+      delete this.animatedPlayerPositions[socketId];
+    }
+  }
+
+  private updateAnimatedPlayerPositions(frameTimestampMs: number): void {
+    const nextPositions: Record<string, Vec2> = {};
+
+    for (const [socketId, motionState] of this.playerMotionStates.entries()) {
+      const currentPosition = this.getMotionPosition(motionState, frameTimestampMs);
+      nextPositions[socketId] = currentPosition;
+
+      if (this.hasMotionCompleted(motionState, frameTimestampMs)) {
+        this.playerMotionStates.set(socketId, {
+          from: { ...motionState.to },
+          to: { ...motionState.to },
+          startTimeMs: frameTimestampMs,
+          durationMs: 0,
+        });
+      }
+    }
+
+    this.animatedPlayerPositions = nextPositions;
+  }
+
+  private getMotionPosition(motionState: PlayerMotionState, frameTimestampMs: number): Vec2 {
+    if (motionState.durationMs <= 0) return { ...motionState.to };
+
+    const elapsedMs = frameTimestampMs - motionState.startTimeMs;
+    const linearProgress = this.clamp01(elapsedMs / motionState.durationMs);
+    const easedProgress = this.easeInOutCubic(linearProgress);
+
+    return {
+      x: motionState.from.x + ((motionState.to.x - motionState.from.x) * easedProgress),
+      y: motionState.from.y + ((motionState.to.y - motionState.from.y) * easedProgress),
+    };
+  }
+
+  private hasMotionCompleted(motionState: PlayerMotionState, frameTimestampMs: number): boolean {
+    if (motionState.durationMs <= 0) return true;
+    return frameTimestampMs - motionState.startTimeMs >= motionState.durationMs;
+  }
+
+  private shouldSmoothMovement(from: Vec2, to: Vec2, distance: number): boolean {
+    if (distance <= PLAYER_POSITION_EPSILON) return false;
+    if (distance > PLAYER_TELEPORT_SNAP_DISTANCE) return false;
+    if (!this.isGridAligned(from) || !this.isGridAligned(to)) return false;
+    return true;
+  }
+
+  private isGridAligned(position: Vec2): boolean {
+    return Number.isInteger(position.x) && Number.isInteger(position.y);
+  }
+
+  private getMovementDurationMs(distance: number): number {
+    const scaledDuration = Math.round(PLAYER_MOVE_BASE_DURATION_MS * distance);
+    return Math.min(PLAYER_MOVE_MAX_DURATION_MS, Math.max(PLAYER_MOVE_MIN_DURATION_MS, scaledDuration));
+  }
+
+  private getDistance(from: Vec2, to: Vec2): number {
+    return Math.hypot(to.x - from.x, to.y - from.y);
+  }
+
+  private arePositionsClose(left: Vec2, right: Vec2): boolean {
+    return Math.abs(left.x - right.x) <= PLAYER_POSITION_EPSILON && Math.abs(left.y - right.y) <= PLAYER_POSITION_EPSILON;
+  }
+
+  private clamp01(value: number): number {
+    return Math.min(1, Math.max(0, value));
+  }
+
+  private easeInOutCubic(progress: number): number {
+    if (progress < EASE_IN_OUT_SWITCH_POINT) {
+      return EASE_ACCELERATION_FACTOR * progress * progress * progress;
+    }
+    return 1 - Math.pow((EASE_DECELERATION_FACTOR * progress) + EASE_DECELERATION_OFFSET, EASE_POWER) / EASE_DECELERATION_DIVISOR;
   }
 
   @HostListener('window:resize')
@@ -125,7 +264,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
       this.render();
       return;
     }
-    
+
     const pos = this.getOriginalGridPosition(e);
     const isActionTarget = pos !== null &&
       this.actionHighlightTiles.some(h => h.pos.x === pos.x && h.pos.y === pos.y);
@@ -226,13 +365,17 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
 
     ctx.clearRect(0, 0, rect.width, rect.height);
 
+    const frameTimestampMs = performance.now();
+    this.syncPlayerMotionStates(frameTimestampMs);
+    this.updateAnimatedPlayerPositions(frameTimestampMs);
+
     this.isometricViewService.renderBoard({
       ctx,
       width: rect.width,
       height: rect.height,
       grid: this.grid,
       players: this.players,
-      playerPositions: this.playerPositions,
+      playerPositions: this.animatedPlayerPositions,
       camera: { x: this.cameraX, y: this.cameraY, zoom: this.zoom },
       needsRecenter: this.needsRecenter,
       reachableTiles: this.reachableTiles,

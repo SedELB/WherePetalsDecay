@@ -11,7 +11,7 @@ import { TestBed } from '@angular/core/testing';
 import { Game } from '@common/game';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { GameMode, SocketNamespace } from '@common/enums';
-import { environment } from 'src/environments/environment';
+import { environment } from '@src/environments/environment';
 import { AdminGameService } from './admin-game.service';
 import { AdminGameEvents } from '@common/socket-events/admin.gateway.events';
 
