@@ -279,8 +279,8 @@ export class GameViewCombatService {
         if (!this.isCombatStarted()) return;
         if (data.roomId !== this.fighters().roomId) return;
 
-            this.combatRoundIndex.set(data.roundIndex);
-            this.combatPostureCountdown.set(Math.ceil(data.postureTimeoutMs / ONE_SECOND_DELAY));
+        this.combatRoundIndex.set(data.roundIndex);
+        this.combatPostureCountdown.set(Math.ceil(data.postureTimeoutMs / ONE_SECOND_DELAY));
     }
 
     handleCombatRoundCountdown(data: CombatRoundCountdownData): void {
