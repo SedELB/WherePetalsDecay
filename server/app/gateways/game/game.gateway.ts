@@ -1,10 +1,11 @@
 /* eslint-disable max-lines */
 import { GameLogicService, SanctuaryUseResult } from '@app/services/game-logic/game-logic.service';
+import { VirtualPlayerService } from '@app/services/game-logic/virtual-player.service';
 import { JournalService } from '@app/services/journal/journal.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Posture } from '@common/character';
 import { Direction } from '@common/direction';
-import { GameMode, SocketNamespace, TileItem, TileTexture } from '@common/enums';
+import { GameMode, PlayerType, SocketNamespace, TileItem, TileTexture } from '@common/enums';
 import {
     CombatEndedData,
     CombatLockStateData,
@@ -21,7 +22,7 @@ import { JournalEventType } from '@common/journal-entry';
 import { Player } from '@common/player';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
     ConnectedSocket,
     MessageBody,
@@ -70,6 +71,7 @@ interface CombatSession {
 @Injectable()
 export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     @WebSocketServer() private server: Server;
+    @Inject(VirtualPlayerService) private readonly virtualPlayerService: VirtualPlayerService;
 
     private fightCounter = 0;
     private readonly endGamePlayers = new Map<string, Set<string>>();
@@ -94,7 +96,11 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             },
             onTurnStarted: (lobbyId: string, playerSocketId: string) => {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnStarted, playerSocketId);
-                this.gameTurnSyncService.syncPlayerTurnState(this.server, lobbyId, playerSocketId);
+                this.gameTurnSyncService.syncPlayerTurnStateWithoutAutoEnd(this.server, lobbyId, playerSocketId);
+                setImmediate(() => {
+                    this.gameTurnSyncService.autoEndTurnIfNoActions(lobbyId, playerSocketId);
+                    this.triggerVirtualPlayerTurnIfNeeded(lobbyId, playerSocketId);
+                });
                 this.server.to(lobbyId).emit(JoinGameEvents.SanctuaryStateUpdate, {
                     inactiveSanctuaries: this.gameLogicService.getInactiveSanctuaries(lobbyId),
                 });
@@ -873,6 +879,72 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     private sendActionPoints(lobbyId: string, socketId: string): void {
         const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
         this.server.to(lobbyId).emit(JoinGameEvents.ActionPoints, { socketId, actionPoints });
+    }
+
+    private triggerVirtualPlayerTurnIfNeeded(lobbyId: string, playerSocketId: string): void {
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        if (!activeGame) return;
+
+        const currentPlayer = activeGame.lobby.players.find((player) => player.socketId === playerSocketId);
+        if (!currentPlayer || currentPlayer.playerType !== PlayerType.Virtual) return;
+
+        this.virtualPlayerService.executeTurn(
+            this.server,
+            activeGame,
+            currentPlayer,
+            this.initiateVirtualPlayerCombat.bind(this),
+            (targetLobbyId: string, winnerSocketId: string) => this.handleGameOver(targetLobbyId, winnerSocketId),
+        );
+    }
+
+    private initiateVirtualPlayerCombat(lobbyId: string, attackerId: string, defenderId: string): void {
+        if (this.hasActiveCombatInLobby(lobbyId)) return;
+        if (!this.gameLogicService.isPlayerTurn(lobbyId, attackerId)) return;
+
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        if (!activeGame) return;
+
+        const attacker = activeGame.lobby.players.find((player) => player.socketId === attackerId);
+        const defender = activeGame.lobby.players.find((player) => player.socketId === defenderId);
+        if (!attacker || !defender) return;
+
+        this.fightCounter++;
+        const roomId = `fight-vp-${this.fightCounter}`;
+
+        // Real participants join the room (virtual players have no client socket)
+        this.server.in(attackerId).socketsJoin(roomId);
+        this.server.in(defenderId).socketsJoin(roomId);
+
+        const combatSession: CombatSession = {
+            lobbyId,
+            roomId,
+            attackerId,
+            defenderId,
+            postures: new Map<string, Posture>(),
+            roundIndex: 1,
+            awaitingPostures: false,
+            consumeActionPointOnNextRound: true,
+        };
+
+        this.combatSessions.set(roomId, combatSession);
+        this.gameLogicService.pauseTurnCycle(lobbyId);
+        this.emitCombatLockState({
+            lobbyId,
+            isLocked: true,
+            roomId,
+            attackerSocketId: attackerId,
+            defenderSocketId: defenderId,
+        });
+
+        const combatStartedData: CombatStartedData = { player: attacker, enemy: defender, roomId };
+        this.server.to(roomId).emit(JoinGameEvents.CombatStarted, combatStartedData);
+        this.journalService.addCombatStartEntry(lobbyId, attacker.character.name, defender.character.name);
+
+        combatSession.timeoutHandle = setTimeout(() => {
+            const activeSession = this.combatSessions.get(roomId);
+            if (!activeSession) return;
+            this.startCombatRoundAwaitingPostures(activeSession);
+        }, COMBAT_START_ANNOUNCEMENT_DELAY_MS);
     }
 
     private emitCombatJournalEntries(session: CombatSession, combatResult: CombatResult): void {

@@ -1,8 +1,6 @@
 import { Inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
-import { GameViewCombatService } from '@app/services/game-view/game-view-combat.service';
-import { GameViewSignals } from '@app/services/game-view/game-view-signals.interface';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { SocketNamespace, TileTexture } from '@common/enums';
 import {
@@ -15,7 +13,10 @@ import {
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Vec2 } from '@common/vec2';
-import { ONE_SECOND_DELAY } from './game-view.constants';
+
+import { GameViewCombatService } from '@app/services/game-view/game-view-combat.service';
+import { GameViewSignals } from '@app/services/game-view/game-view-signals.interface';
+
 
 @Injectable({
     providedIn: 'root',
@@ -72,6 +73,7 @@ export class GameViewListenersService {
 
     private registerTurnListeners(signals: GameViewSignals, ns: SocketNamespace): void {
         this.webSocketService.onNamespace<string>(ns, JoinGameEvents.TurnStarted, (playerSocketId) => {
+            signals.disableEndTurn.set(false);
             signals.activePlayerSocketId.set(playerSocketId);
             signals.turnNotification.set(null);
         });
@@ -79,11 +81,6 @@ export class GameViewListenersService {
         this.webSocketService.onNamespace<number>(ns, JoinGameEvents.BetweenTurnCountdown, (secondsLeft) => {
             signals.disableEndTurn.set(true);
             signals.turnCountdown.set(secondsLeft);
-            if (secondsLeft <= 1) {
-                setTimeout(() => {
-                    signals.disableEndTurn.set(false);
-                }, ONE_SECOND_DELAY);
-            }
         });
 
         this.webSocketService.onNamespace<number>(ns, JoinGameEvents.TurnCountdown, (secondsLeft) => {
