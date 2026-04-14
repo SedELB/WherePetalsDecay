@@ -49,17 +49,22 @@ export class TileItemCountService {
 
   private countSanctuaryBlocks(game: Game, item: TileItem): number {
     let count = 0;
-    game.grid.forEach((row, y) => {
-      row.forEach((tile, x) => {
-        if (tile.item === item) {
-          const aboveHasSame = game.grid[y - 1]?.[x]?.item === item;
-          const leftHasSame = game.grid[y]?.[x - 1]?.item === item;
-          if (!aboveHasSame && !leftHasSame) count++;
+    const con = new Set<string>();
+    for (let y = 0; y < game.grid.length; y++) {
+      for (let x = 0; x < game.grid[y].length; x++) {
+        if (game.grid[y][x].item === item && !con.has(`${x},${y}`)) {
+          count++;
+          if (game.grid[y]?.[x + 1]?.item === item && game.grid[y + 1]?.[x]?.item === item && game.grid[y + 1]?.[x + 1]?.item === item) {
+            con.add(`${x},${y}`).add(`${x + 1},${y}`).add(`${x},${y + 1}`).add(`${x + 1},${y + 1}`);
+          } else {
+            con.add(`${x},${y}`);
+          }
         }
-      });
-    });
+      }
+    }
     return count;
   }
+  
   countTileTexture(game: Game, tileTexture: TileTexture): number {
     let count = 0;
     game.grid.forEach((row) => (count += row.filter((tile) => tile.type === tileTexture).length));
@@ -90,7 +95,10 @@ export class TileItemCountService {
   }
 
   isObjectTypeComplete(game: Game, type: TileItem): boolean {
-    const placed = this.countTileItem(game, type);
+    const placed = (type === TileItem.HealingSanctuary || type === TileItem.CombatSanctuary) 
+      ? this.countSanctuaryBlocks(game, type) 
+      : this.countTileItem(game, type);
+      
     switch (type) {
       case TileItem.Spawn:
         return placed >= this.getRequiredSpawnCount(game);

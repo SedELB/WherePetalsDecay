@@ -21,9 +21,6 @@ export function drawPortcullisTexture(ctx: CanvasRenderingContext2D): void {
   const S       = TILE_SIZE;
   const BORDER  = 30;   // stone border thickness
   const CENTER  = S - 2 * BORDER;
-  const BAR_W   = 10;    // bar width (px in square space)
-  const BARS_N  = 4;    // number of bars per side
-  const HOLE_H  = 5;    // visible depth of the hole in the stone
 
   // --- Palette ---
   const COL = {
@@ -31,57 +28,45 @@ export function drawPortcullisTexture(ctx: CanvasRenderingContext2D): void {
     stoneLight:  '#8a8078',
     stoneDark:   '#5a5248',
     stoneLine:   '#3a3230',
-    floorBg:     '#2a2520',
+    floorBg:     '#5e5751', // Darker stone for contrast
     hole:        '#0e0c0a',
     holeRim:     '#1e1a16',
   };
 
   ctx.clearRect(0, 0, S, S);
 
-  // -- Central floor --
+  // -- Background --
+  ctx.fillStyle = COL.stoneMid;
+  ctx.fillRect(0, 0, S, S);
+  
+  // -- Darker Center Floor --
   ctx.fillStyle = COL.floorBg;
   ctx.fillRect(BORDER, BORDER, CENTER, CENTER);
 
-  // Floor texture (subtle grid)
-  const GRID_STEPS = 5;
-  ctx.strokeStyle = '#302825';
-  ctx.lineWidth = 0.5;
-  for (let i = 1; i < GRID_STEPS; i++) {
-    const d = (CENTER / GRID_STEPS) * i;
-    ctx.beginPath(); ctx.moveTo(BORDER + d, BORDER);        ctx.lineTo(BORDER + d, BORDER + CENTER); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(BORDER,     BORDER + d);    ctx.lineTo(BORDER + CENTER, BORDER + d); ctx.stroke();
-  }
-
-  // -- Stone border --
-  ctx.fillStyle = COL.stoneMid;
-  ctx.fillRect(0, 0,          S, BORDER);              // top
-  ctx.fillRect(0, S - BORDER, S, BORDER);              // bottom
-  ctx.fillRect(0, BORDER,     BORDER, CENTER);         // left
-  ctx.fillRect(S - BORDER, BORDER, BORDER, CENTER);    // right
-
-  // Horizontal joints
+  // -- Uniform Stone Brick Texture (Joints) --
   const BLOCK_H = 14;
   const BLOCK_W = 22;
   ctx.strokeStyle = COL.stoneLine;
   ctx.lineWidth = 1;
-  for (let y = BLOCK_H; y < BORDER; y += BLOCK_H) {
-    ctx.beginPath(); ctx.moveTo(0, y);     ctx.lineTo(S, y);     ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, S - y); ctx.lineTo(S, S - y); ctx.stroke();
+
+  // Horizontal joints across the whole tile
+  for (let y = BLOCK_H; y < S; y += BLOCK_H) {
+    ctx.beginPath(); 
+    ctx.moveTo(0, y); 
+    ctx.lineTo(S, y); 
+    ctx.stroke();
   }
-  // Vertical joints (alternating)
-  for (let row = 0; row * BLOCK_H < BORDER; row++) {
+
+  // Vertical joints (alternating brick pattern) across the whole tile
+  for (let row = 0; row * BLOCK_H < S; row++) {
+    const y0 = row * BLOCK_H;
     const offset = (row % 2) * (BLOCK_W / 2);
     for (let x = offset; x < S; x += BLOCK_W) {
-      const y0 = row * BLOCK_H;
-      ctx.beginPath(); ctx.moveTo(x, y0);             ctx.lineTo(x, y0 + BLOCK_H);     ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(x, S - y0 - BLOCK_H); ctx.lineTo(x, S - y0);         ctx.stroke();
+      ctx.beginPath(); 
+      ctx.moveTo(x, y0); 
+      ctx.lineTo(x, y0 + BLOCK_H); 
+      ctx.stroke();
     }
-  }
-  // Left/right side joints
-  for (let row = 0; row * BLOCK_H < CENTER; row++) {
-    const y0 = BORDER + row * BLOCK_H;
-    ctx.beginPath(); ctx.moveTo(0,          y0); ctx.lineTo(BORDER,     y0); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(S - BORDER, y0); ctx.lineTo(S,          y0); ctx.stroke();
   }
 
   // Stone highlight (light top + left edge)
@@ -106,23 +91,6 @@ export function drawPortcullisTexture(ctx: CanvasRenderingContext2D): void {
     _drawMoss(ctx, pos.x, pos.y);
   }
 
-  // -- Holes --
-  const positions: number[] = [];
-  for (let i = 0; i < BARS_N; i++) {
-    positions.push(BORDER + (CENTER / (BARS_N + 1)) * (i + 1));
-  }
-
-  const holeCfg = { barW: BAR_W, holeH: HOLE_H, colors: COL };
-
-  for (const bx of positions) {
-    _drawHole(ctx, bx, BORDER, true, holeCfg);
-    _drawHole(ctx, bx, S - BORDER, true, holeCfg);
-  }
-  for (const by of positions) {
-    _drawHole(ctx, BORDER, by, false, holeCfg);
-    _drawHole(ctx, S - BORDER, by, false, holeCfg);
-  }
-
   // General outline
   ctx.strokeStyle = COL.stoneLine;
   ctx.lineWidth = 2;
@@ -132,40 +100,6 @@ export function drawPortcullisTexture(ctx: CanvasRenderingContext2D): void {
 }
 
 // Internal functions
-
-interface HoleConfig {
-  barW: number;
-  holeH: number;
-  colors: Record<string, string>;
-}
-
-function _drawHole(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  horizontal: boolean,
-  config: HoleConfig,
-): void {
-  const { barW, holeH, colors } = config;
-  const hw = barW / 2;
-  ctx.fillStyle = colors.hole;
-  if (horizontal) {
-    ctx.fillRect(cx - hw, cy - holeH / 2, barW, holeH);
-    ctx.strokeStyle = colors.holeRim;
-    ctx.lineWidth = 0.5;
-    ctx.strokeRect(cx - hw, cy - holeH / 2, barW, holeH);
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(cx - hw + 1, cy - holeH / 2, barW - 2, 2);
-  } else {
-    ctx.fillRect(cx - holeH / 2, cy - hw, holeH, barW);
-    ctx.strokeStyle = colors.holeRim;
-    ctx.lineWidth = 0.5;
-    ctx.strokeRect(cx - holeH / 2, cy - hw, holeH, barW);
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(cx - holeH / 2, cy - hw + 1, 2, barW - 2);
-  }
-}
-
 function _drawMoss(ctx: CanvasRenderingContext2D, x: number, y: number): void {
   const MOSS_PIXEL = 2; const MOSS_WIDTH = 3;
   const dots: [number, number][] = [[0, 0], [1, 0], [0, 1], [MOSS_PIXEL, 1], [1, MOSS_PIXEL], [MOSS_WIDTH, 0], [MOSS_PIXEL, MOSS_PIXEL]];
@@ -174,6 +108,6 @@ function _drawMoss(ctx: CanvasRenderingContext2D, x: number, y: number): void {
     ctx.fillRect(x + dx * MOSS_PIXEL, y + dy * MOSS_PIXEL, MOSS_PIXEL, MOSS_PIXEL);
   }
   ctx.fillStyle = '#4a7a35';
-  ctx.fillRect(x + MOSS_PIXEL, y,     MOSS_PIXEL, MOSS_PIXEL);
-  ctx.fillRect(x,     y + MOSS_PIXEL, MOSS_PIXEL, MOSS_PIXEL);
+  ctx.fillRect(x + MOSS_PIXEL, y, MOSS_PIXEL, MOSS_PIXEL);
+  ctx.fillRect(x, y + MOSS_PIXEL, MOSS_PIXEL, MOSS_PIXEL);
 }

@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
+import { IsometricViewService } from '@app/services/isometric-view/isometric-view.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Posture } from '@common/character';
 import { Direction } from '@common/direction';
@@ -63,6 +64,7 @@ export class GameViewService {
         private readonly router: Router,
         private readonly gameViewCombatService: GameViewCombatService,
         private readonly gameViewListenersService: GameViewListenersService,
+        private readonly isometricViewService: IsometricViewService,
     ) {
         this.gameViewListenersService.registerAll({
             namespace: this.namespace,
@@ -93,6 +95,7 @@ export class GameViewService {
             closeFlagTransferSwalIfOpen: () => this.closeFlagTransferSwalIfOpen(),
             promptFlagTransfer: (rId, rName, lId, isReq) => this.promptFlagTransfer(rId, rName, lId, isReq),
             expandSanctuaryPositions: (topLeftList) => this.expandSanctuaryPositions(topLeftList),
+            triggerDoorAnimation: (x, y, newType) => this.isometricViewService.triggerDoorAnimation(x, y, newType),
         });
     }
 
