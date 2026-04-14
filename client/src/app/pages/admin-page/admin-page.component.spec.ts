@@ -15,7 +15,7 @@ import { GameMode, MapSetupMode } from '@common/enums';
 import { Game } from '@common/game';
 import { BehaviorSubject, of } from 'rxjs';
 import swal, { SweetAlertResult } from 'sweetalert2';
-import { AdminPageComponent } from './admin-page.component';
+import { AdminPageComponent } from '@app/pages/admin-page/admin-page.component';
 
 
 describe('AdminPageComponent', () => {

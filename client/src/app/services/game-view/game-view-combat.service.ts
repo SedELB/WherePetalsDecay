@@ -1,4 +1,6 @@
+/* eslint-disable max-lines */
 import { Injectable, signal } from '@angular/core';
+import { COMBAT_POSTURE_TIMEOUT_MS } from '@app/constants/combat-timeline.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Debuf, Posture } from '@common/character';
 import { SocketNamespace, TileItem } from '@common/enums';
@@ -17,12 +19,9 @@ import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
+import { COMBAT_END_NOTIFICATION_DELAY, DEFAULT_COMBAT_POSTURE, ONE_SECOND_DELAY } from '@app/services/game-view/game-view.constants';
 
-const ONE_SECOND_DELAY = 1000;
-const COMBAT_END_NOTIFICATION_DELAY = 3000;
-const DEFAULT_COMBAT_POSTURE: Posture = { type: null, bonus: 0 };
-
-export interface CombatListenerDependencies {
+interface CombatListenerDependencies {
     getLocalSocketId: () => string | undefined;
     getGameLobby: () => Lobby | null;
     updateGameLobby: (updater: (lobby: Lobby | null) => Lobby | null) => void;
@@ -30,24 +29,44 @@ export interface CombatListenerDependencies {
     setFlagTaken: (value: boolean) => void;
 }
 
+interface CombatEndPopupData { title: string; message: string; }
+
 @Injectable({
     providedIn: 'root',
 })
 export class GameViewCombatService {
     readonly isCombatStarted = signal<boolean>(false);
+    readonly isRoundTransitioning = signal<boolean>(false);
     readonly combatRoundIndex = signal<number>(1);
     readonly combatPostureCountdown = signal<number>(0);
+    readonly combatPostureCountdownMax = signal<number>(0);
+    readonly combatInitiatorName = signal<string>('');
     readonly combatAttackAnimation = signal<{ data: CombatAttackAnimationData; sequence: number } | null>(null);
     readonly fighters = signal<CombatStartedData>({ player: {} as Player, enemy: {} as Player, roomId: '' });
     readonly lastCombatResult = signal<CombatResult | null>(null);
-
-    private combatAttackAnimationSequence = 0;
+    readonly lastCombatRoundResolved = signal<CombatRoundResolvedData | null>(null);
+    readonly combatEndPopup = signal<CombatEndPopupData | null>(null);
 
     private webSocketService: WebSocketService | null = null;
     private namespace: SocketNamespace | null = null;
-    setWebSocketConfig(webSocketService: WebSocketService, namespace: SocketNamespace): void {
+    private listenersRegistered = false;
+    private combatAttackAnimationSequence = 0;
+
+    setupListeners(webSocketService: WebSocketService, namespace: SocketNamespace, dependencies: CombatListenerDependencies): void {
         this.webSocketService = webSocketService;
         this.namespace = namespace;
+
+        if (this.listenersRegistered) return;
+        this.listenersRegistered = true;
+
+        this.registerCombatResultListener(dependencies);
+        this.registerCombatEndedListener(dependencies);
+        this.registerCombatStartedListener(dependencies);
+        this.registerCombatRoundStartedListener();
+        this.registerCombatRoundCountdownListener();
+        this.registerCombatRoundResolvedListener(dependencies);
+        this.registerCombatAttackAnimationListener(dependencies);
+        this.registerPostureReceivedListener();
     }
 
     sendPostureChoice(lobbyId: string, roomId: string, posture: Posture): void {
@@ -65,14 +84,27 @@ export class GameViewCombatService {
 
     resetCombatState(): void {
         this.isCombatStarted.set(false);
+        this.isRoundTransitioning.set(false);
         this.combatRoundIndex.set(1);
         this.combatPostureCountdown.set(0);
+        this.combatPostureCountdownMax.set(0);
+        this.combatInitiatorName.set('');
         this.combatAttackAnimation.set(null);
         this.fighters.set({ player: {} as Player, enemy: {} as Player, roomId: '' });
         this.lastCombatResult.set(null);
+        this.lastCombatRoundResolved.set(null);
+        this.combatEndPopup.set(null);
     }
 
-    handleCombatResult(data: CombatResult, dependencies: CombatListenerDependencies): void {
+    private registerCombatResultListener(dependencies: CombatListenerDependencies): void {
+        if (!this.webSocketService || !this.namespace) return;
+
+        this.webSocketService.onNamespace<CombatResult>(this.namespace, JoinGameEvents.CombatResult, (data) => {
+            this.handleCombatResult(data, dependencies);
+        });
+    }
+
+    private handleCombatResult(data: CombatResult, dependencies: CombatListenerDependencies): void {
         this.lastCombatResult.set(data);
         this.updateLobbyFromCombatResult(data, dependencies);
         this.updatePositionsFromCombatResult(data, dependencies);
@@ -90,7 +122,7 @@ export class GameViewCombatService {
                         ...player,
                         winsCount: player.winsCount + (data.winnerId === data.attacker.socketId ? 1 : 0),
                         lossCount: player.lossCount + (data.attacker.killed ? 1 : 0),
-                        combatCount: player.combatCount++,
+                        combatCount: player.combatCount + 1,
                         totalHpDealt: player.totalHpDealt + data.attacker.damageDealt,
                         totalHpLost: player.totalHpLost + data.defender.damageDealt,
                         character: {
@@ -106,7 +138,7 @@ export class GameViewCombatService {
                         ...player,
                         winsCount: player.winsCount + (data.winnerId === data.defender.socketId ? 1 : 0),
                         lossCount: player.lossCount + (data.defender.killed ? 1 : 0),
-                        combatCount: player.combatCount + 1,
+                        combatCount: player.combatCount++,
                         totalHpDealt: player.totalHpDealt + data.defender.damageDealt,
                         totalHpLost: player.totalHpLost + data.attacker.damageDealt,
                         character: {
@@ -147,7 +179,17 @@ export class GameViewCombatService {
         dependencies.updateGameLobby((lobby) => {
             if (!lobby) return lobby;
 
-            lobby.game.grid[droppedFlagPosition.y][droppedFlagPosition.x].item = TileItem.Flag;
+            const targetRow = lobby.game.grid[droppedFlagPosition.y];
+            if (!targetRow || !targetRow[droppedFlagPosition.x]) return lobby;
+
+            const updatedGrid = lobby.game.grid.map((row, rowIndex) =>
+                rowIndex === droppedFlagPosition.y
+                    ? row.map((tile, colIndex) =>
+                        colIndex === droppedFlagPosition.x ? { ...tile, item: TileItem.Flag } : tile,
+                    )
+                    : row,
+            );
+
             const updatedPlayers = lobby.players.map((player) => {
                 if (player.socketId === data.attacker.socketId || player.socketId === data.defender.socketId) {
                     return { ...player, hasFlag: false };
@@ -155,7 +197,7 @@ export class GameViewCombatService {
                 return player;
             });
 
-            return { ...lobby, players: updatedPlayers };
+            return { ...lobby, game: { ...lobby.game, grid: updatedGrid }, players: updatedPlayers };
         });
 
         dependencies.setFlagTaken(false);
@@ -168,7 +210,6 @@ export class GameViewCombatService {
 
         const localResult = localIsAttacker ? data.attacker : data.defender;
         const enemyResult = localIsAttacker ? data.defender : data.attacker;
-        const isCombatContinuing = !localResult.killed && !enemyResult.killed;
 
         this.fighters.update((fightData) => ({
             ...fightData,
@@ -178,7 +219,7 @@ export class GameViewCombatService {
                     ...fightData.player.character,
                     life: localResult.lifeAfter,
                     debuf: localResult.attack.penalty as Debuf,
-                    bonusPosture: isCombatContinuing ? { ...DEFAULT_COMBAT_POSTURE } : fightData.player.character.bonusPosture,
+                    bonusPosture: fightData.player.character.bonusPosture,
                 },
             },
             enemy: {
@@ -187,16 +228,21 @@ export class GameViewCombatService {
                     ...fightData.enemy.character,
                     life: enemyResult.lifeAfter,
                     debuf: enemyResult.attack.penalty as 2 | 0,
-                    bonusPosture: isCombatContinuing ? { ...DEFAULT_COMBAT_POSTURE } : fightData.enemy.character.bonusPosture,
+                    bonusPosture: fightData.enemy.character.bonusPosture,
                 },
             },
         }));
     }
 
-    handleCombatEnded(data: CombatEndedData, players: Player[], localId: string | undefined): void {
-        if (!this.isLocalCombatEvent(data, localId)) return;
-        const message = this.buildCombatEndedMessage(data, players);
-        this.showCombatEndedToast(message);
+    private registerCombatEndedListener(dependencies: CombatListenerDependencies): void {
+        if (!this.webSocketService || !this.namespace) return;
+
+        this.webSocketService.onNamespace<CombatEndedData>(this.namespace, JoinGameEvents.CombatEnded, (data) => {
+            if (!this.isLocalCombatEvent(data, dependencies.getLocalSocketId())) return;
+
+            const message = this.buildCombatEndedMessage(data, dependencies.getGameLobby()?.players ?? []);
+            this.showCombatEndedPopup(message);
+        });
     }
 
     private isLocalCombatEvent(data: CombatEndedData, localId: string | undefined): boolean {
@@ -221,27 +267,19 @@ export class GameViewCombatService {
         return 'Combat terminé.';
     }
 
-    private showCombatEndedToast(message: string): void {
-        void swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'info',
-            title: 'Fin du combat',
-            text: message,
-            showConfirmButton: false,
-            showCloseButton: true,
-            timer: COMBAT_END_NOTIFICATION_DELAY,
-            timerProgressBar: true,
-        }).then(() => {
-            this.completeCombatOverlay();
-        });
+    private showCombatEndedPopup(message: string): void {
+        this.combatEndPopup.set({ title: 'Fin du combat', message });
     }
 
-    handleCombatStarted(data: CombatStartedData, localId: string | undefined): void {
-        if (!localId) return;
+    private registerCombatStartedListener(dependencies: CombatListenerDependencies): void {
+        if (!this.webSocketService || !this.namespace) return;
 
-        const isLocalAttacker = data.player.socketId === localId;
-        const isLocalDefender = data.enemy.socketId === localId;
+        this.webSocketService.onNamespace<CombatStartedData>(this.namespace, JoinGameEvents.CombatStarted, (data) => {
+            const localId = dependencies.getLocalSocketId();
+            if (!localId) return;
+
+            const isLocalAttacker = data.player.socketId === localId;
+            const isLocalDefender = data.enemy.socketId === localId;
             if (!isLocalAttacker && !isLocalDefender) {
                 this.completeCombatOverlay();
                 return;
@@ -269,40 +307,83 @@ export class GameViewCombatService {
                 },
             };
 
+            this.combatInitiatorName.set(data.player.character.name);
             this.isCombatStarted.set(true);
+            this.isRoundTransitioning.set(false);
             this.combatRoundIndex.set(1);
             this.combatPostureCountdown.set(0);
+            this.combatPostureCountdownMax.set(0);
             this.fighters.set(normalizedCombatData);
+        });
     }
 
-    handleCombatRoundStarted(data: CombatRoundStartedData): void {
-        if (!this.isCombatStarted()) return;
-        if (data.roomId !== this.fighters().roomId) return;
+    private registerCombatRoundStartedListener(): void {
+        if (!this.webSocketService || !this.namespace) return;
 
-        this.combatRoundIndex.set(data.roundIndex);
-        this.combatPostureCountdown.set(Math.ceil(data.postureTimeoutMs / ONE_SECOND_DELAY));
+        this.webSocketService.onNamespace<CombatRoundStartedData>(this.namespace, JoinGameEvents.CombatRoundStarted, (data) => {
+            if (!this.isCombatStarted()) return;
+            if (data.roomId !== this.fighters().roomId) return;
+
+            this.isRoundTransitioning.set(false);
+            this.combatRoundIndex.set(data.roundIndex);
+            this.lastCombatRoundResolved.set(null);
+            this.fighters.update((fightData) => ({
+                ...fightData,
+                player: {
+                    ...fightData.player,
+                    character: {
+                        ...fightData.player.character,
+                        bonusPosture: { ...DEFAULT_COMBAT_POSTURE },
+                    },
+                },
+                enemy: {
+                    ...fightData.enemy,
+                    character: {
+                        ...fightData.enemy.character,
+                        bonusPosture: { ...DEFAULT_COMBAT_POSTURE },
+                    },
+                },
+            }));
+            const postureChoiceTimeoutMs = data.postureTimeoutMs > 0 ? data.postureTimeoutMs : COMBAT_POSTURE_TIMEOUT_MS;
+            const countdownMax = Math.ceil(postureChoiceTimeoutMs / ONE_SECOND_DELAY);
+            this.combatPostureCountdownMax.set(countdownMax);
+            this.combatPostureCountdown.set(countdownMax);
+        });
     }
 
-    handleCombatRoundCountdown(data: CombatRoundCountdownData): void {
-        if (!this.isCombatStarted()) return;
-        if (data.roomId !== this.fighters().roomId) return;
+    private registerCombatRoundCountdownListener(): void {
+        if (!this.webSocketService || !this.namespace) return;
+
+        this.webSocketService.onNamespace<CombatRoundCountdownData>(this.namespace, JoinGameEvents.CombatRoundCountdown, (data) => {
+            if (!this.isCombatStarted()) return;
+            if (data.roomId !== this.fighters().roomId) return;
 
             this.combatRoundIndex.set(data.roundIndex);
+            if (data.secondsLeft > this.combatPostureCountdownMax()) {
+                this.combatPostureCountdownMax.set(data.secondsLeft);
+            }
             this.combatPostureCountdown.set(data.secondsLeft);
+        });
     }
 
-    handleCombatRoundResolved(data: CombatRoundResolvedData, localId: string | undefined): void {
-        if (!this.isCombatStarted()) return;
-        if (data.roomId !== this.fighters().roomId) return;
+    private registerCombatRoundResolvedListener(dependencies: CombatListenerDependencies): void {
+        if (!this.webSocketService || !this.namespace) return;
 
+        this.webSocketService.onNamespace<CombatRoundResolvedData>(this.namespace, JoinGameEvents.CombatRoundResolved, (data) => {
+            if (!this.isCombatStarted()) return;
+            if (data.roomId !== this.fighters().roomId) return;
+
+            this.isRoundTransitioning.set(true);
             this.combatRoundIndex.set(data.roundIndex);
             this.combatPostureCountdown.set(0);
+            this.lastCombatRoundResolved.set(data);
 
+            const localId = dependencies.getLocalSocketId();
             if (!localId || !data.timedOutSocketIds?.includes(localId)) return;
 
             void swal.fire({
                 toast: true,
-                position: 'top-end',
+                position: 'bottom-end',
                 icon: 'info',
                 title: 'Posture par défaut',
                 text: 'Temps écoulé : posture neutre appliquée pour ce round.',
@@ -310,26 +391,39 @@ export class GameViewCombatService {
                 timer: COMBAT_END_NOTIFICATION_DELAY,
                 timerProgressBar: true,
             });
+        });
     }
 
-    handleCombatAttackAnimation(data: CombatAttackAnimationData, localId: string | undefined): void {
-        if (!localId) return;
+    private registerCombatAttackAnimationListener(dependencies: CombatListenerDependencies): void {
+        if (!this.webSocketService || !this.namespace) return;
 
-        const isParticipant = localId === data.attackerSocketId || localId === data.defenderSocketId;
+        this.webSocketService.onNamespace<CombatAttackAnimationData>(this.namespace, JoinGameEvents.CombatAttackAnimation, (data) => {
+            const localId = dependencies.getLocalSocketId();
+            if (!localId) return;
+
+            const isParticipant = localId === data.attackerSocketId || localId === data.defenderSocketId;
             if (!isParticipant) return;
+
+            this.isRoundTransitioning.set(true);
+            this.combatPostureCountdown.set(0);
 
             this.combatAttackAnimationSequence++;
             this.combatAttackAnimation.set({
                 data,
                 sequence: this.combatAttackAnimationSequence,
             });
+        });
     }
 
-    handlePostureReceived({ socketId, posture }: PostureReceivedData): void {
-        if (!this.isCombatStarted() || socketId !== this.fighters().enemy.socketId) return;
+    private registerPostureReceivedListener(): void {
+        if (!this.webSocketService || !this.namespace) return;
+
+        this.webSocketService.onNamespace<PostureReceivedData>(this.namespace, JoinGameEvents.PostureReceived, ({ socketId, posture }) => {
+            if (!this.isCombatStarted() || socketId !== this.fighters().enemy.socketId) return;
             this.fighters.update((fightData) => ({
                 ...fightData,
                 enemy: { ...fightData.enemy, character: { ...fightData.enemy.character, bonusPosture: posture } },
             }));
+        });
     }
 }

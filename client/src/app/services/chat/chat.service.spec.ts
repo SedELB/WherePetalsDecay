@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ChatService } from './chat.service';
+import { ChatService } from '@app/services/chat/chat.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 
 describe('ChatService', () => {
