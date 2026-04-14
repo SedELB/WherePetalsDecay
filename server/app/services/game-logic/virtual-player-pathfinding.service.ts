@@ -1,4 +1,5 @@
 import { DIRECTION_OFFSETS } from '@common/direction';
+import { TileItem } from '@common/enums';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
@@ -50,6 +51,7 @@ export class VirtualPlayerPathfindingService {
                 const tile = game.lobby.game.grid[neighbourPos.y][neighbourPos.x];
                 const moveCost = TILE_COSTS[tile.type];
                 if (moveCost === Infinity) continue;
+                if (this.isSanctuaryTile(game, neighbourPos)) continue;
 
                 const neighbourKey = this.positionKey(neighbourPos);
                 const newCost = currentNode.cumulativeCost + moveCost;
@@ -153,6 +155,11 @@ export class VirtualPlayerPathfindingService {
             if (playerPos.x === pos.x && playerPos.y === pos.y) return true;
         }
         return false;
+    }
+
+    isSanctuaryTile(game: ActiveGame, pos: Vec2): boolean {
+        const tile = game.lobby.game.grid[pos.y]?.[pos.x];
+        return tile?.item === TileItem.HealingSanctuary || tile?.item === TileItem.CombatSanctuary;
     }
 
     private isInsideBounds(game: ActiveGame, pos: Vec2): boolean {

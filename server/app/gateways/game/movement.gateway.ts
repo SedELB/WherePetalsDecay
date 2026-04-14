@@ -196,10 +196,11 @@ export class MovementGateway {
         const reachable = this.gameLogicService.getReachableTiles(lobbyId, socketId);
         const adjacent = this.gameLogicService.getAdjacentPlayers(lobbyId, socketId);
         const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
+        const canToggleDoor = this.gameLogicService.canToggleAdjacentDoor(lobbyId, socketId);
 
         const canMove = reachable.length > 0;
         const canFight = adjacent.length > 0 && actionPoints > 0;
 
-        if (!canMove && !canFight) this.gameLogicService.endTurn(lobbyId);
+        if (!canMove && !canFight && !canToggleDoor) this.gameLogicService.endTurn(lobbyId);
     }
 }
