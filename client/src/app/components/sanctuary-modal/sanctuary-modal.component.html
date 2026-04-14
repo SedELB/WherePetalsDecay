@@ -1,0 +1,11 @@
+<div class="sanctuary-modal-overlay">
+    <div class="sanctuary-modal">
+        <h2 class="sanctuary-title">Sanctuaire {{ type === itemTypes.HealingSanctuary ? 'de Soin' : 'de Combat' }}</h2>
+        <p class="sanctuary-effect">Effet : {{ getSanctuaryLabel() }}</p>
+        <div class="sanctuary-actions">
+            <app-button (click)="onUse('normal')">Normal</app-button>
+            <app-button (click)="onUse('doubleOrNothing')">Double ou Rien (50%)</app-button>
+            <app-button (click)="onCancel()">Annuler</app-button>
+        </div>
+    </div>
+</div>

@@ -1,5 +1,5 @@
 import { AdminGateway } from '@app/gateways/admin/admin.gateway';
-import { GamesGateway } from '@app/gateways/games/games.gateway';
+import { GameCatalogGateway } from '@app/gateways/game-catalog/game-catalog.gateway';
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
 import { GameService } from '@app/services/game/game.service';
@@ -13,7 +13,7 @@ export class GameController {
     constructor(
         private readonly gameService: GameService,
         private readonly adminGateway: AdminGateway,
-        private readonly gamesGateway: GamesGateway,
+        private readonly gameCatalogGateway: GameCatalogGateway,
     ) {}
 
     @Get('/allGames')
@@ -52,7 +52,7 @@ export class GameController {
             const createdGame = await this.gameService.addGame(gameDto);
             this.adminGateway.notifyGameCreated(createdGame);
             if (createdGame.isVisible) {
-                this.gamesGateway.notifyGameCreated(createdGame);
+                this.gameCatalogGateway.notifyGameCreated(createdGame);
             }
             response.status(HttpStatus.CREATED).json('Le jeu a été créé avec succès !');
         } catch (error) {
@@ -68,7 +68,7 @@ export class GameController {
 
             // Notify others to hide the game
             if (!updatedGame.isVisible) {
-                this.gamesGateway.notifyGameDeleted(id);
+                this.gameCatalogGateway.notifyGameDeleted(id);
             }
 
             response.status(HttpStatus.OK).json('Le jeu a été modifié avec succès !');
@@ -85,9 +85,9 @@ export class GameController {
             this.adminGateway.notifyGameVisibilityChanged(id, isVisible);
 
             if (isVisible) {
-                this.gamesGateway.notifyGameCreated(updatedGame);
+                this.gameCatalogGateway.notifyGameCreated(updatedGame);
             } else {
-                this.gamesGateway.notifyGameDeleted(id);
+                this.gameCatalogGateway.notifyGameDeleted(id);
             }
 
             response.status(HttpStatus.OK).json('Le jeu a été modifié avec succès !');
@@ -101,7 +101,7 @@ export class GameController {
         try {
             await this.gameService.deleteGame(id);
             this.adminGateway.notifyGameDeleted(id);
-            this.gamesGateway.notifyGameDeleted(id);
+            this.gameCatalogGateway.notifyGameDeleted(id);
             response.status(HttpStatus.NO_CONTENT).json('Le jeu a été supprimé avec succès !');
         } catch (error) {
             response.status(HttpStatus.NOT_FOUND).json(error.message);

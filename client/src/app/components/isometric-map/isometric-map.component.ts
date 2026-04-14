@@ -8,6 +8,7 @@ import { ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
 
 @Component({
   selector: 'app-isometric-map',
+  standalone: true,
   imports: [],
   templateUrl: './isometric-map.component.html',
   styleUrl: './isometric-map.component.scss',
