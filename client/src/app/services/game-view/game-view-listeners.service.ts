@@ -17,7 +17,6 @@ import { GameViewCombatService, CombatListenerDependencies } from '@app/services
 import { GameViewCombatListenersService } from '@app/services/game-view/game-view-combat-listeners.service';
 import { GameViewSignals } from '@app/services/game-view/game-view-signals.interface';
 
-const ONE_SECOND_DELAY = 1000;
 
 @Injectable({
     providedIn: 'root',
@@ -75,6 +74,7 @@ export class GameViewListenersService {
 
     private registerTurnListeners(signals: GameViewSignals, ns: SocketNamespace): void {
         this.webSocketService.onNamespace<string>(ns, JoinGameEvents.TurnStarted, (playerSocketId) => {
+            signals.disableEndTurn.set(false);
             signals.activePlayerSocketId.set(playerSocketId);
             signals.turnNotification.set(null);
         });
@@ -82,11 +82,6 @@ export class GameViewListenersService {
         this.webSocketService.onNamespace<number>(ns, JoinGameEvents.BetweenTurnCountdown, (secondsLeft) => {
             signals.disableEndTurn.set(true);
             signals.turnCountdown.set(secondsLeft);
-            if (secondsLeft <= 1) {
-                setTimeout(() => {
-                    signals.disableEndTurn.set(false);
-                }, ONE_SECOND_DELAY);
-            }
         });
 
         this.webSocketService.onNamespace<number>(ns, JoinGameEvents.TurnCountdown, (secondsLeft) => {
