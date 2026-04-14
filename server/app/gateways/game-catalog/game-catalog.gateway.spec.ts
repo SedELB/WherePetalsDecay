@@ -2,11 +2,11 @@ import { Game } from '@app/model/schema/game.schema';
 import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Server, Socket } from 'socket.io';
-import { GamesGateway } from './games.gateway';
+import { GameCatalogGateway } from './game-catalog.gateway';
 import { GameCreationEvents } from '@common/socket-events/games.gateway.events';
 
-describe('GamesGateway', () => {
-    let gateway: GamesGateway;
+describe('GameCatalogGateway', () => {
+    let gateway: GameCatalogGateway;
     let logger: Logger;
     let mockServer: Partial<Server>;
 
@@ -17,7 +17,7 @@ describe('GamesGateway', () => {
 
         const module: TestingModule = await Test.createTestingModule({
             providers: [
-                GamesGateway,
+                GameCatalogGateway,
                 {
                     provide: Logger,
                     useValue: {
@@ -27,13 +27,13 @@ describe('GamesGateway', () => {
             ],
         }).compile();
 
-        gateway = module.get<GamesGateway>(GamesGateway);
+        gateway = module.get<GameCatalogGateway>(GameCatalogGateway);
         logger = module.get<Logger>(Logger);
         gateway['server'] = mockServer as Server;
     });
 
     it('should be defined', () => {
-        // Ensures GamesGateway instance is properly created and injected
+        // Ensures GameCatalogGateway instance is properly created and injected
         expect(gateway).toBeDefined();
     });
 
@@ -41,7 +41,7 @@ describe('GamesGateway', () => {
         // Verifies gateway logs initialization message to games namespace
         it('should log initialization message', () => {
             gateway.afterInit();
-            expect(logger.log).toHaveBeenCalledWith('GamesGateway initialized on /games namespace');
+            expect(logger.log).toHaveBeenCalledWith('GameCatalogGateway initialized on /games namespace');
         });
     });
 
