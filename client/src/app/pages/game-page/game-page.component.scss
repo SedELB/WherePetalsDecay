@@ -275,7 +275,7 @@
     }
 
     &[data-tile='wall'] {
-        background-image: url('../../../assets/tiles/wall.png');
+        background-image: url('../../../assets/tiles/wall.jpg');
     }
 
     &[data-tile='water'] {
@@ -483,6 +483,18 @@
         }
     }
 
+    &.door {
+        background: rgba(243, 156, 18, 0.15);
+        border-color: rgba(243, 156, 18, 0.55);
+        color: #f5c75a;
+
+        &.selected {
+            background: rgba(243, 156, 18, 0.4);
+            border-color: rgba(243, 156, 18, 0.9);
+            box-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
+        }
+    }
+
     &.sanctuary {
         background: transparent;
         border-color: rgba(180, 120, 255, 0.55);
@@ -498,7 +510,6 @@
             box-shadow: 0 0 10px rgba(180, 120, 255, 0.4);
         }
     }
-
 }
 
 .cell--teleportable {
