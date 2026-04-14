@@ -1,4 +1,5 @@
 import { Lobby } from '@common/lobby';
+import { SanctuaryType } from '@common/tile';
 import { Vec2 } from '@common/vec2';
 
 export const VICTORIES_TO_WIN = 3;
@@ -25,6 +26,8 @@ export interface ActiveGame {
     flagHolders: Set<string>;
     totalTurns: number;
     gameStartTime: number;
+    sanctuaryPositions: Map<SanctuaryType, Vec2[]>;
+    doorPositions: Vec2[];
 }
 
 export interface TurnCallbacks {

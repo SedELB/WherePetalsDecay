@@ -5,6 +5,7 @@ import { GameMode, GridSizes, SanctuaryCount, TileItem, TileTexture } from '@com
 import {
     COMBAT_SANCTUARIES_NOT_PLACED,
     DESC_INVALID_DOOR_PLACEMENT,
+    DESC_INVALID_DOOR_PLACEMENT_2,
     DESCRIPTION_FIELD_EMPTY,
     DESCRIPTION_FIELD_TOO_LONG,
     DOOR_ON_GRID_BORDER,
@@ -105,7 +106,7 @@ export class GameValidatorService {
         const aboveSame = y > 0 && game.grid[y - 1][x].item === item;
         const leftSame = x > 0 && game.grid[y][x - 1].item === item;
         const aboveLeftSame = y > 0 && x > 0 && game.grid[y - 1][x - 1].item === item;
-        
+
         let originY = y;
         let originX = x;
 
@@ -117,7 +118,7 @@ export class GameValidatorService {
         } else if (leftSame) {
             originX = x - 1;
         }
-        
+
         return `${originY}, ${originX}`;
     }
 
@@ -128,7 +129,7 @@ export class GameValidatorService {
         }
 
         const totalSanctuaryBlocks = this.getRequiredSanctuaryCount(game) * 2;
-        
+
         const totalWalkable = game.grid.flat().filter((tile) => {
             const isSanctuary = tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary;
             return tile.type !== TileTexture.Wall && !isSanctuary;
@@ -156,7 +157,7 @@ export class GameValidatorService {
                 if (this.isTileValidForPath(game, next.y, next.x, visited)) {
                     const nextTile = game.grid[next.y][next.x];
                     const isSanctuary = nextTile.item === TileItem.HealingSanctuary || nextTile.item === TileItem.CombatSanctuary;
-                    
+
                     if (isSanctuary) {
                         const origin = this.getSanctuaryOrigin(game, next.y, next.x);
                         reachedSanctuaries.add(`${nextTile.item}-${origin}`);
@@ -263,9 +264,13 @@ export class GameValidatorService {
             const horizontalSandwich = (left === wall && right === wall) &&
                 (!obstacles.includes(up) && !obstacles.includes(down));
 
-            if (!verticalSandwich && !horizontalSandwich) {
+            if (verticalSandwich && horizontalSandwich) {
                 errors.push(`${INVALID_DOOR_PLACEMENT} (${row}, ${col}) : ${DESC_INVALID_DOOR_PLACEMENT}`);
             }
+            if (!verticalSandwich && !horizontalSandwich) {
+                errors.push(`${INVALID_DOOR_PLACEMENT} (${row}, ${col}) : ${DESC_INVALID_DOOR_PLACEMENT_2}`);
+            }
+
         }
         if (errors.length > 0) throw errors;
         return true;
