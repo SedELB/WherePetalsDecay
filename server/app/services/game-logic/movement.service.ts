@@ -183,8 +183,9 @@ export class MovementService {
 
     private trackTileVisit(game: ActiveGame, socketId: string, pos: Vec2, tileType: TileTexture, tileItem: TileItem | null): void {
         const key = this.posKey(pos);
-
-        const isTerrainTile = tileType === TileTexture.Floor || tileType === TileTexture.Water || tileType === TileTexture.Ice;
+        // TODO : open door
+        const isTerrainTile = 
+            tileType === TileTexture.Floor || tileType === TileTexture.Water || tileType === TileTexture.Ice || tileType === TileTexture.DoorOpened;
         if (isTerrainTile) {
             if (!game.visitedTilesPerPlayer.has(socketId)) {
                 game.visitedTilesPerPlayer.set(socketId, new Set());

@@ -2,6 +2,8 @@ import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { GameController } from './controllers/game/game.controller';
+import { VirtualPlayerPathfindingService } from './services/game-logic/virtual-player-pathfinding.service';
+import { VirtualPlayerScannerService } from './services/game-logic/virtual-player-scanner.service';
 import { AdminGateway } from './gateways/admin/admin.gateway';
 import { ChatGateway } from './gateways/chat/chat.gateway';
 import { GameTurnSyncService } from './gateways/game/game-turn-sync.service';
@@ -53,6 +55,8 @@ import { LobbyService } from './services/lobby/lobby.service';
         JournalService,
         GameTurnSyncService,
         VirtualPlayerService,
+        VirtualPlayerPathfindingService,
+        VirtualPlayerScannerService,
 
         // Gateways
         AdminGateway,
