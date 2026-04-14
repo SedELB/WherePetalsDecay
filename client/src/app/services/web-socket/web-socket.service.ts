@@ -1,7 +1,7 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { SocketNamespace } from '@common/enums';
 import { io, Socket } from 'socket.io-client';
-import { environment } from 'src/environments/environment';
+import { environment } from '@src/environments/environment';
 
 @Injectable({
     providedIn: 'root',
