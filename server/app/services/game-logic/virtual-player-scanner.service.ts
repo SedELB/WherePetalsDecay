@@ -107,7 +107,7 @@ export class VirtualPlayerScannerService {
         game: ActiveGame,
         virtualPlayer: Player,
         vpPos: Vec2,
-        sanctuaryTypes: TileItem[] = DEFAULT_SANCTUARY_TYPES,
+        sanctuaryTypes: SanctuaryType[] = DEFAULT_SANCTUARY_TYPES,
         precomputedCostToPosition?: Map<string, number>,
     ): Vec2 | null {
         const costToPosition = precomputedCostToPosition ?? this.pathfindingService.computeFullDijkstra(game, vpPos).costToPosition;
@@ -115,15 +115,9 @@ export class VirtualPlayerScannerService {
         let nearestCost = Infinity;
         let result: Vec2 | null = null;
 
-        const { grid } = game.lobby.game;
-        for (let row = 0; row < grid.length; row++) { // TODO : can add extractsanctuaries method in game-setup to avoid iterating over entire grid each time
-            for (let col = 0; col < grid[row].length; col++) {
-                const item = grid[row][col].item;
-                if (!this.isSanctuaryOfType(item, sanctuaryTypes)) continue;
-
-                const pos: Vec2 = { x: col, y: row };
+        for (const sanctuaryType of sanctuaryTypes) {
+            for (const pos of game.sanctuaryPositions.get(sanctuaryType) ?? []) {
                 const cost = costToPosition.get(this.pathfindingService.positionKey(pos)) ?? Infinity;
-
                 if (cost <= remainingMvtPts && cost < nearestCost &&
                     !this.pathfindingService.isTileOccupiedByAnotherPlayer(game, pos, virtualPlayer.socketId)) {
                     nearestCost = cost;
@@ -172,20 +166,17 @@ export class VirtualPlayerScannerService {
         const candidatesPos = new Map<string, Vec2>();
         const { grid } = game.lobby.game;
 
-        for (let row = 0; row < grid.length; row++) {
-            for (let col = 0; col < grid[row].length; col++) {
-                if (grid[row][col].item !== sanctuaryType) continue;
-                for (const offset of Object.values(DIRECTION_OFFSETS)) {
-                    const borderPos: Vec2 = { x: col + offset.x, y: row + offset.y };
-                    if (!this.isInsideBounds(grid, borderPos)) continue;
+        for (const sanctuaryPos of game.sanctuaryPositions.get(sanctuaryType) ?? []) {
+            for (const offset of Object.values(DIRECTION_OFFSETS)) {
+                const borderPos: Vec2 = { x: sanctuaryPos.x + offset.x, y: sanctuaryPos.y + offset.y };
+                if (!this.isInsideBounds(grid, borderPos)) continue;
 
-                    const borderTile = grid[borderPos.y][borderPos.x];
-                    if (borderTile.item === TileItem.HealingSanctuary || borderTile.item === TileItem.CombatSanctuary) continue;
-                    if (TILE_COSTS[borderTile.type] === Infinity) continue;
-                    if (this.pathfindingService.isTileOccupiedByAnotherPlayer(game, borderPos, virtualPlayer.socketId)) continue;
+                const borderTile = grid[borderPos.y][borderPos.x];
+                if (borderTile.item === TileItem.HealingSanctuary || borderTile.item === TileItem.CombatSanctuary) continue;
+                if (TILE_COSTS[borderTile.type] === Infinity) continue;
+                if (this.pathfindingService.isTileOccupiedByAnotherPlayer(game, borderPos, virtualPlayer.socketId)) continue;
 
-                    candidatesPos.set(this.pathfindingService.positionKey(borderPos), borderPos);
-                }
+                candidatesPos.set(this.pathfindingService.positionKey(borderPos), borderPos);
             }
         }
 
@@ -202,7 +193,7 @@ export class VirtualPlayerScannerService {
 
     findFlagOnMap(game: ActiveGame): Vec2 | null {
         const { grid } = game.lobby.game;
-        for (let row = 0; row < grid.length; row++) { // TODO : can add extractFlags method in game-setup to avoid iterating over entire grid each time
+        for (let row = 0; row < grid.length; row++) {
             for (let col = 0; col < grid[row].length; col++) {
                 if (grid[row][col].item === TileItem.Flag) return { x: col, y: row };
             }
@@ -238,9 +229,8 @@ export class VirtualPlayerScannerService {
         return null;
     }
 
-
-    private isSanctuaryOfType(item: TileItem | null, sanctuaryTypes: TileItem[]): boolean {
-        return item !== null && sanctuaryTypes.includes(item);
+    private isSanctuaryOfType(item: TileItem | null, sanctuaryTypes: SanctuaryType[]): boolean {
+        return item !== null && sanctuaryTypes.includes(item as SanctuaryType);
     }
 
     private isInsideBounds(grid: ActiveGame['lobby']['game']['grid'], pos: Vec2): boolean {

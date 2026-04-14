@@ -1,6 +1,7 @@
-import { TileItem } from '@common/enums';
+import { TileItem, TileTexture } from '@common/enums';
 import { Game } from '@common/game';
 import { GameStats } from '@common/interfaces/game-stats';
+import { SanctuaryType } from '@common/tile';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
@@ -55,5 +56,34 @@ export class GameSetupService {
             [array[i], array[j]] = [array[j], array[i]];
         }
         return array;
+    }
+
+    extractSanctuaryPositions(game: Game): Map<SanctuaryType, Vec2[]> {
+        const result = new Map<SanctuaryType, Vec2[]>([
+            [TileItem.HealingSanctuary, []],
+            [TileItem.CombatSanctuary, []],
+        ]);
+        for (let row = 0; row < game.grid.length; row++) {
+            for (let col = 0; col < game.grid[row].length; col++) {
+                const item = game.grid[row][col].item;
+                if (item === TileItem.HealingSanctuary || item === TileItem.CombatSanctuary) {
+                    result.get(item)?.push({ x: col, y: row });
+                }
+            }
+        }
+        return result;
+    }
+
+    extractDoorPositions(game: Game): Vec2[] {
+        const doors: Vec2[] = [];
+        for (let row = 0; row < game.grid.length; row++) {
+            for (let col = 0; col < game.grid[row].length; col++) {
+                const tileType = game.grid[row][col].type;
+                if (tileType === TileTexture.DoorClosed || tileType === TileTexture.DoorOpened) {
+                    doors.push({ x: col, y: row });
+                }
+            }
+        }
+        return doors;
     }
 }

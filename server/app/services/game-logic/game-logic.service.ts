@@ -86,6 +86,8 @@ export class GameLogicService {
             flagHolders: new Set(),
             totalTurns: 0,
             gameStartTime: Date.now(),
+            sanctuaryPositions: this.gameSetupService.extractSanctuaryPositions(lobby.game),
+            doorPositions: this.gameSetupService.extractDoorPositions(lobby.game),
         };
 
         for (const [socketId, pos] of playerPositions) {
