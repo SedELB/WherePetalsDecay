@@ -12,8 +12,8 @@ import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { GameMode, SocketNamespace } from '@common/enums';
 import { Game } from '@common/game';
 import { GameCreationEvents } from '@common/socket-events/games.gateway.events';
-import { environment } from 'src/environments/environment';
-import { GameCreationService } from './game-creation.service';
+import { environment } from '@src/environments/environment';
+import { GameCreationService } from '@app/services/game-creation/game-creation.service';
 
 
 describe('GameCreationService', () => {

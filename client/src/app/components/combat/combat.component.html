@@ -3,24 +3,54 @@
         <div class="profile-card">
             <img class="pfp" [src]="player.character.avatar" [alt]="player.character.name">
             <h3>{{ player.character.name }} (vous)</h3>
-            <p class="posture">Posture: {{ player.character.bonusPosture?.type?.toUpperCase() || 'En attente' }}</p>
 
-            <div class="stats-panel unified" [ngClass]="{ 'disabled-panel': !roundResult }">
+            <div class="stats-panel compact unified">
                 <h4>Stats de combat</h4>
-                <span>HP: {{ player.character.life }}</span>
-                <span class="group-title">ATK</span>
-                <span>Base: {{ roundResult?.player?.attack?.base ?? player.character.attack }}</span>
-                <span>Bonus posture: +{{ roundResult?.player?.attack?.postureBonus ?? 0 }}</span>
-                <span>Dé: +{{ roundResult?.player?.attack?.dice ?? 0 }}</span>
-                <span>Pénalité: -{{ roundResult?.player?.attack?.penalty ?? (player.character.debuf ?? 0) }}</span>
-                <span class="total-line">Total ATK: {{ roundResult?.player?.attack?.total ?? '—' }}</span>
+                <div class="bonus-legend" aria-label="Légende des bonus">
+                    <span class="bonus-badge bonus-badge--posture">Bonus posture</span>
+                    <span class="bonus-badge bonus-badge--dice">Bonus dé</span>
+                </div>
+                <div class="stat-row stat-row--hp">
+                    <span class="stat-label">❤️ HP</span>
+                    <span class="stat-value">{{ getDisplayedLife('player') }}/{{ getOriginalMaxLife('player') }}</span>
+                </div>
+                <div class="life-bar" [attr.aria-label]="'Barre de vie de ' + player.character.name">
+                    <div class="life-bar-fill" [style.width.%]="getLifeProgressPercent('player')"></div>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">⚔️ Attaque</span>
+                    <span class="stat-bonuses">
+                        @if (getPostureBonus('player', 'attack') > 0) {
+                            <span class="bonus-badge">+{{ getPostureBonus('player', 'attack') }}</span>
+                        }
+                        @if (getDiceBonus('player', 'attack') > 0) {
+                            <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('player', 'attack') }}</span>
+                        }
+                    </span>
+                    <span class="stat-value">{{ getStatTotal('player', 'attack') }}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">🛡️ Défense</span>
+                    <span class="stat-bonuses">
+                        @if (getPostureBonus('player', 'defense') > 0) {
+                            <span class="bonus-badge">+{{ getPostureBonus('player', 'defense') }}</span>
+                        }
+                        @if (getDiceBonus('player', 'defense') > 0) {
+                            <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('player', 'defense') }}</span>
+                        }
+                    </span>
+                    <span class="stat-value">{{ getStatTotal('player', 'defense') }}</span>
+                </div>
+            </div>
 
-                <span class="group-title">DEF</span>
-                <span>Base: {{ roundResult?.player?.defense?.base ?? player.character.defense }}</span>
-                <span>Bonus posture: +{{ roundResult?.player?.defense?.postureBonus ?? 0 }}</span>
-                <span>Dé: +{{ roundResult?.player?.defense?.dice ?? 0 }}</span>
-                <span>Pénalité: -{{ roundResult?.player?.defense?.penalty ?? (player.character.debuf ?? 0) }}</span>
-                <span class="total-line">Total DEF: {{ roundResult?.player?.defense?.total ?? '—' }}</span>
+            <div class="posture-status">
+                @if (isPosturePending(player)) {
+                    <span class="posture-status__text">Posture en attente</span>
+                    <span class="loading-spinner" aria-label="Chargement posture"></span>
+                } @else {
+                    <span class="posture-status__text">Posture choisie</span>
+                    <span class="posture-status__value">{{ getPostureStatusValue(player) }}</span>
+                }
             </div>
         </div>
     </section>
@@ -29,11 +59,36 @@
         <h1>Interface de combat</h1>
         <p class="subtitle">
             Round #{{ getCurrentRoundIndex() }}
-            @if (getPostureCountdown() > 0) {
-                · Choix de posture: {{ getPostureCountdown() }}s
-            }
         </p>
-        <p class="subtitle">Les résultats détaillés restent affichés jusqu'au prochain lancé de dés.</p>
+        <div class="combat-status-slot">
+            @if (shouldShowAttackAnnouncement()) {
+                <p class="attack-announcement">{{ getAttackAnnouncementMessage() }}</p>
+            } @else if (isPostureCountdownVisible()) {
+                <div class="posture-timer">
+                    <span class="timer-text">Choix de posture: {{ getPostureCountdown() }}s</span>
+                    <div class="timer-line">
+                        <div class="timer-line-fill" [style.width.%]="getPostureCountdownProgressPercent()"></div>
+                    </div>
+                </div>
+            }
+        </div>
+        @if (diceRollDisplay; as roll) {
+            <div class="dice-roll-panel" [ngClass]="{ 'is-final': roll.isFinal }">
+                <p class="dice-roll-title">{{ roll.isFinal ? '🎲 Résultat des dés' : '🎲 Lancer des dés en cours' }}</p>
+                <div class="dice-roll-values dice-roll-values--stack">
+                    <span>
+                        {{ roll.player.fighterName }} ·
+                        ⚔️ D{{ roll.player.attackFaces }} : <b>{{ roll.player.attackValue }}</b> ·
+                        🛡️ D{{ roll.player.defenseFaces }} : <b>{{ roll.player.defenseValue }}</b>
+                    </span>
+                    <span>
+                        {{ roll.enemy.fighterName }} ·
+                        ⚔️ D{{ roll.enemy.attackFaces }} : <b>{{ roll.enemy.attackValue }}</b> ·
+                        🛡️ D{{ roll.enemy.defenseFaces }} : <b>{{ roll.enemy.defenseValue }}</b>
+                    </span>
+                </div>
+            </div>
+        }
 
         <div class="combat">
             <app-isometric-map
@@ -48,24 +103,64 @@
                 }
             </div>
 
-            <div class="bonuses" [ngClass]="{ 'hidden': !isChoosingPosture }">
-                <h2>Choisir votre posture</h2>
-                <div class="bonus-effect">
-                    <span>Offensive: +2 ATK</span>
-                    <span>Défensive: +2 DEF</span>
+            @if (combatEndPopup; as popup) {
+                <div class="damage-popup-overlay">
+                    <div class="damage-popup damage-popup--end">
+                        <h3>{{ popup.title }}</h3>
+                        <p>{{ popup.message }}</p>
+                    </div>
                 </div>
+            } @else if (combatStartPopup) {
+                <div class="damage-popup-overlay">
+                    <div class="damage-popup damage-popup--info">
+                        <h3>{{ combatStartPopup.title }}</h3>
+                        <p>{{ combatStartPopup.message }}</p>
+                    </div>
+                </div>
+            } @else if (roundAnnouncementPopup) {
+                <div class="damage-popup-overlay">
+                    <div class="damage-popup damage-popup--announcement">
+                        <h3>Prochain tour</h3>
+                        <p>{{ roundAnnouncementPopup.message }}</p>
+                    </div>
+                </div>
+            } @else if (postureResultPopup) {
+                <div class="damage-popup-overlay">
+                    <div class="damage-popup damage-popup--posture">
+                        <h3>Bonus appliqués — Manche #{{ postureResultPopup.roundIndex }}</h3>
+                        <p><b>Votre posture :</b> {{ postureResultPopup.playerPosture }}</p>
+                        <p><b>Posture adverse :</b> {{ postureResultPopup.enemyPosture }}</p>
+                    </div>
+                </div>
+            } @else if (damagePopup) {
+                <div class="damage-popup-overlay">
+                    <div class="damage-popup">
+                        <h3>Résultat de la manche #{{ damagePopup.rollIndex }}</h3>
+                        <p><b>Dégâts infligés:</b> {{ damagePopup.damageDealt }}</p>
+                        <p><b>Dégâts subis:</b> {{ damagePopup.damageReceived }}</p>
+                    </div>
+                </div>
+            } @else if (statusPopup) {
+                <div class="damage-popup-overlay">
+                    <div class="damage-popup damage-popup--status">
+                        <h3>État des combattants — Manche #{{ statusPopup.roundIndex }}</h3>
+                        <p><b>{{ player.character.name }} :</b> {{ statusPopup.playerLife }} PV</p>
+                        <p><b>{{ enemy.character.name }} :</b> {{ statusPopup.enemyLife }} PV</p>
+                    </div>
+                </div>
+            }
+
+            <div class="bonuses" [ngClass]="{ 'hidden': !shouldShowPosturePanel() }">
+                <h2>Choisir votre posture</h2>
                 <div class="choices">
-                    <app-button (click)="choosePosture('atk')">Posture offensive</app-button>
-                    <app-button (click)="choosePosture('def')">Posture défensive</app-button>
+                    <div class="posture-choice" data-tooltip="+2 ATK">
+                        <app-button (click)="choosePosture('atk')">Posture offensive</app-button>
+                    </div>
+                    <div class="posture-choice" data-tooltip="+2 DEF">
+                        <app-button (click)="choosePosture('def')">Posture défensive</app-button>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <div class="result-panel" [ngClass]="{ 'disabled-panel': !roundResult }">
-            <h3>Différences ATK/DEF</h3>
-            <span>ATK vous - DEF ennemi = <b>{{ roundResult?.damageDealt ?? 0 }}</b> dégâts infligés</span>
-            <span>ATK ennemi - DEF vous = <b>{{ roundResult?.damageReceived ?? 0 }}</b> dégâts subis</span>
-            <span class="roll-tag">Dernier lancé: #{{ roundResult?.rollIndex ?? 0 }}</span>
         </div>
     </main>
 
@@ -73,24 +168,54 @@
         <div class="profile-card">
             <img class="pfp" [src]="enemy.character.avatar" [alt]="enemy.character.name">
             <h3>{{ enemy.character.name }}</h3>
-            <p class="posture">Posture: {{ enemy.character.bonusPosture?.type?.toUpperCase() || 'En attente' }}</p>
 
-            <div class="stats-panel unified" [ngClass]="{ 'disabled-panel': !roundResult }">
+            <div class="stats-panel compact unified">
                 <h4>Stats de combat</h4>
-                <span>HP: {{ enemy.character.life }}</span>
-                <span class="group-title">ATK</span>
-                <span>Base: {{ roundResult?.enemy?.attack?.base ?? enemy.character.attack }}</span>
-                <span>Bonus posture: +{{ roundResult?.enemy?.attack?.postureBonus ?? 0 }}</span>
-                <span>Dé: +{{ roundResult?.enemy?.attack?.dice ?? 0 }}</span>
-                <span>Pénalité: -{{ roundResult?.enemy?.attack?.penalty ?? (enemy.character.debuf ?? 0) }}</span>
-                <span class="total-line">Total ATK: {{ roundResult?.enemy?.attack?.total ?? '—' }}</span>
+                <div class="bonus-legend" aria-label="Légende des bonus">
+                    <span class="bonus-badge bonus-badge--posture">Bonus posture</span>
+                    <span class="bonus-badge bonus-badge--dice">Bonus dé</span>
+                </div>
+                <div class="stat-row stat-row--hp">
+                    <span class="stat-label">❤️ HP</span>
+                    <span class="stat-value">{{ getDisplayedLife('enemy') }}/{{ getOriginalMaxLife('enemy') }}</span>
+                </div>
+                <div class="life-bar" [attr.aria-label]="'Barre de vie de ' + enemy.character.name">
+                    <div class="life-bar-fill" [style.width.%]="getLifeProgressPercent('enemy')"></div>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">⚔️ Attaque</span>
+                    <span class="stat-bonuses">
+                        @if (getPostureBonus('enemy', 'attack') > 0) {
+                            <span class="bonus-badge">+{{ getPostureBonus('enemy', 'attack') }}</span>
+                        }
+                        @if (getDiceBonus('enemy', 'attack') > 0) {
+                            <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('enemy', 'attack') }}</span>
+                        }
+                    </span>
+                    <span class="stat-value">{{ getStatTotal('enemy', 'attack') }}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">🛡️ Défense</span>
+                    <span class="stat-bonuses">
+                        @if (getPostureBonus('enemy', 'defense') > 0) {
+                            <span class="bonus-badge">+{{ getPostureBonus('enemy', 'defense') }}</span>
+                        }
+                        @if (getDiceBonus('enemy', 'defense') > 0) {
+                            <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('enemy', 'defense') }}</span>
+                        }
+                    </span>
+                    <span class="stat-value">{{ getStatTotal('enemy', 'defense') }}</span>
+                </div>
+            </div>
 
-                <span class="group-title">DEF</span>
-                <span>Base: {{ roundResult?.enemy?.defense?.base ?? enemy.character.defense }}</span>
-                <span>Bonus posture: +{{ roundResult?.enemy?.defense?.postureBonus ?? 0 }}</span>
-                <span>Dé: +{{ roundResult?.enemy?.defense?.dice ?? 0 }}</span>
-                <span>Pénalité: -{{ roundResult?.enemy?.defense?.penalty ?? (enemy.character.debuf ?? 0) }}</span>
-                <span class="total-line">Total DEF: {{ roundResult?.enemy?.defense?.total ?? '—' }}</span>
+            <div class="posture-status">
+                @if (isPosturePending(enemy)) {
+                    <span class="posture-status__text">Posture en attente</span>
+                    <span class="loading-spinner" aria-label="Chargement posture"></span>
+                } @else {
+                    <span class="posture-status__text">Posture choisie</span>
+                    <span class="posture-status__value">{{ getPostureStatusValue(enemy) }}</span>
+                }
             </div>
         </div>
     </section>

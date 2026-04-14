@@ -32,7 +32,7 @@ import { GameMode, SocketNamespace } from '@common/enums';
 import { Game } from '@common/game';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
-import { JoinGamePageComponent } from './join-game-page.component';
+import { JoinGamePageComponent } from '@app/pages/join-game-page/join-game-page.component';
 
 describe('JoinGamePageComponent', () => {
     let component: JoinGamePageComponent;

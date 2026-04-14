@@ -4,15 +4,9 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { GameController } from './controllers/game/game.controller';
 import { AdminGateway } from './gateways/admin/admin.gateway';
 import { ChatGateway } from './gateways/chat/chat.gateway';
-import { CombatInitiationGateway } from './gateways/combat/combat-initiation.gateway';
-import { CombatResolutionGateway } from './gateways/combat/combat-resolution.gateway';
-import { CombatRoundGateway } from './gateways/combat/combat-round.gateway';
-import { CombatSessionService } from './gateways/combat/combat-session.service';
 import { GameCatalogGateway } from './gateways/game-catalog/game-catalog.gateway';
-import { FlagTransferGateway } from './gateways/game/flag-transfer.gateway';
 import { GameTurnSyncService } from './gateways/game/game-turn-sync.service';
 import { GameGateway } from './gateways/game/game.gateway';
-import { MovementGateway } from './gateways/game/movement.gateway';
 import { JoinGateway } from './gateways/join/join.gateway';
 import { JournalGateway } from './gateways/journal/journal.gateway';
 import { Game, gameSchema } from './model/schema/game.schema';
@@ -60,7 +54,6 @@ import { LobbyService } from './services/lobby/lobby.service';
         GameLogicService,
         JournalService,
         GameTurnSyncService,
-        CombatSessionService,
         VirtualPlayerService,
         VirtualPlayerPathfindingService,
         VirtualPlayerScannerService,
@@ -69,11 +62,6 @@ import { LobbyService } from './services/lobby/lobby.service';
         AdminGateway,
         GameGateway,
         GameCatalogGateway,
-        CombatInitiationGateway,
-        CombatRoundGateway,
-        CombatResolutionGateway,
-        MovementGateway,
-        FlagTransferGateway,
         JoinGateway,
         ChatGateway,
         JournalGateway,
