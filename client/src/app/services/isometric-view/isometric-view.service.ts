@@ -83,7 +83,8 @@ export class IsometricViewService {
                 if (tile.type === TileTexture.DoorClosed || tile.type === TileTexture.DoorOpened) {
                     drawPortcullisBars(
                         config.ctx,
-                        { north: params.surfaceTopLeft, east: params.surfaceTopRight, south: params.surfaceBottomRight, west: params.surfaceBottomLeft },
+                        { north: params.surfaceTopLeft, east: params.surfaceTopRight,
+                            south: params.surfaceBottomRight, west: params.surfaceBottomLeft },
                         tile.type === TileTexture.DoorClosed ? 1 : 0,
                     );
                 }

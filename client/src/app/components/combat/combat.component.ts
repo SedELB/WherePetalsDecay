@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { NgClass, NgStyle } from '@angular/common';
 import { Component, effect, Input, OnChanges, OnDestroy, OnInit } from '@angular/core';
 import { ButtonComponent } from '@app/components/button/button.component';
