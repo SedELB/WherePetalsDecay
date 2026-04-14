@@ -1,6 +1,8 @@
 ﻿@use "src/styles.scss" as *;
 
 .combat-container {
+    --combat-height: 450px;
+
     position: absolute;
     inset: 0;
     z-index: 10;
@@ -8,10 +10,11 @@
     justify-content: center;
     pointer-events: auto;
     flex-direction: row;
-    align-items: stretch;
+    align-items: center;
     gap: 1rem;
     padding: 1rem;
     box-sizing: border-box;
+    transform: translateY(40px);
 }
 
 %panel-base {
@@ -26,6 +29,7 @@
 .fighter-column {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: 0.9rem;
     min-width: 280px;
     max-width: 320px;
@@ -82,7 +86,7 @@
 
 .combat-status-slot {
     width: min(420px, 100%);
-    min-height: 3.15rem;
+    min-height: 2.6rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -181,7 +185,7 @@
 }
 
 .stats-panel {
-    @extend %panel-base;
+    padding: 0.9rem 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
@@ -212,6 +216,8 @@
         justify-content: center;
         gap: 0.35rem;
         margin-top: -0.15rem;
+        padding-bottom: 5px;
+        border-bottom: black solid 1px;
     }
 
     .stat-row {
@@ -344,12 +350,12 @@ app-isometric-map {
 .combat {
     position: relative;
     width: 520px;
-    height: 430px;
+    height: var(--combat-height);
+    margin-top: -0.45rem;
     transition: opacity 0.3s ease, visibility 0s linear 0.3s;
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    height: 100%;
 
     .bonuses {
         position: absolute;

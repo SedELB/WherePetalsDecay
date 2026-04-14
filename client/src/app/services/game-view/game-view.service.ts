@@ -58,6 +58,7 @@ export class GameViewService {
     readonly combatAttackAnimation = this.gameViewCombatService.combatAttackAnimation;
     readonly fighters = this.gameViewCombatService.fighters;
     readonly lastCombatResult = this.gameViewCombatService.lastCombatResult;
+    readonly lastCombatRoundResolved = this.gameViewCombatService.lastCombatRoundResolved;
     readonly combatEndPopup = this.gameViewCombatService.combatEndPopup;
     private readonly endGamePlayersSignal = signal<Player[]>([]);
     private readonly endGameStatsSignal = signal<GameStats | null>(null);

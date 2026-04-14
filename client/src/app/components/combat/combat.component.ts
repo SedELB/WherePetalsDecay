@@ -21,7 +21,7 @@ import { GameViewService } from '@app/services/game-view/game-view.service';
 import { Posture } from '@common/character';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { TileTexture } from '@common/enums';
-import { CombatResult } from '@common/interfaces/game-view';
+import { CombatResult, CombatRoundTimelineData } from '@common/interfaces/game-view';
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
@@ -50,7 +50,7 @@ interface FighterDetailedResult { attack: DetailedStatLine; defense: DetailedSta
 interface RoundDetailedResult { player: FighterDetailedResult; enemy: FighterDetailedResult; rollIndex: number; }
 interface DamagePopupData { damageDealt: number; damageReceived: number; rollIndex: number; }
 interface CombatStartPopupData { title: string; message: string; }
-interface PendingRoundResult { result: CombatResult; resultKey: string; }
+interface PendingRoundResult { result: CombatResult; resultKey: string; timeline: CombatRoundTimelineData | null; }
 interface PostureResultPopupData { playerPosture: string; enemyPosture: string; roundIndex: number; }
 interface RoundAnnouncementPopupData { roundIndex: number; message: string; }
 interface StatusPopupData { playerLife: number; enemyLife: number; roundIndex: number; }
@@ -74,6 +74,23 @@ interface FighterPositionAnimationParams {
   to: Vec2;
   durationMs: number;
   onComplete: () => void;
+}
+interface FighterMovementPhaseParams {
+  sequenceToken: number;
+  attackerSocketId: string;
+  defenderSocketId: string;
+  advanceDurationMs: number;
+  holdDurationMs: number;
+  retreatDurationMs: number;
+  onComplete: () => void;
+}
+interface RoundResolutionSequenceParams {
+  sequenceToken: number;
+  roundResult: RoundDetailedResult;
+  damageDealt: number;
+  damageReceived: number;
+  roundIndex: number;
+  timeline: CombatRoundTimelineData | null;
 }
 
 @Component({
@@ -118,6 +135,18 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
   private diceRollInterval: ReturnType<typeof setInterval> | null = null;
   private combatStartPopupTimeout: ReturnType<typeof setTimeout> | null = null;
   private combatEndPopupTimeout: ReturnType<typeof setTimeout> | null = null;
+  private readonly defaultRoundTimeline: CombatRoundTimelineData = {
+    postureResultDisplayDurationMs: POSTURE_RESULT_DISPLAY_DURATION_MS,
+    roundPhaseBufferMs: ROUND_PHASE_BUFFER_MS,
+    diceRollDurationMs: DICE_ROLL_DURATION_MS,
+    diceResultDisplayDurationMs: DICE_RESULT_DISPLAY_DURATION_MS,
+    damageDisplayDurationMs: DAMAGE_DISPLAY_DURATION_MS,
+    fighterAdvanceDurationMs: FIGHTER_ADVANCE_DURATION_MS,
+    fighterHoldDurationMs: FIGHTER_HOLD_DURATION_MS,
+    fighterRetreatDurationMs: FIGHTER_RETREAT_DURATION_MS,
+    statusBufferDurationMs: STATUS_BUFFER_DURATION_MS,
+    nextRoundAnnouncementDurationMs: NEXT_ROUND_ANNOUNCEMENT_DURATION_MS,
+  };
   readonly combatMap: Tile[][] = [
     [{ type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null }],
     [{ type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null }],
@@ -351,6 +380,10 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     const fighterResult = side === 'player' ? this.roundResult?.player : this.roundResult?.enemy;
     if (!fighterResult) return null;
     return stat === 'attack' ? fighterResult.attack : fighterResult.defense;
+  }
+
+  private getRoundTimeline(timeline: CombatRoundTimelineData | null): CombatRoundTimelineData {
+    return { ...this.defaultRoundTimeline, ...(timeline ?? {}) };
   }
 
   private clearCombatStartPopupTimeout(): void {
@@ -589,7 +622,13 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     };
   }
 
-  private playRoundDiceAnimation(sequenceToken: number, roundResult: RoundDetailedResult, onFinished: () => void): void {
+  private playRoundDiceAnimation(
+    sequenceToken: number,
+    roundResult: RoundDetailedResult,
+    rollDurationMs: number,
+    resultDurationMs: number,
+    onFinished: () => void,
+  ): void {
     this.clearDiceRollAnimations();
     this.isDiceRollInProgress = true;
 
@@ -639,10 +678,10 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
         this.isDiceRollInProgress = false;
         this.diceRollDisplay = null;
         onFinished();
-      }, DICE_RESULT_DISPLAY_DURATION_MS);
+      }, resultDurationMs);
 
       this.diceRollAnimationTimeouts.push(resultTimeout);
-    }, DICE_ROLL_DURATION_MS);
+    }, rollDurationMs);
 
     this.diceRollAnimationTimeouts.push(settleTimeout);
   }
@@ -687,12 +726,15 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     this.movementAnimationFrameId = requestAnimationFrame(step);
   }
 
-  private runFighterMovementPhase(
-    sequenceToken: number,
-    attackerSocketId: string,
-    defenderSocketId: string,
-    onComplete: () => void,
-  ): void {
+  private runFighterMovementPhase({
+    sequenceToken,
+    attackerSocketId,
+    defenderSocketId,
+    advanceDurationMs,
+    holdDurationMs,
+    retreatDurationMs,
+    onComplete,
+  }: FighterMovementPhaseParams): void {
     const basePositions = this.getBaseCombatPositions();
     const attackerBasePosition = basePositions[attackerSocketId];
     const defenderBasePosition = basePositions[defenderSocketId];
@@ -712,19 +754,19 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
       fighterSocketId: attackerSocketId,
       from: this.playerPos[attackerSocketId] ?? attackerBasePosition,
       to: attackerLungePosition,
-      durationMs: FIGHTER_ADVANCE_DURATION_MS,
+      durationMs: advanceDurationMs,
       onComplete: () => {
         if (!this.isRoundSequenceTokenActive(sequenceToken)) return;
 
         this.activeHitTargetSocketId = defenderSocketId;
-        this.enqueueRoundStep(sequenceToken, FIGHTER_HOLD_DURATION_MS, () => {
+        this.enqueueRoundStep(sequenceToken, holdDurationMs, () => {
           this.activeHitTargetSocketId = null;
           this.animateFighterPosition({
             sequenceToken,
             fighterSocketId: attackerSocketId,
             from: attackerLungePosition,
             to: attackerBasePosition,
-            durationMs: FIGHTER_RETREAT_DURATION_MS,
+            durationMs: retreatDurationMs,
             onComplete: () => {
               if (!this.isRoundSequenceTokenActive(sequenceToken)) return;
 
@@ -755,61 +797,86 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     this.applyPendingRoundResultIfReady();
   }
 
-  private runRoundResolutionSequence(
-    sequenceToken: number,
-    roundResult: RoundDetailedResult,
-    damageDealt: number,
-    damageReceived: number,
-    roundIndex: number,
-  ): void {
-    this.playRoundDiceAnimation(sequenceToken, roundResult, () => {
-      this.roundResult = roundResult;
-      this.showPostureResultPopup(roundIndex);
+  private runRoundResolutionSequence({
+    sequenceToken,
+    roundResult,
+    damageDealt,
+    damageReceived,
+    roundIndex,
+    timeline,
+  }: RoundResolutionSequenceParams): void {
+    const roundTimeline = this.getRoundTimeline(timeline);
 
-      this.enqueueRoundStep(sequenceToken, POSTURE_RESULT_DISPLAY_DURATION_MS, () => {
-        this.postureResultPopup = null;
+    this.playRoundDiceAnimation(
+      sequenceToken,
+      roundResult,
+      roundTimeline.diceRollDurationMs,
+      roundTimeline.diceResultDisplayDurationMs,
+      () => {
+        this.roundResult = roundResult;
+        this.showPostureResultPopup(roundIndex);
 
-        this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
-          this.runFighterMovementPhase(sequenceToken, this.player.socketId, this.enemy.socketId, () => {
-            this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
-              this.runFighterMovementPhase(sequenceToken, this.enemy.socketId, this.player.socketId, () => {
-                this.applyPendingLifeAfterAttackAnimation();
-                this.clearRoundBonusesAfterAttackAnimation();
+        this.enqueueRoundStep(sequenceToken, roundTimeline.postureResultDisplayDurationMs, () => {
+          this.postureResultPopup = null;
 
-                this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
-                  this.showDamagePopup(damageDealt, damageReceived, roundIndex);
+          this.enqueueRoundStep(sequenceToken, roundTimeline.roundPhaseBufferMs, () => {
+            this.runFighterMovementPhase({
+              sequenceToken,
+              attackerSocketId: this.player.socketId,
+              defenderSocketId: this.enemy.socketId,
+              advanceDurationMs: roundTimeline.fighterAdvanceDurationMs,
+              holdDurationMs: roundTimeline.fighterHoldDurationMs,
+              retreatDurationMs: roundTimeline.fighterRetreatDurationMs,
+              onComplete: () => {
+                this.enqueueRoundStep(sequenceToken, roundTimeline.roundPhaseBufferMs, () => {
+                  this.runFighterMovementPhase({
+                    sequenceToken,
+                    attackerSocketId: this.enemy.socketId,
+                    defenderSocketId: this.player.socketId,
+                    advanceDurationMs: roundTimeline.fighterAdvanceDurationMs,
+                    holdDurationMs: roundTimeline.fighterHoldDurationMs,
+                    retreatDurationMs: roundTimeline.fighterRetreatDurationMs,
+                    onComplete: () => {
+                      this.applyPendingLifeAfterAttackAnimation();
+                      this.clearRoundBonusesAfterAttackAnimation();
 
-                  this.enqueueRoundStep(sequenceToken, DAMAGE_DISPLAY_DURATION_MS, () => {
-                    this.hideDamagePopup();
+                      this.enqueueRoundStep(sequenceToken, roundTimeline.roundPhaseBufferMs, () => {
+                        this.showDamagePopup(damageDealt, damageReceived, roundIndex);
 
-                    this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
-                      this.showStatusPopup(roundIndex);
+                        this.enqueueRoundStep(sequenceToken, roundTimeline.damageDisplayDurationMs, () => {
+                          this.hideDamagePopup();
 
-                      this.enqueueRoundStep(sequenceToken, STATUS_BUFFER_DURATION_MS, () => {
-                        this.statusPopup = null;
+                          this.enqueueRoundStep(sequenceToken, roundTimeline.roundPhaseBufferMs, () => {
+                            this.showStatusPopup(roundIndex);
 
-                        if (this.pendingCombatEndPopup) {
-                          this.finishRoundSequence(sequenceToken);
-                          return;
-                        }
+                            this.enqueueRoundStep(sequenceToken, roundTimeline.statusBufferDurationMs, () => {
+                              this.statusPopup = null;
 
-                        const nextRoundIndex = this.getCurrentRoundIndex() + 1;
-                        this.showRoundAnnouncementPopup(nextRoundIndex);
+                              if (this.pendingCombatEndPopup) {
+                                this.finishRoundSequence(sequenceToken);
+                                return;
+                              }
 
-                        this.enqueueRoundStep(sequenceToken, NEXT_ROUND_ANNOUNCEMENT_DURATION_MS, () => {
-                          this.roundAnnouncementPopup = null;
-                          this.finishRoundSequence(sequenceToken);
+                              const nextRoundIndex = this.getCurrentRoundIndex() + 1;
+                              this.showRoundAnnouncementPopup(nextRoundIndex);
+
+                              this.enqueueRoundStep(sequenceToken, roundTimeline.nextRoundAnnouncementDurationMs, () => {
+                                this.roundAnnouncementPopup = null;
+                                this.finishRoundSequence(sequenceToken);
+                              });
+                            });
+                          });
                         });
                       });
-                    });
+                    },
                   });
                 });
-              });
+              },
             });
           });
         });
-      });
-    });
+      },
+    );
   }
 
   getOverlayStyle(socketId: string): Record<string, string> {
@@ -828,26 +895,46 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   private applyLatestServerResult(): void {
-    const result = this.gameViewService.lastCombatResult();
-    if (!result) return;
+    const payload = this.getLatestCombatResultPayload();
+    if (!payload || !this.isResultForCurrentDuel(payload.result)) return;
 
-    const isPlayerInvolved =
-      (result.attacker.socketId === this.player.socketId && result.defender.socketId === this.enemy.socketId) ||
-      (result.attacker.socketId === this.enemy.socketId && result.defender.socketId === this.player.socketId);
-    if (!isPlayerInvolved) return;
-
-    const resultKey = this.buildResultKey(result);
+    const resultKey = this.buildResultKey(payload.result, payload.roundIndex, payload.resolvedAtEpochMs);
     if (resultKey === this.lastAppliedResultKey || resultKey === this.pendingRoundResult?.resultKey) return;
 
     if (this.isAnySequenceActivityInProgress()) {
-      this.pendingRoundResult = { result, resultKey };
+      this.pendingRoundResult = { result: payload.result, resultKey, timeline: payload.timeline };
       return;
     }
 
-    this.applyRoundResult(result, resultKey);
+    this.applyRoundResult(payload.result, resultKey, payload.timeline);
   }
 
-  private buildResultKey(result: CombatResult): string {
+  private getLatestCombatResultPayload(): {
+    result: CombatResult;
+    timeline: CombatRoundTimelineData | null;
+    roundIndex?: number;
+    resolvedAtEpochMs?: number;
+  } | null {
+    const roundResolved = this.gameViewService.lastCombatRoundResolved();
+    if (!roundResolved) return null;
+    if (roundResolved.roomId !== this.gameViewService.getCurrentCombatRoomId()) return null;
+
+    return {
+      result: roundResolved.result,
+      timeline: roundResolved.timeline ?? null,
+      roundIndex: roundResolved.roundIndex,
+      resolvedAtEpochMs: roundResolved.resolvedAtEpochMs,
+    };
+  }
+
+  private isResultForCurrentDuel(result: CombatResult): boolean {
+    return (
+      (result.attacker.socketId === this.player.socketId && result.defender.socketId === this.enemy.socketId) ||
+      (result.attacker.socketId === this.enemy.socketId && result.defender.socketId === this.player.socketId)
+    );
+  }
+
+  private buildResultKey(result: CombatResult, roundIndex?: number, resolvedAtEpochMs?: number): string {
     return [
       result.attacker.socketId,
       result.defender.socketId,
@@ -855,6 +942,8 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
       result.defender.lifeAfter,
       result.attacker.damageDealt,
       result.defender.damageDealt,
+      roundIndex ?? 'na',
+      resolvedAtEpochMs ?? 'na',
     ].join(':');
   }
 
@@ -862,10 +951,10 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     if (this.isAnySequenceActivityInProgress() || !this.pendingRoundResult) return;
     const pendingRoundResult = this.pendingRoundResult;
     this.pendingRoundResult = null;
-    this.applyRoundResult(pendingRoundResult.result, pendingRoundResult.resultKey);
+    this.applyRoundResult(pendingRoundResult.result, pendingRoundResult.resultKey, pendingRoundResult.timeline);
   }
 
-  private applyRoundResult(result: CombatResult, resultKey: string): void {
+  private applyRoundResult(result: CombatResult, resultKey: string, timeline: CombatRoundTimelineData | null): void {
     this.lastAppliedResultKey = resultKey;
 
     const localIsAttacker = result.attacker.socketId === this.player.socketId;
@@ -929,7 +1018,14 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     this.isRoundSequenceInProgress = true;
     this.clearRoundSequenceTimeouts();
     const sequenceToken = this.createRoundSequenceToken();
-    this.runRoundResolutionSequence(sequenceToken, computedRoundResult, local.damageDealt, enemy.damageDealt, this.rollCount);
+    this.runRoundResolutionSequence({
+      sequenceToken,
+      roundResult: computedRoundResult,
+      damageDealt: local.damageDealt,
+      damageReceived: enemy.damageDealt,
+      roundIndex: this.rollCount,
+      timeline,
+    });
   }
 
   private showToast(

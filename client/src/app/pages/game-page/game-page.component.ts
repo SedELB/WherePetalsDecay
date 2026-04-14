@@ -63,7 +63,6 @@ export class GamePageComponent implements OnInit {
     protected gameMode = GameMode;
 
     readonly tileNames: Record<string, string> = TILE_NAMES;
-
     readonly itemNames: Record<string, string> = ITEM_NAMES;
 
     showSanctuaryModal = false;
@@ -95,6 +94,7 @@ export class GamePageComponent implements OnInit {
     readonly currentPlayerId = computed(() => this.gameViewService.getLocalSocketId());
     readonly isFlagTaken = computed(() => this.gameViewService.isFlagTaken());
     readonly isCombatStarted = computed(() => this.gameViewService.isCombatStarted());
+    readonly shouldCollapseGameInfo = computed(() => this.isCombatStarted() || Boolean(this.gameViewService.combatLockState()?.isLocked));
     readonly fighters = computed(() => this.gameViewService.fighters());
     readonly combatLockState = computed(() => this.gameViewService.combatLockState());
     readonly isLocalCombatParticipant = computed(() => {
@@ -150,10 +150,7 @@ export class GamePageComponent implements OnInit {
     readonly hasAnyAction = computed(() => checkHasAnyAction(
         this.isMyTurn(), this.actionPoints(), this.attackTargets(), this.requestFlagTargets(), this.giveFlagTargets()));
 
-    constructor(
-        protected readonly gameViewService: GameViewService,
-        private readonly router: Router,
-    ) {
+    constructor(protected readonly gameViewService: GameViewService, private readonly router: Router) {
         effect(() => {
             const activeId = this.activePlayerSocketId();
             const localId = this.gameViewService.getLocalSocketId();

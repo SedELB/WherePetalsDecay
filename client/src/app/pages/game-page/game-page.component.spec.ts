@@ -23,7 +23,6 @@ describe('GamePageComponent', () => {
     const LOCAL_SOCKET = 'local-socket';
     const OTHER_SOCKET = 'other-socket';
 
-
     const DEFAULT_LIFE = 6;
     const BONUS_LIFE = 8;
     const TILE_X = 3;
@@ -143,12 +142,11 @@ describe('GamePageComponent', () => {
         mockGameViewService.combatLockState.set(null);
         mockGameViewService.isCombatStarted.set(false);
         mockGameViewService.fighters.set({ player: {} as Player, enemy: {} as Player, roomId: '' });
-        mockGameViewService.sendMove, mockGameViewService.sendEndTurn,
-        mockGameViewService.sendAbandon, mockGameViewService.sendAbandonWithoutPrompt,
-        mockGameViewService.sendCombat, mockGameViewService.sendTileInfoRequest,
-        mockGameViewService.sendToggleDoor, mockGameViewService.sendUseSanctuary,
-        mockGameViewService.toggleDebugMode, mockGameViewService.teleportMove,
-        mockGameViewService.isHost].forEach((s) => s.calls.reset());
+        [mockGameViewService.getLocalSocketId, mockGameViewService.isHost, mockGameViewService.sendMove, mockGameViewService.sendEndTurn,
+        mockGameViewService.sendAbandon, mockGameViewService.sendAbandonWithoutPrompt, mockGameViewService.sendCombat,
+        mockGameViewService.sendTileInfoRequest, mockGameViewService.sendToggleDoor, mockGameViewService.sendUseSanctuary,
+        mockGameViewService.toggleDebugMode, mockGameViewService.teleportMove, mockGameViewService.setLobby,
+        mockGameViewService.resetGameState].forEach((spy) => spy.calls.reset());
     };
 
     beforeEach(async () => {
