@@ -13,6 +13,13 @@ export class GameTurnSyncService {
         this.refreshPlayerNavigationState(server, lobbyId, socketId);
     }
 
+    syncPlayerTurnStateWithoutAutoEnd(server: Server, lobbyId: string, socketId: string): void {
+        this.emitMovementPoints(server, lobbyId, socketId);
+        this.emitActionPoints(server, lobbyId, socketId);
+        this.emitReachableTiles(server, lobbyId, socketId);
+        this.emitReachableTilesForTeleport(server, lobbyId, socketId);
+    }
+
     refreshPlayerNavigationState(server: Server, lobbyId: string, socketId: string): void {
         this.emitReachableTiles(server, lobbyId, socketId);
         this.emitReachableTilesForTeleport(server, lobbyId, socketId);
