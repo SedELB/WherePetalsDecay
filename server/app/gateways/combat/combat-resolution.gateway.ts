@@ -147,14 +147,18 @@ export class CombatResolutionGateway {
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
         if (activeGame?.isDebugMode) return;
 
+        const player = activeGame?.lobby.players.find((p) => p.socketId === socketId);
+        if (player?.playerType === PlayerType.Virtual) return;
+
         const reachable = this.gameLogicService.getReachableTiles(lobbyId, socketId);
         const adjacent = this.gameLogicService.getAdjacentPlayers(lobbyId, socketId);
         const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
+        const canToggleDoor = this.gameLogicService.canToggleAdjacentDoor(lobbyId, socketId);
 
         const canMove = reachable.length > 0;
         const canFight = adjacent.length > 0 && actionPoints > 0;
 
-        if (!canMove && !canFight) this.gameLogicService.endTurn(lobbyId);
+        if (!canMove && !canFight && !canToggleDoor) this.gameLogicService.endTurn(lobbyId);
     }
 
     private triggerVirtualPlayerTurnIfNeeded(lobbyId: string, playerSocketId: string): void {

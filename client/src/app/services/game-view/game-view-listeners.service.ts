@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
@@ -13,11 +13,10 @@ import {
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Vec2 } from '@common/vec2';
-import { GameViewCombatService, CombatListenerDependencies } from '@app/services/game-view/game-view-combat.service';
-import { GameViewCombatListenersService } from '@app/services/game-view/game-view-combat-listeners.service';
+
+import { GameViewCombatService } from '@app/services/game-view/game-view-combat.service';
 import { GameViewSignals } from '@app/services/game-view/game-view-signals.interface';
 
-const ONE_SECOND_DELAY = 1000;
 
 @Injectable({
     providedIn: 'root',
@@ -26,8 +25,7 @@ export class GameViewListenersService {
     constructor(
         private readonly webSocketService: WebSocketService,
         private readonly router: Router,
-        private readonly gameViewCombatService: GameViewCombatService,
-        private readonly gameViewCombatListenersService: GameViewCombatListenersService,
+        @Inject(GameViewCombatService) private readonly gameViewCombatService: GameViewCombatService,
     ) {}
 
     registerAll(signals: GameViewSignals): void {
@@ -75,6 +73,7 @@ export class GameViewListenersService {
 
     private registerTurnListeners(signals: GameViewSignals, ns: SocketNamespace): void {
         this.webSocketService.onNamespace<string>(ns, JoinGameEvents.TurnStarted, (playerSocketId) => {
+            signals.disableEndTurn.set(false);
             signals.activePlayerSocketId.set(playerSocketId);
             signals.turnNotification.set(null);
         });
@@ -82,11 +81,6 @@ export class GameViewListenersService {
         this.webSocketService.onNamespace<number>(ns, JoinGameEvents.BetweenTurnCountdown, (secondsLeft) => {
             signals.disableEndTurn.set(true);
             signals.turnCountdown.set(secondsLeft);
-            if (secondsLeft <= 1) {
-                setTimeout(() => {
-                    signals.disableEndTurn.set(false);
-                }, ONE_SECOND_DELAY);
-            }
         });
 
         this.webSocketService.onNamespace<number>(ns, JoinGameEvents.TurnCountdown, (secondsLeft) => {
@@ -159,12 +153,17 @@ export class GameViewListenersService {
             ({ giverPlayerId, targetPlayerId }) => {
                 signals.gameLobby.update((lobby) => {
                     if (!lobby) return lobby;
-                    const giver = lobby.players.find((player) => player.socketId === giverPlayerId);
-                    const taker = lobby.players.find((player) => player.socketId === targetPlayerId);
-                    if (!giver || !taker) return lobby;
-                    taker.hasFlag = true;
-                    giver.hasFlag = false;
-                    return { ...lobby };
+                    const hasGiver = lobby.players.some((player) => player.socketId === giverPlayerId);
+                    const hasTaker = lobby.players.some((player) => player.socketId === targetPlayerId);
+                    if (!hasGiver || !hasTaker) return lobby;
+
+                    const updatedPlayers = lobby.players.map((player) => {
+                        if (player.socketId === giverPlayerId) return { ...player, hasFlag: false };
+                        if (player.socketId === targetPlayerId) return { ...player, hasFlag: true };
+                        return player;
+                    });
+
+                    return { ...lobby, players: updatedPlayers };
                 });
             },
         );
@@ -255,27 +254,35 @@ export class GameViewListenersService {
     }
 
     private registerCombatListeners(signals: GameViewSignals, ns: SocketNamespace): void {
-        this.gameViewCombatService.setWebSocketConfig(this.webSocketService, ns);
-        
-        const dependencies: CombatListenerDependencies = {
+        this.gameViewCombatService.setupListeners(this.webSocketService, ns, {
             getLocalSocketId: () => signals.getLocalSocketId(),
             getGameLobby: () => signals.gameLobby(),
-            updateGameLobby: (updater) => signals.gameLobby.update(updater),
-            updatePlayerPositions: (updater) => signals.playerPositions.update(updater),
-            setFlagTaken: (value) => signals.isFlagTaken.set(value),
-        };
-        this.gameViewCombatListenersService.setupListeners(ns, dependencies);
+            updateGameLobby: (updater: (lobby: Lobby | null) => Lobby | null) => signals.gameLobby.update(updater),
+            updatePlayerPositions: (updater: (positions: Record<string, Vec2>) => Record<string, Vec2>) =>
+                signals.playerPositions.update(updater),
+            setFlagTaken: (value: boolean) => signals.isFlagTaken.set(value),
+        });
     }
 
     private applyFlagPickup(signals: GameViewSignals, socketId: string, position: Vec2): void {
         signals.gameLobby.update((lobby) => {
             if (!lobby) return lobby;
-            lobby.game.grid[position.y][position.x].item = null;
+
+            const targetRow = lobby.game.grid[position.y];
+            if (!targetRow || !targetRow[position.x]) return lobby;
+
+            const updatedGrid = lobby.game.grid.map((row, y) =>
+                y === position.y
+                    ? row.map((tile, x) => (x === position.x ? { ...tile, item: null } : tile))
+                    : row,
+            );
+
             const updatedPlayers = lobby.players.map((player) => {
                 if (player.socketId === socketId) return { ...player, hasFlag: true };
                 return player;
             });
-            return { ...lobby, players: updatedPlayers };
+
+            return { ...lobby, game: { ...lobby.game, grid: updatedGrid }, players: updatedPlayers };
         });
         signals.isFlagTaken.set(true);
     }

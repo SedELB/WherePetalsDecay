@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { Direction, DIRECTION_OFFSETS } from '@common/direction';
 import { TileItem, TileTexture } from '@common/enums';
 import { Game } from '@common/game';
@@ -87,37 +86,12 @@ export class MovementService {
         bestCost.set(this.posKey(startPos), 0);
 
         while (queue.length > 0) {
-            let minIndex = 0;
-            for (let i = 1; i < queue.length; i++) {
-                if (queue[i].cost < queue[minIndex].cost) minIndex = i;
-            }
-            const current = queue.splice(minIndex, 1)[0];
+            const current = this.popLowestCostEntry(queue);
 
             const currentKey = this.posKey(current.pos);
             if (current.cost > bestCost.get(currentKey)) continue;
 
-            for (const offset of Object.values(DIRECTION_OFFSETS)) {
-                const nextPos: Vec2 = { x: current.pos.x + offset.x, y: current.pos.y + offset.y };
-
-                if (!this.isWithinBounds(game.lobby.game, nextPos)) continue;
-
-                if (this.isTileOccupied(game, nextPos)) continue;
-
-                const tile = game.lobby.game.grid[nextPos.y][nextPos.x];
-                const tileCost = TILE_COSTS[tile.type];
-                if (tileCost === Infinity) continue;
-                if (this.isSanctuaryTile(game, nextPos)) continue;
-
-                const totalCost = current.cost + tileCost;
-                if (totalCost > remaining) continue;
-
-                const key = this.posKey(nextPos);
-                const previousCost = bestCost.get(key);
-                if (previousCost !== undefined && previousCost <= totalCost) continue;
-
-                bestCost.set(key, totalCost);
-                queue.push({ pos: nextPos, cost: totalCost });
-            }
+            this.enqueueReachableNeighbors(game, current, remaining, bestCost, queue);
         }
 
         bestCost.delete(this.posKey(startPos));
@@ -135,6 +109,56 @@ export class MovementService {
 
     getMovementPoints(game: ActiveGame, socketId: string): number {
         return game.movementPoints.get(socketId) ?? 0;
+    }
+
+    private popLowestCostEntry(queue: { pos: Vec2; cost: number }[]): { pos: Vec2; cost: number } {
+        let minIndex = 0;
+        for (let i = 1; i < queue.length; i++) {
+            if (queue[i].cost < queue[minIndex].cost) minIndex = i;
+        }
+        return queue.splice(minIndex, 1)[0];
+    }
+
+    private enqueueReachableNeighbors(
+        game: ActiveGame,
+        current: { pos: Vec2; cost: number },
+        remaining: number,
+        bestCost: Map<string, number>,
+        queue: { pos: Vec2; cost: number }[],
+    ): void {
+        for (const offset of Object.values(DIRECTION_OFFSETS)) {
+            const nextPos: Vec2 = { x: current.pos.x + offset.x, y: current.pos.y + offset.y };
+            this.tryQueueReachableTile({ game, nextPos, currentCost: current.cost, remaining, bestCost, queue });
+        }
+    }
+
+    private tryQueueReachableTile(params: {
+        game: ActiveGame;
+        nextPos: Vec2;
+        currentCost: number;
+        remaining: number;
+        bestCost: Map<string, number>;
+        queue: { pos: Vec2; cost: number }[];
+    }): void {
+        const { game, nextPos, currentCost, remaining, bestCost, queue } = params;
+
+        if (!this.isWithinBounds(game.lobby.game, nextPos)) return;
+        if (this.isTileOccupied(game, nextPos)) return;
+
+        const tile = game.lobby.game.grid[nextPos.y][nextPos.x];
+        const tileCost = TILE_COSTS[tile.type];
+        if (tileCost === Infinity) return;
+        if (this.isSanctuaryTile(game, nextPos)) return;
+
+        const totalCost = currentCost + tileCost;
+        if (totalCost > remaining) return;
+
+        const key = this.posKey(nextPos);
+        const previousCost = bestCost.get(key);
+        if (previousCost !== undefined && previousCost <= totalCost) return;
+
+        bestCost.set(key, totalCost);
+        queue.push({ pos: nextPos, cost: totalCost });
     }
 
     private isSanctuaryTile(game: ActiveGame, pos: Vec2): boolean {
@@ -184,7 +208,7 @@ export class MovementService {
     private trackTileVisit(game: ActiveGame, socketId: string, pos: Vec2, tileType: TileTexture, tileItem: TileItem | null): void {
         const key = this.posKey(pos);
         // TODO : open door
-        const isTerrainTile = 
+        const isTerrainTile =
             tileType === TileTexture.Floor || tileType === TileTexture.Water || tileType === TileTexture.Ice || tileType === TileTexture.DoorOpened;
         if (isTerrainTile) {
             if (!game.visitedTilesPerPlayer.has(socketId)) {
