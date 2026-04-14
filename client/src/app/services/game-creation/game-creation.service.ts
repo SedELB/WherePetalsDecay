@@ -5,7 +5,7 @@ import { SocketNamespace } from '@common/enums';
 import { Game } from '@common/game';
 import { GameCreationEvents } from '@common/socket-events/games.gateway.events';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { environment } from 'src/environments/environment';
+import { environment } from '@src/environments/environment';
 
 @Injectable({
     providedIn: 'root',

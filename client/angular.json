@@ -37,11 +37,6 @@
             "styles": [
               "src/styles.scss"
             ],
-            "stylePreprocessorOptions": {
-              "includePaths": [
-                "."
-              ]
-            },
             "scripts": [],
             "browser": "src/main.ts"
           },
@@ -111,11 +106,6 @@
             "styles": [
               "src/styles.scss"
             ],
-            "stylePreprocessorOptions": {
-              "includePaths": [
-                "."
-              ]
-            },
             "scripts": [],
             "codeCoverageExclude": [
               "src/environments/**/*.ts",
