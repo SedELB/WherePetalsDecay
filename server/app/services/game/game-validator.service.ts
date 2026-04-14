@@ -17,7 +17,7 @@ import {
     NAME_FIELD_TOO_LONG,
     NO_TERRAIN_TILES,
     SPAWN_POINTS_NOT_PLACED,
-    UNREACHABLE_TILES
+    UNREACHABLE_TILES,
 } from '@common/error-messages';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
