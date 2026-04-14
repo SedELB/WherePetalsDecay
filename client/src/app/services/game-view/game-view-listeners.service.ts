@@ -156,12 +156,17 @@ export class GameViewListenersService {
             ({ giverPlayerId, targetPlayerId }) => {
                 signals.gameLobby.update((lobby) => {
                     if (!lobby) return lobby;
-                    const giver = lobby.players.find((player) => player.socketId === giverPlayerId);
-                    const taker = lobby.players.find((player) => player.socketId === targetPlayerId);
-                    if (!giver || !taker) return lobby;
-                    taker.hasFlag = true;
-                    giver.hasFlag = false;
-                    return { ...lobby };
+                    const hasGiver = lobby.players.some((player) => player.socketId === giverPlayerId);
+                    const hasTaker = lobby.players.some((player) => player.socketId === targetPlayerId);
+                    if (!hasGiver || !hasTaker) return lobby;
+
+                    const updatedPlayers = lobby.players.map((player) => {
+                        if (player.socketId === giverPlayerId) return { ...player, hasFlag: false };
+                        if (player.socketId === targetPlayerId) return { ...player, hasFlag: true };
+                        return player;
+                    });
+
+                    return { ...lobby, players: updatedPlayers };
                 });
             },
         );
@@ -264,12 +269,22 @@ export class GameViewListenersService {
     private applyFlagPickup(signals: GameViewSignals, socketId: string, position: Vec2): void {
         signals.gameLobby.update((lobby) => {
             if (!lobby) return lobby;
-            lobby.game.grid[position.y][position.x].item = null;
+
+            const targetRow = lobby.game.grid[position.y];
+            if (!targetRow || !targetRow[position.x]) return lobby;
+
+            const updatedGrid = lobby.game.grid.map((row, y) =>
+                y === position.y
+                    ? row.map((tile, x) => (x === position.x ? { ...tile, item: null } : tile))
+                    : row,
+            );
+
             const updatedPlayers = lobby.players.map((player) => {
                 if (player.socketId === socketId) return { ...player, hasFlag: true };
                 return player;
             });
-            return { ...lobby, players: updatedPlayers };
+
+            return { ...lobby, game: { ...lobby.game, grid: updatedGrid }, players: updatedPlayers };
         });
         signals.isFlagTaken.set(true);
     }

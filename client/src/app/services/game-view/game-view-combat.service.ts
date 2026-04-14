@@ -120,7 +120,7 @@ export class GameViewCombatService {
                         ...player,
                         winsCount: player.winsCount + (data.winnerId === data.attacker.socketId ? 1 : 0),
                         lossCount: player.lossCount + (data.attacker.killed ? 1 : 0),
-                        combatCount: player.combatCount++,
+                        combatCount: player.combatCount + 1,
                         totalHpDealt: player.totalHpDealt + data.attacker.damageDealt,
                         totalHpLost: player.totalHpLost + data.defender.damageDealt,
                         character: {
@@ -177,7 +177,17 @@ export class GameViewCombatService {
         dependencies.updateGameLobby((lobby) => {
             if (!lobby) return lobby;
 
-            lobby.game.grid[droppedFlagPosition.y][droppedFlagPosition.x].item = TileItem.Flag;
+            const targetRow = lobby.game.grid[droppedFlagPosition.y];
+            if (!targetRow || !targetRow[droppedFlagPosition.x]) return lobby;
+
+            const updatedGrid = lobby.game.grid.map((row, rowIndex) =>
+                rowIndex === droppedFlagPosition.y
+                    ? row.map((tile, colIndex) =>
+                        colIndex === droppedFlagPosition.x ? { ...tile, item: TileItem.Flag } : tile,
+                    )
+                    : row,
+            );
+
             const updatedPlayers = lobby.players.map((player) => {
                 if (player.socketId === data.attacker.socketId || player.socketId === data.defender.socketId) {
                     return { ...player, hasFlag: false };
@@ -185,7 +195,7 @@ export class GameViewCombatService {
                 return player;
             });
 
-            return { ...lobby, players: updatedPlayers };
+            return { ...lobby, game: { ...lobby.game, grid: updatedGrid }, players: updatedPlayers };
         });
 
         dependencies.setFlagTaken(false);
