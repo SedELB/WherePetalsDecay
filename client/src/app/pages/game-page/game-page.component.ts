@@ -145,10 +145,16 @@ export class GamePageComponent implements OnInit {
         this.localPlayer(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()));
     readonly giveFlagTargets = computed((): Vec2[] => getGiveFlagTargets(
         this.localPlayer(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()));
-    readonly actionHighlightTiles = computed((): ActionTileHighlight[] => getActionHighlightTiles(
-        this.isSubMenuOpen(), this.activeSubAction(), this.attackTargets(), this.requestFlagTargets(), this.giveFlagTargets()));
-    readonly hasAnyAction = computed(() => checkHasAnyAction(
-        this.isMyTurn(), this.actionPoints(), this.attackTargets(), this.requestFlagTargets(), this.giveFlagTargets()));
+    readonly actionHighlightTiles = computed((): ActionTileHighlight[] =>
+        getActionHighlightTiles({
+            isSubMenuOpen: this.isSubMenuOpen(), activeSubAction: this.activeSubAction(), attackTargets: this.attackTargets(),
+            requestFlagTargets: this.requestFlagTargets(), giveFlagTargets: this.giveFlagTargets(), adjacentDoorTiles: [], sanctuaryTargets: [],
+        }));
+    readonly hasAnyAction = computed(() =>
+        checkHasAnyAction({
+            isMyTurn: this.isMyTurn(), actionPoints: this.actionPoints(), attackTargets: this.attackTargets(),
+            requestFlagTargets: this.requestFlagTargets(), giveFlagTargets: this.giveFlagTargets(), adjacentDoorTiles: [], sanctuaryTargets: [],
+        }));
 
     constructor(protected readonly gameViewService: GameViewService, private readonly router: Router) {
         effect(() => {
@@ -165,7 +171,6 @@ export class GamePageComponent implements OnInit {
     ngOnInit(): void {
         if (!this.lobby()) this.router.navigate([this.routes.home]);
     }
-
     @HostListener('window:keyup', ['$event'])
     onKeyUp(event: KeyboardEvent): void {
         const lobbyId = this.lobby()?.lobbyId;
@@ -189,7 +194,6 @@ export class GamePageComponent implements OnInit {
     onChatFocusChange(focused: boolean): void {
         this.isChatFocused = focused;
     }
-
     @HostListener('window:beforeunload')
     onBeforeUnload(): void {
         const lobbyId = this.lobby()?.lobbyId;
@@ -202,7 +206,6 @@ export class GamePageComponent implements OnInit {
         if (this.showCombatInProgressModal()) return true;
         return !(this.isMyTurn() || (this.isDebugModeActive() && this.gameViewService.isHost()));
     }
-
     onEndTurn(): void {
         const lobbyId = this.lobby()?.lobbyId;
         if (!lobbyId) return;
@@ -211,10 +214,9 @@ export class GamePageComponent implements OnInit {
     }
 
     onAbandon(): void {
-        const errorMessage = 'Êtes-vous sûr de vouloir abandonner la partie ? Vous ne pourrez pas revenir dans cette partie si vous quittez.';
         swal.fire({
             title: 'Quitter ?',
-            text: errorMessage,
+            text: 'Êtes-vous sûr de vouloir abandonner la partie ? Vous ne pourrez pas revenir dans cette partie si vous quittez.',
             icon: 'warning',
             confirmButtonText: 'Abandonner',
             cancelButtonText: 'Annuler',
@@ -233,8 +235,7 @@ export class GamePageComponent implements OnInit {
     }
 
     selectSubAction(type: ActionHighlightType): void {
-        const current = this.activeSubAction();
-        this.activeSubAction.set(current === type ? null : type);
+        this.activeSubAction.set(this.activeSubAction() === type ? null : type);
     }
 
     onTileClick(x: number, y: number): void {
@@ -294,16 +295,13 @@ export class GamePageComponent implements OnInit {
         if (!lobbyId || !this.pendingSanctuaryPosition) return;
         this.gameViewService.sendUseSanctuary(lobbyId, this.pendingSanctuaryPosition, mode);
         this.showSanctuaryModal = false;
-        this.pendingSanctuaryPosition = null;
-        this.pendingSanctuaryType = null;
+        this.pendingSanctuaryPosition = this.pendingSanctuaryType = null;
     }
 
     onCancelSanctuary(): void {
         this.showSanctuaryModal = false;
-        this.pendingSanctuaryPosition = null;
-        this.pendingSanctuaryType = null;
+        this.pendingSanctuaryPosition = this.pendingSanctuaryType = null;
     }
-
     getSanctuaryLabel(): string {
         return this.pendingSanctuaryType === TileItem.HealingSanctuary ? 'Soin (+2 PV)' : 'Combat (+1 ATK / +1 DEF)';
     }

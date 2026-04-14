@@ -23,7 +23,7 @@ export class MapSetupService {
     constructor(private readonly tileItemCountService: TileItemCountService) {}
 
     initializeGridIfEmpty(game: Game): void {
-        if (!game.grid || game.grid.length === 0 || game.grid.length !== game.size.rows || game.grid[0]?.length !== game.size.cols) {
+        if (!game.grid?.length || game.grid.length !== game.size.rows || game.grid[0]?.length !== game.size.cols) {
             game.grid = Array.from({ length: game.size.rows }, () =>
                 Array.from({ length: game.size.cols }, (): Tile => ({ type: TileTexture.Floor, item: null })),
             );
@@ -32,7 +32,7 @@ export class MapSetupService {
 
 
     private applyTile(params: TileParams): void {
-        const { game, rowIndex, colIndex, tileAttribute, event, counts } = params;
+        const { game, rowIndex, colIndex, tileAttribute, counts } = params;
         const currentTile = game.grid[rowIndex]?.[colIndex];
 
         if (Object.values(TileItem).includes(tileAttribute as TileItem)) {
@@ -51,24 +51,20 @@ export class MapSetupService {
                 this.tileItemCountService.decreaseTileItemCount(counts, item);
             }
         } else {
-            if ([TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed].includes(tileAttribute as TileTexture) && currentTile.item) {
-                this.deleteTile({ game, rowIndex, colIndex, tileAttribute, event, counts });
+            const texture = tileAttribute as TileTexture;
+            this.removeBlockingItemIfNeeded(game, rowIndex, colIndex, texture, counts);
 
-            }
-            if (tileAttribute === TileTexture.DoorClosed || tileAttribute === TileTexture.DoorOpened) {
+            if (texture === TileTexture.DoorClosed || texture === TileTexture.DoorOpened) {
                 currentTile.type = inverseDoor(currentTile.type);
-                return;
+            } else {
+                currentTile.type = texture;
             }
-            if (currentTile.type !== tileAttribute) currentTile.type = tileAttribute as TileTexture;
         }
     }
 
-
     private placeSanctuary(game: Game, rowIndex: number, colIndex: number, item: TileItem, counts: TileItemCounts): void {
-        game.grid[rowIndex][colIndex].item = item;
-        game.grid[rowIndex][colIndex + 1].item = item;
-        game.grid[rowIndex + 1][colIndex].item = item;
-        game.grid[rowIndex + 1][colIndex + 1].item = item;
+        game.grid[rowIndex][colIndex].item = game.grid[rowIndex][colIndex + 1].item = item;
+        game.grid[rowIndex + 1][colIndex].item = game.grid[rowIndex + 1][colIndex + 1].item = item;
         this.tileItemCountService.decreaseTileItemCount(counts, item);
     }
 
@@ -86,7 +82,9 @@ export class MapSetupService {
         const currentTile = game.grid[rowIndex]?.[colIndex];
         const currItem = currentTile.item;
 
-        if (currItem && isSanctuary(currItem) && event.shiftKey) {
+        const overwritingWithWall = [TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed].includes(tileAttribute as TileTexture);
+
+        if (currItem && isSanctuary(currItem) && (event.shiftKey || overwritingWithWall)) {
             this.deleteSanctuary(game, rowIndex, colIndex, currItem, counts);
             return;
         }
@@ -95,20 +93,26 @@ export class MapSetupService {
         if (currItem && event.shiftKey) {
             currentTile.item = null;
             this.tileItemCountService.increaseTileItemCount(counts, currItem);
-        } else if (!event.shiftKey && currentTile.type !== TileTexture.Floor) {
+        } else if (!event.shiftKey && currentTile.type !== TileTexture.Floor && !overwritingWithWall) {
             currentTile.type = TileTexture.Floor;
         }
-        if ([TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed].includes(tileAttribute as TileTexture) && currItem) {
+
+        if (overwritingWithWall && currItem && !isSanctuary(currItem)) {
             currentTile.item = null;
             this.tileItemCountService.increaseTileItemCount(counts, currItem);
         }
     }
 
-    private removeBlockingItemIfNeeded(gameTile: Tile, activeTileTexture: TileTexture, counts: TileItemCounts): void {
+    private removeBlockingItemIfNeeded(game: Game, cellY: number, cellX: number, activeTileTexture: TileTexture, counts: TileItemCounts): void {
+        const gameTile = game.grid[cellY][cellX];
         if ([TileTexture.Wall, TileTexture.DoorOpened, TileTexture.DoorClosed].includes(activeTileTexture) && gameTile.item) {
             const removedItem = gameTile.item;
-            gameTile.item = null;
-            this.tileItemCountService.increaseTileItemCount(counts, removedItem);
+            if (isSanctuary(removedItem)) {
+                this.deleteSanctuary(game, cellY, cellX, removedItem, counts);
+            } else {
+                gameTile.item = null;
+                this.tileItemCountService.increaseTileItemCount(counts, removedItem);
+            }
         }
     }
 
@@ -227,7 +231,7 @@ export class MapSetupService {
             if (!gameTile) continue;
 
             if (activeTileTexture) {
-                this.removeBlockingItemIfNeeded(gameTile, activeTileTexture, counts);
+                this.removeBlockingItemIfNeeded(game, cell.y, cell.x, activeTileTexture, counts);
                 try {
                     this.applyTile({ game, rowIndex: cell.y, colIndex: cell.x, tileAttribute: activeTileTexture, event, counts });
                 } catch {
@@ -293,7 +297,7 @@ export class MapSetupService {
     }
 
     private extractPlacedObjects(game: Game): PlacedObject[] {
-        const placedObjects: PlacedObject[] = [];
+        const placed: PlacedObject[] = [];
         game.grid.forEach((row, y) => {
             row.forEach((tile, x) => {
                 if (!tile.item) return;
@@ -301,14 +305,14 @@ export class MapSetupService {
                     const aboveHasSame = game.grid[y - 1]?.[x]?.item === tile.item;
                     const leftHasSame = game.grid[y]?.[x - 1]?.item === tile.item;
                     if (!aboveHasSame && !leftHasSame) {
-                        placedObjects.push({ type: tile.item, position: { x, y } });
+                        placed.push({ type: tile.item, position: { x, y } });
                     }
                 } else {
-                    placedObjects.push({ type: tile.item, position: { x, y } });
+                    placed.push({ type: tile.item, position: { x, y } });
                 }
             });
         });
-        return placedObjects;
+        return placed;
     }
 
     buildValidationPayload(game: Game): GameDraftForValidation {

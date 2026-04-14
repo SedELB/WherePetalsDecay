@@ -37,4 +37,5 @@ export interface GameViewSignals {
     closeFlagTransferSwalIfOpen(): void;
     promptFlagTransfer(requesterId: string, requesterName: string, lobbyId: string, isRequest?: boolean): void;
     expandSanctuaryPositions(topLeftList: Vec2[]): Vec2[];
+    triggerDoorAnimation(x: number, y: number, newType: import('@common/enums').TileTexture): void;
 }
