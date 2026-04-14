@@ -189,22 +189,21 @@ describe('GamePageComponent', () => {
     });
 
     describe('isMyTurn', () => {
-        /** Confirms the turn indicator activates dynamically when the local player's socket ID matches the currently active player's ID. */
         it('should be true when the active player is me', () => {
             mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
-            expect(component.isMyTurn()).toBe(true);
+            expect(component.gamePageSignalService.isMyTurn()).toBe(true);
         });
 
         /** Ensures the local player's turn indicator remains deactivated while an opponent is currently taking their turn. */
         it('should be false when it is someone else turn', () => {
             mockGameViewService.activePlayerSocketId.set(OTHER_SOCKET);
-            expect(component.isMyTurn()).toBe(false);
+            expect(component.gamePageSignalService.isMyTurn()).toBe(false);
         });
 
         /** Verifies that no player is flagged as active during the brief transitional delay between two separate turns. */
         it('should be false between turns (no active player)', () => {
             mockGameViewService.activePlayerSocketId.set(null);
-            expect(component.isMyTurn()).toBe(false);
+            expect(component.gamePageSignalService.isMyTurn()).toBe(false);
         });
     });
 
@@ -212,12 +211,12 @@ describe('GamePageComponent', () => {
         /** Successfully isolates and retrieves the local player's specific character data from the general lobby player list. */
         it('should find the player matching our socket ID', () => {
             mockGameViewService.gameLobby.set(createLobby());
-            expect(component.localPlayer()?.socketId).toBe(LOCAL_SOCKET);
+            expect(component.gamePageSignalService.localPlayer()?.socketId).toBe(LOCAL_SOCKET);
         });
 
         /** Gracefully handles the absence of lobby data by returning undefined rather than throwing a read error. */
         it('should be undefined when the lobby is not set', () => {
-            expect(component.localPlayer()).toBeUndefined();
+            expect(component.gamePageSignalService.localPlayer()).toBeUndefined();
         });
     });
 
@@ -225,7 +224,7 @@ describe('GamePageComponent', () => {
         /** Validates that standard player characters accurately reflect the default maximum health pool. */
         it('should be DEFAULT_LIFE for a regular player (no life bonus)', () => {
             mockGameViewService.gameLobby.set(createLobby());
-            expect(component.maxLife()).toBe(DEFAULT_LIFE);
+            expect(component.gamePageSignalService.maxLife()).toBe(DEFAULT_LIFE);
         });
 
         /** Ensures that players who selected the specific life bonus trait during character creation correctly receive a higher maximum health pool. */
@@ -243,7 +242,7 @@ describe('GamePageComponent', () => {
                 ],
             });
             mockGameViewService.gameLobby.set(lobby);
-            expect(component.maxLife()).toBe(BONUS_LIFE);
+            expect(component.gamePageSignalService.maxLife()).toBe(BONUS_LIFE);
         });
     });
 
@@ -252,7 +251,7 @@ describe('GamePageComponent', () => {
         it('should return players in the turn order', () => {
             mockGameViewService.gameLobby.set(createLobby());
             mockGameViewService.turnOrder.set([OTHER_SOCKET, LOCAL_SOCKET]);
-            expect(component.orderedPlayers()[0].socketId).toBe(OTHER_SOCKET);
+            expect(component.gamePageSignalService.orderedPlayers()[0].socketId).toBe(OTHER_SOCKET);
         });
 
         /** Verifies that the UI list dynamically rotates so that the player whose turn it currently is always appears at the top of the display. */
@@ -260,7 +259,7 @@ describe('GamePageComponent', () => {
             mockGameViewService.gameLobby.set(createLobby());
             mockGameViewService.turnOrder.set([LOCAL_SOCKET, OTHER_SOCKET]);
             mockGameViewService.activePlayerSocketId.set(OTHER_SOCKET);
-            expect(component.orderedPlayers()[0].socketId).toBe(OTHER_SOCKET);
+            expect(component.gamePageSignalService.orderedPlayers()[0].socketId).toBe(OTHER_SOCKET);
         });
     });
 
@@ -270,8 +269,8 @@ describe('GamePageComponent', () => {
             mockGameViewService.gameLobby.set(createLobby());
             mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
             mockGameViewService.playerPositions.set({ [LOCAL_SOCKET]: { x: 2, y: 2 }, [OTHER_SOCKET]: { x: 3, y: 2 } });
-            expect(component.adjacentPlayers().length).toBe(1);
-            expect(component.adjacentPlayers()[0].socketId).toBe(OTHER_SOCKET);
+            expect(component.gamePageSignalService.adjacentPlayers().length).toBe(1);
+            expect(component.gamePageSignalService.adjacentPlayers()[0].socketId).toBe(OTHER_SOCKET);
         });
 
         /** Prevents initiating out-of-sequence combat actions by returning an empty list of targets if it is not the local player's turn. */
@@ -279,7 +278,7 @@ describe('GamePageComponent', () => {
             mockGameViewService.gameLobby.set(createLobby());
             mockGameViewService.activePlayerSocketId.set(OTHER_SOCKET);
             mockGameViewService.playerPositions.set({ [LOCAL_SOCKET]: { x: 2, y: 2 }, [OTHER_SOCKET]: { x: 3, y: 2 } });
-            expect(component.adjacentPlayers()).toEqual([]);
+            expect(component.gamePageSignalService.adjacentPlayers()).toEqual([]);
         });
 
         /** Strictly enforces grid combat rules by completely ignoring opponents placed on diagonal tiles. */
@@ -287,7 +286,7 @@ describe('GamePageComponent', () => {
             mockGameViewService.gameLobby.set(createLobby());
             mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
             mockGameViewService.playerPositions.set({ [LOCAL_SOCKET]: { x: 2, y: 2 }, [OTHER_SOCKET]: { x: 3, y: 3 } });
-            expect(component.adjacentPlayers()).toEqual([]);
+            expect(component.gamePageSignalService.adjacentPlayers()).toEqual([]);
         });
 
         /** Ensures that players who have already quit the session are completely ignored and cannot be targeted for combat. */
@@ -298,7 +297,7 @@ describe('GamePageComponent', () => {
             mockGameViewService.gameLobby.set(lobby);
             mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
             mockGameViewService.playerPositions.set({ [LOCAL_SOCKET]: { x: 2, y: 2 }, [OTHER_SOCKET]: { x: 3, y: 2 } });
-            expect(component.adjacentPlayers()).toEqual([]);
+            expect(component.gamePageSignalService.adjacentPlayers()).toEqual([]);
         });
     });
 
@@ -347,8 +346,8 @@ describe('GamePageComponent', () => {
                 [OTHER_SOCKET]: { x: 1, y: 0 },
             });
             mockGameViewService.actionPoints.set(1);
-            component.isSubMenuOpen.set(true);
-            component.activeSubAction.set('attack');
+            component.gamePageSignalService.isSubMenuOpen.set(true);
+            component.gamePageSignalService.activeSubAction.set('attack');
             spyOn(component, 'isOnIce').and.returnValue(0);
             component.onTileClick(1, 0);
             expect(mockGameViewService.sendCombat).toHaveBeenCalledWith(
