@@ -10,7 +10,7 @@ import { GameViewService } from '@app/services/game-view/game-view.service';
 import { GameMode, PlayerType } from '@common/enums';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
-import { GamePageComponent } from './game-page.component';
+import { GamePageComponent } from '@app/pages/game-page/game-page.component';
 
 @Component({ template: '', standalone: true })
 class DummyComponent {}
