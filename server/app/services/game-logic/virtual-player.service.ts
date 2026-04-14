@@ -1,7 +1,9 @@
+/* eslint-disable max-lines */
 import { Posture } from '@common/character';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { GameMode, TileItem, VirtualPlayerProfile } from '@common/enums';
 import { Player } from '@common/player';
+import { SanctuaryType } from '@common/tile';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
@@ -14,6 +16,7 @@ import { VirtualPlayerScannerService } from './virtual-player-scanner.service';
 const VP_MIN_ACTION_DELAY_MS = 1000;
 const VP_EXTRA_ACTION_DELAY_MS = 2000;
 const VP_STEP_DELAY_MS = 300;
+const HEALING_SANCTUARY_MIN_MISSING_HP = 2;
 
 const AGGRESSIVE_POSTURE: Posture = { type: 'atk', bonus: 2 };
 const DEFENSIVE_POSTURE: Posture = { type: 'def', bonus: 2 };
@@ -79,6 +82,13 @@ export class VirtualPlayerService {
     // Classic mode
 
     private runClassicTurn(context: TurnContext, currentPos: Vec2): void {
+        if (this.tryUseSanctuaryAtCurrentPosition(context, TileItem.HealingSanctuary)) {
+            this.continueTurnAfterSanctuary(context);
+            return;
+        }
+
+        if (this.tryMoveAndUseSanctuary(context, currentPos, TileItem.HealingSanctuary)) return;
+
         if (context.virtualPlayer.virtualProfile === VirtualPlayerProfile.Aggressive) {
             this.runAggressiveClassicTurn(context, currentPos);
         } else {
@@ -110,7 +120,9 @@ export class VirtualPlayerService {
 
     private runAggressivePostCombatMovement(context: TurnContext, currentPos: Vec2): void {
         const { game, virtualPlayer, lobbyId } = context;
-        const sanctuaryBorderTile = this.scanner.findNearestTileAdjacentToHealingSanctuary(game, virtualPlayer, currentPos);
+        const sanctuaryBorderTile = this.scanner.findNearestTileAdjacentToSanctuary(game, virtualPlayer, currentPos, {
+            sanctuaryType: TileItem.HealingSanctuary,
+        });
         if (sanctuaryBorderTile) {
             this.moveTowardThenAct(context, currentPos, sanctuaryBorderTile, () => this.endVirtualPlayerTurn(lobbyId));
             return;
@@ -136,10 +148,7 @@ export class VirtualPlayerService {
                 ? this.findHealingSanctuaryBorderOnRetreatPath(context, currentPos, fleeTarget) ?? fleeTarget
                 : fleeTarget;
 
-            this.moveTowardThenAct(context, currentPos, retreatTarget, () => {
-                this.tryAttackAdjacentEnemy(context); // TODO : can defensive atk someone ?
-                this.endVirtualPlayerTurn(lobbyId);
-            });
+            this.moveTowardThenAct(context, currentPos, retreatTarget, () => this.endVirtualPlayerTurn(lobbyId));
             return;
         }
 
@@ -157,12 +166,83 @@ export class VirtualPlayerService {
         if (!fleePath) return null;
 
         for (const pathStep of fleePath) {
-            if (this.scanner.isTileAdjacentToHealingSanctuary(game, pathStep)) {
+            if (this.scanner.isTileAdjacentToSanctuary(game, pathStep, TileItem.HealingSanctuary)) {
                 return pathStep;
             }
         }
 
         return null;
+    }
+
+    private tryUseSanctuaryAtCurrentPosition(context: TurnContext, sanctuaryType: SanctuaryType): boolean {
+        const { game, virtualPlayer, lobbyId } = context;
+        const isInjured = virtualPlayer.character.life <= this.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
+        if (!isInjured) return false;
+
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
+        if (actionPoints <= 0) return false;
+
+        const currentPos = game.playerPositions.get(virtualPlayer.socketId);
+        if (!currentPos) return false;
+
+        const sanctuaryPos = this.findAdjacentSanctuaryPosition(game, currentPos, sanctuaryType);
+        if (!sanctuaryPos) return false;
+
+        const useResult = this.gameLogicService.useSanctuary(lobbyId, virtualPlayer.socketId, sanctuaryPos, 'normal');
+        return Boolean(useResult);
+    }
+
+    private tryMoveAndUseSanctuary(context: TurnContext, currentPos: Vec2, sanctuaryType: SanctuaryType): boolean {
+        const { game, virtualPlayer } = context;
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
+        if (actionPoints <= 0) return false;
+
+        const isInjured = virtualPlayer.character.life <= this.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
+        if (!isInjured) return false;
+
+        const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, currentPos);
+
+        // TODO: check later if we can delete this
+        // if (!this.scanner.findNearestReachableSanctuary(game, virtualPlayer, currentPos, [sanctuaryType], costToPosition)) return false;
+
+        const border = this.scanner.findNearestTileAdjacentToSanctuary(game, virtualPlayer, currentPos, {
+            sanctuaryType,
+            reachableThisTurn: true,
+            precomputedCostToPosition: costToPosition,
+        });
+        if (!border) return false;
+
+        this.moveTowardThenAct(context, currentPos, border, () => {
+            this.tryUseSanctuaryAtCurrentPosition(context, sanctuaryType);
+            this.continueTurnAfterSanctuary(context);
+        });
+        return true;
+    }
+
+    private findAdjacentSanctuaryPosition(game: ActiveGame, currentPos: Vec2, sanctuaryType: SanctuaryType): Vec2 | null {
+        const candidatesPos: Vec2[] = [
+            { x: currentPos.x, y: currentPos.y - 1 },
+            { x: currentPos.x - 1, y: currentPos.y },
+            { x: currentPos.x, y: currentPos.y + 1 },
+            { x: currentPos.x + 1, y: currentPos.y },
+        ];
+
+        for (const pos of candidatesPos) {
+            const tile = game.lobby.game.grid[pos.y]?.[pos.x];
+            if (tile?.item === sanctuaryType) return pos;
+        }
+
+        return null;
+    }
+
+    private continueTurnAfterSanctuary(context: TurnContext): void {
+        const remainingMovement = context.game.movementPoints.get(context.virtualPlayer.socketId) ?? 0;
+        if (remainingMovement <= 0) {
+            this.endVirtualPlayerTurn(context.lobbyId);
+            return;
+        }
+
+        setTimeout(() => this.runDecisionCycle(context), VP_STEP_DELAY_MS);
     }
 
     // --------
