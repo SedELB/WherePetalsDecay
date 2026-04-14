@@ -1,11 +1,10 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { ButtonComponent } from '@app/components/button/button.component';
 import { TileItem } from '@common/enums';
 
 @Component({
     selector: 'app-sanctuary-modal',
     standalone: true,
-    imports: [ButtonComponent],
+    imports: [],
     templateUrl: './sanctuary-modal.component.html',
     styleUrl: './sanctuary-modal.component.scss',
 })

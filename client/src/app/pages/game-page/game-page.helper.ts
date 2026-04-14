@@ -1,7 +1,9 @@
 import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
 import { DIRECTION_OFFSETS } from '@common/direction';
+import { TileItem } from '@common/enums';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
+import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
 
 const TEN = 10;
@@ -177,18 +179,39 @@ export function getAdjacentPlayers(
     });
 }
 
+export function getSanctuaryTargets(
+    localId: string | undefined,
+    positions: Record<string, Vec2>,
+    grid: Tile[][],
+    inactiveSanctuaries: Vec2[],
+): Vec2[] {
+    if (!localId) return [];
+    const myPos = positions[localId];
+    if (!myPos) return [];
+    const adjacent = Object.values(DIRECTION_OFFSETS).map((offset) => ({ x: myPos.x + offset.x, y: myPos.y + offset.y }));
+    return adjacent.filter((pos) => {
+        const tile = grid[pos.y]?.[pos.x];
+        if (!tile) return false;
+        const isSanctuary = tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary;
+        const isInactive = inactiveSanctuaries.some((s) => s.x === pos.x && s.y === pos.y);
+        return isSanctuary && !isInactive;
+    });
+}
+
 export function getActionHighlightTiles(
     isSubMenuOpen: boolean,
     activeSubAction: ActionHighlightType | null,
     attackTargets: Vec2[],
     requestFlagTargets: Vec2[],
     giveFlagTargets: Vec2[],
+    sanctuaryTargets: Vec2[],
 ): ActionTileHighlight[] {
     if (!isSubMenuOpen || !activeSubAction) return [];
     const typeMap: Record<ActionHighlightType, Vec2[]> = {
         attack: attackTargets,
         requestFlag: requestFlagTargets,
         giveFlag: giveFlagTargets,
+        sanctuary: sanctuaryTargets,
     };
     return (typeMap[activeSubAction] ?? []).map((pos) => ({ pos, type: activeSubAction }));
 }
@@ -199,7 +222,9 @@ export function checkHasAnyAction(
     attackTargets: Vec2[],
     requestFlagTargets: Vec2[],
     giveFlagTargets: Vec2[],
+    sanctuaryTargets: Vec2[],
 ): boolean {
-    return isMyTurn && actionPoints > 0 && 
-           (attackTargets.length > 0 || requestFlagTargets.length > 0 || giveFlagTargets.length > 0);
+    if (!isMyTurn) return false;
+    const hasPaidAction = actionPoints > 0 && (attackTargets.length > 0 || requestFlagTargets.length > 0 || giveFlagTargets.length > 0);
+    return hasPaidAction || sanctuaryTargets.length > 0;
 }

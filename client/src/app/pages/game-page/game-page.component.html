@@ -146,6 +146,14 @@
                         (click)="selectSubAction('giveFlag')"
                     >Donner drapeau</button>
                 }
+                @if (sanctuaryTargets().length > 0) {
+                    <button
+                        id="sub-action-attack"
+                        class="sub-action-btn sanctuary"
+                        [class.selected]="activeSubAction() === 'sanctuary'"
+                        (click)="onSelectSanctuaryAction()"
+                    >Utiliser sanctuaire</button>
+                }
             </div>
 
             <div class="action-bar">
