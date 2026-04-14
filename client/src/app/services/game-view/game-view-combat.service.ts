@@ -19,7 +19,7 @@ import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
-import { COMBAT_END_NOTIFICATION_DELAY, DEFAULT_COMBAT_POSTURE, ONE_SECOND_DELAY } from './game-view.constants';
+import { COMBAT_END_NOTIFICATION_DELAY, DEFAULT_COMBAT_POSTURE, ONE_SECOND_DELAY } from '@app/services/game-view/game-view.constants';
 
 interface CombatListenerDependencies {
     getLocalSocketId: () => string | undefined;
@@ -138,7 +138,7 @@ export class GameViewCombatService {
                         ...player,
                         winsCount: player.winsCount + (data.winnerId === data.defender.socketId ? 1 : 0),
                         lossCount: player.lossCount + (data.defender.killed ? 1 : 0),
-                        combatCount: player.combatCount + 1,
+                        combatCount: player.combatCount++,
                         totalHpDealt: player.totalHpDealt + data.defender.damageDealt,
                         totalHpLost: player.totalHpLost + data.attacker.damageDealt,
                         character: {

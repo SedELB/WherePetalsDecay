@@ -21,7 +21,7 @@ import { GameMode, TileItem, TileTexture } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
-import { ITEM_NAMES, MOVE_COOLDOWN_MS, TILE_NAMES, TO_PERCENT } from './game-page.constants';
+import { ITEM_NAMES, MOVE_COOLDOWN_MS, TILE_NAMES, TO_PERCENT } from '@app/pages/game-page/game-page.constants';
 import {
     TileClickContext,
     buildTileClickContext,
@@ -42,6 +42,8 @@ import {
     getTimerDisplay as helperGetTimerDisplay,
     getTimerLabel as helperGetTimerLabel,
 } from './game-page.helper';
+
+const MESSAGE_ERROR = 'Êtes-vous sûr de vouloir abandonner la partie ? Vous ne pourrez pas revenir dans cette partie si vous quittez.';
 
 @Component({
     selector: 'app-game-page',
@@ -236,7 +238,7 @@ export class GamePageComponent implements OnInit {
     onAbandon(): void {
         swal.fire({
             title: 'Quitter ?',
-            text: 'Êtes-vous sûr de vouloir abandonner la partie ? Vous ne pourrez pas revenir dans cette partie si vous quittez.',
+            text: MESSAGE_ERROR,
             icon: 'warning',
             confirmButtonText: 'Abandonner',
             cancelButtonText: 'Annuler',
