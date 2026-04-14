@@ -77,36 +77,53 @@ export class IsometricViewService {
     config.ctx.lineJoin = 'round';
     config.ctx.strokeStyle = STROKE_COLOR;
 
-    for (let row = 0; row < totalRows; row++) {
-      for (let col = 0; col < totalColumns; col++) {
-        const tile = config.grid[row][col];
-        const params: TileRenderParams = {
-          context: config.ctx, tile,
-          surfaceTopLeft: vertices[row][col],
-          surfaceTopRight: vertices[row][col + 1],
-          surfaceBottomRight: vertices[row + 1][col + 1],
-          surfaceBottomLeft: vertices[row + 1][col],
-        };
+    // Pass 1: Render all base terrain tiles
+    for (let sum = 0; sum < totalRows + totalColumns - 1; sum++) {
+      for (let row = 0; row <= sum; row++) {
+        const col = sum - row;
+        if (row < totalRows && col < totalColumns) {
+          const tile = config.grid[row][col];
+          const params: TileRenderParams = {
+            context: config.ctx, tile,
+            surfaceTopLeft: vertices[row][col],
+            surfaceTopRight: vertices[row][col + 1],
+            surfaceBottomRight: vertices[row + 1][col + 1],
+            surfaceBottomLeft: vertices[row + 1][col],
+          };
 
-        const depthParams: TileDepthParams = {
-          context: config.ctx,
-          thickness: TILE_THICKNESS,
-          rowIndex: row, totalRows,
-          columnIndex: col, totalColumns,
-          surfaceTopRight: vertices[row][col + 1],
-          surfaceBottomRight: vertices[row + 1][col + 1],
-          surfaceBottomLeft: vertices[row + 1][col],
-        };
+          const depthParams: TileDepthParams = {
+            context: config.ctx,
+            thickness: TILE_THICKNESS,
+            rowIndex: row, totalRows,
+            columnIndex: col, totalColumns,
+            surfaceTopRight: vertices[row][col + 1],
+            surfaceBottomRight: vertices[row + 1][col + 1],
+            surfaceBottomLeft: vertices[row + 1][col],
+          };
 
-        // 1. Draw base tile and depth
-        drawIsometricTileBase(params, depthParams, config, this.getImage);
+          drawIsometricTileBase(params, depthParams, config, this.getImage);
+        }
+      }
+    }
 
-        // 2. Draw Entities
-        this.drawAssetsOnTile(params, col, row, config);
+    // Pass 2: Render all objects, Sanctuaries, and Characters in depth order
+    for (let sum = 0; sum < totalRows + totalColumns - 1; sum++) {
+      for (let row = 0; row <= sum; row++) {
+        const col = sum - row;
+        if (row < totalRows && col < totalColumns) {
+          const tile = config.grid[row][col];
+          const params: TileRenderParams = {
+            context: config.ctx, tile,
+            surfaceTopLeft: vertices[row][col],
+            surfaceTopRight: vertices[row][col + 1],
+            surfaceBottomRight: vertices[row + 1][col + 1],
+            surfaceBottomLeft: vertices[row + 1][col],
+          };
 
-        // 3. Render Special Structures
-        this.renderPortcullis(tile, col, row, config, params);
-        this.renderSanctuary(tile, col, row, config, vertices);
+          this.renderSanctuary(tile, col, row, config, vertices);
+          this.drawAssetsOnTile(params, col, row, config);
+          this.renderPortcullis(tile, col, row, config, params);
+        }
       }
     }
   }
@@ -134,15 +151,16 @@ export class IsometricViewService {
     const totalRows = config.grid.length;
     const totalCols = config.grid[0].length;
 
-    const isBottomRight = (col + 1 >= totalCols || config.grid[row]?.[col + 1]?.item !== tile.item)
-      && (row + 1 >= totalRows || config.grid[row + 1]?.[col]?.item !== tile.item);
+    // Detect the top-left tile of the 2x2 sanctuary footprint
+    const isTopLeft = (col === 0 || config.grid[row]?.[col - 1]?.item !== tile.item)
+      && (row === 0 || config.grid[row - 1]?.[col]?.item !== tile.item);
 
-    if (isBottomRight && row >= 1 && col >= 1 && tile.item) {
+    if (isTopLeft && row + 1 < totalRows && col + 1 < totalCols && tile.item) {
       drawSanctuarySprite(config.ctx, tile.item, {
-        north: vertices[row - 1][col - 1],
-        east: vertices[row - 1][col + 1],
-        south: vertices[row + 1][col + 1],
-        west: vertices[row + 1][col - 1],
+        north: vertices[row][col],
+        east: vertices[row][col + 2],
+        south: vertices[row + 2][col + 2],
+        west: vertices[row + 2][col],
       }, this.getImage);
     }
   }
