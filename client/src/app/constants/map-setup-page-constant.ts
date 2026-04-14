@@ -39,14 +39,14 @@ export const OBJECT_PLACEMENT_TOOL: Record<TileItem, ObjectPlacementTool> = {
     },
     [TileItem.HealingSanctuary]: {
         type: TileItem.HealingSanctuary,
-        label: 'Relique de soin',
-        description: 'Emplacement où un joueur peut placer un sanctuaire de soin.',
+        label: 'Sanctuaire de soin',
+        description: `Permet d'obtenir des bonus de vie.`,
         image: './assets/icons/healingSanctuary.svg',
     },
     [TileItem.CombatSanctuary]: {
         type: TileItem.CombatSanctuary,
-        label: 'Relique de combat',
-        description: 'Emplacement où un joueur peut placer un sanctuaire de combat.',
+        label: 'Sanctuaire de combat',
+        description: `Permet d'obtenir des bonus de combat.`,
         image: './assets/icons/combatSanctuary.svg',
     },
 };
