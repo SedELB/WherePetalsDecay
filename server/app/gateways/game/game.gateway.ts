@@ -6,7 +6,6 @@ import { Posture } from '@common/character';
 import { Direction } from '@common/direction';
 import { GameMode, SocketNamespace, TileItem, TileTexture } from '@common/enums';
 import {
-    CombatAttackAnimationData,
     CombatEndedData,
     CombatLockStateData,
     CombatResult,
@@ -34,10 +33,11 @@ import {
 import { Server, Socket } from 'socket.io';
 import { GameTurnSyncService } from './game-turn-sync.service';
 
-const COMBAT_ROUND_DELAY_MS = 2000;
+const COMBAT_ROUND_DELAY_MS = 31000;
+const COMBAT_START_ANNOUNCEMENT_DELAY_MS = 2000;
 const COMBAT_POSTURE_TIMEOUT_MS = 10000;
+const COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS = 2000;
 const COUNTDOWN_TICK_MS = 1000;
-const ATTACK_ANIMATION_DURATION_MS = 2000;
 const DEFAULT_POSTURE: Posture = { type: null, bonus: 0 };
 
 interface CombatSession {
@@ -50,6 +50,7 @@ interface CombatSession {
     awaitingPostures: boolean;
     consumeActionPointOnNextRound: boolean;
     timeoutHandle?: ReturnType<typeof setTimeout>;
+    countdownStartHandle?: ReturnType<typeof setTimeout>;
     countdownHandle?: ReturnType<typeof setInterval>;
 }
 
@@ -254,7 +255,10 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const postureData: PostureReceivedData = { socketId: socket.id, posture: normalizedPosture };
         socket.to(roomId).emit(JoinGameEvents.PostureReceived, postureData);
 
-        if (session.postures.has(session.attackerId) && session.postures.has(session.defenderId)) {
+        const areBothPosturesChosen = [session.attackerId, session.defenderId].every((participantSocketId) =>
+            session.postures.has(participantSocketId),
+        );
+        if (areBothPosturesChosen) {
             this.resolveCombatSession(roomId);
         }
     }
@@ -308,7 +312,12 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const combatStartedData: CombatStartedData = { player: attacker, enemy: defender, roomId };
         this.server.to(roomId).emit(JoinGameEvents.CombatStarted, combatStartedData);
         this.journalService.addCombatStartEntry(lobbyId, attacker.character.name, defender.character.name);
-        this.startCombatRoundAwaitingPostures(combatSession);
+
+        combatSession.timeoutHandle = setTimeout(() => {
+            const activeSession = this.combatSessions.get(roomId);
+            if (!activeSession) return;
+            this.startCombatRoundAwaitingPostures(activeSession);
+        }, COMBAT_START_ANNOUNCEMENT_DELAY_MS);
     }
 
     @SubscribeMessage(JoinGameEvents.GiveFlagRequest)
@@ -570,20 +579,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         defender.character.bonusPosture = session.postures.get(session.defenderId) ?? { ...DEFAULT_POSTURE };
 
         session.awaitingPostures = false;
-        const attackAnimationData: CombatAttackAnimationData = {
-            lobbyId: session.lobbyId,
-            attackerSocketId: session.attackerId,
-            defenderSocketId: session.defenderId,
-            durationMs: ATTACK_ANIMATION_DURATION_MS,
-        };
-        this.server.to(session.roomId).emit(JoinGameEvents.CombatAttackAnimation, attackAnimationData);
-
-        session.timeoutHandle = setTimeout(() => {
-            const activeSession = this.combatSessions.get(session.roomId);
-            if (!activeSession) return;
-
-            this.executeCombatRound(activeSession.roomId, activeSession.consumeActionPointOnNextRound, timedOutSocketIds);
-        }, ATTACK_ANIMATION_DURATION_MS);
+        this.executeCombatRound(session.roomId, session.consumeActionPointOnNextRound, timedOutSocketIds);
     }
 
     private executeCombatRound(roomId: string, consumeActionPoint: boolean, timedOutSocketIds: string[] = []): void {
@@ -778,6 +774,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             roomId: session.roomId,
             roundIndex: session.roundIndex,
             postureTimeoutMs: COMBAT_POSTURE_TIMEOUT_MS,
+            postureCountdownDelayMs: COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS,
         };
         this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundStarted, roundStartedData);
 
@@ -791,24 +788,33 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundCountdown, roundCountdownData);
         };
 
-        emitCountdown();
-        session.countdownHandle = setInterval(() => {
-            if (!session.awaitingPostures) {
-                this.clearCombatSessionTimers(session);
-                return;
-            }
-
-            secondsLeft--;
-            if (secondsLeft <= 0) {
-                if (session.countdownHandle) {
-                    clearInterval(session.countdownHandle);
-                    session.countdownHandle = undefined;
-                }
-                return;
-            }
+        const startCountdown = () => {
+            if (!session.awaitingPostures) return;
 
             emitCountdown();
-        }, COUNTDOWN_TICK_MS);
+            session.countdownHandle = setInterval(() => {
+                if (!session.awaitingPostures) {
+                    this.clearCombatSessionTimers(session);
+                    return;
+                }
+
+                secondsLeft--;
+                if (secondsLeft <= 0) {
+                    if (session.countdownHandle) {
+                        clearInterval(session.countdownHandle);
+                        session.countdownHandle = undefined;
+                    }
+                    return;
+                }
+
+                emitCountdown();
+            }, COUNTDOWN_TICK_MS);
+        };
+
+        session.countdownStartHandle = setTimeout(() => {
+            session.countdownStartHandle = undefined;
+            startCountdown();
+        }, COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS);
 
         session.timeoutHandle = setTimeout(() => {
             if (!session.awaitingPostures) return;
@@ -819,13 +825,18 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             }
 
             this.resolveCombatSession(session.roomId, timedOutSocketIds);
-        }, COMBAT_POSTURE_TIMEOUT_MS);
+        }, COMBAT_POSTURE_TIMEOUT_MS + COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS);
     }
 
     private clearCombatSessionTimers(session: CombatSession): void {
         if (session.timeoutHandle) {
             clearTimeout(session.timeoutHandle);
             session.timeoutHandle = undefined;
+        }
+
+        if (session.countdownStartHandle) {
+            clearTimeout(session.countdownStartHandle);
+            session.countdownStartHandle = undefined;
         }
 
         if (session.countdownHandle) {
