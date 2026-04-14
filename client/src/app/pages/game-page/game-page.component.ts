@@ -1,4 +1,3 @@
-/* eslint-disable*/
 import { Component, HostListener, OnInit, computed, effect, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
@@ -7,6 +6,10 @@ import { CombatComponent } from '@app/components/combat/combat.component';
 import { IsometricMapComponent } from '@app/components/isometric-map/isometric-map.component';
 import { JournalComponent } from '@app/components/journal/journal.component';
 import { SakuraComponent } from '@app/components/sakura/sakura.component';
+import { CharacterSheetComponent } from '@app/components/character-sheet/character-sheet.component';
+import { GameOverOverlayComponent } from '@app/components/game-over-overlay/game-over-overlay.component';
+import { PlayersListComponent } from '@app/components/players-list/players-list.component';
+import { SanctuaryModalComponent } from '@app/components/sanctuary-modal/sanctuary-modal.component';
 import { OBJECT_PLACEMENT_TOOL } from '@app/constants/map-setup-page-constant';
 import { ROUTES } from '@app/constants/routes.constants';
 import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
@@ -20,20 +23,37 @@ import swal from 'sweetalert2';
 import {
     TileClickContext,
     buildTileClickContext,
-    findPlayerAtPosition,
+    getPlayerAtPosition as helperGetPlayerAtPosition,
     getCurrentPlayerIceDebuff,
-    getPlayerAvatarById,
-    getPlayerNameById,
-    getTeamPlayersFromLobby,
-    getTimerDisplayFromCountdown,
-    getTimerLabelForTurn,
-} from './game-page.utils';
+    getPlayerName as helperGetPlayerName,
+    getTimerDisplay as helperGetTimerDisplay,
+    getTimerLabel as helperGetTimerLabel,
+    getOrderedPlayers,
+    getAdjacentPlayers,
+    getTeamPlayers,
+    getAttackTargets,
+    getRequestFlagTargets,
+    getGiveFlagTargets,
+    getActionHighlightTiles,
+    checkHasAnyAction,
+} from './game-page.helper';
 
 const MOVE_COOLDOWN_MS = 150;
 
 @Component({
     selector: 'app-game-page',
-    imports: [ButtonComponent, SakuraComponent, ChatComponent, IsometricMapComponent, JournalComponent, CombatComponent],
+    imports: [
+        ButtonComponent,
+        SakuraComponent,
+        ChatComponent,
+        IsometricMapComponent,
+        JournalComponent,
+        CombatComponent,
+        PlayersListComponent,
+        CharacterSheetComponent,
+        SanctuaryModalComponent,
+        GameOverOverlayComponent,
+    ],
     templateUrl: './game-page.component.html',
     styleUrl: './game-page.component.scss',
 })
@@ -113,130 +133,35 @@ export class GamePageComponent implements OnInit {
         return `${attackerName} affronte ${defenderName}. La partie reprendra à la fin du combat.`;
     });
 
-    readonly orderedPlayers = computed(() => {
-        const order = this.gameViewService.turnOrder();
-        const players = this.lobby()?.players ?? [];
-        if (!order.length) return players;
-
-        const fullList = order
-            .map((socketId) => players.find((player) => player.socketId === socketId))
-            .filter((player): player is Player => !!player);
-
-        const activeId = this.activePlayerSocketId();
-        if (!activeId) return fullList;
-
-        const activeIndex = fullList.findIndex((player) => player.socketId === activeId);
-        return activeIndex <= 0 ? fullList : [...fullList.slice(activeIndex), ...fullList.slice(0, activeIndex)];
-    });
-
-    readonly localPlayer = computed(() => {
-        const localId = this.gameViewService.getLocalSocketId();
-        return this.lobby()?.players.find((player) => player.socketId === localId);
-    });
-
+    readonly orderedPlayers = computed(() =>
+        getOrderedPlayers(this.gameViewService.turnOrder(), this.lobby()?.players ?? [], this.activePlayerSocketId()));
+    readonly localPlayer = computed(() =>
+        this.lobby()?.players.find((player) => player.socketId === this.gameViewService.getLocalSocketId()));
     readonly maxLife = computed(() => {
-        const player = this.localPlayer();
-        return !player ? BASE_STATS.life : player.character.lifeBonus ? BASE_STATS.life + BASE_STATS.bonus : BASE_STATS.life;
+        const p = this.localPlayer();
+        return !p ? BASE_STATS.life : p.character.lifeBonus ? BASE_STATS.life + BASE_STATS.bonus : BASE_STATS.life;
     });
-
-    readonly activePlayer = computed(() => {
-        const activeId = this.activePlayerSocketId();
-        return this.lobby()?.players.find((player) => player.socketId === activeId);
-    });
-
+    readonly activePlayer = computed(() =>
+        this.lobby()?.players.find((player) => player.socketId === this.activePlayerSocketId()));
     readonly isMyTurn = computed(() => this.activePlayerSocketId() === this.gameViewService.getLocalSocketId());
     readonly inactiveSanctuaries = computed(() => this.gameViewService.inactiveSanctuaries());
     readonly journalEntries = computed(() => this.gameViewService.journalEntries());
-
     readonly allTeams = computed(() => [
-        this.getTeamPlayers('A'),
-        this.getTeamPlayers('B'),
+        getTeamPlayers('A', this.lobby(), this.orderedPlayers()),
+        getTeamPlayers('B', this.lobby(), this.orderedPlayers()),
     ]);
-
-    readonly adjacentPlayers = computed((): Player[] => {
-        if (!this.isMyTurn()) return [];
-        const localId = this.gameViewService.getLocalSocketId();
-        const positions = this.playerPositions();
-        const myPos = localId ? positions[localId] : null;
-        if (!myPos) return [];
-
-        const adjacent = Object.values(DIRECTION_OFFSETS).map((offset) => ({ x: myPos.x + offset.x, y: myPos.y + offset.y }));
-        return (this.lobby()?.players ?? []).filter((player) => {
-            if (player.socketId === localId || player.hasAbandonned) return false;
-            const pos = positions[player.socketId];
-            return !!pos && adjacent.some((a) => a.x === pos.x && a.y === pos.y);
-        });
-    });
-
-    readonly attackTargets = computed((): Vec2[] => {
-        if (!this.isMyTurn()) return [];
-        const localId = this.gameViewService.getLocalSocketId();
-        const allTeams = this.allTeams();
-        return this.adjacentPlayers()
-            .filter((player) => {
-                const isSameTeam = allTeams.some((team) =>
-                    team.some((teammate) => teammate.socketId === localId) &&
-                    team.some((teammate) => teammate.socketId === player.socketId),
-                );
-                return !isSameTeam;
-            })
-            .map((player) => this.playerPositions()[player.socketId])
-            .filter((pos): pos is Vec2 => !!pos);
-    });
-
-    readonly requestFlagTargets = computed((): Vec2[] => {
-        if (!this.isMyTurn()) return [];
-        const localId = this.gameViewService.getLocalSocketId();
-        const localPlayer = this.localPlayer();
-        if (!localPlayer || localPlayer.hasFlag) return [];
-
-        const allTeams = this.allTeams();
-        return this.adjacentPlayers()
-            .filter((player) => {
-                const isSameTeam = allTeams.some((team) =>
-                    team.some((teammate) => teammate.socketId === localId) &&
-                    team.some((teammate) => teammate.socketId === player.socketId),
-                );
-                return isSameTeam && player.hasFlag;
-            })
-            .map((player) => this.playerPositions()[player.socketId])
-            .filter((pos): pos is Vec2 => !!pos);
-    });
-
-    readonly giveFlagTargets = computed((): Vec2[] => {
-        if (!this.isMyTurn()) return [];
-        const localId = this.gameViewService.getLocalSocketId();
-        const localPlayer = this.localPlayer();
-        if (!localPlayer?.hasFlag) return [];
-
-        const allTeams = this.allTeams();
-        return this.adjacentPlayers()
-            .filter((player) => allTeams.some((team) =>
-                team.some((teammate) => teammate.socketId === localId) &&
-                team.some((teammate) => teammate.socketId === player.socketId),
-            ))
-            .map((player) => this.playerPositions()[player.socketId])
-            .filter((pos): pos is Vec2 => !!pos);
-    });
-
-    readonly actionHighlightTiles = computed((): ActionTileHighlight[] => {
-        const subAction = this.activeSubAction();
-        if (!this.isSubMenuOpen() || !subAction) return [];
-        const typeMap: Record<ActionHighlightType, Vec2[]> = {
-            attack: this.attackTargets(),
-            requestFlag: this.requestFlagTargets(),
-            giveFlag: this.giveFlagTargets(),
-        };
-        return (typeMap[subAction] ?? []).map((pos) => ({ pos, type: subAction }));
-    });
-
-    readonly hasAnyAction = computed(() =>
-        this.isMyTurn() &&
-        this.actionPoints() > 0 &&
-        (this.attackTargets().length > 0 ||
-            this.requestFlagTargets().length > 0 ||
-            this.giveFlagTargets().length > 0),
-    );
+    readonly adjacentPlayers = computed((): Player[] => getAdjacentPlayers(
+        this.isMyTurn(), this.gameViewService.getLocalSocketId(), this.playerPositions(), this.lobby()?.players ?? []));
+    readonly attackTargets = computed((): Vec2[] => getAttackTargets(
+        this.gameViewService.getLocalSocketId(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()));
+    readonly requestFlagTargets = computed((): Vec2[] => getRequestFlagTargets(
+        this.localPlayer(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()));
+    readonly giveFlagTargets = computed((): Vec2[] => getGiveFlagTargets(
+        this.localPlayer(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()));
+    readonly actionHighlightTiles = computed((): ActionTileHighlight[] => getActionHighlightTiles(
+        this.isSubMenuOpen(), this.activeSubAction(), this.attackTargets(), this.requestFlagTargets(), this.giveFlagTargets()));
+    readonly hasAnyAction = computed(() => checkHasAnyAction(
+        this.isMyTurn(), this.actionPoints(), this.attackTargets(), this.requestFlagTargets(), this.giveFlagTargets()));
 
     constructor(
         protected readonly gameViewService: GameViewService,
@@ -339,20 +264,20 @@ export class GamePageComponent implements OnInit {
         if (this.tryHandleDoorClick(lobbyId, x, y, tile?.type, isAdjacent)) return;
         if (this.tryHandleSanctuaryClick(x, y, tile?.item as TileItem | null | undefined, isAdjacent)) return;
 
+        this.handleSubActionClick(x, y);
+    }
+
+    private handleSubActionClick(x: number, y: number): void {
         const action = this.activeSubAction();
         const clickContext = this.resolveTileClickContext(x, y);
         if (!action || !clickContext) return;
 
-        switch (action) {
-            case 'attack':
-                this.handleAttackAction(clickContext.lobbyId, clickContext.currentPlayer, clickContext.targetPlayer, x, y);
-                break;
-            case 'giveFlag':
-                this.gameViewService.giveFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
-                break;
-            case 'requestFlag':
-                this.gameViewService.requestFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
-                break;
+        if (action === 'attack') {
+            this.handleAttackAction(clickContext.lobbyId, clickContext.currentPlayer, clickContext.targetPlayer, x, y);
+        } else if (action === 'giveFlag') {
+            this.gameViewService.giveFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
+        } else if (action === 'requestFlag') {
+            this.gameViewService.requestFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
         }
 
         this.closeSubMenu();
@@ -416,15 +341,6 @@ export class GamePageComponent implements OnInit {
         this.gameViewService.sendTileInfoRequest(lobbyId, position);
     }
 
-    getTeamPlayers(team: 'A' | 'B'): Player[] {
-        return getTeamPlayersFromLobby(this.lobby(), this.orderedPlayers(), team);
-    }
-
-    isAdjacentPlayer(col: number, row: number): boolean {
-        const playerSocketId = this.getPlayerAtPosition(col, row);
-        return !!playerSocketId && this.adjacentPlayers().some((player) => player.socketId === playerSocketId);
-    }
-
     isReachable(col: number, row: number): boolean {
         return this.reachableTiles().some((tile) => tile.x === col && tile.y === row);
     }
@@ -434,23 +350,19 @@ export class GamePageComponent implements OnInit {
     }
 
     getPlayerAtPosition(x: number, y: number): string | null {
-        return findPlayerAtPosition(this.playerPositions(), x, y);
-    }
-
-    getPlayerAvatar(socketId: string): string | undefined {
-        return getPlayerAvatarById(this.lobby()?.players ?? [], socketId);
+        return helperGetPlayerAtPosition(x, y, this.playerPositions());
     }
 
     getPlayerName(socketId: string): string {
-        return getPlayerNameById(this.lobby()?.players ?? [], socketId);
+        return helperGetPlayerName(socketId, this.lobby()?.players ?? []);
     }
 
     getTimerLabel(): string {
-        return getTimerLabelForTurn(this.activePlayerSocketId(), this.gameViewService.getLocalSocketId(), this.lobby()?.players ?? []);
+        return helperGetTimerLabel(this.activePlayerSocketId(), this.gameViewService.getLocalSocketId(), this.lobby()?.players ?? []);
     }
 
     getTimerDisplay(): string {
-        return getTimerDisplayFromCountdown(this.turnCountdown(), this.activePlayerSocketId());
+        return helperGetTimerDisplay(this.turnCountdown(), this.activePlayerSocketId());
     }
 
     private handleAttackAction(lobbyId: string, currentPlayer: Player, targetPlayer: Player, x: number, y: number): void {

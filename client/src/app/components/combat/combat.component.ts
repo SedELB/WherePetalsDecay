@@ -11,42 +11,25 @@ import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
 
-const POSTURE_BONUS = 2;
-const TOAST_DEFAULT_TIMER = 2200;
-const START_TOAST_TIMER = 3600;
-const ROUND_RESULT_TOAST_TIMER = 4200;
-const COMBAT_ATTACK_ANIMATION_DEFAULT_MS = 1000;
-const COMBAT_ANIMATION_PHASE_COUNT = 6;
-const COMBAT_ANIMATION_DEFENDER_STEP_MULTIPLIER = 3;
-const COMBAT_ANIMATION_DEFENDER_HIT_MULTIPLIER = 4;
-const COMBAT_ANIMATION_DEFENDER_BACK_MULTIPLIER = 5;
-const COMBAT_ANIMATION_RESET_MULTIPLIER = 6;
-const COMBAT_ANIMATION_MIN_STEP_MS = 80;
-const TILE_CENTER_OFFSET = 0.5;
-const TO_PERCENT = 100;
-
-type TypePosture = 'atk' | 'def' | null;
-
-interface DetailedStatLine {
-  base: number;
-  postureBonus: number;
-  dice: number;
-  penalty: number;
-  total: number;
-}
-
-interface FighterDetailedResult {
-  attack: DetailedStatLine;
-  defense: DetailedStatLine;
-}
-
-interface RoundDetailedResult {
-  player: FighterDetailedResult;
-  enemy: FighterDetailedResult;
-  damageDealt: number;
-  damageReceived: number;
-  rollIndex: number;
-}
+import {
+  TypePosture,
+  RoundDetailedResult,
+  POSTURE_BONUS,
+  START_TOAST_TIMER,
+  COMBAT_ATTACK_ANIMATION_DEFAULT_MS,
+  COMBAT_ANIMATION_PHASE_COUNT,
+  COMBAT_ANIMATION_MIN_STEP_MS,
+  COMBAT_ANIMATION_DEFENDER_STEP_MULTIPLIER,
+  COMBAT_ANIMATION_DEFENDER_HIT_MULTIPLIER,
+  COMBAT_ANIMATION_DEFENDER_BACK_MULTIPLIER,
+  COMBAT_ANIMATION_RESET_MULTIPLIER,
+  TILE_CENTER_OFFSET,
+  TO_PERCENT,
+  ROUND_RESULT_TOAST_TIMER,
+  TOAST_DEFAULT_TIMER,
+  getBaseCombatPositions,
+  computeLungePosition,
+} from '@app/components/combat/combat.helper';
 
 @Component({
   selector: 'app-combat',
@@ -113,7 +96,7 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
 
     this.initializeDuelIfNeeded();
 
-    this.playerPos = this.getBaseCombatPositions();
+    this.playerPos = getBaseCombatPositions(this.enemy.socketId, this.player.socketId);
 
     this.isChoosingPosture = !this.hasChosenPosture(this.player);
     if (this.isChoosingPosture) {
@@ -196,7 +179,7 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
       return;
     }
 
-    const basePositions = this.getBaseCombatPositions();
+    const basePositions = getBaseCombatPositions(this.enemy.socketId, this.player.socketId);
     const attackerBasePosition = basePositions[animation.attackerSocketId];
     const defenderBasePosition = basePositions[animation.defenderSocketId];
     if (!attackerBasePosition || !defenderBasePosition) {
@@ -204,8 +187,8 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
       return;
     }
 
-    const attackerLungePosition = this.computeLungePosition(attackerBasePosition, defenderBasePosition);
-    const defenderLungePosition = this.computeLungePosition(defenderBasePosition, attackerBasePosition);
+    const attackerLungePosition = computeLungePosition(attackerBasePosition, defenderBasePosition);
+    const defenderLungePosition = computeLungePosition(defenderBasePosition, attackerBasePosition);
     const totalDurationMs = animation.durationMs > 0 ? animation.durationMs : COMBAT_ATTACK_ANIMATION_DEFAULT_MS;
     const stepDurationMs = Math.max(COMBAT_ANIMATION_MIN_STEP_MS, Math.floor(totalDurationMs / COMBAT_ANIMATION_PHASE_COUNT));
 
@@ -243,7 +226,7 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     }, stepDurationMs * COMBAT_ANIMATION_DEFENDER_BACK_MULTIPLIER);
 
     const resetTimeout = setTimeout(() => {
-      this.playerPos = this.getBaseCombatPositions();
+      this.playerPos = getBaseCombatPositions(this.enemy.socketId, this.player.socketId);
       this.activeHitTargetSocketId = null;
       this.attackAnimationTimeouts = [];
     }, stepDurationMs * COMBAT_ANIMATION_RESET_MULTIPLIER);
@@ -259,31 +242,6 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
 
     this.queuedAttackAnimation = null;
   }
-
-  private getBaseCombatPositions(): Record<string, Vec2> {
-    return {
-      [this.enemy.socketId]: { x: 1, y: 0 },
-      [this.player.socketId]: { x: 1, y: 2 },
-    };
-  }
-
-  private computeLungePosition(attackerPosition: Vec2, defenderPosition: Vec2): Vec2 {
-    const deltaX = defenderPosition.x - attackerPosition.x;
-    const deltaY = defenderPosition.y - attackerPosition.y;
-
-    if (Math.abs(deltaX) >= Math.abs(deltaY)) {
-      return {
-        x: attackerPosition.x + Math.sign(deltaX),
-        y: attackerPosition.y,
-      };
-    }
-
-    return {
-      x: attackerPosition.x,
-      y: attackerPosition.y + Math.sign(deltaY),
-    };
-  }
-
   private clearAttackAnimationTimeouts(): void {
     if (this.attackAnimationTimeouts.length === 0) return;
     this.attackAnimationTimeouts.forEach((timeout) => clearTimeout(timeout));
@@ -291,7 +249,7 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   getOverlayStyle(socketId: string): Record<string, string> {
-    const position = this.playerPos[socketId] ?? this.getBaseCombatPositions()[socketId];
+    const position = this.playerPos[socketId] ?? getBaseCombatPositions(this.enemy?.socketId, this.player?.socketId)[socketId];
     if (!position) {
       return { left: '50%', top: '50%' };
     }

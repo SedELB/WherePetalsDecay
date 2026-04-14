@@ -83,90 +83,13 @@
             </section>
 
             <section class="players-list">
-                <h3 class="section-title">Ordre des tours</h3>
-                @if (game()?.gameMode === gameMode.Classic){
-                    <div class="list">
-                        <ul>
-                            @for (player of orderedPlayers(); track player.socketId) {
-                                <li [class.active]="player.socketId === activePlayerSocketId()"
-                                    [class.abandonned]="player.hasAbandonned">
-                                    <div class="player-info">
-                                        <span class="info">
-                                            <span class="name" title="{{ player.character.name }}">{{ player.character.name }}</span>
-                                            <span class="stats-icon">⚔️ {{ player.winsCount }}</span>
-                                            @if (player.isHost) { <span class="host-indicator">👑</span> }
-                                            @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator">▶</span> }
-                                            @if (player.playerType === 'virtual') {
-                                                @if (player.virtualProfile === 'aggressive') {
-                                                    <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
-                                                } @else {
-                                                    <span class="virtual-player-badge"><img src="./assets/icons/shield.svg" class="vp-icon" alt="icône bouclier"/> BOT</span>
-                                                }
-                                            }
-                                        </span>
-                                    </div>
-                                </li>
-                            }
-                        </ul>
-                    </div>
-                } @else {
-                    <!-- Mode CTF -->
-                    <div class="team-section team-a-section">
-                        <h4 class="section-title team-title" style="color: #3b82f6;">Équipe A</h4>
-                        <div class="list">
-                            <ul>
-                                @for (player of getTeamPlayers('A'); track player.socketId) {
-                                    <li [class.active]="player.socketId === activePlayerSocketId()"
-                                        [class.abandonned]="player.hasAbandonned">
-                                        <div class="player-info">
-                                            <span class="info">
-                                                <span class="name" title="{{ player.character.name }}">{{ player.character.name }}</span>
-                                                @if (player.hasFlag) { <span class="flag-indicator" title="Possède le drapeau">🚩</span> }
-                                                @if (player.isHost) { <span class="host-indicator">👑</span> }
-                                                @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator turn-indicator-a">▶</span> }
-                                                @if (player.playerType === 'virtual') {
-                                                    @if (player.virtualProfile === 'aggressive') {
-                                                        <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
-                                                    } @else {
-                                                        <span class="virtual-player-badge"><img src="./assets/icons/shield.svg" class="vp-icon" alt="icône bouclier"/> BOT</span>
-                                                    }
-                                                }
-                                            </span>
-                                        </div>
-                                    </li>
-                                }
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="team-section team-b-section">
-                        <h4 class="section-title team-title" style="color: #ef4444;">Équipe B</h4>
-                        <div class="list">
-                            <ul>
-                                @for (player of getTeamPlayers('B'); track player.socketId) {
-                                    <li [class.active]="player.socketId === activePlayerSocketId()"
-                                        [class.abandonned]="player.hasAbandonned">
-                                        <div class="player-info">
-                                            <span class="info">
-                                                <span class="name" title="{{ player.character.name }}">{{ player.character.name }}</span>
-                                                @if (player.hasFlag) { <span class="flag-indicator">🚩</span> }
-                                                @if (player.isHost) { <span class="host-indicator">👑</span> }
-                                                @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator turn-indicator-b">▶</span> }
-                                                @if (player.playerType === 'virtual') {
-                                                    @if (player.virtualProfile === 'aggressive') {
-                                                        <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
-                                                    } @else {
-                                                        <span class="virtual-player-badge"><img src="./assets/icons/shield.svg" class="vp-icon" alt="icône bouclier"/> BOT</span>
-                                                    }
-                                                }
-                                            </span>
-                                        </div>
-                                    </li>
-                                }
-                            </ul>
-                        </div>
-                    </div>
-                }
+                <app-players-list
+                    [orderedPlayers]="orderedPlayers()"
+                    [activePlayerSocketId]="activePlayerSocketId()"
+                    [gameMode]="game()?.gameMode ?? gameMode.Classic"
+                    [teamA]="allTeams()[0]"
+                    [teamB]="allTeams()[1]">
+                </app-players-list>
             </section>
         </aside>
 
@@ -190,20 +113,12 @@
             </section>
 
             <section class="character-sheet">
-                <h3 class="section-title">Mon Personnage</h3>
-                <div class="local-player-info">
-                    <ul>
-                        <img [src]="localPlayer()?.character?.avatar" [alt]="localPlayer()?.character?.name" class="player-avatar"/>
-                        <li>Nom : <span>{{ localPlayer()?.character?.name }}</span></li>
-                        <li>PV restants : <span>{{ localPlayer()?.character?.life }}</span></li>
-                        <li>PV max : <span>{{ maxLife() }}</span></li>
-                        <li>Rapidité : <span>{{ localPlayer()?.character?.speed }}</span></li>
-                        <li>Attaque | Dés : <span>{{ localPlayer()?.character?.attack }} | {{ localPlayer()?.character?.attackDice }}</span></li>
-                        <li>Défense | Dés : <span>{{ localPlayer()?.character?.defense }} | {{ localPlayer()?.character?.defenseDice }}</span></li>
-                        <li>Points de mouvement : <span>{{ movementPoints() }}</span></li>
-                        <li>Points d'action : <span>{{ actionPoints() }}</span></li>
-                    </ul>
-                </div>
+                <app-character-sheet
+                    [player]="localPlayer()"
+                    [maxLife]="maxLife()"
+                    [movementPoints]="movementPoints()"
+                    [actionPoints]="actionPoints()">
+                </app-character-sheet>
             </section>
 
             <div class="sub-action-panel" [class.open]="isSubMenuOpen()">
@@ -254,34 +169,12 @@
     }
 
     @if (gameOver(); as over) {
-        <div class="game-over-overlay">
-            <div class="game-over-message">
-                <h2>Partie terminée</h2>
-
-                @if (over.isForfeit && over.winnerSocketId === localPlayer()?.socketId) {
-                    <p>Vous avez gagné car tous les autres joueurs ont quitté !</p>
-                }
-                @else if (over.winnerSocketId) {
-                    @if (over.winnerSocketId === localPlayer()?.socketId) {
-                        @if (game()?.gameMode === gameMode.Ctf) {
-                            <p>Félicitations ! Vous avez gagné en ramenant le drapeau à votre base !</p>
-                        } @else {
-                            <p>Félicitations ! Vous avez gagné la partie avec 3 victoires !</p>
-                        }
-                    } @else {
-                        @if (game()?.gameMode === gameMode.Ctf) {
-                            <p>{{ getPlayerName(over.winnerSocketId) }} a ramené le drapeau et fait gagner son équipe !</p>
-                        } @else {
-                            <p>{{ getPlayerName(over.winnerSocketId) }} a atteint 3 victoires et remporte la partie.</p>
-                        }
-                    }
-                }
-                @else if (over.abandonTeam) {
-                    <p>L'équipe {{ over.abandonTeam }} a abandonné la partie.</p>
-                    <p>Redirection vers le menu principal...</p>
-                }
-            </div>
-        </div>
+        <app-game-over-overlay
+            [gameOver]="over"
+            [localPlayerSocketId]="localPlayer()?.socketId"
+            [winnerName]="over.winnerSocketId ? getPlayerName(over.winnerSocketId) : ''"
+            [gameMode]="game()?.gameMode ?? gameMode.Classic">
+        </app-game-over-overlay>
     }
 
     @if (tileInfo(); as info) {
@@ -306,18 +199,12 @@
         </div>
     }
 
-    @if (showSanctuaryModal) {
-        <div class="sanctuary-modal-overlay">
-            <div class="sanctuary-modal">
-                <h2 class="sanctuary-title">Sanctuaire {{ pendingSanctuaryType === 'healingSanctuary' ? 'de Soin' : 'de Combat' }}</h2>
-                <p class="sanctuary-effect">Effet : {{ getSanctuaryLabel() }}</p>
-                <div class="sanctuary-actions">
-                    <app-button (click)="onUseSanctuary('normal')">Normal</app-button>
-                    <app-button (click)="onUseSanctuary('doubleOrNothing')">Double ou Rien (50%)</app-button>
-                    <app-button (click)="onCancelSanctuary()">Annuler</app-button>
-                </div>
-            </div>
-        </div>
+    @if (showSanctuaryModal && pendingSanctuaryType) {
+        <app-sanctuary-modal
+            [type]="pendingSanctuaryType"
+            (use)="onUseSanctuary($event)"
+            (cancel)="onCancelSanctuary()"
+        ></app-sanctuary-modal>
     }
 
 </main>
