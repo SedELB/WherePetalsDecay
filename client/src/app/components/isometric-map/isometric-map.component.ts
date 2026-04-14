@@ -27,6 +27,7 @@ interface PlayerMotionState {
 
 @Component({
   selector: 'app-isometric-map',
+  standalone: true,
   imports: [],
   templateUrl: './isometric-map.component.html',
   styleUrl: './isometric-map.component.scss',
@@ -42,6 +43,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   @Input() teleportableTiles: Vec2[] = [];
   @Input() actionHighlightTiles: ActionTileHighlight[] = [];
   @Input() localPlayerSocketId?: string;
+  @Input() isLocalPlayerTurn: boolean = false;
   @Input() inactiveSanctuaries: Vec2[] = [];
   @Input() isCTF: boolean = false;
   @Input() teamA: Player[] = [];
@@ -380,6 +382,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
       teleportableTiles: this.teleportableTiles,
       actionHighlightTiles: this.actionHighlightTiles,
       localPlayerSocketId: this.localPlayerSocketId,
+      isLocalPlayerTurn: this.isLocalPlayerTurn,
       inactiveSanctuaries: this.inactiveSanctuaries,
       isCTF: this.isCTF,
       teamA: this.teamA,
