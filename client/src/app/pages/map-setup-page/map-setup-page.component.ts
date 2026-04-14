@@ -1,7 +1,6 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from '@app/components/button/button.component';
-import { Game } from '@common/game';
 import { OBJECT_PLACEMENT_TOOL, TILE_TOOLS } from '@app/constants/map-setup-page-constant';
 import { AdminGameService } from '@app/services/admin-game/admin-game.service';
 import { DESC_MAX_LENGTH, NAME_MAX_LENGTH } from '@app/services/game-validator/game-validator.service';
@@ -10,6 +9,7 @@ import { TileItemCounts } from '@app/services/map-setup.types';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { ButtonVariant, GameMode, MapSetupMode, TileItem, TileTexture } from '@common/enums';
+import { Game } from '@common/game';
 import { Tile } from '@common/tile';
 import { Subscription } from 'rxjs';
 import { skip } from 'rxjs/operators';
@@ -58,13 +58,15 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
 
     @ViewChild('thumbnailGrid') thumbnailGridRef!: ElementRef<HTMLElement>;
 
-  isGameLoaded = false;
+    isGameLoaded = false;
     private isPaintingTiles = false;
     private isErasingTiles = false;
 
     private itemCounts: TileItemCounts = {
         spawnCount: 0,
         flagCount: 0,
+        healingSanctuaryCount: 0,
+        combatSanctuaryCount: 0,
     };
 
     async ngOnInit(): Promise<void> {
@@ -105,7 +107,7 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
                     } else {
                         const userWantsUpdate = confirm(
                             'Ce jeu a été modifié par un autre administrateur. ' +
-                                'Voulez-vous charger les changements? (Vos modifications locales seront perdues)',
+                            'Voulez-vous charger les changements? (Vos modifications locales seront perdues)',
                         );
                         if (userWantsUpdate) {
                             this.game = JSON.parse(JSON.stringify(currentGame));
@@ -144,6 +146,22 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
 
     getPlacedFlagCount(): number {
         return this.tileItemCountService.getPlacedFlagCount(this.game);
+    }
+
+    getPlacedHealingSanctuaryCount(): number {
+        return this.tileItemCountService.getPlacedHealingSanctuaryCount(this.game);
+    }
+
+    getPlacedCombatSanctuaryCount(): number {
+        return this.tileItemCountService.getPlacedCombatSanctuaryCount(this.game);
+    }
+
+    getRequiredHealingSanctuaryCount(): number {
+        return this.tileItemCountService.getRequiredHealingSanctuaryCount(this.game);
+    }
+
+    getRequiredCombatSanctuaryCount(): number {
+        return this.tileItemCountService.getRequiredCombatSanctuaryCount(this.game);
     }
 
     isObjectTypeComplete(type: TileItem): boolean {
