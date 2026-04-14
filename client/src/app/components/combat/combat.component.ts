@@ -19,6 +19,7 @@ import {
 } from '@app/constants/combat-timeline.constants';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { Posture } from '@common/character';
+import { BASE_STATS } from '@common/constants/character.constants';
 import { TileTexture } from '@common/enums';
 import { CombatResult } from '@common/interfaces/game-view';
 import { Player } from '@common/player';
@@ -53,6 +54,7 @@ interface PendingRoundResult { result: CombatResult; resultKey: string; }
 interface PostureResultPopupData { playerPosture: string; enemyPosture: string; roundIndex: number; }
 interface RoundAnnouncementPopupData { roundIndex: number; message: string; }
 interface StatusPopupData { playerLife: number; enemyLife: number; roundIndex: number; }
+type LifeBySide = Record<FighterSide, number>;
 interface FighterDiceDisplayData {
   fighterName: string;
   attackFaces: number;
@@ -108,6 +110,8 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
   private currentAttackerSocketId: string | null = null;
   private pendingRoundResult: PendingRoundResult | null = null;
   private pendingCombatEndPopup: CombatStartPopupData | null = null;
+  private displayedLifeBySide: LifeBySide = { player: 0, enemy: 0 };
+  private pendingLifeBySide: LifeBySide | null = null;
   private roundSequenceTimeouts: ReturnType<typeof setTimeout>[] = [];
   private diceRollAnimationTimeouts: ReturnType<typeof setTimeout>[] = [];
   private movementAnimationFrameId: number | null = null;
@@ -159,14 +163,14 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   isPosturePending(fighter: Player): boolean {
-    return !fighter?.character?.bonusPosture?.type;
+    return !fighter?.character?.bonusPosture?.type && this.isPostureCountdownVisible();
   }
 
   getPostureStatusValue(fighter: Player): string {
     const postureType = fighter?.character?.bonusPosture?.type;
     if (postureType === 'atk') return '⚔️ Offensive';
     if (postureType === 'def') return '🛡️ Défensive';
-    return 'Posture en attente';
+    return '⏳ Neutre';
   }
 
   getStatTotal(side: FighterSide, stat: FighterStatType): number {
@@ -174,19 +178,47 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     if (statResult) return statResult.total;
 
     const fighter = this.getFighterBySide(side);
+    if (!fighter?.character) return 0;
     return stat === 'attack' ? fighter.character.attack : fighter.character.defense;
   }
 
   getPostureBonus(side: FighterSide, stat: FighterStatType): number {
     const statResult = this.getRoundStatResult(side, stat);
     if (statResult) return statResult.postureBonus;
+
+    const postureType = this.getFighterBySide(side)?.character?.bonusPosture?.type;
+    if (!postureType) return 0;
+    if (stat === 'attack' && postureType === 'atk') return POSTURE_BONUS;
+    if (stat === 'defense' && postureType === 'def') return POSTURE_BONUS;
     return 0;
   }
 
-  getDiceBonusDisplay(side: FighterSide, stat: FighterStatType): string {
+  getDiceBonus(side: FighterSide, stat: FighterStatType): number {
     const statResult = this.getRoundStatResult(side, stat);
-    if (!statResult) return '+X';
-    return `+${statResult.dice}`;
+    if (!statResult) return 0;
+    return statResult.dice;
+  }
+
+  getDiceBonusDisplay(side: FighterSide, stat: FighterStatType): string {
+    return `+${this.getDiceBonus(side, stat)}`;
+  }
+
+  getDisplayedLife(side: FighterSide): number {
+    return this.displayedLifeBySide[side];
+  }
+
+  getOriginalMaxLife(side: FighterSide): number {
+    const fighter = this.getFighterBySide(side);
+    if (!fighter?.character) return BASE_STATS.life;
+    return BASE_STATS.life + (fighter.character.lifeBonus ? BASE_STATS.bonus : 0);
+  }
+
+  getLifeProgressPercent(side: FighterSide): number {
+    const maxLife = this.getOriginalMaxLife(side);
+    if (maxLife <= 0) return 0;
+
+    const progressPercent = (this.getDisplayedLife(side) / maxLife) * TO_PERCENT;
+    return Math.min(TO_PERCENT, Math.max(0, progressPercent));
   }
 
   shouldShowPosturePanel(): boolean {
@@ -208,6 +240,10 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
 
     this.initializeDuelIfNeeded();
 
+    if (!this.isRoundSequenceInProgress && !this.pendingLifeBySide) {
+      this.syncDisplayedLivesWithCurrentFighters();
+    }
+
     this.playerPos = this.getBaseCombatPositions();
 
     this.isChoosingPosture = !this.hasChosenPosture(this.player);
@@ -224,7 +260,7 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   choosePosture(posture: TypePosture): void {
-    if (!this.isChoosingPosture || !posture || !this.isPostureCountdownVisible()) return;
+    if (!this.isChoosingPosture || !posture || !this.isPostureCountdownVisible() || !this.player?.character) return;
 
     this.player.character.bonusPosture = { type: posture, bonus: POSTURE_BONUS };
     this.isChoosingPosture = false;
@@ -249,12 +285,14 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     this.currentAttackerSocketId = null;
     this.pendingRoundResult = null;
     this.pendingCombatEndPopup = null;
+    this.pendingLifeBySide = null;
     this.cancelRoundSequence();
     this.hideCombatStartPopup();
     this.hideCombatEndPopup();
     this.hideDamagePopup();
     this.rollCount = 0;
     this.lastAppliedResultKey = '';
+    this.syncDisplayedLivesWithCurrentFighters();
 
     if (!this.hasChosenPosture(this.player)) {
       this.player.character.bonusPosture = { type: null, bonus: 0 };
@@ -273,6 +311,8 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   private getBaseCombatPositions(): Record<string, Vec2> {
+    if (!this.enemy?.socketId || !this.player?.socketId) return {};
+
     return {
       [this.enemy.socketId]: { x: 1, y: 0 },
       [this.player.socketId]: { x: 1, y: 2 },
@@ -298,8 +338,8 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
 
   private getFighterName(socketId: string | null): string {
     if (!socketId) return 'Un joueur';
-    if (socketId === this.player?.socketId) return this.player.character.name;
-    if (socketId === this.enemy?.socketId) return this.enemy.character.name;
+    if (socketId === this.player?.socketId) return this.player?.character?.name ?? 'Un joueur';
+    if (socketId === this.enemy?.socketId) return this.enemy?.character?.name ?? 'Un joueur';
     return 'Un joueur';
   }
 
@@ -446,7 +486,7 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
 
   private showCombatStartPopup(): void {
     this.hideCombatStartPopup();
-    const initiatorName = this.gameViewService.combatInitiatorName() || this.player.character.name;
+    const initiatorName = this.gameViewService.combatInitiatorName() || this.player?.character?.name || 'Un joueur';
     this.combatStartPopup = {
       title: 'Combat lancé',
       message: `${initiatorName} a initié le combat. Préparez votre posture.`,
@@ -476,8 +516,8 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
   private showStatusPopup(roundIndex: number): void {
     this.statusPopup = {
       roundIndex,
-      playerLife: this.player.character.life,
-      enemyLife: this.enemy.character.life,
+      playerLife: this.getDisplayedLife('player'),
+      enemyLife: this.getDisplayedLife('enemy'),
     };
   }
 
@@ -499,6 +539,29 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     this.damagePopup = null;
   }
 
+  private syncDisplayedLivesWithCurrentFighters(): void {
+    this.displayedLifeBySide = {
+      player: this.player.character.life,
+      enemy: this.enemy.character.life,
+    };
+  }
+
+  private applyPendingLifeAfterAttackAnimation(): void {
+    if (!this.pendingLifeBySide) return;
+
+    this.displayedLifeBySide = {
+      player: this.pendingLifeBySide.player,
+      enemy: this.pendingLifeBySide.enemy,
+    };
+    this.pendingLifeBySide = null;
+  }
+
+  private clearRoundBonusesAfterAttackAnimation(): void {
+    this.roundResult = null;
+    this.player.character.bonusPosture = { type: null, bonus: 0 };
+    this.enemy.character.bonusPosture = { type: null, bonus: 0 };
+  }
+
   private getPostureLabel(postureType: TypePosture): string {
     if (postureType === 'atk') return '⚔️ Offensive';
     if (postureType === 'def') return '🛡️ Défensive';
@@ -513,10 +576,14 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
 
   private buildDiceDisplayData(attackValue: number, defenseValue: number, side: FighterSide): FighterDiceDisplayData {
     const fighter = this.getFighterBySide(side);
+    const fighterName = fighter?.character?.name ?? 'Joueur';
+    const attackDice = fighter?.character?.attackDice;
+    const defenseDice = fighter?.character?.defenseDice;
+
     return {
-      fighterName: fighter.character.name,
-      attackFaces: this.getDiceFaces(fighter.character.attackDice),
-      defenseFaces: this.getDiceFaces(fighter.character.defenseDice),
+      fighterName,
+      attackFaces: this.getDiceFaces(attackDice),
+      defenseFaces: this.getDiceFaces(defenseDice),
       attackValue,
       defenseValue,
     };
@@ -675,6 +742,8 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
   private finishRoundSequence(sequenceToken: number): void {
     if (!this.isRoundSequenceTokenActive(sequenceToken)) return;
 
+    this.applyPendingLifeAfterAttackAnimation();
+
     this.isRoundSequenceInProgress = false;
     this.isAttackAnimationInProgress = false;
     this.isDiceRollInProgress = false;
@@ -701,15 +770,18 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
         this.postureResultPopup = null;
 
         this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
-          this.showDamagePopup(damageDealt, damageReceived, roundIndex);
-
-          this.enqueueRoundStep(sequenceToken, DAMAGE_DISPLAY_DURATION_MS, () => {
-            this.hideDamagePopup();
-
+          this.runFighterMovementPhase(sequenceToken, this.player.socketId, this.enemy.socketId, () => {
             this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
-              this.runFighterMovementPhase(sequenceToken, this.player.socketId, this.enemy.socketId, () => {
+              this.runFighterMovementPhase(sequenceToken, this.enemy.socketId, this.player.socketId, () => {
+                this.applyPendingLifeAfterAttackAnimation();
+                this.clearRoundBonusesAfterAttackAnimation();
+
                 this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
-                  this.runFighterMovementPhase(sequenceToken, this.enemy.socketId, this.player.socketId, () => {
+                  this.showDamagePopup(damageDealt, damageReceived, roundIndex);
+
+                  this.enqueueRoundStep(sequenceToken, DAMAGE_DISPLAY_DURATION_MS, () => {
+                    this.hideDamagePopup();
+
                     this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
                       this.showStatusPopup(roundIndex);
 
@@ -801,6 +873,18 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     const enemy = localIsAttacker ? result.defender : result.attacker;
 
     this.rollCount++;
+
+    const playerLifeBeforeRound = local.lifeAfter + enemy.damageDealt;
+    const enemyLifeBeforeRound = enemy.lifeAfter + local.damageDealt;
+    this.displayedLifeBySide = {
+      player: playerLifeBeforeRound,
+      enemy: enemyLifeBeforeRound,
+    };
+    this.pendingLifeBySide = {
+      player: local.lifeAfter,
+      enemy: enemy.lifeAfter,
+    };
+
     const computedRoundResult: RoundDetailedResult = {
       player: {
         attack: {

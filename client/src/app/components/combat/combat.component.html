@@ -10,9 +10,12 @@
                     <span class="bonus-badge bonus-badge--posture">Bonus posture</span>
                     <span class="bonus-badge bonus-badge--dice">Bonus dé</span>
                 </div>
-                <div class="stat-row">
+                <div class="stat-row stat-row--hp">
                     <span class="stat-label">❤️ HP</span>
-                    <span class="stat-value">{{ player.character.life }}</span>
+                    <span class="stat-value">{{ getDisplayedLife('player') }}/{{ getOriginalMaxLife('player') }}</span>
+                </div>
+                <div class="life-bar" [attr.aria-label]="'Barre de vie de ' + player.character.name">
+                    <div class="life-bar-fill" [style.width.%]="getLifeProgressPercent('player')"></div>
                 </div>
                 <div class="stat-row">
                     <span class="stat-label">⚔️ Attaque</span>
@@ -20,7 +23,9 @@
                         @if (getPostureBonus('player', 'attack') > 0) {
                             <span class="bonus-badge">+{{ getPostureBonus('player', 'attack') }}</span>
                         }
-                        <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('player', 'attack') }}</span>
+                        @if (getDiceBonus('player', 'attack') > 0) {
+                            <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('player', 'attack') }}</span>
+                        }
                     </span>
                     <span class="stat-value">{{ getStatTotal('player', 'attack') }}</span>
                 </div>
@@ -30,7 +35,9 @@
                         @if (getPostureBonus('player', 'defense') > 0) {
                             <span class="bonus-badge">+{{ getPostureBonus('player', 'defense') }}</span>
                         }
-                        <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('player', 'defense') }}</span>
+                        @if (getDiceBonus('player', 'defense') > 0) {
+                            <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('player', 'defense') }}</span>
+                        }
                     </span>
                     <span class="stat-value">{{ getStatTotal('player', 'defense') }}</span>
                 </div>
@@ -82,7 +89,6 @@
                 </div>
             </div>
         }
-        <p class="subtitle">Les résultats détaillés restent affichés jusqu'au prochain lancé de dés.</p>
 
         <div class="combat">
             <app-isometric-map
@@ -169,9 +175,12 @@
                     <span class="bonus-badge bonus-badge--posture">Bonus posture</span>
                     <span class="bonus-badge bonus-badge--dice">Bonus dé</span>
                 </div>
-                <div class="stat-row">
+                <div class="stat-row stat-row--hp">
                     <span class="stat-label">❤️ HP</span>
-                    <span class="stat-value">{{ enemy.character.life }}</span>
+                    <span class="stat-value">{{ getDisplayedLife('enemy') }}/{{ getOriginalMaxLife('enemy') }}</span>
+                </div>
+                <div class="life-bar" [attr.aria-label]="'Barre de vie de ' + enemy.character.name">
+                    <div class="life-bar-fill" [style.width.%]="getLifeProgressPercent('enemy')"></div>
                 </div>
                 <div class="stat-row">
                     <span class="stat-label">⚔️ Attaque</span>
@@ -179,7 +188,9 @@
                         @if (getPostureBonus('enemy', 'attack') > 0) {
                             <span class="bonus-badge">+{{ getPostureBonus('enemy', 'attack') }}</span>
                         }
-                        <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('enemy', 'attack') }}</span>
+                        @if (getDiceBonus('enemy', 'attack') > 0) {
+                            <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('enemy', 'attack') }}</span>
+                        }
                     </span>
                     <span class="stat-value">{{ getStatTotal('enemy', 'attack') }}</span>
                 </div>
@@ -189,7 +200,9 @@
                         @if (getPostureBonus('enemy', 'defense') > 0) {
                             <span class="bonus-badge">+{{ getPostureBonus('enemy', 'defense') }}</span>
                         }
-                        <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('enemy', 'defense') }}</span>
+                        @if (getDiceBonus('enemy', 'defense') > 0) {
+                            <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('enemy', 'defense') }}</span>
+                        }
                     </span>
                     <span class="stat-value">{{ getStatTotal('enemy', 'defense') }}</span>
                 </div>

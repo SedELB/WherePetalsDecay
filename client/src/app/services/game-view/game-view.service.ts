@@ -130,16 +130,7 @@ export class GameViewService {
             }
 
             if (data.flagTaken) {
-                this.gameLobby.update((lobby) => {
-                    if (!lobby) return lobby;
-                    lobby.game.grid[data.position.y][data.position.x].item = null;
-                    const updatedPlayers = lobby.players.map((player) => {
-                        if (player.socketId === data.socketId) return { ...player, hasFlag: true };
-                        return player;
-                    });
-                    return { ...lobby, players: updatedPlayers };
-                });
-                this.isFlagTaken.set(true);
+                this.applyFlagPickup(data.socketId, data.position);
             }
         });
 
@@ -148,17 +139,7 @@ export class GameViewService {
             this.playerPositions.update((positions) => ({ ...positions, [data.socketId]: data.position }));
 
             if (data.flagTaken) {
-                this.gameLobby.update((lobby) => {
-                    if (!lobby) return lobby;
-                    lobby.game.grid[data.position.y][data.position.x].item = null;
-                    const updatedPlayers = lobby.players.map((player) => {
-                        if (player.socketId === data.socketId) return { ...player, hasFlag: true };
-                        return player;
-                    });
-
-                    return { ...lobby, players: updatedPlayers };
-                });
-                this.isFlagTaken.set(true);
+                this.applyFlagPickup(data.socketId, data.position);
             }
         });
 
@@ -196,12 +177,17 @@ export class GameViewService {
             ({ giverPlayerId, targetPlayerId }) => {
                 this.gameLobby.update((lobby) => {
                     if (!lobby) return lobby;
-                    const giver = lobby.players.find((player) => player.socketId === giverPlayerId);
-                    const taker = lobby.players.find((player) => player.socketId === targetPlayerId);
-                    if (!giver || !taker) return lobby;
-                    taker.hasFlag = true;
-                    giver.hasFlag = false;
-                    return { ...lobby };
+                    const hasGiver = lobby.players.some((player) => player.socketId === giverPlayerId);
+                    const hasTaker = lobby.players.some((player) => player.socketId === targetPlayerId);
+                    if (!hasGiver || !hasTaker) return lobby;
+
+                    const updatedPlayers = lobby.players.map((player) => {
+                        if (player.socketId === giverPlayerId) return { ...player, hasFlag: false };
+                        if (player.socketId === targetPlayerId) return { ...player, hasFlag: true };
+                        return player;
+                    });
+
+                    return { ...lobby, players: updatedPlayers };
                 });
             },
         );
@@ -423,6 +409,30 @@ export class GameViewService {
 
     sendUseSanctuary(lobbyId: string, position: Vec2, mode: 'normal' | 'doubleOrNothing'): void {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestUseSanctuary, { lobbyId, position, mode });
+    }
+
+    private applyFlagPickup(socketId: string, position: Vec2): void {
+        this.gameLobby.update((lobby) => {
+            if (!lobby) return lobby;
+
+            const targetRow = lobby.game.grid[position.y];
+            if (!targetRow || !targetRow[position.x]) return lobby;
+
+            const updatedGrid = lobby.game.grid.map((row, y) =>
+                y === position.y
+                    ? row.map((tile, x) => (x === position.x ? { ...tile, item: null } : tile))
+                    : row,
+            );
+
+            const updatedPlayers = lobby.players.map((player) => {
+                if (player.socketId === socketId) return { ...player, hasFlag: true };
+                return player;
+            });
+
+            return { ...lobby, game: { ...lobby.game, grid: updatedGrid }, players: updatedPlayers };
+        });
+
+        this.isFlagTaken.set(true);
     }
 
     private expandSanctuaryPositions(topLeftList: Vec2[]): Vec2[] {

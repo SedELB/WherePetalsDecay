@@ -255,6 +255,11 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
         const postureData: PostureReceivedData = { socketId: socket.id, posture: normalizedPosture };
         socket.to(roomId).emit(JoinGameEvents.PostureReceived, postureData);
+
+        const allPosturesReceived = session.postures.has(session.attackerId) && session.postures.has(session.defenderId);
+        if (allPosturesReceived) {
+            this.resolveCombatSession(roomId);
+        }
     }
 
     @SubscribeMessage(JoinGameEvents.RequestCombat)
