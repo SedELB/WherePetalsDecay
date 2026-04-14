@@ -89,6 +89,11 @@ interface RoundResolutionSequenceParams {
     roundIndex: number;
     timeline: CombatRoundTimelineData | null;
 }
+type RoundPhaseAction = (next: () => void) => void;
+interface RoundPhaseStep {
+    delayMs: number;
+    action: RoundPhaseAction;
+}
 
 @Injectable()
 export class CombatLogicService {
@@ -779,6 +784,115 @@ export class CombatLogicService {
         });
     }
 
+    private runRoundMovementPhase(
+        sequenceToken: number,
+        attackerSocketId: string,
+        defenderSocketId: string,
+        roundTimeline: CombatRoundTimelineData,
+        onComplete: () => void,
+    ): void {
+        this.runFighterMovementPhase({
+            sequenceToken,
+            attackerSocketId,
+            defenderSocketId,
+            advanceDurationMs: roundTimeline.fighterAdvanceDurationMs,
+            holdDurationMs: roundTimeline.fighterHoldDurationMs,
+            retreatDurationMs: roundTimeline.fighterRetreatDurationMs,
+            onComplete,
+        });
+    }
+
+    private runRoundPhasePipeline(sequenceToken: number, steps: RoundPhaseStep[]): void {
+        if (steps.length === 0) return;
+
+        const [currentStep, ...remainingSteps] = steps;
+        this.enqueueRoundStep(sequenceToken, currentStep.delayMs, () => {
+            currentStep.action(() => this.runRoundPhasePipeline(sequenceToken, remainingSteps));
+        });
+    }
+
+    private buildRoundResolutionSteps(
+        sequenceToken: number,
+        roundTimeline: CombatRoundTimelineData,
+        damageDealt: number,
+        damageReceived: number,
+        roundIndex: number,
+    ): RoundPhaseStep[] {
+        return [
+            {
+                delayMs: roundTimeline.roundPhaseBufferMs,
+                action: (next) => this.runRoundMovementPhase(
+                    sequenceToken,
+                    this.player.socketId,
+                    this.enemy.socketId,
+                    roundTimeline,
+                    next,
+                ),
+            },
+            {
+                delayMs: roundTimeline.roundPhaseBufferMs,
+                action: (next) => this.runRoundMovementPhase(
+                    sequenceToken,
+                    this.enemy.socketId,
+                    this.player.socketId,
+                    roundTimeline,
+                    next,
+                ),
+            },
+            {
+                delayMs: 0,
+                action: (next) => {
+                    this.applyPendingLifeAfterAttackAnimation();
+                    this.clearRoundBonusesAfterAttackAnimation();
+                    next();
+                },
+            },
+            {
+                delayMs: roundTimeline.roundPhaseBufferMs,
+                action: (next) => {
+                    this.showDamagePopup(damageDealt, damageReceived, roundIndex);
+                    next();
+                },
+            },
+            {
+                delayMs: roundTimeline.damageDisplayDurationMs,
+                action: (next) => {
+                    this.hideDamagePopup();
+                    next();
+                },
+            },
+            {
+                delayMs: roundTimeline.roundPhaseBufferMs,
+                action: (next) => {
+                    this.showStatusPopup(roundIndex);
+                    next();
+                },
+            },
+            {
+                delayMs: roundTimeline.statusBufferDurationMs,
+                action: (next) => {
+                    this.statusPopup = null;
+
+                    if (this.pendingCombatEndPopup) {
+                        this.finishRoundSequence(sequenceToken);
+                        return;
+                    }
+
+                    const nextRoundIndex = this.getCurrentRoundIndex() + 1;
+                    this.showRoundAnnouncementPopup(nextRoundIndex);
+                    next();
+                },
+            },
+            {
+                delayMs: roundTimeline.nextRoundAnnouncementDurationMs,
+                action: () => {
+                    this.roundAnnouncementPopup = null;
+                    this.finishRoundSequence(sequenceToken);
+                },
+            },
+        ];
+    }
+
     private finishRoundSequence(sequenceToken: number): void {
         if (!this.isRoundSequenceTokenActive(sequenceToken)) return;
 
@@ -814,61 +928,14 @@ export class CombatLogicService {
                 this.roundResult = roundResult;
                 this.postureResultPopup = null;
 
-                this.enqueueRoundStep(sequenceToken, roundTimeline.roundPhaseBufferMs, () => {
-                    this.runFighterMovementPhase({
-                        sequenceToken,
-                        attackerSocketId: this.player.socketId,
-                        defenderSocketId: this.enemy.socketId,
-                        advanceDurationMs: roundTimeline.fighterAdvanceDurationMs,
-                        holdDurationMs: roundTimeline.fighterHoldDurationMs,
-                        retreatDurationMs: roundTimeline.fighterRetreatDurationMs,
-                        onComplete: () => {
-                            this.enqueueRoundStep(sequenceToken, roundTimeline.roundPhaseBufferMs, () => {
-                                this.runFighterMovementPhase({
-                                    sequenceToken,
-                                    attackerSocketId: this.enemy.socketId,
-                                    defenderSocketId: this.player.socketId,
-                                    advanceDurationMs: roundTimeline.fighterAdvanceDurationMs,
-                                    holdDurationMs: roundTimeline.fighterHoldDurationMs,
-                                    retreatDurationMs: roundTimeline.fighterRetreatDurationMs,
-                                    onComplete: () => {
-                                        this.applyPendingLifeAfterAttackAnimation();
-                                        this.clearRoundBonusesAfterAttackAnimation();
-
-                                        this.enqueueRoundStep(sequenceToken, roundTimeline.roundPhaseBufferMs, () => {
-                                            this.showDamagePopup(damageDealt, damageReceived, roundIndex);
-
-                                            this.enqueueRoundStep(sequenceToken, roundTimeline.damageDisplayDurationMs, () => {
-                                                this.hideDamagePopup();
-
-                                                this.enqueueRoundStep(sequenceToken, roundTimeline.roundPhaseBufferMs, () => {
-                                                    this.showStatusPopup(roundIndex);
-
-                                                    this.enqueueRoundStep(sequenceToken, roundTimeline.statusBufferDurationMs, () => {
-                                                        this.statusPopup = null;
-
-                                                        if (this.pendingCombatEndPopup) {
-                                                            this.finishRoundSequence(sequenceToken);
-                                                            return;
-                                                        }
-
-                                                        const nextRoundIndex = this.getCurrentRoundIndex() + 1;
-                                                        this.showRoundAnnouncementPopup(nextRoundIndex);
-
-                                                        this.enqueueRoundStep(sequenceToken, roundTimeline.nextRoundAnnouncementDurationMs, () => {
-                                                            this.roundAnnouncementPopup = null;
-                                                            this.finishRoundSequence(sequenceToken);
-                                                        });
-                                                    });
-                                                });
-                                            });
-                                        });
-                                    },
-                                });
-                            });
-                        },
-                    });
-                });
+                const roundSteps = this.buildRoundResolutionSteps(
+                    sequenceToken,
+                    roundTimeline,
+                    damageDealt,
+                    damageReceived,
+                    roundIndex,
+                );
+                this.runRoundPhasePipeline(sequenceToken, roundSteps);
             },
         );
     }
