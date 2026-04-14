@@ -1,17 +1,15 @@
-/* eslint-disable max-lines */
 import { Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
+import { IsometricViewService } from '@app/services/isometric-view/isometric-view.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Posture } from '@common/character';
 import { Direction } from '@common/direction';
-import { SocketNamespace, TileTexture } from '@common/enums';
+import { SocketNamespace } from '@common/enums';
 import { GameStats } from '@common/interfaces/game-stats';
 import {
     CombatLockStateData,
     GameOverEventData,
-    GameStartedData,
-    PlayerMovedData,
     TileInfoData,
 } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
@@ -20,11 +18,11 @@ import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
 import { GameViewCombatService } from './game-view-combat.service';
+import { GameViewListenersService } from './game-view-listeners.service';
 import { getFirstTurnNotification, getNextTurnNotification } from './game-view-notification.utils';
 
 const SANCTUARY_BLOCK_SIZE = 2;
 
-const ONE_SECOND_DELAY = 1000;
 const END_GAME_REDIRECT_DELAY = 5000;
 
 @Injectable({
@@ -65,238 +63,39 @@ export class GameViewService {
         private readonly webSocketService: WebSocketService,
         private readonly router: Router,
         private readonly gameViewCombatService: GameViewCombatService,
+        private readonly gameViewListenersService: GameViewListenersService,
+        private readonly isometricViewService: IsometricViewService,
     ) {
-        this.setupWebSocketListeners();
-    }
-
-    private setupWebSocketListeners(): void {
-        this.webSocketService.onNamespace(this.namespace, JoinGameEvents.LeftLobby, () => {
-            this.setLobby(null);
-            this.combatLockState.set(null);
-            this.router.navigate([ROUTES.home]);
-        });
-
-        this.webSocketService.onNamespace<GameStartedData>(this.namespace, JoinGameEvents.GameStarted, (data) => {
-            this.resetGameState();
-            this.setLobby(data.lobby);
-            this.turnOrder.set(data.turnOrder);
-            this.playerPositions.set(data.playerPositions);
-            this.playerStartPositions.set(data.playerStartPositions);
-            this.showFirstTurnNotification(data.turnOrder, data.lobby);
-        });
-
-        this.webSocketService.onNamespace<string>(this.namespace, JoinGameEvents.TurnStarted, (playerSocketId) => {
-            this.activePlayerSocketId.set(playerSocketId);
-            this.turnNotification.set(null);
-        });
-
-        this.webSocketService.onNamespace<number>(this.namespace, JoinGameEvents.BetweenTurnCountdown, (secondsLeft) => {
-            this.disableEndTurn.set(true);
-            this.turnCountdown.set(secondsLeft);
-            if (secondsLeft <= 1) {
-                setTimeout(() => {
-                    this.disableEndTurn.set(false);
-                }, ONE_SECOND_DELAY);
-            }
-        });
-
-        this.webSocketService.onNamespace<number>(this.namespace, JoinGameEvents.TurnCountdown, (secondsLeft) => {
-            this.turnCountdown.set(secondsLeft);
-        });
-
-        this.webSocketService.onNamespace<string>(this.namespace, JoinGameEvents.TurnEnded, (endedPlayerSocketId) => {
-            this.activePlayerSocketId.set(null);
-            this.reachableTiles.set([]);
-            this.reachableTilesForTeleport.set([]);
-            this.showNextTurnNotification(endedPlayerSocketId);
-            if (this.closeFlagTransferSwal) {
-                this.closeFlagTransferSwal();
-                this.closeFlagTransferSwal = null;
-            }
-        });
-
-        this.webSocketService.onNamespace<PlayerMovedData>(this.namespace, JoinGameEvents.PlayerMoved, (data) => {
-            this.playerPositions.update((positions) => ({ ...positions, [data.socketId]: data.position }));
-            if (data.socketId === this.getLocalSocketId()) {
-                this.movementPoints.set(data.movementPoints);
-            }
-
-            if (data.flagTaken) {
-                this.gameLobby.update((lobby) => {
-                    if (!lobby) return lobby;
-                    lobby.game.grid[data.position.y][data.position.x].item = null;
-                    const updatedPlayers = lobby.players.map((player) => {
-                        if (player.socketId === data.socketId) return { ...player, hasFlag: true };
-                        return player;
-                    });
-                    return { ...lobby, players: updatedPlayers };
-                });
-                this.isFlagTaken.set(true);
-            }
-        });
-
-        this.webSocketService.onNamespace<PlayerMovedData>(this.namespace, JoinGameEvents.PlayerTeleported, (data) => {
-            if (!this.isDebugModeActive()) return;
-            this.playerPositions.update((positions) => ({ ...positions, [data.socketId]: data.position }));
-
-            if (data.flagTaken) {
-                this.gameLobby.update((lobby) => {
-                    if (!lobby) return lobby;
-                    lobby.game.grid[data.position.y][data.position.x].item = null;
-                    const updatedPlayers = lobby.players.map((player) => {
-                        if (player.socketId === data.socketId) return { ...player, hasFlag: true };
-                        return player;
-                    });
-
-                    return { ...lobby, players: updatedPlayers };
-                });
-                this.isFlagTaken.set(true);
-            }
-        });
-
-        this.webSocketService.onNamespace<boolean>(this.namespace, JoinGameEvents.DebugToggled, (isEnabled) => {
-            this.isDebugModeActive.set(isEnabled);
-        });
-
-        this.webSocketService.onNamespace<{ socketId: string; tiles: Vec2[] }>(this.namespace, JoinGameEvents.ReachableTiles, (data) => {
-            if (data.socketId === this.getLocalSocketId()) {
-                this.reachableTiles.set(data.tiles);
-            }
-        });
-
-        this.webSocketService.onNamespace<{ socketId: string; tiles: Vec2[] }>(this.namespace, JoinGameEvents.ReachableTilesForTeleport, (data) => {
-            if (data.socketId === this.getLocalSocketId()) {
-                this.reachableTilesForTeleport.set(data.tiles);
-            }
-        });
-
-        this.webSocketService.onNamespace<{ socketId: string; movementPoints: number }>(this.namespace, JoinGameEvents.MovementPoints, (data) => {
-            if (data.socketId === this.getLocalSocketId()) {
-                this.movementPoints.set(data.movementPoints);
-            }
-        });
-
-        this.webSocketService.onNamespace<{ socketId: string; actionPoints: number }>(this.namespace, JoinGameEvents.ActionPoints, (data) => {
-            if (data.socketId === this.getLocalSocketId()) {
-                this.actionPoints.set(data.actionPoints);
-            }
-        });
-
-        this.webSocketService.onNamespace<{ giverPlayerId: string; targetPlayerId: string }>(
-            this.namespace,
-            JoinGameEvents.FlagTransferred,
-            ({ giverPlayerId, targetPlayerId }) => {
-                this.gameLobby.update((lobby) => {
-                    if (!lobby) return lobby;
-                    const giver = lobby.players.find((player) => player.socketId === giverPlayerId);
-                    const taker = lobby.players.find((player) => player.socketId === targetPlayerId);
-                    if (!giver || !taker) return lobby;
-                    taker.hasFlag = true;
-                    giver.hasFlag = false;
-                    return { ...lobby };
-                });
-            },
-        );
-
-        this.webSocketService.onNamespace<{ requesterId: string; requesterName: string; lobbyId: string }>(
-            this.namespace,
-            JoinGameEvents.GiveFlagResponse,
-            ({ requesterId, requesterName, lobbyId }) => this.promptFlagTransfer(requesterId, requesterName, lobbyId),
-        );
-
-        this.webSocketService.onNamespace<{ requesterId: string; requesterName: string; lobbyId: string }>(
-            this.namespace,
-            JoinGameEvents.RequestFlagResponse,
-            ({ requesterId, requesterName, lobbyId }) => this.promptFlagTransfer(requesterId, requesterName, lobbyId, true),
-        );
-
-        this.webSocketService.onNamespace<{ socketId: string; updatedLobby: Lobby }>(this.namespace,
-            JoinGameEvents.PlayerAbandoned, ({ socketId, updatedLobby }) => {
-                this.playerPositions.update((positions) => {
-                    const updated = { ...positions };
-                    delete updated[socketId];
-                    return updated;
-                });
-                this.setLobby(updatedLobby);
-            });
-
-        this.webSocketService.onNamespace<GameOverEventData>(this.namespace, JoinGameEvents.GameOver, (data) => {
-            this.handleGameOverEvent(data);
-        });
-
-        this.webSocketService.onNamespace<CombatLockStateData>(
-            this.namespace,
-            JoinGameEvents.CombatLockStateChanged,
-            (data) => this.combatLockState.set(data.isLocked ? data : null),
-        );
-
-        this.webSocketService.onNamespace<TileInfoData>(this.namespace, JoinGameEvents.TileInfo, (data) => {
-            this.tileInfo.set(data);
-        });
-
-        this.webSocketService.onNamespace<{ position: Vec2; newType: TileTexture }>(
-            this.namespace, JoinGameEvents.DoorToggled, (data) => {
-                this.gameLobby.update((lobby) => {
-                    if (!lobby) return lobby;
-                    const updatedGrid = lobby.game.grid.map((row, y) =>
-                        row.map((tile, x) =>
-                            x === data.position.x && y === data.position.y ? { ...tile, type: data.newType } : tile,
-                        ),
-                    );
-                    return { ...lobby, game: { ...lobby.game, grid: updatedGrid } };
-                });
-            },
-        );
-
-        this.webSocketService.onNamespace<{ inactiveSanctuaries: Vec2[] }>(
-            this.namespace, JoinGameEvents.SanctuaryStateUpdate, (data) => {
-                this.inactiveSanctuaries.set(this.expandSanctuaryPositions(data.inactiveSanctuaries));
-            },
-        );
-
-        this.webSocketService.onNamespace<{
-            socketId: string; sanctuaryType: string; mode: string;
-            healAmount: number; combatBonusApplied: boolean;
-            playerNewLife: number; playerName: string; inactiveSanctuaries: Vec2[];
-        }>(this.namespace, JoinGameEvents.SanctuaryUsed, (data) => {
-            this.inactiveSanctuaries.set(this.expandSanctuaryPositions(data.inactiveSanctuaries));
-            if (data.healAmount > 0) {
-                this.gameLobby.update((lobby) => {
-                    if (!lobby) return lobby;
-                    const updatedPlayers = lobby.players.map((p) =>
-                        p.socketId === data.socketId
-                            ? { ...p, character: { ...p.character, life: data.playerNewLife } }
-                            : p,
-                    );
-                    return { ...lobby, players: updatedPlayers };
-                });
-            }
-        });
-
-        this.webSocketService.onNamespace<{ socketId: string; attack: number; defense: number; life: number }>(
-            this.namespace, JoinGameEvents.PlayerStatsUpdate, (data) => {
-                this.gameLobby.update((lobby) => {
-                    if (!lobby) return lobby;
-                    const updatedPlayers = lobby.players.map((p) =>
-                        p.socketId === data.socketId
-                            ? { ...p, character: { ...p.character, attack: data.attack, defense: data.defense, life: data.life } }
-                            : p,
-                    );
-                    return { ...lobby, players: updatedPlayers };
-                });
-            },
-        );
-
-        this.webSocketService.onNamespace<string>(this.namespace, JoinGameEvents.JournalEntry, (message) => {
-            this.journalEntries.update((entries) => [...entries, message]);
-        });
-
-        this.gameViewCombatService.setupListeners(this.webSocketService, this.namespace, {
+        this.gameViewListenersService.registerAll({
+            namespace: this.namespace,
+            isDebugModeActive: this.isDebugModeActive,
+            disableEndTurn: this.disableEndTurn,
+            gameLobby: this.gameLobby,
+            playerPositions: this.playerPositions,
+            playerStartPositions: this.playerStartPositions,
+            turnOrder: this.turnOrder,
+            activePlayerSocketId: this.activePlayerSocketId,
+            turnCountdown: this.turnCountdown,
+            reachableTiles: this.reachableTiles,
+            reachableTilesForTeleport: this.reachableTilesForTeleport,
+            movementPoints: this.movementPoints,
+            actionPoints: this.actionPoints,
+            tileInfo: this.tileInfo,
+            turnNotification: this.turnNotification,
+            inactiveSanctuaries: this.inactiveSanctuaries,
+            journalEntries: this.journalEntries,
+            isFlagTaken: this.isFlagTaken,
+            combatLockState: this.combatLockState,
             getLocalSocketId: () => this.getLocalSocketId(),
-            getGameLobby: () => this.gameLobby(),
-            updateGameLobby: (updater) => this.gameLobby.update(updater),
-            updatePlayerPositions: (updater) => this.playerPositions.update(updater),
-            setFlagTaken: (value) => this.isFlagTaken.set(value),
+            setLobby: (lobby) => this.setLobby(lobby),
+            resetGameState: () => this.resetGameState(),
+            showFirstTurnNotification: (order, lobby) => this.showFirstTurnNotification(order, lobby),
+            showNextTurnNotification: (endedId) => this.showNextTurnNotification(endedId),
+            handleGameOverEvent: (data) => this.handleGameOverEvent(data),
+            closeFlagTransferSwalIfOpen: () => this.closeFlagTransferSwalIfOpen(),
+            promptFlagTransfer: (rId, rName, lId, isReq) => this.promptFlagTransfer(rId, rName, lId, isReq),
+            expandSanctuaryPositions: (topLeftList) => this.expandSanctuaryPositions(topLeftList),
+            triggerDoorAnimation: (x, y, newType) => this.isometricViewService.triggerDoorAnimation(x, y, newType),
         });
     }
 
@@ -413,7 +212,7 @@ export class GameViewService {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestUseSanctuary, { lobbyId, position, mode });
     }
 
-    private expandSanctuaryPositions(topLeftList: Vec2[]): Vec2[] {
+    expandSanctuaryPositions(topLeftList: Vec2[]): Vec2[] {
         const expanded: Vec2[] = [];
         for (const tl of topLeftList) {
             for (let dy = 0; dy < SANCTUARY_BLOCK_SIZE; dy++) {
@@ -431,6 +230,13 @@ export class GameViewService {
 
     leaveEndGame(lobbyId: string): void {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.LeaveEndGame, lobbyId);
+    }
+
+    private closeFlagTransferSwalIfOpen(): void {
+        if (this.closeFlagTransferSwal) {
+            this.closeFlagTransferSwal();
+            this.closeFlagTransferSwal = null;
+        }
     }
 
     private promptFlagTransfer(requesterId: string, requesterName: string, lobbyId: string, isRequest = false): void {

@@ -1,5 +1,5 @@
 import { AdminGateway } from '@app/gateways/admin/admin.gateway';
-import { GamesGateway } from '@app/gateways/games/games.gateway';
+import { GameCatalogGateway } from '@app/gateways/game-catalog/game-catalog.gateway';
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
 import { Game } from '@app/model/schema/game.schema';
@@ -14,12 +14,12 @@ describe('GameController', () => {
     let controller: GameController;
     let gameService: SinonStubbedInstance<GameService>;
     let adminGateway: SinonStubbedInstance<AdminGateway>;
-    let gamesGateway: SinonStubbedInstance<GamesGateway>;
+    let gameCatalogGateway: SinonStubbedInstance<GameCatalogGateway>;
 
     beforeEach(async () => {
         gameService = createStubInstance(GameService);
         adminGateway = createStubInstance(AdminGateway);
-        gamesGateway = createStubInstance(GamesGateway);
+        gameCatalogGateway = createStubInstance(GameCatalogGateway);
         const module: TestingModule = await Test.createTestingModule({
             controllers: [GameController],
             providers: [
@@ -32,8 +32,8 @@ describe('GameController', () => {
                     useValue: adminGateway,
                 },
                 {
-                    provide: GamesGateway,
-                    useValue: gamesGateway,
+                    provide: GameCatalogGateway,
+                    useValue: gameCatalogGateway,
                 },
             ],
         }).compile();
@@ -129,7 +129,7 @@ describe('GameController', () => {
         const gameDto: CreateGameDto = {} as CreateGameDto;
         await controller.addGame(gameDto, res);
         expect(adminGateway.notifyGameCreated.calledOnce).toBe(true);
-        expect(gamesGateway.notifyGameCreated.calledOnce).toBe(true);
+        expect(gameCatalogGateway.notifyGameCreated.calledOnce).toBe(true);
     });
 
     it('addGame() should succeed and notify only admin gateway when game is not visible', async () => {
@@ -150,7 +150,7 @@ describe('GameController', () => {
         const gameDto: CreateGameDto = {} as CreateGameDto;
         await controller.addGame(gameDto, res);
         expect(adminGateway.notifyGameCreated.calledOnce).toBe(true);
-        expect(gamesGateway.notifyGameCreated.called).toBe(false);
+        expect(gameCatalogGateway.notifyGameCreated.called).toBe(false);
     });
 
     it('addGame() should return BAD_REQUEST when service unable to add the game', async () => {
@@ -188,7 +188,7 @@ describe('GameController', () => {
         const gameDto: UpdateGameDto = {} as UpdateGameDto;
         await controller.modifyGame('game-id', gameDto, res);
         expect(adminGateway.notifyGameUpdated.calledOnce).toBe(true);
-        expect(gamesGateway.notifyGameDeleted.called).toBe(false);
+        expect(gameCatalogGateway.notifyGameDeleted.called).toBe(false);
     });
 
     it('modifyGame() should succeed and notify game deletion when game becomes invisible', async () => {
@@ -209,7 +209,7 @@ describe('GameController', () => {
         const gameDto: UpdateGameDto = {} as UpdateGameDto;
         await controller.modifyGame('game-id', gameDto, res);
         expect(adminGateway.notifyGameUpdated.calledOnce).toBe(true);
-        expect(gamesGateway.notifyGameDeleted.calledOnce).toBe(true);
+        expect(gameCatalogGateway.notifyGameDeleted.calledOnce).toBe(true);
     });
 
     it('modifyGame() should return NOT_FOUND when service cannot find the game', async () => {
@@ -261,7 +261,7 @@ describe('GameController', () => {
 
         await controller.deleteGame('game-id', res);
         expect(adminGateway.notifyGameDeleted.calledOnce).toBe(true);
-        expect(gamesGateway.notifyGameDeleted.calledOnce).toBe(true);
+        expect(gameCatalogGateway.notifyGameDeleted.calledOnce).toBe(true);
     });
 
     it('deleteGame() should return NOT_FOUND when service cannot delete the game', async () => {
@@ -330,8 +330,8 @@ describe('GameController', () => {
 
         await controller.modifyVisibility('game-id', true, res);
         expect(adminGateway.notifyGameVisibilityChanged.calledOnce).toBe(true);
-        expect(gamesGateway.notifyGameCreated.calledOnce).toBe(true);
-        expect(gamesGateway.notifyGameDeleted.called).toBe(false);
+        expect(gameCatalogGateway.notifyGameCreated.calledOnce).toBe(true);
+        expect(gameCatalogGateway.notifyGameDeleted.called).toBe(false);
     });
 
     it('modifyVisibility() should succeed and notify game deletion when visibility is set to false', async () => {
@@ -351,8 +351,8 @@ describe('GameController', () => {
 
         await controller.modifyVisibility('game-id', false, res);
         expect(adminGateway.notifyGameVisibilityChanged.calledOnce).toBe(true);
-        expect(gamesGateway.notifyGameDeleted.calledOnce).toBe(true);
-        expect(gamesGateway.notifyGameCreated.called).toBe(false);
+        expect(gameCatalogGateway.notifyGameDeleted.calledOnce).toBe(true);
+        expect(gameCatalogGateway.notifyGameCreated.called).toBe(false);
     });
 
     it('modifyVisibility() should return BAD_REQUEST when service cannot update visibility', async () => {

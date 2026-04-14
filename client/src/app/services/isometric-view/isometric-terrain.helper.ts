@@ -13,6 +13,7 @@ const ACTION_GLOW_COLORS: Record<string, string> = {
   attack: 'rgba(255, 60, 60, 0.9)',
   giveFlag: 'rgba(50, 255, 110, 0.9)',
   requestFlag: 'rgba(80, 180, 255, 0.9)',
+  toggleDoor: 'rgba(243, 156, 18, 0.9)',
 };
 
 function buildPolygonPath(ctx: CanvasRenderingContext2D, points: Vec2[]): void {
@@ -76,6 +77,7 @@ function getActionFillColor(type: string, pulse: number): string {
     attack: `rgba(255, 60, 60, ${pulse})`,
     giveFlag: `rgba(50, 255, 110, ${pulse})`,
     requestFlag: `rgba(80, 180, 255, ${pulse})`,
+    toggleDoor: `rgba(243, 156, 18, ${pulse})`,
   };
   return ACTION_FILL_COLORS[type] ?? `rgba(255,255,255,${pulse})`;
 }

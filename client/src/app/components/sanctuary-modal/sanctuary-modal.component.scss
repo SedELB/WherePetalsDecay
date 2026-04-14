@@ -1,0 +1,113 @@
+.sanctuary-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.65);
+}
+
+.sanctuary-modal {
+    background: rgba(12, 14, 34, 0.97);
+    border: 1px solid rgba(160, 100, 255, 0.35);
+    border-radius: 1rem;
+    padding: 2rem 2.5rem;
+    color: white;
+    text-align: center;
+    min-width: 22rem;
+    box-shadow:
+        0 0 40px rgba(160, 100, 255, 0.2),
+        0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.sanctuary-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+    color: #c08aff;
+    letter-spacing: 0.03em;
+}
+
+.sanctuary-effect {
+    color: #aaa;
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+.sanctuary-divider {
+    height: 1px;
+    background: rgba(160, 100, 255, 0.25);
+    margin: 1.25rem 0;
+}
+
+.sanctuary-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.modal-btn {
+    width: 100%;
+    max-width: 16rem;
+    padding: 0.55rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-weight: 600;
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease,
+        background 0.15s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    }
+
+    &.normal {
+        background: rgba(80, 200, 130, 0.15);
+        border-color: rgba(80, 200, 130, 0.5);
+        color: #6de6a0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.1rem;
+
+        .btn-sub {
+            font-size: 0.72rem;
+            font-weight: 400;
+            color: rgba(110, 230, 160, 0.7);
+        }
+    }
+
+    &.risky {
+        background: rgba(255, 190, 60, 0.15);
+        border-color: rgba(255, 190, 60, 0.5);
+        color: #ffd070;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.1rem;
+
+        .btn-sub {
+            font-size: 0.72rem;
+            font-weight: 400;
+            color: rgba(255, 210, 100, 0.7);
+        }
+    }
+
+    &.cancel {
+        background: transparent;
+        border-color: rgba(255, 255, 255, 0.15);
+        color: rgba(255, 255, 255, 0.45);
+        font-size: 0.82rem;
+        margin-top: 0.2rem;
+
+        &:hover {
+            color: rgba(255, 255, 255, 0.7);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+    }
+}

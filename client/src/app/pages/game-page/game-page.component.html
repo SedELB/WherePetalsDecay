@@ -4,7 +4,7 @@
 <main class="container" (contextmenu)="$event.preventDefault()">
     <section class="game-board-wrapper">
         <div class="grid-container">
-            <div class="map-frame" aria-label="Grille de carte" [class.debug-background]="this.isDebugModeActive()">
+                <div class="map-frame" aria-label="Grille de carte" [class.debug-background]="this.gamePageSignalService.isDebugModeActive()">
                 <div class="controls-panel">
                     <div class="panel-left">
                         <app-button id="back-button" [width]="100" (click)="onAbandon()">Quitter</app-button>
@@ -17,7 +17,7 @@
                         <span class="control"><span class="key">D</span> Droite</span>
                         <span class="control"><span class="key">Molette</span> Zoom</span>
                         <span class="control"><span class="key">Maintenir clic</span> Déplacer la carte</span>
-                        @if (this.isDebugModeActive()){
+                        @if (this.gamePageSignalService.isDebugModeActive()){
                             <span class="control"><span class="key">Clic droit</span> Téléportation</span>
                         }
                         @else {
@@ -27,36 +27,37 @@
                     <div class="panel-right"></div>
                 </div>
                 <div class="timer-display">
-                    @if (activePlayer()?.character?.avatar) {
-                        <img [src]="activePlayer()?.character?.avatar" alt="Avatar actif" style="width: 2rem; height: 2rem; border-radius: 25%; object-fit: cover;" />
+                    @if (gamePageSignalService.activePlayer()?.character?.avatar) {
+                        <img [src]="gamePageSignalService.activePlayer()?.character?.avatar" alt="Avatar actif" style="width: 2rem; height: 2rem; border-radius: 25%; object-fit: cover;" />
                     }
                     <span class="timer-label">{{ getTimerLabel() }}</span>
                     <span class="timer-countdown">{{ getTimerDisplay() }}</span>
                 </div>
                 <app-isometric-map 
-                    [grid]="game()?.grid ?? []"
-                    [players]="lobby()?.players ?? []"
-                    [playerPositions]="playerPositions()"
-                    [reachableTiles]="reachableTiles()"
-                    [teleportableTiles]="isDebugModeActive() ? reachableTilesForTeleport() : []"
-                    [localPlayerSocketId]="localPlayer()?.socketId"
-                    [inactiveSanctuaries]="inactiveSanctuaries()"
-                    [isCTF]="game()?.gameMode === gameMode.Ctf"
-                    [teamA]="lobby()?.teamA ?? []"
-                    [teamB]="lobby()?.teamB ?? []"
-                    [actionHighlightTiles]="actionHighlightTiles()"
+                    [grid]="gamePageSignalService.game()?.grid ?? []"
+                    [players]="gamePageSignalService.lobby()?.players ?? []"
+                    [playerPositions]="gamePageSignalService.playerPositions()"
+                    [reachableTiles]="gamePageSignalService.reachableTiles()"
+                    [teleportableTiles]="gamePageSignalService.isDebugModeActive() ? gamePageSignalService.reachableTilesForTeleport() : []"
+                    [localPlayerSocketId]="gamePageSignalService.localPlayer()?.socketId"
+                    [isLocalPlayerTurn]="gamePageSignalService.isMyTurn()"
+                    [inactiveSanctuaries]="gamePageSignalService.inactiveSanctuaries()"
+                    [isCTF]="gamePageSignalService.game()?.gameMode === gameMode.Ctf"
+                    [teamA]="gamePageSignalService.lobby()?.teamA ?? []"
+                    [teamB]="gamePageSignalService.lobby()?.teamB ?? []"
+                    [actionHighlightTiles]="gamePageSignalService.actionHighlightTiles()"
                     (tileClick)="onTileClick($event.x, $event.y)"
                     (rightClick)="onRightClick($event.event, $event.pos)"
                 ></app-isometric-map>
-                @if (isCombatOverlayVisible()) {
-                    <app-combat [player]="this.fighters().player" [enemy]="this.fighters().enemy" ></app-combat>
+                @if (gamePageSignalService.isCombatOverlayVisible()) {
+                    <app-combat [player]="this.gamePageSignalService.fighters().player" [enemy]="this.gamePageSignalService.fighters().enemy" ></app-combat>
                 }
 
-                @if (showCombatInProgressModal()) {
+                @if (gamePageSignalService.showCombatInProgressModal()) {
                     <div class="combat-lock-modal-overlay">
                         <div class="combat-lock-modal">
                             <h2>Combat en cours</h2>
-                            <p>{{ combatInProgressMessage() }}</p>
+                            <p>{{ gamePageSignalService.combatInProgressMessage() }}</p>
                             <p>Le journal et le clavardage restent accessibles.</p>
                         </div>
                     </div>
@@ -69,108 +70,31 @@
         <button class="panel-toggle-btn" (click)="isLeftPanelOpen = !isLeftPanelOpen">
             {{ isLeftPanelOpen ? '▶' : '◀' }} Info
         </button>
-        <aside class="side-panel left" [class.collapsed]="!isLeftPanelOpen" [class.debug-background]="this.isDebugModeActive()">
+        <aside class="side-panel left" [class.collapsed]="!isLeftPanelOpen" [class.debug-background]="this.gamePageSignalService.isDebugModeActive()">
             <section class="game-stats">
                 <h3 class="section-title">Informations de partie</h3>
                 <div class="game-info">
                     <ul>
-                        <li>Nom du jeu : <span>{{ game()?.name }}</span></li>
-                        <li>Taille du jeu : <span>{{ game()?.size?.rows }}X{{ game()?.size?.cols }}</span></li>
-                        <li>Mode de jeu : <span>{{ game()?.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</span></li>
-                        <li>Nombre de joueurs : <span>{{ lobby()?.playerCount }}</span></li>
+                        <li>Nom du jeu : <span>{{ gamePageSignalService.game()?.name }}</span></li>
+                        <li>Taille du jeu : <span>{{ gamePageSignalService.game()?.size?.rows }}X{{ gamePageSignalService.game()?.size?.cols }}</span></li>
+                        <li>Mode de jeu : <span>{{ gamePageSignalService.game()?.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</span></li>
+                        <li>Nombre de joueurs : <span>{{ gamePageSignalService.lobby()?.playerCount }}</span></li>
                     </ul>
                 </div>
             </section>
 
             <section class="players-list">
-                <h3 class="section-title">Ordre des tours</h3>
-                @if (game()?.gameMode === gameMode.Classic){
-                    <div class="list">
-                        <ul>
-                            @for (player of orderedPlayers(); track player.socketId) {
-                                <li [class.active]="player.socketId === activePlayerSocketId()"
-                                    [class.abandonned]="player.hasAbandonned">
-                                    <div class="player-info">
-                                        <span class="info">
-                                            <span class="name" title="{{ player.character.name }}">{{ player.character.name }}</span>
-                                            <span class="stats-icon">⚔️ {{ player.winsCount }}</span>
-                                            @if (player.isHost) { <span class="host-indicator">👑</span> }
-                                            @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator">▶</span> }
-                                            @if (player.playerType === 'virtual') {
-                                                @if (player.virtualProfile === 'aggressive') {
-                                                    <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
-                                                } @else {
-                                                    <span class="virtual-player-badge"><img src="./assets/icons/shield.svg" class="vp-icon" alt="icône bouclier"/> BOT</span>
-                                                }
-                                            }
-                                        </span>
-                                    </div>
-                                </li>
-                            }
-                        </ul>
-                    </div>
-                } @else {
-                    <!-- Mode CTF -->
-                    <div class="team-section team-a-section">
-                        <h4 class="section-title team-title" style="color: #3b82f6;">Équipe A</h4>
-                        <div class="list">
-                            <ul>
-                                @for (player of getTeamPlayers('A'); track player.socketId) {
-                                    <li [class.active]="player.socketId === activePlayerSocketId()"
-                                        [class.abandonned]="player.hasAbandonned">
-                                        <div class="player-info">
-                                            <span class="info">
-                                                <span class="name" title="{{ player.character.name }}">{{ player.character.name }}</span>
-                                                @if (player.hasFlag) { <span class="flag-indicator" title="Possède le drapeau">🚩</span> }
-                                                @if (player.isHost) { <span class="host-indicator">👑</span> }
-                                                @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator turn-indicator-a">▶</span> }
-                                                @if (player.playerType === 'virtual') {
-                                                    @if (player.virtualProfile === 'aggressive') {
-                                                        <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
-                                                    } @else {
-                                                        <span class="virtual-player-badge"><img src="./assets/icons/shield.svg" class="vp-icon" alt="icône bouclier"/> BOT</span>
-                                                    }
-                                                }
-                                            </span>
-                                        </div>
-                                    </li>
-                                }
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="team-section team-b-section">
-                        <h4 class="section-title team-title" style="color: #ef4444;">Équipe B</h4>
-                        <div class="list">
-                            <ul>
-                                @for (player of getTeamPlayers('B'); track player.socketId) {
-                                    <li [class.active]="player.socketId === activePlayerSocketId()"
-                                        [class.abandonned]="player.hasAbandonned">
-                                        <div class="player-info">
-                                            <span class="info">
-                                                <span class="name" title="{{ player.character.name }}">{{ player.character.name }}</span>
-                                                @if (player.hasFlag) { <span class="flag-indicator">🚩</span> }
-                                                @if (player.isHost) { <span class="host-indicator">👑</span> }
-                                                @if (player.socketId === activePlayerSocketId()) { <span class="turn-indicator turn-indicator-b">▶</span> }
-                                                @if (player.playerType === 'virtual') {
-                                                    @if (player.virtualProfile === 'aggressive') {
-                                                        <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
-                                                    } @else {
-                                                        <span class="virtual-player-badge"><img src="./assets/icons/shield.svg" class="vp-icon" alt="icône bouclier"/> BOT</span>
-                                                    }
-                                                }
-                                            </span>
-                                        </div>
-                                    </li>
-                                }
-                            </ul>
-                        </div>
-                    </div>
-                }
+                <app-players-list
+                    [orderedPlayers]="gamePageSignalService.orderedPlayers()"
+                    [activePlayerSocketId]="gamePageSignalService.activePlayerSocketId()"
+                    [gameMode]="gamePageSignalService.game()?.gameMode ?? gameMode.Classic"
+                    [teamA]="gamePageSignalService.allTeams()[0]"
+                    [teamB]="gamePageSignalService.allTeams()[1]">
+                </app-players-list>
             </section>
         </aside>
 
-        <aside class="side-panel right" [class.debug-background]="this.isDebugModeActive()">
+        <aside class="side-panel right" [class.debug-background]="this.gamePageSignalService.isDebugModeActive()">
             <section class="chat-box">
                 <div class="tab-bar">
                     <button class="tab-btn" [class.active]="!isJournalOpen" (click)="isJournalOpen = false">Clavardage</button>
@@ -178,113 +102,99 @@
                 </div>
                 @if (isJournalOpen) {
                     <app-journal
-                        [lobbyId]="lobby()?.lobbyId ?? ''"
+                        [lobbyId]="gamePageSignalService.lobby()?.lobbyId ?? ''"
                     ></app-journal>
                 } @else {
                     <app-chat
-                        [lobbyId]="lobby()?.lobbyId ?? ''"
-                        [playerName]="localPlayer()?.character?.name ?? ''"
+                        [lobbyId]="gamePageSignalService.lobby()?.lobbyId ?? ''"
+                        [playerName]="gamePageSignalService.localPlayer()?.character?.name ?? ''"
                         (chatFocusChange)="onChatFocusChange($event)"
                     ></app-chat>
                 }
             </section>
 
             <section class="character-sheet">
-                <h3 class="section-title">Mon Personnage</h3>
-                <div class="local-player-info">
-                    <ul>
-                        <img [src]="localPlayer()?.character?.avatar" [alt]="localPlayer()?.character?.name" class="player-avatar"/>
-                        <li>Nom : <span>{{ localPlayer()?.character?.name }}</span></li>
-                        <li>PV restants : <span>{{ localPlayer()?.character?.life }}</span></li>
-                        <li>PV max : <span>{{ maxLife() }}</span></li>
-                        <li>Rapidité : <span>{{ localPlayer()?.character?.speed }}</span></li>
-                        <li>Attaque | Dés : <span>{{ localPlayer()?.character?.attack }} | {{ localPlayer()?.character?.attackDice }}</span></li>
-                        <li>Défense | Dés : <span>{{ localPlayer()?.character?.defense }} | {{ localPlayer()?.character?.defenseDice }}</span></li>
-                        <li>Points de mouvement : <span>{{ movementPoints() }}</span></li>
-                        <li>Points d'action : <span>{{ actionPoints() }}</span></li>
-                    </ul>
-                </div>
+                <app-character-sheet
+                    [player]="gamePageSignalService.localPlayer()"
+                    [maxLife]="gamePageSignalService.maxLife()"
+                    [movementPoints]="gamePageSignalService.movementPoints()"
+                    [actionPoints]="gamePageSignalService.actionPoints()">
+                </app-character-sheet>
             </section>
 
-            <div class="sub-action-panel" [class.open]="isSubMenuOpen()">
-                @if (attackTargets().length > 0) {
+            <div class="sub-action-panel" [class.open]="gamePageSignalService.isSubMenuOpen()">
+                @if (gamePageSignalService.attackTargets().length > 0) {
                     <button
                         id="sub-action-attack"
                         class="sub-action-btn attack"
-                        [class.selected]="activeSubAction() === 'attack'"
-                        (click)="selectSubAction('attack')"
+                        [class.selected]="gamePageSignalService.activeSubAction() === 'attack'"
+                        (click)="gamePageSignalService.selectSubAction('attack')"
                     >Attaquer</button>
                 }
-                @if (requestFlagTargets().length > 0) {
+                @if (gamePageSignalService.adjacentDoorTiles().length > 0) {
+                    <button
+                        id="sub-action-door"
+                        class="sub-action-btn door"
+                        [class.selected]="gamePageSignalService.activeSubAction() === 'toggleDoor'"
+                        (click)="gamePageSignalService.selectSubAction('toggleDoor')"
+                    >{{ gamePageSignalService.doorActionLabel() }}</button>
+                }
+                @if (gamePageSignalService.requestFlagTargets().length > 0) {
                     <button
                         id="sub-action-request-flag"
                         class="sub-action-btn flag-req"
-                        [class.selected]="activeSubAction() === 'requestFlag'"
-                        (click)="selectSubAction('requestFlag')"
+                        [class.selected]="gamePageSignalService.activeSubAction() === 'requestFlag'"
+                        (click)="gamePageSignalService.selectSubAction('requestFlag')"
                     >Demander drapeau</button>
                 }
-                @if (giveFlagTargets().length > 0) {
+                @if (gamePageSignalService.giveFlagTargets().length > 0) {
                     <button
                         id="sub-action-give-flag"
                         class="sub-action-btn flag-give"
-                        [class.selected]="activeSubAction() === 'giveFlag'"
-                        (click)="selectSubAction('giveFlag')"
+                        [class.selected]="gamePageSignalService.activeSubAction() === 'giveFlag'"
+                        (click)="gamePageSignalService.selectSubAction('giveFlag')"
                     >Donner drapeau</button>
+                }
+                @if (gamePageSignalService.sanctuaryTargets().length > 0) {
+                    <button
+                        id="sub-action-sanctuary"
+                        class="sub-action-btn sanctuary"
+                        [class.selected]="gamePageSignalService.activeSubAction() === 'sanctuary'"
+                        (click)="onSelectSanctuaryAction()"
+                    >Utiliser sanctuaire</button>
                 }
             </div>
 
             <div class="action-bar">
                 <app-button
                     id="action-toggle-btn"
-                    (click)="toggleSubMenu()"
-                    [disabled]="!hasAnyAction()"
-                    [class.active-action]="isSubMenuOpen()"
+                    (click)="gamePageSignalService.toggleSubMenu()"
+                    [disabled]="!gamePageSignalService.hasAnyAction()"
+                    [class.active-action]="gamePageSignalService.isSubMenuOpen()"
                 >
-                    {{ isSubMenuOpen() ? 'Annuler' : 'Action' }}
+                    {{ gamePageSignalService.isSubMenuOpen() ? 'Annuler' : 'Action' }}
                 </app-button>
-                <app-button (click)="onEndTurn()" [disabled]="this.disableEndTurn() || isEndTurnDisabled()">Finir Tour</app-button>
+                <app-button (click)="onEndTurn()" [disabled]="this.gamePageSignalService.disableEndTurn() || isEndTurnDisabled()">Finir Tour</app-button>
             </div>
         </aside>
     </div>
 
-    @if (turnNotification(); as notification) {
+    @if (gamePageSignalService.turnNotification(); as notification) {
         <div class="turn-notification-toast">
             <span>{{ notification }}</span>
         </div>
     }
 
-    @if (gameOver(); as over) {
-        <div class="game-over-overlay">
-            <div class="game-over-message">
-                <h2>Partie terminée</h2>
-
-                @if (over.isForfeit && over.winnerSocketId === localPlayer()?.socketId) {
-                    <p>Vous avez gagné car tous les autres joueurs ont quitté !</p>
-                }
-                @else if (over.winnerSocketId) {
-                    @if (over.winnerSocketId === localPlayer()?.socketId) {
-                        @if (game()?.gameMode === gameMode.Ctf) {
-                            <p>Félicitations ! Vous avez gagné en ramenant le drapeau à votre base !</p>
-                        } @else {
-                            <p>Félicitations ! Vous avez gagné la partie avec 3 victoires !</p>
-                        }
-                    } @else {
-                        @if (game()?.gameMode === gameMode.Ctf) {
-                            <p>{{ getPlayerName(over.winnerSocketId) }} a ramené le drapeau et fait gagner son équipe !</p>
-                        } @else {
-                            <p>{{ getPlayerName(over.winnerSocketId) }} a atteint 3 victoires et remporte la partie.</p>
-                        }
-                    }
-                }
-                @else if (over.abandonTeam) {
-                    <p>L'équipe {{ over.abandonTeam }} a abandonné la partie.</p>
-                    <p>Redirection vers le menu principal...</p>
-                }
-            </div>
-        </div>
+    @if (gamePageSignalService.gameOver(); as over) {
+        <app-game-over-overlay
+            [gameOver]="over"
+            [localPlayerSocketId]="gamePageSignalService.localPlayer()?.socketId"
+            [winnerName]="over.winnerSocketId ? getPlayerName(over.winnerSocketId) : ''"
+            [gameMode]="gamePageSignalService.game()?.gameMode ?? gameMode.Classic">
+        </app-game-over-overlay>
     }
 
-    @if (tileInfo(); as info) {
+    @if (gamePageSignalService.tileInfo(); as info) {
         <div class="tile-info-popup" (click)="gameViewService.tileInfo.set(null)">
             <div class="tile-info-content">
                 <p>Type : <span>{{ tileNames[info.tile.type] || info.tile.type }}</span></p>
@@ -300,24 +210,18 @@
         </div>
     }
 
-    @if (isDebugModeActive()){
-        <div class="debug-text-frame" [class.debug-background]="this.isDebugModeActive()">
+    @if (gamePageSignalService.isDebugModeActive()){
+        <div class="debug-text-frame" [class.debug-background]="this.gamePageSignalService.isDebugModeActive()">
             <h1 class="debug-text">MODE DE DÉBOGAGE ACTIVÉ</h1>
         </div>
     }
 
-    @if (showSanctuaryModal) {
-        <div class="sanctuary-modal-overlay">
-            <div class="sanctuary-modal">
-                <h2 class="sanctuary-title">Sanctuaire {{ pendingSanctuaryType === 'healingSanctuary' ? 'de Soin' : 'de Combat' }}</h2>
-                <p class="sanctuary-effect">Effet : {{ getSanctuaryLabel() }}</p>
-                <div class="sanctuary-actions">
-                    <app-button (click)="onUseSanctuary('normal')">Normal</app-button>
-                    <app-button (click)="onUseSanctuary('doubleOrNothing')">Double ou Rien (50%)</app-button>
-                    <app-button (click)="onCancelSanctuary()">Annuler</app-button>
-                </div>
-            </div>
-        </div>
+    @if (showSanctuaryModal && pendingSanctuaryType) {
+        <app-sanctuary-modal
+            [type]="pendingSanctuaryType"
+            (use)="onUseSanctuary($event)"
+            (cancel)="onCancelSanctuary()"
+        ></app-sanctuary-modal>
     }
 
 </main>

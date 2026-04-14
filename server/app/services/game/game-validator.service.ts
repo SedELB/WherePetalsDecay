@@ -81,7 +81,9 @@ export class GameValidatorService {
     private findFirstWalkableTile(grid: Tile[][]): Vec2 | null {
         for (let r = 0; r < grid.length; r++) {
             for (let c = 0; c < grid[r].length; c++) {
-                if (grid[r][c].type !== TileTexture.Wall) return { y: r, x: c };
+                const tile = grid[r][c];
+                const isSanctuary = tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary;
+                if (tile.type !== TileTexture.Wall && !isSanctuary) return { y: r, x: c };
             }
         }
         return null;
@@ -93,10 +95,30 @@ export class GameValidatorService {
         if (!isWithinBounds) return false;
 
         const isNotWall = game.grid[y][x].type !== TileTexture.Wall;
-        const isNotSanctuary = game.grid[y][x].item !== TileItem.HealingSanctuary && game.grid[y][x].item !== TileItem.CombatSanctuary;
         const isNotVisited = !visited.has(`${y}, ${x}`);
 
-        return isNotWall && isNotSanctuary && isNotVisited;
+        return isNotWall && isNotVisited;
+    }
+
+    private getSanctuaryOrigin(game: CreateGameDto, y: number, x: number): string {
+        const item = game.grid[y][x].item;
+        const aboveSame = y > 0 && game.grid[y - 1][x].item === item;
+        const leftSame = x > 0 && game.grid[y][x - 1].item === item;
+        const aboveLeftSame = y > 0 && x > 0 && game.grid[y - 1][x - 1].item === item;
+        
+        let originY = y;
+        let originX = x;
+
+        if (aboveLeftSame && aboveSame && leftSame) {
+            originY = y - 1;
+            originX = x - 1;
+        } else if (aboveSame) {
+            originY = y - 1;
+        } else if (leftSame) {
+            originX = x - 1;
+        }
+        
+        return `${originY}, ${originX}`;
     }
 
     private areThereUnreachableTiles(game: CreateGameDto): boolean {
@@ -105,15 +127,19 @@ export class GameValidatorService {
             throw new Error(NO_TERRAIN_TILES);
         }
 
-        const types = this.countByProperty(game, 'type');
-        const items = this.countByProperty(game, 'item');
-        const sanctuaryTiles = (items.healingSanctuary || 0) + (items.combatSanctuary || 0);
+        const totalSanctuaryBlocks = this.getRequiredSanctuaryCount(game) * 2;
+        
+        const totalWalkable = game.grid.flat().filter((tile) => {
+            const isSanctuary = tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary;
+            return tile.type !== TileTexture.Wall && !isSanctuary;
+        }).length;
 
-        const totalWalkable = (types.floor || 0) + (types.water || 0) + (types.ice || 0) +
-            (types.doorOpened || 0) + (types.doorClosed || 0) - sanctuaryTiles; // Door and terrain
+        const expectedTotalReached = totalWalkable + totalSanctuaryBlocks;
 
         const queue = [startPos];
         const visited = new Set<string>();
+        const reachedSanctuaries = new Set<string>();
+
         visited.add(`${startPos.y}, ${startPos.x}`);
 
         while (queue.length > 0) {
@@ -126,15 +152,25 @@ export class GameValidatorService {
             ];
 
             for (const next of neighbours) {
-                const key = `${next.y}, ${next.x}`; // text name of current tile
+                const key = `${next.y}, ${next.x}`;
                 if (this.isTileValidForPath(game, next.y, next.x, visited)) {
-                    visited.add(key);
-                    queue.push(next);
+                    const nextTile = game.grid[next.y][next.x];
+                    const isSanctuary = nextTile.item === TileItem.HealingSanctuary || nextTile.item === TileItem.CombatSanctuary;
+                    
+                    if (isSanctuary) {
+                        const origin = this.getSanctuaryOrigin(game, next.y, next.x);
+                        reachedSanctuaries.add(`${nextTile.item}-${origin}`);
+                    } else {
+                        visited.add(key);
+                        queue.push(next);
+                    }
                 }
             }
         }
 
-        if (visited.size === totalWalkable) {
+        const totalReached = visited.size + reachedSanctuaries.size;
+
+        if (totalReached >= expectedTotalReached) {
             return true;
         } else {
             throw new Error(UNREACHABLE_TILES);

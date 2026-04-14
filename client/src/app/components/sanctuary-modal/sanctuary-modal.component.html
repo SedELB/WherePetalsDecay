@@ -1,0 +1,22 @@
+<div class="sanctuary-modal-overlay">
+    <div class="sanctuary-modal">
+        <h2 class="sanctuary-title">
+            {{ type === itemTypes.HealingSanctuary ? 'Sanctuaire de Soin' : 'Sanctuaire de Combat' }}
+        </h2>
+        <p class="sanctuary-effect">{{ getSanctuaryLabel() }}</p>
+
+        <div class="sanctuary-divider"></div>
+
+        <div class="sanctuary-actions">
+            <button class="modal-btn normal" (click)="onUse('normal')">
+                <span class="btn-label">Normal</span>
+                <span class="btn-sub">Effet garanti</span>
+            </button>
+            <button class="modal-btn risky" (click)="onUse('doubleOrNothing')">
+                <span class="btn-label">Double ou Rien</span>
+                <span class="btn-sub">50 % de chance : effet doublé ou aucun effet</span>
+            </button>
+            <button class="modal-btn cancel" (click)="onCancel()">Annuler</button>
+        </div>
+    </div>
+</div>
