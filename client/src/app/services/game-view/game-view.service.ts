@@ -20,8 +20,8 @@ import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
-import { getFirstTurnNotification, getNextTurnNotification } from './game-view-notification.utils';
-import { END_GAME_REDIRECT_DELAY, ONE_SECOND_DELAY, SANCTUARY_BLOCK_SIZE } from './game-view.constants';
+import { getFirstTurnNotification, getNextTurnNotification } from '@app/services/game-view/game-view-notification.utils';
+import { END_GAME_REDIRECT_DELAY, ONE_SECOND_DELAY, SANCTUARY_BLOCK_SIZE } from '@app/services/game-view/game-view.constants';
 
 @Injectable({
     providedIn: 'root',
