@@ -31,7 +31,7 @@ import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { AVATARS_PATH, BASE_STATS, RANDOM_NAMES } from '@common/constants/character.constants';
 import { SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { CharacterSelectionComponent } from './character-selection.component';
+import { CharacterSelectionComponent } from '@app/pages/character-selection/character-selection.component';
 
 describe('CharacterSelectionComponent', () => {
   let component: CharacterSelectionComponent;
