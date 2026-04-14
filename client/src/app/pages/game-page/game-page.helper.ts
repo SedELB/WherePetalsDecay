@@ -1,18 +1,51 @@
+import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
+import { DIRECTION_OFFSETS } from '@common/direction';
+import { TileItem, TileTexture } from '@common/enums';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
+import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
 
-function isPlayerInTeam(team: Player[], socketId: string): boolean {
+const TEN = 10;
+
+export interface TileClickContext {
+    lobbyId: string;
+    currentPlayer: Player;
+    targetPlayer: Player;
+    targetSocketId: string;
+}
+
+export interface ActionHighlightParams {
+    isSubMenuOpen: boolean;
+    activeSubAction: ActionHighlightType | null;
+    attackTargets: Vec2[];
+    requestFlagTargets: Vec2[];
+    giveFlagTargets: Vec2[];
+    adjacentDoorTiles: Vec2[];
+    sanctuaryTargets: Vec2[];
+}
+
+export interface HasAnyActionParams {
+    isMyTurn: boolean;
+    actionPoints: number;
+    attackTargets: Vec2[];
+    requestFlagTargets: Vec2[];
+    giveFlagTargets: Vec2[];
+    adjacentDoorTiles: Vec2[];
+    sanctuaryTargets: Vec2[];
+}
+
+export function isPlayerInTeam(team: Player[], socketId: string): boolean {
     return team.some((player) => player.socketId === socketId);
 }
 
-function arePlayersTeammates(localSocketId: string, targetSocketId: string, teams: Player[][]): boolean {
+export function arePlayersTeammates(localSocketId: string, targetSocketId: string, teams: Player[][]): boolean {
     return teams.some(
         (team) => isPlayerInTeam(team, localSocketId) && isPlayerInTeam(team, targetSocketId),
     );
 }
 
-function getAdjacentPlayerPositions(adjacentPlayers: Player[], playerPositions: Record<string, Vec2>): Vec2[] {
+export function getAdjacentPlayerPositions(adjacentPlayers: Player[], playerPositions: Record<string, Vec2>): Vec2[] {
     return adjacentPlayers
         .map((player) => playerPositions[player.socketId])
         .filter((position): position is Vec2 => Boolean(position));
@@ -86,7 +119,7 @@ export function getPlayerName(socketId: string, players: Player[]): string {
     return players.find((player) => player.socketId === socketId)?.character?.name ?? 'Un joueur';
 }
 
-export function getTimerLabel(activeId: string | null, localId: string | null, players: Player[]): string {
+export function getTimerLabel(activeId: string | null, localId: string | undefined, players: Player[]): string {
     if (!activeId) return 'Prochain tour...';
 
     const name = getPlayerName(activeId, players);
@@ -95,7 +128,140 @@ export function getTimerLabel(activeId: string | null, localId: string | null, p
 
 export function getTimerDisplay(countdown: number, activeId: string | null): string {
     if (!activeId) return `00:0${countdown}`;
-
-    const TEN = 10;
     return `00:${countdown < TEN ? '0' : ''}${countdown}`;
+}
+
+export function buildTileClickContext(args: {
+    lobby: Lobby | null;
+    currentSocketId: string | undefined;
+    actionPoints: number;
+    targetSocketId: string | null;
+    x: number;
+    y: number;
+    isHighlighted: boolean;
+}): TileClickContext | null {
+    const { lobby, currentSocketId, actionPoints, targetSocketId, isHighlighted } = args;
+    const lobbyId = lobby?.lobbyId;
+    const currentPlayer = lobby?.players.find((player) => player.socketId === currentSocketId);
+    if (!lobbyId || !currentSocketId || !currentPlayer || actionPoints <= 0) return null;
+    if (!targetSocketId || targetSocketId === currentSocketId || !isHighlighted) return null;
+
+    const targetPlayer = lobby?.players.find((player) => player.socketId === targetSocketId);
+    if (!targetPlayer) return null;
+
+    return { lobbyId, currentPlayer, targetPlayer, targetSocketId };
+}
+
+export function getCurrentPlayerIceDebuff(
+    currentSocketId: string | undefined,
+    positions: Record<string, Vec2>,
+    isOnIce: (position: Vec2) => 2 | 0,
+): 2 | 0 {
+    if (!currentSocketId) return 0;
+    const currentPosition = positions[currentSocketId];
+    if (!currentPosition) return 0;
+    return isOnIce(currentPosition);
+}
+
+export function getOrderedPlayers(
+    turnOrder: string[], 
+    players: Player[], 
+    activeId: string | null,
+): Player[] {
+    if (!turnOrder.length) return players;
+
+    const fullList = turnOrder
+        .map((socketId) => players.find((player) => player.socketId === socketId))
+        .filter((player): player is Player => !!player);
+
+    if (!activeId) return fullList;
+
+    const activeIndex = fullList.findIndex((player) => player.socketId === activeId);
+    return activeIndex <= 0 ? fullList : [...fullList.slice(activeIndex), ...fullList.slice(0, activeIndex)];
+}
+
+export function getAdjacentPlayers(
+    isMyTurn: boolean, 
+    localId: string | undefined, 
+    positions: Record<string, Vec2>, 
+    players: Player[],
+): Player[] {
+    if (!isMyTurn || !localId) return [];
+    
+    const myPos = positions[localId];
+    if (!myPos) return [];
+
+    const adjacent = Object.values(DIRECTION_OFFSETS).map((offset) => ({ x: myPos.x + offset.x, y: myPos.y + offset.y }));
+    return players.filter((player) => {
+        if (player.socketId === localId || player.hasAbandonned) return false;
+        const pos = positions[player.socketId];
+        return !!pos && adjacent.some((a) => a.x === pos.x && a.y === pos.y);
+    });
+}
+
+export function getAdjacentDoorTiles(
+    isMyTurn: boolean,
+    localId: string | undefined,
+    positions: Record<string, Vec2>,
+    grid: Tile[][] | undefined,
+): Vec2[] {
+    if (!isMyTurn || !localId || !grid) return [];
+    const myPos = positions[localId];
+    if (!myPos) return [];
+
+    return Object.values(DIRECTION_OFFSETS)
+        .map((offset) => ({ x: myPos.x + offset.x, y: myPos.y + offset.y }))
+        .filter(({ x, y }) => {
+            const type = grid[y]?.[x]?.type;
+            return type === TileTexture.DoorClosed || type === TileTexture.DoorOpened;
+        });
+}
+
+export function getDoorActionLabel(doorTiles: Vec2[], grid: Tile[][] | undefined): string {
+    if (doorTiles.length === 0 || !grid) return 'Porte';
+    const firstDoor = doorTiles[0];
+    const isClosed = grid[firstDoor.y]?.[firstDoor.x]?.type === TileTexture.DoorClosed;
+    return isClosed ? 'Ouvrir porte' : 'Fermer porte';
+}
+
+export function getSanctuaryTargets(
+    localId: string | undefined,
+    positions: Record<string, Vec2>,
+    grid: Tile[][],
+    inactiveSanctuaries: Vec2[],
+): Vec2[] {
+    if (!localId) return [];
+    const myPos = positions[localId];
+    if (!myPos) return [];
+    const adjacent = Object.values(DIRECTION_OFFSETS).map((offset) => ({ x: myPos.x + offset.x, y: myPos.y + offset.y }));
+    return adjacent.filter((pos) => {
+        const tile = grid[pos.y]?.[pos.x];
+        if (!tile) return false;
+        const isSanctuary = tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary;
+        const isInactive = inactiveSanctuaries.some((s) => s.x === pos.x && s.y === pos.y);
+        return isSanctuary && !isInactive;
+    });
+}
+
+export function getActionHighlightTiles(params: ActionHighlightParams): ActionTileHighlight[] {
+    const { isSubMenuOpen, activeSubAction, attackTargets, requestFlagTargets, giveFlagTargets, adjacentDoorTiles, sanctuaryTargets } = params;
+    if (!isSubMenuOpen || !activeSubAction) return [];
+    const typeMap: Record<ActionHighlightType, Vec2[]> = {
+        attack: attackTargets,
+        requestFlag: requestFlagTargets,
+        giveFlag: giveFlagTargets,
+        toggleDoor: adjacentDoorTiles,
+        sanctuary: sanctuaryTargets,
+    };
+    return (typeMap[activeSubAction] ?? []).map((pos) => ({ pos, type: activeSubAction }));
+}
+
+export function checkHasAnyAction(params: HasAnyActionParams): boolean {
+    const { isMyTurn, actionPoints, attackTargets, requestFlagTargets, giveFlagTargets, adjacentDoorTiles, sanctuaryTargets } = params;
+    if (!isMyTurn) return false;
+    const hasPaidAction = actionPoints > 0 && (
+        attackTargets.length > 0 || requestFlagTargets.length > 0 ||
+        giveFlagTargets.length > 0 || adjacentDoorTiles.length > 0
+    );
+    return hasPaidAction || sanctuaryTargets.length > 0;
 }

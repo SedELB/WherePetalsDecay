@@ -20,9 +20,9 @@ function drawPoly(ctx: CanvasRenderingContext2D, points: Vec2[], fill: string, s
 export function drawPortcullisBars(
     ctx: CanvasRenderingContext2D,
     corners: { north: Vec2; east: Vec2; south: Vec2; west: Vec2 },
-    closed: boolean,
+    progress: number,
   ): void {
-  if (!closed) return;
+  // We no longer return on progress <= 0, so the minimum height gets drawn.
   const { north, east, south, west } = corners;
 
   const BAR_COUNT = 4;
@@ -32,7 +32,8 @@ export function drawPortcullisBars(
   const BAR_WIDTH_RATIO = 0.06;
   const BAR_THICKNESS_RATIO = 0.04;
 
-  const BAR_HEIGHT = tileW * BAR_HEIGHT_RATIO;
+  const MIN_BAR_HEIGHT_RATIO = 0.025;
+  const BAR_HEIGHT = tileW * (MIN_BAR_HEIGHT_RATIO + (BAR_HEIGHT_RATIO - MIN_BAR_HEIGHT_RATIO) * progress);
   const BAR_WIDTH = tileW * BAR_WIDTH_RATIO; 
   const BAR_THICKNESS = tileW * BAR_THICKNESS_RATIO; 
 
@@ -76,9 +77,9 @@ export function drawPortcullisBars(
       const p3 = { x: bx + uCol.x * hc + uRow.x * hr, y: by + uCol.y * hc + uRow.y * hr };
       const p4 = { x: bx - uCol.x * hc + uRow.x * hr, y: by - uCol.y * hc + uRow.y * hr };
 
-      const cTop   = isCol ? '#666a70' : '#595d63';
-      const cLeft  = isCol ? '#3d4045' : '#33363a';
-      const cRight = isCol ? '#282b30' : '#1e2024';
+      const cTop   = isCol ? '#8E8276' : '#83796F';
+      const cLeft  = isCol ? '#766C63' : '#6B635B';
+      const cRight = isCol ? '#554F48' : '#4D4741';
 
       // Left Face
       drawPoly(ctx, [p4, p3, { x: p3.x, y: p3.y - BAR_HEIGHT }, { x: p4.x, y: p4.y - BAR_HEIGHT }], cLeft);

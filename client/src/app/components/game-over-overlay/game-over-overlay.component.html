@@ -1,0 +1,28 @@
+<div class="game-over-overlay">
+    <div class="game-over-message">
+        <h2>Partie terminée</h2>
+
+        @if (gameOver.isForfeit && gameOver.winnerSocketId === localPlayerSocketId) {
+            <p>Vous avez gagné car tous les autres joueurs ont quitté !</p>
+        }
+        @else if (gameOver.winnerSocketId) {
+            @if (gameOver.winnerSocketId === localPlayerSocketId) {
+                @if (gameMode === gameModeEnum.Ctf) {
+                    <p>Félicitations ! Vous avez gagné en ramenant le drapeau à votre base !</p>
+                } @else {
+                    <p>Félicitations ! Vous avez gagné la partie avec 3 victoires !</p>
+                }
+            } @else {
+                @if (gameMode === gameModeEnum.Ctf) {
+                    <p>{{ winnerName }} a ramené le drapeau et fait gagner son équipe !</p>
+                } @else {
+                    <p>{{ winnerName }} a atteint 3 victoires et remporte la partie.</p>
+                }
+            }
+        }
+        @else if (gameOver.abandonTeam) {
+            <p>L'équipe {{ gameOver.abandonTeam }} a abandonné la partie.</p>
+            <p>Redirection vers le menu principal...</p>
+        }
+    </div>
+</div>
