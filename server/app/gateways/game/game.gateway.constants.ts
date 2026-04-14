@@ -1,7 +1,5 @@
 import { Posture } from '@common/character';
 
-// NOTE: ces valeurs doivent rester synchronisées avec `common/constants/combat-timeline.constants.ts`.
-// Le serveur garde un miroir local pour éviter les problèmes de frontière TypeScript/rootDir.
 export const COMBAT_POSTURE_TIMEOUT_MS = 10000;
 export const COMBAT_START_ANNOUNCEMENT_DELAY_MS = 3000;
 export const COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS = 3000;
