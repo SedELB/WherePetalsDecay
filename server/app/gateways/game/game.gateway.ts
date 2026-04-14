@@ -1,10 +1,11 @@
-/* eslint-disable */
+/* eslint-disable max-lines */
 import { GameLogicService, SanctuaryUseResult } from '@app/services/game-logic/game-logic.service';
+import { VirtualPlayerService } from '@app/services/game-logic/virtual-player.service';
 import { JournalService } from '@app/services/journal/journal.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Posture } from '@common/character';
 import { Direction } from '@common/direction';
-import { GameMode, SocketNamespace, TileItem, TileTexture } from '@common/enums';
+import { GameMode, PlayerType, SocketNamespace, VirtualPlayerProfile, TileItem, TileTexture } from '@common/enums';
 import {
     CombatAttackAnimationData,
     CombatEndedData,
@@ -21,7 +22,7 @@ import { JournalEventType } from '@common/journal-entry';
 import { Player } from '@common/player';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
     ConnectedSocket,
     MessageBody,
@@ -39,6 +40,7 @@ const COMBAT_POSTURE_TIMEOUT_MS = 10000;
 const COUNTDOWN_TICK_MS = 1000;
 const ATTACK_ANIMATION_DURATION_MS = 2000;
 const DEFAULT_POSTURE: Posture = { type: null, bonus: 0 };
+const VP_POSTURE_MAX_DELAY_MS = 9000;
 
 interface CombatSession {
     lobbyId: string;
@@ -59,14 +61,15 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     @WebSocketServer() private server: Server;
 
     private fightCounter = 0;
+    @Inject(Logger) private readonly logger: Logger;
     private readonly endGamePlayers = new Map<string, Set<string>>();
     private readonly combatSessions = new Map<string, CombatSession>();
-
+    
     constructor(
-        private readonly logger: Logger,
         private readonly gameLogicService: GameLogicService,
         private readonly lobbyService: LobbyService,
         private readonly gameTurnSyncService: GameTurnSyncService,
+        private readonly virtualPlayerService: VirtualPlayerService,
         private readonly journalService: JournalService,
     ) {}
 
@@ -82,6 +85,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             onTurnStarted: (lobbyId: string, playerSocketId: string) => {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnStarted, playerSocketId);
                 this.gameTurnSyncService.syncPlayerTurnState(this.server, lobbyId, playerSocketId);
+                this.triggerVirtualPlayerTurnIfNeeded(lobbyId, playerSocketId);
                 this.server.to(lobbyId).emit(JoinGameEvents.SanctuaryStateUpdate, {
                     inactiveSanctuaries: this.gameLogicService.getInactiveSanctuaries(lobbyId),
                 });
@@ -278,11 +282,16 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const defender = activeGame.lobby.players.find((player) => player.socketId === enemy.socketId);
         if (!attacker || !defender) return;
 
-        const enemySocket = socket.nsp.sockets.get(defender.socketId);
-        if (!enemySocket) return;
-
         socket.join(roomId);
-        enemySocket.join(roomId);
+
+        // Virtual players have no real socket – only join the room for real defenders.
+        const isDefenderVirtualPlayer = defender.playerType === PlayerType.Virtual;
+        if (!isDefenderVirtualPlayer) {
+            const enemySocket = socket.nsp.sockets.get(defender.socketId);
+            if (!enemySocket) return;
+            enemySocket.join(roomId);
+        }
+
 
         const combatSession: CombatSession = {
             lobbyId,
@@ -317,8 +326,15 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
-        const requesterName = this.gameLogicService.getActiveGame(lobbyId)
-            ?.lobby.players.find((player) => player.socketId === socket.id)?.character?.name ?? 'Un coéquipier';
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        const requesterName = activeGame?.lobby.players.find((player) => player.socketId === socket.id)?.character?.name ?? 'Un coéquipier';
+
+        // If the target is a virtual player, auto-accept the flag transfer on its behalf.
+        const targetPlayer = activeGame?.lobby.players.find((p) => p.socketId === targetSocketId);
+        if (targetPlayer?.playerType === PlayerType.Virtual) {
+            this.autoAcceptFlagTransferForVirtualPlayer(lobbyId, targetSocketId, socket.id, false);
+            return;
+        }
 
         this.server.to(targetSocketId).emit(JoinGameEvents.GiveFlagResponse, {
             requesterId: socket.id,
@@ -333,8 +349,15 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
-        const requesterName = this.gameLogicService.getActiveGame(lobbyId)
-            ?.lobby.players.find((player) => player.socketId === socket.id)?.character?.name ?? 'Un coéquipier';
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        const requesterName = activeGame?.lobby.players.find((player) => player.socketId === socket.id)?.character?.name ?? 'Un coéquipier';
+
+        // If the target is a virtual player, auto-accept the flag transfer
+        const targetPlayer = activeGame?.lobby.players.find((p) => p.socketId === targetSocketId);
+        if (targetPlayer?.playerType === PlayerType.Virtual) {
+            this.autoAcceptFlagTransferForVirtualPlayer(lobbyId, targetSocketId, socket.id, true);
+            return;
+        }
 
         this.server.to(targetSocketId).emit(JoinGameEvents.RequestFlagResponse, {
             requesterId: socket.id,
@@ -533,6 +556,130 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (!canMove && !canFight) this.gameLogicService.endTurn(lobbyId);
     }
 
+    // ------------------------------------
+    // Virtual player integration helpers
+    // ------------------------------------
+
+    // Called from 'onTurnStarted'. If the player whose turn just started is a
+    // virtual player, we delegate the entire turn to VirtualPlayerService.
+    private triggerVirtualPlayerTurnIfNeeded(lobbyId: string, playerSocketId: string): void {
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        if (!activeGame) return;
+
+        const currentPlayer = activeGame.lobby.players.find((p) => p.socketId === playerSocketId);
+        if (!currentPlayer || currentPlayer.playerType !== PlayerType.Virtual) return;
+
+        this.virtualPlayerService.executeTurn(
+            this.server,
+            activeGame,
+            currentPlayer,
+            this.initiateVirtualPlayerCombat.bind(this),
+            this.handleGameOver.bind(this),
+        );
+    }
+
+    // Entry-point for server-side VP-initiated combat
+    // Called by VirtualPlayerService instead of emitting raw socket events
+    private initiateVirtualPlayerCombat(lobbyId: string, attackerId: string, defenderId: string): void {
+        this.fightCounter++;
+        const roomId = `fight-vp-${this.fightCounter}`;
+
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        if (!activeGame) return;
+
+        const attacker = activeGame.lobby.players.find((p) => p.socketId === attackerId);
+        const defender = activeGame.lobby.players.find((p) => p.socketId === defenderId);
+        if (!attacker || !defender) return;
+
+        // If the defender has a real socket, add it to the fight room
+        this.server.in(defenderId).socketsJoin(roomId);
+
+        const combatStartedData: CombatStartedData = { player: attacker, enemy: defender, roomId };
+        this.server.to(roomId).emit(JoinGameEvents.CombatStarted, combatStartedData);
+        this.journalService.addCombatStartEntry(lobbyId, attacker.character.name, defender.character.name);
+
+        const combatSession: CombatSession = {
+            lobbyId,
+            roomId,
+            attackerId,
+            defenderId,
+            postures: new Map<string, Posture>(),
+            roundIndex: 1,
+            awaitingPostures: false,
+            consumeActionPointOnNextRound: true,
+        };
+
+        this.combatSessions.set(roomId, combatSession);
+        this.gameLogicService.pauseTurnCycle(lobbyId);
+        this.emitCombatLockState({
+            lobbyId,
+            isLocked: true,
+            roomId,
+            attackerSocketId: attackerId,
+            defenderSocketId: defenderId,
+        });
+        this.startCombatRoundAwaitingPostures(combatSession);
+    }
+
+    // Schedules posture submission for each virtual player participant 
+    // with a random delay (VP_POSTURE_MAX_DELAY_MS)
+    private scheduleVirtualPlayerPostures(session: CombatSession): void {
+        const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
+        if (!activeGame) return;
+
+        for (const participantId of [session.attackerId, session.defenderId]) {
+            const participant = activeGame.lobby.players.find((p) => p.socketId === participantId);
+            if (!participant || participant.playerType !== PlayerType.Virtual) continue;
+
+            const posture =
+                participant.virtualProfile === VirtualPlayerProfile.Aggressive
+                    ? { type: 'atk' as const, bonus: 2 as const }
+                    : { type: 'def' as const, bonus: 2 as const };
+
+            const delay = Math.random() * VP_POSTURE_MAX_DELAY_MS;
+            setTimeout(() => {
+                const currentSession = this.combatSessions.get(session.roomId);
+                if (!currentSession || !currentSession.awaitingPostures) return;
+                if (currentSession.postures.has(participantId)) return;
+
+                currentSession.postures.set(participantId, posture);
+
+                if (currentSession.postures.has(currentSession.attackerId) && currentSession.postures.has(currentSession.defenderId)) {
+                    this.resolveCombatSession(currentSession.roomId);
+                }
+            }, delay);
+        }
+    }
+
+    // When a real player sends a flag-give or flag-request to a VP,
+    // the gateway accepts it server-side instead of routing to a socket.
+    // TODO: clarify the request
+    private autoAcceptFlagTransferForVirtualPlayer(
+        lobbyId: string,
+        virtualPlayerSocketId: string,
+        requesterId: string,
+        isRequest: boolean,
+    ): void {
+        if (!this.gameLogicService.isPlayerTurn(lobbyId, requesterId)) return;
+
+        let wasFlagTransfered: boolean;
+        if (!isRequest) {
+            // The requester (real player) wants to give the flag to the VP.
+            wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, requesterId, virtualPlayerSocketId, requesterId);
+        } else {
+            // The requester (real player) wants the VP (flag holder) to hand it over.
+            wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, virtualPlayerSocketId, requesterId, requesterId);
+        }
+
+        if (!wasFlagTransfered) return;
+
+        const transferData = isRequest
+            ? { giverPlayerId: virtualPlayerSocketId, targetPlayerId: requesterId }
+            : { giverPlayerId: requesterId, targetPlayerId: virtualPlayerSocketId };
+
+        this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, transferData);
+    }
+
     private resolveCombatSession(roomId: string, timedOutSocketIds: string[] = []): void {
         const session = this.combatSessions.get(roomId);
         if (!session || !session.awaitingPostures) return;
@@ -685,6 +832,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (finalResult.winnerId === session.attackerId) {
             this.gameLogicService.resumeTurnCycle(session.lobbyId);
             this.sendActionPoints(session.lobbyId, session.attackerId);
+            this.triggerVirtualPlayerTurnIfNeeded(session.lobbyId, session.attackerId);
             this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
         } else {
             this.gameLogicService.endTurn(session.lobbyId);
@@ -743,6 +891,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (winnerId === session.attackerId) {
             this.gameLogicService.resumeTurnCycle(session.lobbyId);
             this.sendActionPoints(session.lobbyId, session.attackerId);
+            this.triggerVirtualPlayerTurnIfNeeded(session.lobbyId, session.attackerId);
             this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
         }
 
@@ -780,6 +929,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             postureTimeoutMs: COMBAT_POSTURE_TIMEOUT_MS,
         };
         this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundStarted, roundStartedData);
+
+        // Schedule posture submission for virtual player with a random delay
+        this.scheduleVirtualPlayerPostures(session);
 
         let secondsLeft = Math.ceil(COMBAT_POSTURE_TIMEOUT_MS / COUNTDOWN_TICK_MS);
         const emitCountdown = () => {
