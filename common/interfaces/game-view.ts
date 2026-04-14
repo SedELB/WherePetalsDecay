@@ -52,6 +52,7 @@ export interface CombatRoundStartedData {
     roomId: string;
     roundIndex: number;
     postureTimeoutMs: number;
+    postureCountdownDelayMs?: number;
 }
 
 export interface CombatRoundCountdownData {
@@ -105,11 +106,26 @@ export interface CombatResult {
     droppedFlagPosition?: Vec2;
 }
 
+export interface CombatRoundTimelineData {
+    postureResultDisplayDurationMs: number;
+    roundPhaseBufferMs: number;
+    diceRollDurationMs: number;
+    diceResultDisplayDurationMs: number;
+    damageDisplayDurationMs: number;
+    fighterAdvanceDurationMs: number;
+    fighterHoldDurationMs: number;
+    fighterRetreatDurationMs: number;
+    statusBufferDurationMs: number;
+    nextRoundAnnouncementDurationMs: number;
+}
+
 export interface CombatRoundResolvedData {
     roomId: string;
     roundIndex: number;
     result: CombatResult;
     timedOutSocketIds?: string[];
+    resolvedAtEpochMs?: number;
+    timeline?: CombatRoundTimelineData;
 }
 
 export interface GameStartedData {

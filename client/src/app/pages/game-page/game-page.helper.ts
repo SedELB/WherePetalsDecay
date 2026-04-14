@@ -164,8 +164,8 @@ export function getCurrentPlayerIceDebuff(
 }
 
 export function getOrderedPlayers(
-    turnOrder: string[], 
-    players: Player[], 
+    turnOrder: string[],
+    players: Player[],
     activeId: string | null,
 ): Player[] {
     if (!turnOrder.length) return players;
@@ -181,13 +181,13 @@ export function getOrderedPlayers(
 }
 
 export function getAdjacentPlayers(
-    isMyTurn: boolean, 
-    localId: string | undefined, 
-    positions: Record<string, Vec2>, 
+    isMyTurn: boolean,
+    localId: string | undefined,
+    positions: Record<string, Vec2>,
     players: Player[],
 ): Player[] {
     if (!isMyTurn || !localId) return [];
-    
+
     const myPos = positions[localId];
     if (!myPos) return [];
 
