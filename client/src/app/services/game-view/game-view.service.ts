@@ -41,6 +41,7 @@ export class GameViewService {
     readonly turnOrder = signal<string[]>([]);
     readonly activePlayerSocketId = signal<string | null>(null);
     readonly turnCountdown = signal<number>(0);
+    readonly turnCountdownMax = signal<number>(0);
     readonly reachableTiles = signal<Vec2[]>([]);
     readonly reachableTilesForTeleport = signal<Vec2[]>([]);
     readonly movementPoints = signal<number>(0);
@@ -53,11 +54,15 @@ export class GameViewService {
     readonly isFlagTaken = signal<boolean>(false);
     readonly combatLockState = signal<CombatLockStateData | null>(null);
     readonly isCombatStarted = this.gameViewCombatService.isCombatStarted;
+    readonly isCombatRoundTransitioning = this.gameViewCombatService.isRoundTransitioning;
     readonly combatRoundIndex = this.gameViewCombatService.combatRoundIndex;
     readonly combatPostureCountdown = this.gameViewCombatService.combatPostureCountdown;
+    readonly combatPostureCountdownMax = this.gameViewCombatService.combatPostureCountdownMax;
+    readonly combatInitiatorName = this.gameViewCombatService.combatInitiatorName;
     readonly combatAttackAnimation = this.gameViewCombatService.combatAttackAnimation;
     readonly fighters = this.gameViewCombatService.fighters;
     readonly lastCombatResult = this.gameViewCombatService.lastCombatResult;
+    readonly combatEndPopup = this.gameViewCombatService.combatEndPopup;
     private readonly endGamePlayersSignal = signal<Player[]>([]);
     private readonly endGameStatsSignal = signal<GameStats | null>(null);
 
@@ -88,11 +93,15 @@ export class GameViewService {
         this.webSocketService.onNamespace<string>(this.namespace, JoinGameEvents.TurnStarted, (playerSocketId) => {
             this.activePlayerSocketId.set(playerSocketId);
             this.turnNotification.set(null);
+            this.turnCountdownMax.set(0);
         });
 
         this.webSocketService.onNamespace<number>(this.namespace, JoinGameEvents.BetweenTurnCountdown, (secondsLeft) => {
             this.disableEndTurn.set(true);
             this.turnCountdown.set(secondsLeft);
+            if (secondsLeft > this.turnCountdownMax()) {
+                this.turnCountdownMax.set(secondsLeft);
+            }
             if (secondsLeft <= 1) {
                 setTimeout(() => {
                     this.disableEndTurn.set(false);
@@ -102,6 +111,9 @@ export class GameViewService {
 
         this.webSocketService.onNamespace<number>(this.namespace, JoinGameEvents.TurnCountdown, (secondsLeft) => {
             this.turnCountdown.set(secondsLeft);
+            if (secondsLeft > this.turnCountdownMax()) {
+                this.turnCountdownMax.set(secondsLeft);
+            }
         });
 
         this.webSocketService.onNamespace<string>(this.namespace, JoinGameEvents.TurnEnded, (endedPlayerSocketId) => {
@@ -354,6 +366,10 @@ export class GameViewService {
         this.gameViewCombatService.sendPostureChoice(lobbyId, roomId, posture);
     }
 
+    completeCombatOverlay(): void {
+        this.gameViewCombatService.completeCombatOverlay();
+    }
+
     getCurrentCombatRoomId(): string {
         return this.gameViewCombatService.getCurrentCombatRoomId();
     }
@@ -460,6 +476,7 @@ export class GameViewService {
         this.gameOver.set(null);
         this.activePlayerSocketId.set(null);
         this.turnCountdown.set(0);
+        this.turnCountdownMax.set(0);
         this.disableEndTurn.set(false);
         this.reachableTiles.set([]);
         this.reachableTilesForTeleport.set([]);

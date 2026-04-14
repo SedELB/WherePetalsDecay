@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { Component, HostListener, OnInit, computed, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, effect, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { ChatComponent } from '@app/components/chat/chat.component';
@@ -31,6 +31,7 @@ import {
 
 const MOVE_COOLDOWN_MS = 150;
 const GAME_OVER_REDIRECT_DELAY = 5000;
+const TO_PERCENT = 100;
 
 @Component({
     selector: 'app-game-page',
@@ -361,17 +362,7 @@ export class GamePageComponent implements OnInit {
         const clickContext = this.resolveTileClickContext(x, y);
         if (!action || !clickContext) return;
 
-        switch (action) {
-            case 'attack':
-                this.handleAttackAction(clickContext.lobbyId, clickContext.currentPlayer, clickContext.targetPlayer, x, y);
-                break;
-            case 'giveFlag':
-                this.gameViewService.giveFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
-                break;
-            case 'requestFlag':
-                this.gameViewService.requestFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
-                break;
-        }
+        this.executeTileAction(action, clickContext, x, y);
 
         this.closeSubMenu();
     }
@@ -471,6 +462,14 @@ export class GamePageComponent implements OnInit {
         return getTimerDisplayFromCountdown(this.turnCountdown(), this.activePlayerSocketId());
     }
 
+    getTurnCountdownProgressPercent(): number {
+        const countdownMax = this.gameViewService.turnCountdownMax();
+        if (countdownMax <= 0 || !this.activePlayerSocketId()) return 0;
+
+        const progressPercent = (this.turnCountdown() / countdownMax) * TO_PERCENT;
+        return Math.min(TO_PERCENT, Math.max(0, progressPercent));
+    }
+
     private handleAttackAction(lobbyId: string, currentPlayer: Player, targetPlayer: Player, x: number, y: number): void {
         targetPlayer.character.debuf = this.isOnIce({ x, y }) ? 2 : 0;
         currentPlayer.character.debuf = getCurrentPlayerIceDebuff(
@@ -479,6 +478,20 @@ export class GamePageComponent implements OnInit {
             (position) => this.isOnIce(position),
         );
         this.gameViewService.sendCombat(lobbyId, currentPlayer, targetPlayer);
+    }
+
+    private executeTileAction(action: ActionHighlightType, clickContext: TileClickContext, x: number, y: number): void {
+        switch (action) {
+            case 'attack':
+                this.handleAttackAction(clickContext.lobbyId, clickContext.currentPlayer, clickContext.targetPlayer, x, y);
+                return;
+            case 'giveFlag':
+                this.gameViewService.giveFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
+                return;
+            case 'requestFlag':
+                this.gameViewService.requestFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
+                return;
+        }
     }
 
     private resolveTileClickContext(x: number, y: number): TileClickContext | null {

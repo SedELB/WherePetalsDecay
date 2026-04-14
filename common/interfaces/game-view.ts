@@ -52,6 +52,7 @@ export interface CombatRoundStartedData {
     roomId: string;
     roundIndex: number;
     postureTimeoutMs: number;
+    postureCountdownDelayMs?: number;
 }
 
 export interface CombatRoundCountdownData {

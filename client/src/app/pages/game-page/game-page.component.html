@@ -27,11 +27,18 @@
                     <div class="panel-right"></div>
                 </div>
                 <div class="timer-display">
-                    @if (activePlayer()?.character?.avatar) {
-                        <img [src]="activePlayer()?.character?.avatar" alt="Avatar actif" style="width: 2rem; height: 2rem; border-radius: 25%; object-fit: cover;" />
-                    }
-                    <span class="timer-label">{{ getTimerLabel() }}</span>
-                    <span class="timer-countdown">{{ getTimerDisplay() }}</span>
+                    <div class="timer-row">
+                        @if (activePlayer()?.character?.avatar) {
+                            <img [src]="activePlayer()?.character?.avatar" alt="Avatar actif" style="width: 1.2rem; height: 1.2rem; border-radius: 25%; object-fit: cover;" />
+                        }
+                        <span class="timer-label">{{ getTimerLabel() }}</span>
+                        <span class="timer-countdown">{{ getTimerDisplay() }}</span>
+                        @if (activePlayerSocketId()) {
+                            <div class="timer-line">
+                                <div class="timer-line-fill" [style.width.%]="getTurnCountdownProgressPercent()"></div>
+                            </div>
+                        }
+                    </div>
                 </div>
                 <app-isometric-map 
                     [grid]="game()?.grid ?? []"
