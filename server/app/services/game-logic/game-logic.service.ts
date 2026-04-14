@@ -209,6 +209,38 @@ export class GameLogicService {
         return game.actionPoints.get(socketId) ?? 0;
     }
 
+    canToggleAdjacentDoor(lobbyId: string, socketId: string): boolean {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return false;
+
+        const ap = game.actionPoints.get(socketId) ?? 0;
+        if (ap <= 0) return false;
+
+        const playerPos = game.playerPositions.get(socketId);
+        if (!playerPos) return false;
+
+        for (const offset of Object.values(DIRECTION_OFFSETS)) {
+            const position: Vec2 = { x: playerPos.x + offset.x, y: playerPos.y + offset.y };
+            const tile = game.lobby.game.grid[position.y]?.[position.x];
+            if (!tile) continue;
+
+            const isDoor = tile.type === TileTexture.DoorClosed || tile.type === TileTexture.DoorOpened;
+            if (!isDoor) continue;
+
+            if (tile.type === TileTexture.DoorOpened) {
+                const someoneOnTile = [...game.playerPositions.values()].some(
+                    (pos) => pos.x === position.x && pos.y === position.y,
+                );
+                const flagOnTile = tile.item === TileItem.Flag;
+                if (someoneOnTile || flagOnTile) continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
     // Combat methods
 
     getAdjacentPlayers(lobbyId: string, socketId: string): Player[] {

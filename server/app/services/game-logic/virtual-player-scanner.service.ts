@@ -142,7 +142,7 @@ export class VirtualPlayerScannerService {
         const { sanctuaryType, reachableThisTurn = false, precomputedCostToPosition } = options;
         const remainingMvtPts = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
         const costToPosition = precomputedCostToPosition ?? this.pathfindingService.computeFullDijkstra(game, vpPos).costToPosition;
-        const candidates = this.collectSanctuaryBorderCandidates(game, virtualPlayer, sanctuaryType);
+        const candidates = this.getSanctuaryBorderPositions(game, virtualPlayer, sanctuaryType);
 
         let nearestCost = Infinity;
         let nearestPos: Vec2 | null = null;
@@ -158,7 +158,7 @@ export class VirtualPlayerScannerService {
         return nearestPos;
     }
 
-    private collectSanctuaryBorderCandidates(
+    private getSanctuaryBorderPositions(
         game: ActiveGame,
         virtualPlayer: Player,
         sanctuaryType: SanctuaryType,
@@ -167,6 +167,8 @@ export class VirtualPlayerScannerService {
         const { grid } = game.lobby.game;
 
         for (const sanctuaryPos of game.sanctuaryPositions.get(sanctuaryType) ?? []) {
+            if (this.isSanctuaryOnCooldown(game, sanctuaryPos, sanctuaryType)) continue;
+
             for (const offset of Object.values(DIRECTION_OFFSETS)) {
                 const borderPos: Vec2 = { x: sanctuaryPos.x + offset.x, y: sanctuaryPos.y + offset.y };
                 if (!this.isInsideBounds(grid, borderPos)) continue;
@@ -183,11 +185,26 @@ export class VirtualPlayerScannerService {
         return candidatesPos;
     }
 
+    private isSanctuaryOnCooldown(game: ActiveGame, sanctuaryPos: Vec2, sanctuaryType: SanctuaryType): boolean {
+        const topLeft = this.findSanctuaryTopLeft(game, sanctuaryPos, sanctuaryType);
+        return game.sanctuaryCooldowns.has(`${topLeft.x},${topLeft.y}`);
+    }
+
+    private findSanctuaryTopLeft(game: ActiveGame, pos: Vec2, item: SanctuaryType): Vec2 {
+        let { x, y } = pos;
+        const { grid } = game.lobby.game;
+        while (grid[y - 1]?.[x]?.item === item) y--;
+        while (grid[y]?.[x - 1]?.item === item) x--;
+        return { x, y };
+    }
+
     isTileAdjacentToSanctuary(game: ActiveGame, pos: Vec2, sanctuaryType: SanctuaryType): boolean {
         const { grid } = game.lobby.game;
         return Object.values(DIRECTION_OFFSETS).some((offset) => {
             const neighbour: Vec2 = { x: pos.x + offset.x, y: pos.y + offset.y };
-            return this.isInsideBounds(grid, neighbour) && grid[neighbour.y][neighbour.x].item === sanctuaryType;
+            if (!this.isInsideBounds(grid, neighbour)) return false;
+            if (grid[neighbour.y][neighbour.x].item !== sanctuaryType) return false;
+            return !this.isSanctuaryOnCooldown(game, neighbour, sanctuaryType);
         });
     }
 
