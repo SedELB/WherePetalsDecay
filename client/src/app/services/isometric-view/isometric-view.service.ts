@@ -1,295 +1,277 @@
 import { Injectable } from '@angular/core';
 import { ISO_ITEM_ASSETS, RENDER_CONSTANTS, STROKE_COLOR, TILE_LINE_WIDTH, TILE_THICKNESS } from '@app/constants/isometric.constants';
 import { RenderBoardConfig, TileDepthParams, TileRenderParams } from '@app/interfaces/isometric-interfaces';
-import { TileItem, TileTexture } from '@common/enums';
+import { TileTexture } from '@common/enums';
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
 import { applyCameraTransform, buildVertexMap, buildViewConfig, calculateAutoZoom } from './isometric-camera.helper';
 import { drawIsometricTileBase } from './isometric-terrain.helper';
-import { drawSanctuarySprite } from './sanctuary-render.helper';
 import { drawPortcullisBars } from './portcullis-render.helper';
+
+const HALF_TILE_POSITION_OFFSET = 0.5;
 
 @Injectable({ providedIn: 'root' })
 export class IsometricViewService {
-  private imageCache: Map<string, HTMLImageElement> = new Map();
-  private players: Player[] = [];
-  private playerPositions: Record<string, Vec2> = {};
-  private doorAnimations = new Map<string, { current: number; target: number; lastTime: number }>();
+    private imageCache: Map<string, HTMLImageElement> = new Map();
+    private players: Player[] = [];
+    private playerPositions: Record<string, Vec2> = {};
 
-  private static readonly doorAnimSpeed = 4;
+    private getImage = (src: string): HTMLImageElement | null => {
+        if (!src) return null;
+        if (this.imageCache.has(src)) return this.imageCache.get(src) ?? null;
+        const img = new Image();
+        img.src = src;
+        this.imageCache.set(src, img);
+        return img;
+    };
 
-  private getImage = (src: string): HTMLImageElement | null => {
-    if (!src) return null;
-    if (this.imageCache.has(src)) return this.imageCache.get(src) ?? null;
-    const img = new Image();
-    img.src = src;
-    this.imageCache.set(src, img);
-    return img;
-  };
+    renderBoard(config: RenderBoardConfig): void {
+        if (!config.grid?.length || !config.grid[0]?.length) return;
+        this.players = config.players;
+        this.playerPositions = config.playerPositions;
 
-  triggerDoorAnimation(x: number, y: number, newType: TileTexture): void {
-    const key = `${x},${y}`;
-    const existing = this.doorAnimations.get(key);
-    const target = newType === TileTexture.DoorClosed ? 1 : 0;
-    this.doorAnimations.set(key, { current: existing?.current ?? (1 - target), target, lastTime: Date.now() });
-  }
+        const totalRows = config.grid.length;
+        const totalColumns = config.grid[0].length;
 
-  private getDoorProgress(col: number, row: number, tile: Tile): number {
-    const key = `${col},${row}`;
-    const anim = this.doorAnimations.get(key);
-    if (!anim) return tile.type === TileTexture.DoorClosed ? 1 : 0;
+        const { tileW, tileH } = calculateAutoZoom(totalRows, totalColumns, config);
+        const viewConfig = buildViewConfig(totalRows, totalColumns, tileW, tileH, config);
+        const vertices = buildVertexMap(totalRows, totalColumns, viewConfig);
 
-    const now = Date.now();
-    const dt = (now - anim.lastTime) / RENDER_CONSTANTS.oneSecondMs;
-    anim.lastTime = now;
+        config.ctx.save();
+        applyCameraTransform(config);
 
-    const step = IsometricViewService.doorAnimSpeed * dt;
-    if (anim.current < anim.target) anim.current = Math.min(anim.current + step, anim.target);
-    else anim.current = Math.max(anim.current - step, anim.target);
+        this.renderGridTiles(vertices, totalRows, totalColumns, config);
+        this.renderPlayers(vertices, config);
 
-    if (anim.current === anim.target) this.doorAnimations.delete(key);
-    return anim.current;
-  }
+        config.ctx.restore();
+    }
 
-  renderBoard(config: RenderBoardConfig): void {
-    if (!config.grid?.length || !config.grid[0]?.length) return;
-    this.players = config.players;
-    this.playerPositions = config.playerPositions;
+    private renderGridTiles(vertices: Vec2[][], totalRows: number, totalColumns: number, config: RenderBoardConfig): void {
+        config.ctx.lineWidth = TILE_LINE_WIDTH;
+        config.ctx.lineJoin = 'round';
+        config.ctx.strokeStyle = STROKE_COLOR;
 
-    const totalRows = config.grid.length;
-    const totalColumns = config.grid[0].length;
+        for (let row = 0; row < totalRows; row++) {
+            for (let col = 0; col < totalColumns; col++) {
+                const tile = config.grid[row][col];
+                const params: TileRenderParams = {
+                    context: config.ctx, tile,
+                    surfaceTopLeft: vertices[row][col],
+                    surfaceTopRight: vertices[row][col + 1],
+                    surfaceBottomRight: vertices[row + 1][col + 1],
+                    surfaceBottomLeft: vertices[row + 1][col],
+                };
 
-    const { tileW, tileH } = calculateAutoZoom(totalRows, totalColumns, config);
-    const viewConfig = buildViewConfig(totalRows, totalColumns, tileW, tileH, config);
-    const vertices = buildVertexMap(totalRows, totalColumns, viewConfig);
+                const depthParams: TileDepthParams = {
+                    context: config.ctx,
+                    thickness: TILE_THICKNESS,
+                    rowIndex: row, totalRows,
+                    columnIndex: col, totalColumns,
+                    surfaceTopRight: vertices[row][col + 1],
+                    surfaceBottomRight: vertices[row + 1][col + 1],
+                    surfaceBottomLeft: vertices[row + 1][col],
+                };
 
-    config.ctx.save();
-    applyCameraTransform(config);
+                // 1. Draw base tile and depth
+                drawIsometricTileBase(params, depthParams, config, this.getImage);
 
-    this.renderGridTiles(vertices, totalRows, totalColumns, config);
+                // 2. Draw Entities
+                this.drawAssetsOnTile(params);
 
-    config.ctx.restore();
-  }
-
-  private renderGridTiles(vertices: Vec2[][], totalRows: number, totalColumns: number, config: RenderBoardConfig): void {
-    config.ctx.lineWidth = TILE_LINE_WIDTH;
-    config.ctx.lineJoin = 'round';
-    config.ctx.strokeStyle = STROKE_COLOR;
-
-    // Pass 1: Render all base terrain tiles
-    for (let sum = 0; sum < totalRows + totalColumns - 1; sum++) {
-      for (let row = 0; row <= sum; row++) {
-        const col = sum - row;
-        if (row < totalRows && col < totalColumns) {
-          const tile = config.grid[row][col];
-          const params: TileRenderParams = {
-            context: config.ctx, tile,
-            surfaceTopLeft: vertices[row][col],
-            surfaceTopRight: vertices[row][col + 1],
-            surfaceBottomRight: vertices[row + 1][col + 1],
-            surfaceBottomLeft: vertices[row + 1][col],
-          };
-
-          const depthParams: TileDepthParams = {
-            context: config.ctx,
-            thickness: TILE_THICKNESS,
-            rowIndex: row, totalRows,
-            columnIndex: col, totalColumns,
-            surfaceTopRight: vertices[row][col + 1],
-            surfaceBottomRight: vertices[row + 1][col + 1],
-            surfaceBottomLeft: vertices[row + 1][col],
-          };
-
-          drawIsometricTileBase(params, depthParams, config, this.getImage);
+                // 3. Draw Portcullis Bars (top layer)
+                if (tile.type === TileTexture.DoorClosed || tile.type === TileTexture.DoorOpened) {
+                    drawPortcullisBars(
+                        config.ctx,
+                        { north: params.surfaceTopLeft, east: params.surfaceTopRight,
+                            south: params.surfaceBottomRight, west: params.surfaceBottomLeft },
+                        tile.type === TileTexture.DoorClosed ? 1 : 0,
+                    );
+                }
+            }
         }
-      }
     }
 
-    // Pass 2: Render all objects, Sanctuaries, and Characters in depth order
-    for (let sum = 0; sum < totalRows + totalColumns - 1; sum++) {
-      for (let row = 0; row <= sum; row++) {
-        const col = sum - row;
-        if (row < totalRows && col < totalColumns) {
-          const tile = config.grid[row][col];
-          const params: TileRenderParams = {
-            context: config.ctx, tile,
-            surfaceTopLeft: vertices[row][col],
-            surfaceTopRight: vertices[row][col + 1],
-            surfaceBottomRight: vertices[row + 1][col + 1],
-            surfaceBottomLeft: vertices[row + 1][col],
-          };
+    private drawAssetsOnTile(params: TileRenderParams): void {
+        const { context: ctx, surfaceTopLeft: north, surfaceTopRight: east,
+            surfaceBottomRight: south, surfaceBottomLeft: west } = params;
 
-          this.renderSanctuary(tile, col, row, config, vertices);
-          this.drawAssetsOnTile(params, col, row, config);
-          this.renderPortcullis(tile, col, row, config, params);
+        const cx = (west.x + east.x) / 2;
+        const cy = (north.y + south.y) / 2;
+        const tileW = east.x - west.x;
+        const tileH = south.y - north.y;
+
+        const renderData = { ctx, cx, cy, tileW, tileH };
+
+        this.drawItemAt(params.tile, renderData);
+    }
+
+    private renderPlayers(vertices: Vec2[][], config: RenderBoardConfig): void {
+        const sortedPlayers = this.players
+            .map((player) => ({ player, position: this.playerPositions[player.socketId] }))
+            .filter((entry): entry is { player: Player; position: Vec2 } => !!entry.position)
+            .sort((left, right) => {
+                const leftDepth = left.position.x + left.position.y;
+                const rightDepth = right.position.x + right.position.y;
+                if (leftDepth !== rightDepth) return leftDepth - rightDepth;
+                return left.position.x - right.position.x;
+            });
+
+        for (const entry of sortedPlayers) {
+            this.drawPlayerAtPosition(entry.player, entry.position, vertices, config);
         }
-      }
-    }
-  }
-
-  private renderPortcullis(tile: Tile, col: number, row: number, config: RenderBoardConfig, params: TileRenderParams): void {
-    if (tile.type !== TileTexture.DoorClosed && tile.type !== TileTexture.DoorOpened) return;
-    const progress = this.getDoorProgress(col, row, tile);
-    drawPortcullisBars(
-      config.ctx,
-      { north: params.surfaceTopLeft, east: params.surfaceTopRight, south: params.surfaceBottomRight, west: params.surfaceBottomLeft },
-      progress,
-    );
-  }
-
-  private renderSanctuary(
-    tile: Tile,
-    col: number,
-    row: number,
-    config: RenderBoardConfig,
-    vertices: Vec2[][],
-  ): void {
-    const isSanctuary = tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary;
-    if (!isSanctuary) return;
-
-    const totalRows = config.grid.length;
-    const totalCols = config.grid[0].length;
-
-    // Detect the top-left tile of the 2x2 sanctuary footprint
-    const isTopLeft = (col === 0 || config.grid[row]?.[col - 1]?.item !== tile.item)
-      && (row === 0 || config.grid[row - 1]?.[col]?.item !== tile.item);
-
-    if (isTopLeft && row + 1 < totalRows && col + 1 < totalCols && tile.item) {
-      drawSanctuarySprite(config.ctx, tile.item, {
-        north: vertices[row][col],
-        east: vertices[row][col + 2],
-        south: vertices[row + 2][col + 2],
-        west: vertices[row + 2][col],
-      }, this.getImage);
-    }
-  }
-
-  private drawAssetsOnTile(params: TileRenderParams, col: number, row: number, config: RenderBoardConfig): void {
-    const { context: ctx, surfaceTopLeft: north, surfaceTopRight: east,
-      surfaceBottomRight: south, surfaceBottomLeft: west } = params;
-
-    const cx = (west.x + east.x) / 2;
-    const cy = (north.y + south.y) / 2;
-    const tileW = east.x - west.x;
-    const tileH = south.y - north.y;
-
-    const renderData = { ctx, cx, cy, tileW, tileH };
-
-    this.drawItemAt(params.tile, renderData);
-    this.drawPlayerAt(col, row, renderData, config);
-  }
-
-  private drawItemAt(tile: Tile, data: { ctx: CanvasRenderingContext2D; cx: number; cy: number; tileW: number; tileH: number }): void {
-    if (tile.item == null) return;
-    if (tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary) return;
-
-    const imageSrc = ISO_ITEM_ASSETS[tile.item];
-    if (!imageSrc) return;
-
-    const itemImg = this.getImage(imageSrc);
-    if (!itemImg?.complete || itemImg.naturalWidth <= 0) return;
-
-    const aspect = itemImg.naturalWidth / itemImg.naturalHeight;
-    const imgW = data.tileW * RENDER_CONSTANTS.itemWidthRatio;
-    const imgH = imgW / aspect;
-
-    const floatOffset = Math.sin(Date.now() / RENDER_CONSTANTS.itemFloatSpeed) *
-      (data.tileH * RENDER_CONSTANTS.itemFloatAmplitude) -
-      (data.tileH * RENDER_CONSTANTS.itemFloatBaseOffset);
-
-    const verticalShift = data.tileH * RENDER_CONSTANTS.itemVerticalOffset;
-
-    this.drawItemShadow(data.ctx, { cx: data.cx, cy: data.cy, tileW: data.tileW, tileH: data.tileH, floatOffset, verticalShift });
-    data.ctx.drawImage(itemImg, data.cx - imgW / 2, data.cy - imgH / 2 + floatOffset + verticalShift, imgW, imgH);
-  }
-
-  private drawPlayerAt(
-    col: number, row: number,
-    data: { ctx: CanvasRenderingContext2D; cx: number; cy: number; tileW: number; tileH: number },
-    config: RenderBoardConfig,
-  ): void {
-
-    const playerAtTile = this.players.find(p => {
-      const pos = this.playerPositions[p.socketId];
-      return pos?.x === col && pos?.y === row;
-    });
-
-    if (!playerAtTile?.character?.avatar) return;
-
-    const playerImg = this.getImage(playerAtTile.character.avatar);
-    if (!playerImg?.complete || playerImg.naturalWidth <= 0) return;
-
-    const aspect = playerImg.naturalWidth / playerImg.naturalHeight;
-    const imgW = data.tileW * RENDER_CONSTANTS.playerWidthRatio;
-    const imgH = (imgW / aspect) * RENDER_CONSTANTS.playerHeightAdjustment;
-
-    this.drawPlayerShadow(data.ctx, { cx: data.cx, cy: data.cy, tileH: data.tileH, imgW, imgH });
-
-    const charX = data.cx - imgW / 2;
-    const charY = data.cy - imgH + (data.tileH * RENDER_CONSTANTS.playerDepthOffset);
-    const glowColor = this.getPlayerGlowColor(playerAtTile, config);
-
-    if (glowColor) {
-      data.ctx.save();
-      data.ctx.shadowColor = glowColor;
-      data.ctx.shadowBlur = 30; data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-      data.ctx.shadowBlur = 18; data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-      data.ctx.shadowBlur = 8; data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-      data.ctx.shadowBlur = 0; data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-      data.ctx.restore();
-    } else {
-      data.ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-    }
-  }
-
-  private getPlayerGlowColor(player: Player, config: RenderBoardConfig): string | null {
-    const isLocal = player.socketId === config.localPlayerSocketId;
-    let glowColor: string | null = null;
-
-    if (config.isCTF) {
-      const isTeamA = config.teamA?.some((p) => p.socketId === player.socketId);
-      const isTeamB = config.teamB?.some((p) => p.socketId === player.socketId);
-      if (isTeamA) glowColor = '#3b82f6';
-      else if (isTeamB) glowColor = '#ef4444';
     }
 
-    if (isLocal) {
-      glowColor = config.isLocalPlayerTurn ? '#ffffff' : (glowColor ?? '#00f2fe');
+    private drawPlayerAtPosition(player: Player, position: Vec2, vertices: Vec2[][], config: RenderBoardConfig): void {
+        if (!player?.character?.avatar) return;
+
+        const projectedData = this.projectPlayerPosition(position, vertices);
+        if (!projectedData) return;
+        const ctx = config.ctx;
+
+        const playerImg = this.getImage(player.character.avatar);
+        if (!playerImg?.complete || playerImg.naturalWidth <= 0) return;
+
+        const aspect = playerImg.naturalWidth / playerImg.naturalHeight;
+        const imgW = projectedData.tileW * RENDER_CONSTANTS.playerWidthRatio;
+        const imgH = (imgW / aspect) * RENDER_CONSTANTS.playerHeightAdjustment;
+
+        this.drawPlayerShadow(ctx, {
+            cx: projectedData.cx,
+            cy: projectedData.cy,
+            tileH: projectedData.tileH,
+            imgW,
+            imgH,
+        });
+
+        const charX = projectedData.cx - imgW / 2;
+        const charY = projectedData.cy - imgH + (projectedData.tileH * RENDER_CONSTANTS.playerDepthOffset);
+        const isLocal = player.socketId === config.localPlayerSocketId;
+        let glowColor: string | null = null;
+
+        if (config.isCTF) {
+            const isTeamA = config.teamA?.some((teamPlayer) => teamPlayer.socketId === player.socketId);
+            const isTeamB = config.teamB?.some((teamPlayer) => teamPlayer.socketId === player.socketId);
+
+            if (isTeamA) glowColor = '#3b82f6';
+            else if (isTeamB) glowColor = '#ef4444';
+        } else if (isLocal) {
+            glowColor = '#00f2fe';
+        }
+
+        if (glowColor) {
+            ctx.save();
+            ctx.shadowColor = glowColor;
+            ctx.shadowBlur = 30; ctx.drawImage(playerImg, charX, charY, imgW, imgH);
+            ctx.shadowBlur = 18; ctx.drawImage(playerImg, charX, charY, imgW, imgH);
+            ctx.shadowBlur = 8; ctx.drawImage(playerImg, charX, charY, imgW, imgH);
+            ctx.shadowBlur = 0; ctx.drawImage(playerImg, charX, charY, imgW, imgH);
+            ctx.restore();
+            return;
+        }
+
+        ctx.drawImage(playerImg, charX, charY, imgW, imgH);
     }
-    return glowColor;
-  }
 
-  private drawItemShadow(
-    ctx: CanvasRenderingContext2D,
-    data: { cx: number; cy: number; tileW: number; tileH: number; floatOffset: number; verticalShift: number },
-  ): void {
-    const shadowY = data.cy + (data.tileH * RENDER_CONSTANTS.itemShadowOffsetYRatio) + data.verticalShift;
-    const heightAboveGround = -data.floatOffset / (data.tileH * RENDER_CONSTANTS.itemFloatBaseOffset);
-    const scale = RENDER_CONSTANTS.itemShadowScaleMin + RENDER_CONSTANTS.itemShadowScaleRange * (1 - heightAboveGround);
-    const alpha = RENDER_CONSTANTS.itemShadowAlphaMin + RENDER_CONSTANTS.itemShadowAlphaRange * (1 - heightAboveGround);
+    private projectPlayerPosition(position: Vec2, vertices: Vec2[][]): {
+        cx: number;
+        cy: number;
+        tileW: number;
+        tileH: number;
+    } | null {
+        const totalRows = vertices.length - 1;
+        const totalColumns = vertices[0]?.length ? vertices[0].length - 1 : 0;
+        if (totalRows <= 0 || totalColumns <= 0) return null;
 
-    const radiusX = data.tileW * RENDER_CONSTANTS.itemShadowRadiusXRatio * scale;
-    const radiusY = data.tileH * RENDER_CONSTANTS.itemShadowRadiusYRatio * scale;
+        const centerX = position.x + HALF_TILE_POSITION_OFFSET;
+        const centerY = position.y + HALF_TILE_POSITION_OFFSET;
 
-    ctx.save();
-    ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
-    ctx.beginPath();
-    ctx.ellipse(data.cx, shadowY, radiusX, radiusY, 0, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.restore();
-  }
+        if (centerX < 0 || centerY < 0 || centerX > totalColumns || centerY > totalRows) return null;
 
-  private drawPlayerShadow(ctx: CanvasRenderingContext2D, data: { cx: number; cy: number; tileH: number; imgW: number; imgH: number }): void {
-    const shadowY = data.cy + (data.tileH * RENDER_CONSTANTS.shadowOffsetYRatio);
-    const radiusX = data.imgW * RENDER_CONSTANTS.shadowRadiusXRatio;
-    const radiusY = data.imgH * RENDER_CONSTANTS.shadowRadiusYRatio;
+        const baseColumn = Math.min(Math.max(Math.floor(centerX), 0), totalColumns - 1);
+        const baseRow = Math.min(Math.max(Math.floor(centerY), 0), totalRows - 1);
 
-    ctx.save();
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-    ctx.beginPath();
-    ctx.ellipse(data.cx, shadowY, radiusX, radiusY, 0, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.restore();
-  }
+        const tx = centerX - baseColumn;
+        const ty = centerY - baseRow;
+
+        const topLeft = vertices[baseRow][baseColumn];
+        const topRight = vertices[baseRow][baseColumn + 1];
+        const bottomLeft = vertices[baseRow + 1][baseColumn];
+        const bottomRight = vertices[baseRow + 1][baseColumn + 1];
+
+        const topX = topLeft.x + ((topRight.x - topLeft.x) * tx);
+        const topY = topLeft.y + ((topRight.y - topLeft.y) * tx);
+        const bottomX = bottomLeft.x + ((bottomRight.x - bottomLeft.x) * tx);
+        const bottomY = bottomLeft.y + ((bottomRight.y - bottomLeft.y) * tx);
+
+        const cx = topX + ((bottomX - topX) * ty);
+        const cy = topY + ((bottomY - topY) * ty);
+
+        const tileW = Math.max(1, Math.abs(topRight.x - bottomLeft.x));
+        const tileH = Math.max(1, Math.abs(bottomRight.y - topLeft.y));
+
+        return {
+            cx,
+            cy,
+            tileW,
+            tileH,
+        };
+    }
+
+    private drawItemAt(tile: Tile, data: { ctx: CanvasRenderingContext2D; cx: number; cy: number; tileW: number; tileH: number }): void {
+        if (tile.item == null) return;
+
+        const imageSrc = ISO_ITEM_ASSETS[tile.item];
+        if (!imageSrc) return;
+
+        const itemImg = this.getImage(imageSrc);
+        if (!itemImg?.complete || itemImg.naturalWidth <= 0) return;
+
+        const aspect = itemImg.naturalWidth / itemImg.naturalHeight;
+        const imgW = data.tileW * RENDER_CONSTANTS.itemWidthRatio;
+        const imgH = imgW / aspect;
+
+        const floatOffset = Math.sin(Date.now() / RENDER_CONSTANTS.itemFloatSpeed) *
+            (data.tileH * RENDER_CONSTANTS.itemFloatAmplitude) -
+            (data.tileH * RENDER_CONSTANTS.itemFloatBaseOffset);
+
+        const verticalShift = data.tileH * RENDER_CONSTANTS.itemVerticalOffset;
+
+        this.drawItemShadow(data.ctx, { cx: data.cx, cy: data.cy, tileW: data.tileW, tileH: data.tileH, floatOffset, verticalShift });
+        data.ctx.drawImage(itemImg, data.cx - imgW / 2, data.cy - imgH / 2 + floatOffset + verticalShift, imgW, imgH);
+    }
+
+
+    private drawItemShadow(
+        ctx: CanvasRenderingContext2D,
+        data: { cx: number; cy: number; tileW: number; tileH: number; floatOffset: number; verticalShift: number },
+    ): void {
+        const shadowY = data.cy + (data.tileH * RENDER_CONSTANTS.itemShadowOffsetYRatio) + data.verticalShift;
+        const heightAboveGround = -data.floatOffset / (data.tileH * RENDER_CONSTANTS.itemFloatBaseOffset);
+        const scale = RENDER_CONSTANTS.itemShadowScaleMin + RENDER_CONSTANTS.itemShadowScaleRange * (1 - heightAboveGround);
+        const alpha = RENDER_CONSTANTS.itemShadowAlphaMin + RENDER_CONSTANTS.itemShadowAlphaRange * (1 - heightAboveGround);
+
+        const radiusX = data.tileW * RENDER_CONSTANTS.itemShadowRadiusXRatio * scale;
+        const radiusY = data.tileH * RENDER_CONSTANTS.itemShadowRadiusYRatio * scale;
+
+        ctx.save();
+        ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+        ctx.beginPath();
+        ctx.ellipse(data.cx, shadowY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    private drawPlayerShadow(ctx: CanvasRenderingContext2D, data: { cx: number; cy: number; tileH: number; imgW: number; imgH: number }): void {
+        const shadowY = data.cy + (data.tileH * RENDER_CONSTANTS.shadowOffsetYRatio);
+        const radiusX = data.imgW * RENDER_CONSTANTS.shadowRadiusXRatio;
+        const radiusY = data.imgH * RENDER_CONSTANTS.shadowRadiusYRatio;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(data.cx, shadowY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.restore();
+    }
 }

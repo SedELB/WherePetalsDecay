@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { GameViewCombatService } from './game-view-combat.service';
+import { GameViewCombatService } from '@app/services/game-view/game-view-combat.service';
 
 describe('GameViewCombatService', () => {
     let service: GameViewCombatService;

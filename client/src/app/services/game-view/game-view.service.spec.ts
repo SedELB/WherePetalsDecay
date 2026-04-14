@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
-import { GameViewCombatService } from './game-view-combat.service';
-import { GameViewListenersService } from './game-view-listeners.service';
-import { GameViewService } from './game-view.service';
+import { GameViewCombatService } from '@app/services/game-view/game-view-combat.service';
+import { GameViewListenersService } from '@app/services/game-view/game-view-listeners.service';
+import { GameViewService } from '@app/services/game-view/game-view.service';
 
 describe('GameViewService', () => {
     let service: GameViewService;

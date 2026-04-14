@@ -28,7 +28,7 @@ import { GameMode, PlayerType, SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
-import { WaitingRoomComponent } from './waiting-room.component';
+import { WaitingRoomComponent } from '@app/pages/waiting-room/waiting-room.component';
 
 const MIN_PLAYERS_TO_START = 2;
 const FULL_LOBBY_SIZE = 4;

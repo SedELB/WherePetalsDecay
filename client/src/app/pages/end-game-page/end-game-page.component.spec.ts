@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, ActivatedRoute } from '@angular/router';
 import { GameViewService } from '@app/services/game-view/game-view.service';
-import { EndGamePageComponent } from './end-game-page.component';
+import { EndGamePageComponent } from '@app/pages/end-game-page/end-game-page.component';
 import { signal } from '@angular/core';
 
 describe('EndGamePageComponent', () => {
