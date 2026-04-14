@@ -2,7 +2,7 @@ import { Player } from '@common/player';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
 
-export type ActionHighlightType = 'attack' | 'giveFlag' | 'requestFlag';
+export type ActionHighlightType = 'attack' | 'giveFlag' | 'requestFlag' | 'sanctuary';
 
 export interface ActionTileHighlight {
   pos: Vec2;

@@ -482,6 +482,23 @@
             box-shadow: 0 0 10px rgba(50, 255, 110, 0.5);
         }
     }
+
+    &.sanctuary {
+        background: transparent;
+        border-color: rgba(180, 120, 255, 0.55);
+        color: #c08aff;
+
+        &:hover {
+            background: rgba(180, 120, 255, 0.1);
+        }
+
+        &.selected {
+            background: rgba(180, 120, 255, 0.2);
+            border-color: rgba(180, 120, 255, 0.9);
+            box-shadow: 0 0 10px rgba(180, 120, 255, 0.4);
+        }
+    }
+
 }
 
 .cell--teleportable {

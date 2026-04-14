@@ -34,6 +34,7 @@ import {
     getAttackTargets,
     getRequestFlagTargets,
     getGiveFlagTargets,
+    getSanctuaryTargets,
     getActionHighlightTiles,
     checkHasAnyAction,
 } from './game-page.helper';
@@ -158,10 +159,19 @@ export class GamePageComponent implements OnInit {
         this.localPlayer(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()));
     readonly giveFlagTargets = computed((): Vec2[] => getGiveFlagTargets(
         this.localPlayer(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()));
+    readonly sanctuaryTargets = computed((): Vec2[] => {
+        if (!this.isMyTurn()) return [];
+        return getSanctuaryTargets(
+            this.gameViewService.getLocalSocketId(),
+            this.playerPositions(),
+            this.game()?.grid ?? [],
+            this.inactiveSanctuaries(),
+        );
+    });
     readonly actionHighlightTiles = computed((): ActionTileHighlight[] => getActionHighlightTiles(
-        this.isSubMenuOpen(), this.activeSubAction(), this.attackTargets(), this.requestFlagTargets(), this.giveFlagTargets()));
+        this.isSubMenuOpen(), this.activeSubAction(), this.attackTargets(), this.requestFlagTargets(), this.giveFlagTargets(), this.sanctuaryTargets()));
     readonly hasAnyAction = computed(() => checkHasAnyAction(
-        this.isMyTurn(), this.actionPoints(), this.attackTargets(), this.requestFlagTargets(), this.giveFlagTargets()));
+        this.isMyTurn(), this.actionPoints(), this.attackTargets(), this.requestFlagTargets(), this.giveFlagTargets(), this.sanctuaryTargets()));
 
     constructor(
         protected readonly gameViewService: GameViewService,
@@ -253,6 +263,22 @@ export class GamePageComponent implements OnInit {
         this.activeSubAction.set(current === type ? null : type);
     }
 
+    onSelectSanctuaryAction(): void {
+        const targets = this.sanctuaryTargets();
+        if (targets.length === 1) {
+            const pos = targets[0];
+            const tileItem = this.game()?.grid[pos.y]?.[pos.x]?.item as TileItem | null | undefined;
+            if (tileItem === TileItem.HealingSanctuary || tileItem === TileItem.CombatSanctuary) {
+                this.pendingSanctuaryPosition = pos;
+                this.pendingSanctuaryType = tileItem;
+                this.showSanctuaryModal = true;
+                this.closeSubMenu();
+                return;
+            }
+        }
+        this.selectSubAction('sanctuary');
+    }
+
     onTileClick(x: number, y: number): void {
         if (this.showCombatInProgressModal()) return;
         const lobbyId = this.lobby()?.lobbyId;
@@ -262,15 +288,21 @@ export class GamePageComponent implements OnInit {
         const isAdjacent = this.isTileAdjacentToPlayer(x, y);
 
         if (this.tryHandleDoorClick(lobbyId, x, y, tile?.type, isAdjacent)) return;
-        if (this.tryHandleSanctuaryClick(x, y, tile?.item as TileItem | null | undefined, isAdjacent)) return;
 
         this.handleSubActionClick(x, y);
     }
 
     private handleSubActionClick(x: number, y: number): void {
         const action = this.activeSubAction();
+        if (!action) return;
+
+        if (action === 'sanctuary') {
+            this.handleSanctuarySubAction(x, y);
+            return;
+        }
+
         const clickContext = this.resolveTileClickContext(x, y);
-        if (!action || !clickContext) return;
+        if (!clickContext) return;
 
         if (action === 'attack') {
             this.handleAttackAction(clickContext.lobbyId, clickContext.currentPlayer, clickContext.targetPlayer, x, y);
@@ -280,6 +312,20 @@ export class GamePageComponent implements OnInit {
             this.gameViewService.requestFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
         }
 
+        this.closeSubMenu();
+    }
+
+    private handleSanctuarySubAction(x: number, y: number): void {
+        const isHighlighted = this.actionHighlightTiles().some((t) => t.pos.x === x && t.pos.y === y && t.type === 'sanctuary');
+        if (!isHighlighted) return;
+
+        const tileItem = this.game()?.grid[y]?.[x]?.item as TileItem | null | undefined;
+        const isSanctuary = tileItem === TileItem.HealingSanctuary || tileItem === TileItem.CombatSanctuary;
+        if (!isSanctuary) return;
+
+        this.pendingSanctuaryPosition = { x, y };
+        this.pendingSanctuaryType = tileItem;
+        this.showSanctuaryModal = true;
         this.closeSubMenu();
     }
 
@@ -298,16 +344,6 @@ export class GamePageComponent implements OnInit {
         const isDoor = tileType === TileTexture.DoorClosed || tileType === TileTexture.DoorOpened;
         if (!isDoor || !isAdjacent) return false;
         this.gameViewService.sendToggleDoor(lobbyId, { x: col, y: row });
-        return true;
-    }
-
-    private tryHandleSanctuaryClick(col: number, row: number, tileItem: TileItem | null | undefined, isAdjacent: boolean): boolean {
-        const isSanctuary = tileItem === TileItem.HealingSanctuary || tileItem === TileItem.CombatSanctuary;
-        const isInactive = this.inactiveSanctuaries().some((p) => p.x === col && p.y === row);
-        if (!isSanctuary || !isAdjacent || isInactive) return false;
-        this.pendingSanctuaryPosition = { x: col, y: row };
-        this.pendingSanctuaryType = tileItem;
-        this.showSanctuaryModal = true;
         return true;
     }
 
