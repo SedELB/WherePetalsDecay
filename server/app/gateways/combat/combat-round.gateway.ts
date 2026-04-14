@@ -248,7 +248,7 @@ export class CombatRoundGateway {
                     : { type: 'def' as const, bonus: 2 as const };
 
             const delay = Math.random() * VP_POSTURE_MAX_DELAY_MS;
-            setTimeout(() => {
+            const handle = setTimeout(() => {
                 const currentSession = this.combatSessionService.getSession(session.roomId);
                 if (!currentSession || !currentSession.awaitingPostures) return;
                 if (currentSession.postures.has(participantId)) return;
@@ -259,6 +259,7 @@ export class CombatRoundGateway {
                     this.resolveCombatSession(currentSession.roomId);
                 }
             }, delay);
+            session.vpPostureHandles.push(handle);
         }
     }
 
