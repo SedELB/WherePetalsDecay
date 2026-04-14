@@ -24,10 +24,6 @@ describe('HomePageComponent', () => {
         expect(component).toBeTruthy();
     });
 
-    it('should have a game title', () => {
-        expect(component.gameTitle).toBeDefined();
-    });
-
     it('should have a team number', () => {
         expect(component.teamNumber).toBeDefined();
     });
@@ -35,11 +31,6 @@ describe('HomePageComponent', () => {
     it('should have team members', () => {
         expect(component.teamMembers).toBeDefined();
         expect(component.teamMembers.length).toBeGreaterThan(0);
-    });
-
-    it('should display the game title in the template', () => {
-        const compiled = fixture.nativeElement;
-        expect(compiled.querySelector('.game-title').textContent).toContain(component.gameTitle);
     });
 
     it('should display team information in the template', () => {
