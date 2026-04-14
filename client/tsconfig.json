@@ -23,7 +23,7 @@
       "target": "ES2022",
       "module": "es2020",
       "paths": {
-        "src/*": [
+        "@src/*": [
           "./src/*"
         ],
         "@app/*": [
