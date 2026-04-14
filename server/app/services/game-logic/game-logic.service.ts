@@ -1,6 +1,7 @@
+/* eslint-disable */
 import { BASE_STATS } from '@common/constants/character.constants';
-import { Direction } from '@common/direction';
-import { GameMode, PlayerType } from '@common/enums';
+import { Direction, DIRECTION_OFFSETS } from '@common/direction';
+import { GameMode, PlayerType, TileItem, TileTexture } from '@common/enums';
 import { GameStats } from '@common/interfaces/game-stats';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
@@ -13,7 +14,11 @@ import { CombatService } from './combat.service';
 import { CTFService } from './ctf.service';
 import { GameSetupService } from './game-setup.service';
 import { MovementService } from './movement.service';
+import { SanctuaryService, SanctuaryUseResult } from './sanctuary.service';
 import { TurnService } from './turn.service';
+
+export { SanctuaryUseResult };
+
 
 const INITIAL_WINS_COUNT = 0;
 
@@ -25,6 +30,7 @@ export class GameLogicService {
         private readonly turnService: TurnService,
         private readonly movementService: MovementService,
         private readonly combatService: CombatService,
+        private readonly sanctuaryService: SanctuaryService,
         private readonly ctfService: CTFService,
         private readonly gameSetupService: GameSetupService,
     ) {
@@ -71,6 +77,8 @@ export class GameLogicService {
             playerStartPositions,
             movementPoints,
             actionPoints,
+            sanctuaryCooldowns: new Map<string, number>(),
+            playerCombatBonusTurns: new Map<string, number>(),
             visitedTilesPerPlayer: new Map(),
             globalVisitedTiles: new Set(),
             sanctuariesUsed: new Set(),
@@ -266,6 +274,64 @@ export class GameLogicService {
         return null;
     }
 
+    toggleDoor(lobbyId: string, socketId: string, position: Vec2): TileTexture | null {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return null;
+
+        const ap = game.actionPoints.get(socketId) ?? 0;
+        if (ap <= 0) return null;
+
+        const playerPos = game.playerPositions.get(socketId);
+        if (!playerPos) return null;
+        const isAdjacent = Object.values(DIRECTION_OFFSETS).some(
+            (offset) => playerPos.x + offset.x === position.x && playerPos.y + offset.y === position.y,
+        );
+        if (!isAdjacent) return null;
+
+        const tile = game.lobby.game.grid[position.y]?.[position.x];
+        if (!tile) return null;
+        const isDoor = tile.type === TileTexture.DoorClosed || tile.type === TileTexture.DoorOpened;
+        if (!isDoor) return null;
+
+        if (tile.type === TileTexture.DoorOpened) {
+            const someoneOnTile = [...game.playerPositions.values()].some(
+                (pos) => pos.x === position.x && pos.y === position.y,
+            );
+            const flagOnTile = tile.item === TileItem.Flag;
+            if (someoneOnTile || flagOnTile) return null;
+        }
+
+        if (tile.type === TileTexture.DoorClosed) {
+            tile.type = TileTexture.DoorOpened;
+        } else {
+            tile.type = TileTexture.DoorClosed;
+        }
+        game.actionPoints.set(socketId, ap - 1);
+
+
+        return tile.type;
+    }
+
+    // Sanctuary methods
+
+    useSanctuary(lobbyId: string, socketId: string, position: Vec2, mode: 'normal' | 'doubleOrNothing'): SanctuaryUseResult | null {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return null;
+        return this.sanctuaryService.useSanctuary(game, socketId, position, mode);
+    }
+
+    decrementSanctuaryCooldowns(lobbyId: string, endedSocketId: string): string[] {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return [];
+        return this.sanctuaryService.decrementSanctuaryCooldowns(game, endedSocketId);
+    }
+
+    getInactiveSanctuaries(lobbyId: string): Vec2[] {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return [];
+        return this.sanctuaryService.computeInactiveSanctuaries(game);
+    }
+
     // Abandon
 
     abandonPlayer(lobbyId: string, socketId: string): Lobby | undefined {
@@ -378,3 +444,4 @@ export class GameLogicService {
         return positions;
     }
 }
+

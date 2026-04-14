@@ -248,7 +248,7 @@ describe('TileItemCountService', () => {
         game.grid[0][0].item = TileItem.Spawn;
         game.grid[0][1].item = TileItem.Flag;
 
-        const counts = { spawnCount: 2, flagCount: 1 };
+        const counts = { spawnCount: 2, flagCount: 1, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         service.adjustCountsForExistingItems(game, counts);
 
         expect(counts.spawnCount).toBe(1);
@@ -308,28 +308,28 @@ describe('TileItemCountService', () => {
 
     // Test verifyEnoughTileItem
     it('should return true when enough spawn items available', () => {
-        const counts = { spawnCount: 1, flagCount: 0 };
+        const counts = { spawnCount: 1, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         expect(service.verifyEnoughTileItem(counts, TileItem.Spawn)).toBe(true);
     });
 
     it('should return false when no spawn items available', () => {
-        const counts = { spawnCount: 0, flagCount: 0 };
+        const counts = { spawnCount: 0, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         expect(service.verifyEnoughTileItem(counts, TileItem.Spawn)).toBe(false);
     });
 
     it('should return true when enough flag items available', () => {
-        const counts = { spawnCount: 0, flagCount: 1 };
+        const counts = { spawnCount: 0, flagCount: 1, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         expect(service.verifyEnoughTileItem(counts, TileItem.Flag)).toBe(true);
     });
 
     it('should return false when no flag items available', () => {
-        const counts = { spawnCount: 0, flagCount: 0 };
+        const counts = { spawnCount: 0, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         expect(service.verifyEnoughTileItem(counts, TileItem.Flag)).toBe(false);
     });
 
     // Unknown item type returns false
     it('should return false for unknown item type in verify', () => {
-        const counts = { spawnCount: 1, flagCount: 1 };
+        const counts = { spawnCount: 1, flagCount: 1, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         expect(service.verifyEnoughTileItem(counts, 'invalid' as TileItem)).toBe(false);
     });
 
@@ -338,7 +338,7 @@ describe('TileItemCountService', () => {
         const INITIAL_SPAWN = 3;
         const EXPECTED_SPAWN = 2;
         const INITIAL_FLAG = 1;
-        const counts = { spawnCount: INITIAL_SPAWN, flagCount: INITIAL_FLAG };
+        const counts = { spawnCount: INITIAL_SPAWN, flagCount: INITIAL_FLAG, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         service.decreaseTileItemCount(counts, TileItem.Spawn);
 
         expect(counts.spawnCount).toBe(EXPECTED_SPAWN);
@@ -349,7 +349,7 @@ describe('TileItemCountService', () => {
         const INITIAL_SPAWN = 3;
         const INITIAL_FLAG = 1;
         const EXPECTED_FLAG = 0;
-        const counts = { spawnCount: INITIAL_SPAWN, flagCount: INITIAL_FLAG };
+        const counts = { spawnCount: INITIAL_SPAWN, flagCount: INITIAL_FLAG, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         service.decreaseTileItemCount(counts, TileItem.Flag);
 
         expect(counts.spawnCount).toBe(INITIAL_SPAWN);
@@ -360,7 +360,7 @@ describe('TileItemCountService', () => {
     it('should not change counts for unknown item type in decrease', () => {
         const INITIAL_SPAWN = 3;
         const INITIAL_FLAG = 1;
-        const counts = { spawnCount: INITIAL_SPAWN, flagCount: INITIAL_FLAG };
+        const counts = { spawnCount: INITIAL_SPAWN, flagCount: INITIAL_FLAG, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         service.decreaseTileItemCount(counts, 'invalid' as TileItem);
 
         expect(counts.spawnCount).toBe(INITIAL_SPAWN);
@@ -369,7 +369,7 @@ describe('TileItemCountService', () => {
 
     // Test increaseTileItemCount
     it('should increase spawn count', () => {
-        const counts = { spawnCount: 1, flagCount: 0 };
+        const counts = { spawnCount: 1, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         service.increaseTileItemCount(counts, TileItem.Spawn);
 
         expect(counts.spawnCount).toBe(2);
@@ -377,7 +377,7 @@ describe('TileItemCountService', () => {
     });
 
     it('should increase flag count', () => {
-        const counts = { spawnCount: 1, flagCount: 0 };
+        const counts = { spawnCount: 1, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         service.increaseTileItemCount(counts, TileItem.Flag);
 
         expect(counts.spawnCount).toBe(1);
@@ -386,7 +386,7 @@ describe('TileItemCountService', () => {
 
     // Increasing unknown item type does nothing
     it('should not change counts for unknown item type in increase', () => {
-        const counts = { spawnCount: 1, flagCount: 0 };
+        const counts = { spawnCount: 1, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         service.increaseTileItemCount(counts, 'invalid' as TileItem);
 
         expect(counts.spawnCount).toBe(1);

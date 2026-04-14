@@ -87,7 +87,7 @@ describe('MapSetupService', () => {
     // Test applyTile with item placement
     it('should place item on floor tile', () => {
         const game = gameFactory(2, 2);
-        const counts = { spawnCount: 1, flagCount: 1 };
+        const counts = { spawnCount: 1, flagCount: 1, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
 
         service['applyTile']({ game, rowIndex: 0, colIndex: 0, tileAttribute: TileItem.Spawn, event: {} as MouseEvent, counts });
         expect(game.grid[0][0].item).toBe(TileItem.Spawn);
@@ -97,7 +97,7 @@ describe('MapSetupService', () => {
     // Test applyTile with texture placement
     it('should place texture on tile', () => {
         const game = gameFactory(2, 2);
-        const counts = { spawnCount: 1, flagCount: 1 };
+        const counts = { spawnCount: 1, flagCount: 1, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
 
         service['applyTile']({ game, rowIndex: 0, colIndex: 1, tileAttribute: TileTexture.Water, event: {} as MouseEvent, counts });
         expect(game.grid[0][1].type).toBe(TileTexture.Water);
@@ -106,7 +106,7 @@ describe('MapSetupService', () => {
     // Cannot place item on wall
     it('should throw error when placing item on wall tile', () => {
         const game = gameFactory(2, 2);
-        const counts = { spawnCount: 1, flagCount: 1 };
+        const counts = { spawnCount: 1, flagCount: 1, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         game.grid[1][0].type = TileTexture.Wall;
 
         expect(() =>
@@ -117,7 +117,7 @@ describe('MapSetupService', () => {
     // Cannot place item when count is zero
     it('should not place item when count is zero', () => {
         const game = gameFactory(2, 2);
-        const counts = { spawnCount: 0, flagCount: 0 };
+        const counts = { spawnCount: 0, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
 
         service['applyTile']({ game, rowIndex: 1, colIndex: 1, tileAttribute: TileItem.Flag, event: {} as MouseEvent, counts });
         expect(game.grid[1][1].item).toBeNull();
@@ -126,7 +126,7 @@ describe('MapSetupService', () => {
     // Test applyTile does not change same texture
     it('should not change texture when applying same type', () => {
         const game = gameFactory(2, 2);
-        const counts = { spawnCount: 1, flagCount: 1 };
+        const counts = { spawnCount: 1, flagCount: 1, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         game.grid[0][1].type = TileTexture.Water;
 
         service['applyTile']({ game, rowIndex: 0, colIndex: 1, tileAttribute: TileTexture.Water, event: {} as MouseEvent, counts });
@@ -136,7 +136,7 @@ describe('MapSetupService', () => {
     // Test deleteTile with shift key (delete item)
     it('should delete item when shift key is pressed', () => {
         const game = gameFactory(2, 2);
-        const counts = { spawnCount: 0, flagCount: 0 };
+        const counts = { spawnCount: 0, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         game.grid[0][0].item = TileItem.Spawn;
 
         service['deleteTile']({
@@ -154,7 +154,7 @@ describe('MapSetupService', () => {
     // Test deleteTile without shift key, delete texture
     it('should delete texture when shift key is not pressed', () => {
         const game = gameFactory(2, 2);
-        const counts = { spawnCount: 0, flagCount: 0 };
+        const counts = { spawnCount: 0, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         game.grid[0][0].type = TileTexture.Wall;
 
         service['deleteTile']({
@@ -171,7 +171,7 @@ describe('MapSetupService', () => {
     // Test deleteTile removes blocking item when placing wall
     it('should remove item when placing wall texture', () => {
         const game = gameFactory(2, 2);
-        const counts = { spawnCount: 0, flagCount: 0 };
+        const counts = { spawnCount: 0, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         game.grid[0][0].item = TileItem.Spawn;
 
         service['deleteTile']({
@@ -188,7 +188,7 @@ describe('MapSetupService', () => {
 
     // Test removeBlockingItemIfNeeded
     it('should remove item when placing blocking texture', () => {
-        const counts = { spawnCount: 0, flagCount: 0 };
+        const counts = { spawnCount: 0, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         const tile: Tile = { type: TileTexture.Floor, item: TileItem.Spawn };
 
         service['removeBlockingItemIfNeeded'](tile, TileTexture.Wall, counts);
@@ -197,7 +197,7 @@ describe('MapSetupService', () => {
     });
 
     it('should remove item when placing door texture', () => {
-        const counts = { spawnCount: 0, flagCount: 0 };
+        const counts = { spawnCount: 0, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         const tile: Tile = { type: TileTexture.Floor, item: TileItem.Flag };
 
         service['removeBlockingItemIfNeeded'](tile, TileTexture.DoorOpened, counts);
@@ -252,7 +252,7 @@ describe('MapSetupService', () => {
     // Test applyActiveSelection
     it('should apply tile when attribute is provided', () => {
         const game = gameFactory(2, 2);
-        const counts = { spawnCount: 1, flagCount: 1 };
+        const counts = { spawnCount: 1, flagCount: 1, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
         const spy = spyOn<MapSetupService>(service, 'applyTile' as keyof MapSetupService);
 
         service.applyActiveSelection({ game, rowIndex: 0, colIndex: 0, tileAttribute: TileTexture.Wall, event: {} as MouseEvent, counts });
@@ -262,7 +262,7 @@ describe('MapSetupService', () => {
     // Test handleCellMouseDown with left click and texture
     it('should start painting on left click with texture', () => {
         const game = gameFactory(1, 1);
-        const counts = { spawnCount: 1, flagCount: 1 };
+        const counts = { spawnCount: 1, flagCount: 1, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
 
         const leftEvent = {
             button: MouseEventType.LeftClick,
@@ -288,7 +288,7 @@ describe('MapSetupService', () => {
     // Test handleCellMouseDown with left click and item
     it('should start painting on left click with item', () => {
         const game = gameFactory(1, 1);
-        const counts = { spawnCount: 1, flagCount: 1 };
+        const counts = { spawnCount: 1, flagCount: 1, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
 
         const leftEvent = {
             button: MouseEventType.LeftClick,
@@ -313,7 +313,7 @@ describe('MapSetupService', () => {
     // Left click without active tool should not start painting
     it('should not start painting when no active tool is selected', () => {
         const game = gameFactory(1, 1);
-        const counts = { spawnCount: 0, flagCount: 0 };
+        const counts = { spawnCount: 0, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
 
         const leftEvent = {
             button: MouseEventType.LeftClick,

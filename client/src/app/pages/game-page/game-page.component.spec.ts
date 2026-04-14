@@ -3,7 +3,6 @@
  * This component acts as the main view for the active game session, integrating the board, player list, timer, and chat.
  * The tests heavily mock the GameViewService using writable signals to precisely control and verify the game state and user interactions.
  */
-
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -104,6 +103,8 @@ describe('GamePageComponent', () => {
         isDebugModeActive: signal<boolean>(false),
         tileInfo: signal<unknown>(null),
         gameOver: signal<{ winnerSocketId: string | null; isForfeit?: boolean } | null>(null),
+        inactiveSanctuaries: signal<{ x: number; y: number }[]>([]),
+        journalEntries: signal<string[]>([]),
         combatLockState: signal<{ isLocked: boolean; attackerSocketId?: string; defenderSocketId?: string } | null>(null),
         isCombatStarted: signal<boolean>(false),
         fighters: signal({ player: {} as Player, enemy: {} as Player, roomId: '' }),
@@ -115,6 +116,8 @@ describe('GamePageComponent', () => {
         sendAbandonWithoutPrompt: jasmine.createSpy('sendAbandonWithoutPrompt'),
         sendCombat: jasmine.createSpy('sendCombat'),
         sendTileInfoRequest: jasmine.createSpy('sendTileInfoRequest'),
+        sendToggleDoor: jasmine.createSpy('sendToggleDoor'),
+        sendUseSanctuary: jasmine.createSpy('sendUseSanctuary'),
         toggleDebugMode: jasmine.createSpy('toggleDebugMode'),
         teleportMove: jasmine.createSpy('teleportMove'),
         setLobby: jasmine.createSpy('setLobby'),
@@ -135,12 +138,15 @@ describe('GamePageComponent', () => {
         mockGameViewService.isDebugModeActive.set(false);
         mockGameViewService.tileInfo.set(null);
         mockGameViewService.gameOver.set(null);
+        mockGameViewService.inactiveSanctuaries.set([]);
+        mockGameViewService.journalEntries.set([]);
         mockGameViewService.combatLockState.set(null);
         mockGameViewService.isCombatStarted.set(false);
         mockGameViewService.fighters.set({ player: {} as Player, enemy: {} as Player, roomId: '' });
-        [mockGameViewService.sendMove, mockGameViewService.sendEndTurn,
+        mockGameViewService.sendMove, mockGameViewService.sendEndTurn,
         mockGameViewService.sendAbandon, mockGameViewService.sendAbandonWithoutPrompt,
         mockGameViewService.sendCombat, mockGameViewService.sendTileInfoRequest,
+        mockGameViewService.sendToggleDoor, mockGameViewService.sendUseSanctuary,
         mockGameViewService.toggleDebugMode, mockGameViewService.teleportMove,
         mockGameViewService.isHost].forEach((s) => s.calls.reset());
     };
