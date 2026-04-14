@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { NgClass, NgStyle } from '@angular/common';
 import { Component, effect, Input, OnChanges, OnDestroy, OnInit } from '@angular/core';
 import { ButtonComponent } from '@app/components/button/button.component';
@@ -347,7 +346,7 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
       [this.player.socketId]: { x: 1, y: 2 },
     };
   }
-
+  /* tout ce qui est mouvement durant combat */
   private computeLungePosition(attackerPosition: Vec2, defenderPosition: Vec2): Vec2 {
     const deltaX = defenderPosition.x - attackerPosition.x;
     const deltaY = defenderPosition.y - attackerPosition.y;

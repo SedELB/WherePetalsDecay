@@ -26,12 +26,15 @@ import {
     buildTileClickContext,
     checkHasAnyAction,
     getActionHighlightTiles,
+    getAdjacentDoorTiles,
     getAdjacentPlayers,
     getAttackTargets,
     getCurrentPlayerIceDebuff,
+    getDoorActionLabel,
     getGiveFlagTargets,
     getOrderedPlayers,
     getRequestFlagTargets,
+    getSanctuaryTargets,
     getTeamPlayers,
     getPlayerAtPosition as helperGetPlayerAtPosition,
     getPlayerName as helperGetPlayerName,
@@ -57,6 +60,8 @@ import {
     styleUrl: './game-page.component.scss',
 })
 export class GamePageComponent implements OnInit {
+    readonly gamePageSignalService = this;
+
     readonly items = OBJECT_PLACEMENT_TOOL;
     readonly routes = ROUTES;
     readonly costInfinity = Infinity;
@@ -145,15 +150,29 @@ export class GamePageComponent implements OnInit {
         this.localPlayer(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()));
     readonly giveFlagTargets = computed((): Vec2[] => getGiveFlagTargets(
         this.localPlayer(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()));
+    readonly adjacentDoorTiles = computed((): Vec2[] => getAdjacentDoorTiles(
+        this.isMyTurn(), this.gameViewService.getLocalSocketId(), this.playerPositions(), this.game()?.grid));
+    readonly doorActionLabel = computed(() => getDoorActionLabel(this.adjacentDoorTiles(), this.game()?.grid));
+    readonly sanctuaryTargets = computed((): Vec2[] => {
+        if (!this.isMyTurn()) return [];
+        return getSanctuaryTargets(
+            this.gameViewService.getLocalSocketId(),
+            this.playerPositions(),
+            this.game()?.grid ?? [],
+            this.inactiveSanctuaries(),
+        );
+    });
     readonly actionHighlightTiles = computed((): ActionTileHighlight[] =>
         getActionHighlightTiles({
             isSubMenuOpen: this.isSubMenuOpen(), activeSubAction: this.activeSubAction(), attackTargets: this.attackTargets(),
-            requestFlagTargets: this.requestFlagTargets(), giveFlagTargets: this.giveFlagTargets(), adjacentDoorTiles: [], sanctuaryTargets: [],
+            requestFlagTargets: this.requestFlagTargets(), giveFlagTargets: this.giveFlagTargets(),
+            adjacentDoorTiles: this.adjacentDoorTiles(), sanctuaryTargets: this.sanctuaryTargets(),
         }));
     readonly hasAnyAction = computed(() =>
         checkHasAnyAction({
             isMyTurn: this.isMyTurn(), actionPoints: this.actionPoints(), attackTargets: this.attackTargets(),
-            requestFlagTargets: this.requestFlagTargets(), giveFlagTargets: this.giveFlagTargets(), adjacentDoorTiles: [], sanctuaryTargets: [],
+            requestFlagTargets: this.requestFlagTargets(), giveFlagTargets: this.giveFlagTargets(),
+            adjacentDoorTiles: this.adjacentDoorTiles(), sanctuaryTargets: this.sanctuaryTargets(),
         }));
 
     constructor(protected readonly gameViewService: GameViewService, private readonly router: Router) {
@@ -236,6 +255,10 @@ export class GamePageComponent implements OnInit {
 
     selectSubAction(type: ActionHighlightType): void {
         this.activeSubAction.set(this.activeSubAction() === type ? null : type);
+    }
+
+    onSelectSanctuaryAction(): void {
+        this.selectSubAction('sanctuary');
     }
 
     onTileClick(x: number, y: number): void {
