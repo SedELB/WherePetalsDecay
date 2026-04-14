@@ -93,7 +93,7 @@
     left: 0;
     height: 0.125rem;
     width: 100%;
-    background-color: $rose-button;
+    background-color: $red-button;
     transform: scaleX(0);
     transition: all 0.3s ease;
 }
@@ -108,7 +108,7 @@
 .info-textarea:valid ~ .label {
     top: -1.25rem;
     font-size: 0.875rem;
-    color: $rose-button;
+    color: $red-button;
 }
 
 .info-input:focus ~ .underline,

@@ -109,7 +109,7 @@ p {
 }
 
 .avatar-item:hover:not(.selected) {
-    border-color: $rose-button;
+    border-color: $red-button;
 }
 
 .attributes-container {
@@ -147,7 +147,7 @@ p {
 
         .attribute-dice {
             display: inline-block;
-            background-color: $rose-button;
+            background-color: $red-button;
             color: $text-color;
             padding: 0.25rem 0.5rem;
             border-radius: 0.25rem;

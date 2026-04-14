@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { ButtonComponent } from '@app/components/button/button.component';
+import { ButtonVariant } from '@common/enums';
 
 @Component({
     selector: 'app-main-page',
@@ -8,6 +9,7 @@ import { ButtonComponent } from '@app/components/button/button.component';
     imports: [ButtonComponent],
 })
 export class HomePageComponent {
+    protected readonly buttonVariant = ButtonVariant;
     readonly gameTitle: string = 'GrimStone';
 
     readonly teamNumber: string = '310';
