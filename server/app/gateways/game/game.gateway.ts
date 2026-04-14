@@ -12,6 +12,7 @@ import {
     CombatRoundCountdownData,
     CombatRoundResolvedData,
     CombatRoundStartedData,
+    CombatRoundTimelineData,
     CombatStartedData,
     PostureReceivedData,
 } from '@common/interfaces/game-view';
@@ -38,7 +39,17 @@ import {
     COMBAT_ROUND_DELAY_MS,
     COMBAT_START_ANNOUNCEMENT_DELAY_MS,
     COUNTDOWN_TICK_MS,
+    DAMAGE_DISPLAY_DURATION_MS,
     DEFAULT_POSTURE,
+    DICE_RESULT_DISPLAY_DURATION_MS,
+    DICE_ROLL_DURATION_MS,
+    FIGHTER_ADVANCE_DURATION_MS,
+    FIGHTER_HOLD_DURATION_MS,
+    FIGHTER_RETREAT_DURATION_MS,
+    NEXT_ROUND_ANNOUNCEMENT_DURATION_MS,
+    POSTURE_RESULT_DISPLAY_DURATION_MS,
+    ROUND_PHASE_BUFFER_MS,
+    STATUS_BUFFER_DURATION_MS,
 } from './game.gateway.constants';
 
 interface CombatSession {
@@ -585,6 +596,19 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const session = this.combatSessions.get(roomId);
         if (!session) return;
 
+        const timeline: CombatRoundTimelineData = {
+            postureResultDisplayDurationMs: POSTURE_RESULT_DISPLAY_DURATION_MS,
+            roundPhaseBufferMs: ROUND_PHASE_BUFFER_MS,
+            diceRollDurationMs: DICE_ROLL_DURATION_MS,
+            diceResultDisplayDurationMs: DICE_RESULT_DISPLAY_DURATION_MS,
+            damageDisplayDurationMs: DAMAGE_DISPLAY_DURATION_MS,
+            fighterAdvanceDurationMs: FIGHTER_ADVANCE_DURATION_MS,
+            fighterHoldDurationMs: FIGHTER_HOLD_DURATION_MS,
+            fighterRetreatDurationMs: FIGHTER_RETREAT_DURATION_MS,
+            statusBufferDurationMs: STATUS_BUFFER_DURATION_MS,
+            nextRoundAnnouncementDurationMs: NEXT_ROUND_ANNOUNCEMENT_DURATION_MS,
+        };
+
         const combatResult = this.gameLogicService.initiateCombat(
             session.lobbyId,
             session.attackerId,
@@ -609,6 +633,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             roomId: session.roomId,
             roundIndex: session.roundIndex,
             result: combatResult,
+            resolvedAtEpochMs: Date.now(),
+            timeline,
             ...(timedOutSocketIds.length > 0 ? { timedOutSocketIds } : {}),
         };
         this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundResolved, roundResolvedData);

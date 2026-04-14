@@ -153,10 +153,10 @@
             <div class="bonuses" [ngClass]="{ 'hidden': !shouldShowPosturePanel() }">
                 <h2>Choisir votre posture</h2>
                 <div class="choices">
-                    <div class="posture-choice" data-tooltip="Bonus posture: +2 ATK">
+                    <div class="posture-choice" data-tooltip="+2 ATK">
                         <app-button (click)="choosePosture('atk')">Posture offensive</app-button>
                     </div>
-                    <div class="posture-choice" data-tooltip="Bonus posture: +2 DEF">
+                    <div class="posture-choice" data-tooltip="+2 DEF">
                         <app-button (click)="choosePosture('def')">Posture défensive</app-button>
                     </div>
                 </div>

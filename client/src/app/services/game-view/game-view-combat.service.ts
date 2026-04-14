@@ -44,6 +44,7 @@ export class GameViewCombatService {
     readonly combatAttackAnimation = signal<{ data: CombatAttackAnimationData; sequence: number } | null>(null);
     readonly fighters = signal<CombatStartedData>({ player: {} as Player, enemy: {} as Player, roomId: '' });
     readonly lastCombatResult = signal<CombatResult | null>(null);
+    readonly lastCombatRoundResolved = signal<CombatRoundResolvedData | null>(null);
     readonly combatEndPopup = signal<CombatEndPopupData | null>(null);
 
     private webSocketService: WebSocketService | null = null;
@@ -91,6 +92,7 @@ export class GameViewCombatService {
         this.combatAttackAnimation.set(null);
         this.fighters.set({ player: {} as Player, enemy: {} as Player, roomId: '' });
         this.lastCombatResult.set(null);
+        this.lastCombatRoundResolved.set(null);
         this.combatEndPopup.set(null);
     }
 
@@ -324,6 +326,7 @@ export class GameViewCombatService {
 
             this.isRoundTransitioning.set(false);
             this.combatRoundIndex.set(data.roundIndex);
+            this.lastCombatRoundResolved.set(null);
             this.fighters.update((fightData) => ({
                 ...fightData,
                 player: {
@@ -344,7 +347,7 @@ export class GameViewCombatService {
             const postureChoiceTimeoutMs = data.postureTimeoutMs > 0 ? data.postureTimeoutMs : COMBAT_POSTURE_TIMEOUT_MS;
             const countdownMax = Math.ceil(postureChoiceTimeoutMs / ONE_SECOND_DELAY);
             this.combatPostureCountdownMax.set(countdownMax);
-            this.combatPostureCountdown.set(0);
+            this.combatPostureCountdown.set(countdownMax);
         });
     }
 
@@ -373,6 +376,7 @@ export class GameViewCombatService {
             this.isRoundTransitioning.set(true);
             this.combatRoundIndex.set(data.roundIndex);
             this.combatPostureCountdown.set(0);
+            this.lastCombatRoundResolved.set(data);
 
             const localId = dependencies.getLocalSocketId();
             if (!localId || !data.timedOutSocketIds?.includes(localId)) return;
