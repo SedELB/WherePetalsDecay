@@ -13,12 +13,24 @@
   </div>
 
   <div class="card-info">
-    <ul>
-      <li>Nom du jeu : <span>{{ game.name }}</span></li>
-      <li>Taille du jeu : <span>{{ game.size.rows }}X{{ game.size.cols }}</span></li>
-      <li>Mode de jeu : <span>{{ game.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</span></li>
-      <li>Dernière modification : <span>{{ displayTime() }}</span></li>
-    </ul>
+    <div class="card-header">
+      <h3 class="game-name">{{ game.name }}</h3>
+    </div>
+
+    <div class="card-stats">
+      <div class="stat-item">
+        <span class="label">Taille :</span>
+        <span class="value">{{ game.size.rows }} x {{ game.size.cols }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="label">Mode :</span>
+        <span class="value">{{ game.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</span>
+      </div>
+      <div class="stat-item">
+        <span class="label">Dernière mise à jour :</span>
+        <span class="value">{{ displayTime() }}</span>
+      </div>
+    </div>
 
     <div class="card-buttons">
       <ng-content></ng-content>

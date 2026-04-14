@@ -60,10 +60,10 @@ body {
 }
 
 .swal2-popup {
-    background: rgba(12, 14, 34, 0.95) !important;
+    background: rgba(0, 0, 0, 0.8);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0.875rem;
-    font-family: inherit;
+    font-family: "PT Sans";
 
     .swal2-title { color: $text-color; }
     .swal2-html-container { color: rgba(255, 255, 255, 0.85); }
@@ -97,6 +97,13 @@ body {
 
 .swal2-icon {
     border-color: rgba(255, 255, 255, 0.15);
+}
+
+.swal2-icon.swal2-success {
+    & [class^='swal2-success-circular-line'],
+    .swal2-success-fix {
+        background: transparent !important;
+    }
 }
 
 .swal2-icon.swal2-warning {
@@ -134,10 +141,10 @@ body {
 @keyframes fade-in {
     from {
         opacity: 0;
-        translate: 0 0.5rem;
+        margin-top: 0.5rem;
     }
     to {
         opacity: 1;
-        translate: 0 0;
+        margin-top: 0;
     }
 }

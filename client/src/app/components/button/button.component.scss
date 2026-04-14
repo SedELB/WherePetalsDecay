@@ -21,6 +21,8 @@
     letter-spacing: 0.0313rem;
     color: #fff;
     background-color: $red-button;
+    font-family: inherit;
+    font-size: 1rem;
 }
 
 .btn:disabled {
@@ -232,18 +234,21 @@
         right: 0.75rem;
         fill: white;
         filter: invert(1);
-        transition: right 0.3s ease;
+        transition: right 0.3s ease, transform 0.3s ease;
     }
 
-    &:hover:not(:disabled) {
+    &:hover:not(:disabled),
+    &:active:not(:disabled) {
         color: transparent;
-        box-shadow: 0 0.1875rem 0 rgba(0, 0, 0, 0.25);
 
         .pencil {
             right: 50%;
             transform: translateX(50%);
-            transition: right 0.3s ease;
         }
+    }
+
+    &:hover:not(:disabled) {
+        box-shadow: 0 0.1875rem 0 rgba(0, 0, 0, 0.25);
     }
 
     &:active:not(:disabled) {
@@ -310,12 +315,12 @@
     background: transparent;
     color: rgba(255, 255, 255, 0.6);
     font-family: "PT Sans", sans-serif;
-    font-size: 2.22rem;
+    font-size: 1.90rem;
     font-weight: 400;
     letter-spacing: 0.2rem;
     text-transform: none;
     padding: 0.5rem 0;
-    box-shadow: none;
+    text-shadow: 0 0 12px black;
     height: auto;
     width: fit-content;
     justify-content: flex-start;
@@ -333,7 +338,7 @@
 
     &:active:not(:disabled) {
         transform: scale(1.1);
-        color: #fff !important;
+        color: #fff;
     }
 }
 
