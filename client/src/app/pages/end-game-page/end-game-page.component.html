@@ -16,63 +16,63 @@
         </header>
 
         <div class="main-content">
-            <section class="players-section">
-                <h2>Tableau des joueurs</h2>
-                <div class="table-wrapper">
-                    <table class="stats-table">
-                        <thead>
-                            <tr>
-                                <th (click)="onSort('name')" class="sortable" [class.active-sort]="isActiveSort('name')">
-                                    Joueur<span [class.sort-dim]="!isActiveSort('name')">{{ sortIndicator('name') }}</span>
-                                </th>
-                                <th (click)="onSort('combatCount')" class="sortable" [class.active-sort]="isActiveSort('combatCount')">
-                                    Combats<span [class.sort-dim]="!isActiveSort('combatCount')">{{ sortIndicator('combatCount') }}</span>
-                                </th>
-                                <th (click)="onSort('winsCount')" class="sortable" [class.active-sort]="isActiveSort('winsCount')">
-                                    Victoires<span [class.sort-dim]="!isActiveSort('winsCount')">{{ sortIndicator('winsCount') }}</span>
-                                </th>
-                                <th (click)="onSort('lossCount')" class="sortable" [class.active-sort]="isActiveSort('lossCount')">
-                                    Défaites<span [class.sort-dim]="!isActiveSort('lossCount')">{{ sortIndicator('lossCount') }}</span>
-                                </th>
-                                <th (click)="onSort('totalHpLost')" class="sortable" [class.active-sort]="isActiveSort('totalHpLost')">
-                                    PV perdus<span [class.sort-dim]="!isActiveSort('totalHpLost')">{{ sortIndicator('totalHpLost') }}</span>
-                                </th>
-                                <th (click)="onSort('totalHpDealt')" class="sortable" [class.active-sort]="isActiveSort('totalHpDealt')">
-                                    PV infligés<span [class.sort-dim]="!isActiveSort('totalHpDealt')">{{ sortIndicator('totalHpDealt') }}</span>
-                                </th>
-                                <th (click)="onSort('visitedTilesPercent')" class="sortable" [class.active-sort]="isActiveSort('visitedTilesPercent')">
-                                    Tuiles visitées<span [class.sort-dim]="!isActiveSort('visitedTilesPercent')">{{ sortIndicator('visitedTilesPercent') }}</span>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @for (player of sortedPlayers(); track player.socketId) {
-                                <tr [class.winner-row]="isWinner(player)"
-                                    [class.me-row]="isMe(player)"
-                                    [class.abandoned-row]="player.hasAbandonned">
-                                    <td class="player-name-cell">
-                                        <img [src]="player.character.avatar"
-                                             [alt]="player.character.name"
-                                             class="player-avatar" />
-                                        <span>{{ player.character.name }}</span>
-                                        @if (isMe(player)) { <span class="badge me">Vous</span> }
-                                        @if (isWinner(player)) { <span class="badge winner">👑</span> }
-                                        @if (player.hasAbandonned) { <span class="badge abandoned">Abandonné</span> }
-                                    </td>
-                                    <td>{{ player.combatCount }}</td>
-                                    <td>{{ player.winsCount }}</td>
-                                    <td>{{ player.lossCount }}</td>
-                                    <td>{{ player.totalHpLost }}</td>
-                                    <td>{{ player.totalHpDealt }}</td>
-                                    <td>{{ visitedPercent(player) }}</td>
+            <div class="left-panel">
+                <section class="players-section">
+                    <h2>Tableau des joueurs</h2>
+                    <div class="table-wrapper">
+                        <table class="stats-table">
+                            <thead>
+                                <tr>
+                                    <th (click)="onSort('name')" class="sortable" [class.active-sort]="isActiveSort('name')">
+                                        Joueur<span [class.sort-dim]="!isActiveSort('name')">{{ sortIndicator('name') }}</span>
+                                    </th>
+                                    <th (click)="onSort('combatCount')" class="sortable" [class.active-sort]="isActiveSort('combatCount')">
+                                        Combats<span [class.sort-dim]="!isActiveSort('combatCount')">{{ sortIndicator('combatCount') }}</span>
+                                    </th>
+                                    <th (click)="onSort('winsCount')" class="sortable" [class.active-sort]="isActiveSort('winsCount')">
+                                        Victoires<span [class.sort-dim]="!isActiveSort('winsCount')">{{ sortIndicator('winsCount') }}</span>
+                                    </th>
+                                    <th (click)="onSort('lossCount')" class="sortable" [class.active-sort]="isActiveSort('lossCount')">
+                                        Défaites<span [class.sort-dim]="!isActiveSort('lossCount')">{{ sortIndicator('lossCount') }}</span>
+                                    </th>
+                                    <th (click)="onSort('totalHpLost')" class="sortable" [class.active-sort]="isActiveSort('totalHpLost')">
+                                        PV perdus<span [class.sort-dim]="!isActiveSort('totalHpLost')">{{ sortIndicator('totalHpLost') }}</span>
+                                    </th>
+                                    <th (click)="onSort('totalHpDealt')" class="sortable" [class.active-sort]="isActiveSort('totalHpDealt')">
+                                        PV infligés<span [class.sort-dim]="!isActiveSort('totalHpDealt')">{{ sortIndicator('totalHpDealt') }}</span>
+                                    </th>
+                                    <th (click)="onSort('visitedTilesPercent')" class="sortable" [class.active-sort]="isActiveSort('visitedTilesPercent')">
+                                        Tuiles visitées<span [class.sort-dim]="!isActiveSort('visitedTilesPercent')">{{ sortIndicator('visitedTilesPercent') }}</span>
+                                    </th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+                            </thead>
+                            <tbody>
+                                @for (player of sortedPlayers(); track player.socketId) {
+                                    <tr [class.winner-row]="isWinner(player)"
+                                        [class.me-row]="isMe(player)"
+                                        [class.abandoned-row]="player.hasAbandonned">
+                                        <td class="player-name-cell">
+                                            <img [src]="player.character.avatar"
+                                                 [alt]="player.character.name"
+                                                 class="player-avatar" />
+                                            <span>{{ player.character.name }}</span>
+                                            @if (isMe(player)) { <span class="badge me">Vous</span> }
+                                            @if (isWinner(player)) { <span class="badge winner">👑</span> }
+                                            @if (player.hasAbandonned) { <span class="badge abandoned">Abandonné</span> }
+                                        </td>
+                                        <td>{{ player.combatCount }}</td>
+                                        <td>{{ player.winsCount }}</td>
+                                        <td>{{ player.lossCount }}</td>
+                                        <td>{{ player.totalHpLost }}</td>
+                                        <td>{{ player.totalHpDealt }}</td>
+                                        <td>{{ visitedPercent(player) }}</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
 
-            <div class="right-panel">
                 @if (stats) {
                     <section class="global-stats">
                         <h2>Statistiques globales</h2>
@@ -110,7 +110,9 @@
                         </ul>
                     </section>
                 }
+            </div>
 
+            <div class="right-panel">
                 <section class="messages-section">
                     <h2>Messages</h2>
                     <div class="tab-bar">
@@ -135,11 +137,11 @@
                         }
                     </div>
                 </section>
-
-                <div class="actions">
-                    <app-button (clicked)="onReturnHome()">Retour à la vue initiale</app-button>
-                </div>
             </div>
+        </div>
+
+        <div class="actions">
+            <app-button (clicked)="onReturnHome()">Retour à la vue initiale</app-button>
         </div>
     </div>
 </main>
