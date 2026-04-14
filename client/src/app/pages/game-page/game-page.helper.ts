@@ -1,7 +1,7 @@
 import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
 import { DIRECTION_OFFSETS } from '@common/direction';
+import { TileItem, TileTexture } from '@common/enums';
 import { Lobby } from '@common/lobby';
-import { TileTexture } from '@common/enums';
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
@@ -22,6 +22,7 @@ export interface ActionHighlightParams {
     requestFlagTargets: Vec2[];
     giveFlagTargets: Vec2[];
     adjacentDoorTiles: Vec2[];
+    sanctuaryTargets: Vec2[];
 }
 
 export interface HasAnyActionParams {
@@ -31,6 +32,7 @@ export interface HasAnyActionParams {
     requestFlagTargets: Vec2[];
     giveFlagTargets: Vec2[];
     adjacentDoorTiles: Vec2[];
+    sanctuaryTargets: Vec2[];
 }
 
 export function isPlayerInTeam(team: Player[], socketId: string): boolean {
@@ -222,20 +224,44 @@ export function getDoorActionLabel(doorTiles: Vec2[], grid: Tile[][] | undefined
     return isClosed ? 'Ouvrir porte' : 'Fermer porte';
 }
 
+export function getSanctuaryTargets(
+    localId: string | undefined,
+    positions: Record<string, Vec2>,
+    grid: Tile[][],
+    inactiveSanctuaries: Vec2[],
+): Vec2[] {
+    if (!localId) return [];
+    const myPos = positions[localId];
+    if (!myPos) return [];
+    const adjacent = Object.values(DIRECTION_OFFSETS).map((offset) => ({ x: myPos.x + offset.x, y: myPos.y + offset.y }));
+    return adjacent.filter((pos) => {
+        const tile = grid[pos.y]?.[pos.x];
+        if (!tile) return false;
+        const isSanctuary = tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary;
+        const isInactive = inactiveSanctuaries.some((s) => s.x === pos.x && s.y === pos.y);
+        return isSanctuary && !isInactive;
+    });
+}
+
 export function getActionHighlightTiles(params: ActionHighlightParams): ActionTileHighlight[] {
-    const { isSubMenuOpen, activeSubAction, attackTargets, requestFlagTargets, giveFlagTargets, adjacentDoorTiles } = params;
+    const { isSubMenuOpen, activeSubAction, attackTargets, requestFlagTargets, giveFlagTargets, adjacentDoorTiles, sanctuaryTargets } = params;
     if (!isSubMenuOpen || !activeSubAction) return [];
     const typeMap: Record<ActionHighlightType, Vec2[]> = {
         attack: attackTargets,
         requestFlag: requestFlagTargets,
         giveFlag: giveFlagTargets,
         toggleDoor: adjacentDoorTiles,
+        sanctuary: sanctuaryTargets,
     };
     return (typeMap[activeSubAction] ?? []).map((pos) => ({ pos, type: activeSubAction }));
 }
 
 export function checkHasAnyAction(params: HasAnyActionParams): boolean {
-    const { isMyTurn, actionPoints, attackTargets, requestFlagTargets, giveFlagTargets, adjacentDoorTiles } = params;
-    return isMyTurn && actionPoints > 0 &&
-           (attackTargets.length > 0 || requestFlagTargets.length > 0 || giveFlagTargets.length > 0 || adjacentDoorTiles.length > 0);
+    const { isMyTurn, actionPoints, attackTargets, requestFlagTargets, giveFlagTargets, adjacentDoorTiles, sanctuaryTargets } = params;
+    if (!isMyTurn) return false;
+    const hasPaidAction = actionPoints > 0 && (
+        attackTargets.length > 0 || requestFlagTargets.length > 0 ||
+        giveFlagTargets.length > 0 || adjacentDoorTiles.length > 0
+    );
+    return hasPaidAction || sanctuaryTargets.length > 0;
 }
