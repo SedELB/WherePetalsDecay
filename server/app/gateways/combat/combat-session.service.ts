@@ -20,6 +20,7 @@ export interface CombatSession {
     consumeActionPointOnNextRound: boolean;
     timeoutHandle?: ReturnType<typeof setTimeout>;
     countdownHandle?: ReturnType<typeof setInterval>;
+    vpPostureHandles: ReturnType<typeof setTimeout>[];
 }
 
 @Injectable()
@@ -61,6 +62,11 @@ export class CombatSessionService {
             clearInterval(session.countdownHandle);
             session.countdownHandle = undefined;
         }
+
+        for (const handle of session.vpPostureHandles) {
+            clearTimeout(handle);
+        }
+        session.vpPostureHandles = [];
     }
 
     cleanupCombatSession(server: Server, roomId: string): void {

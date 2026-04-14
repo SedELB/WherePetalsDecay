@@ -56,8 +56,11 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             },
             onTurnStarted: (lobbyId: string, playerSocketId: string) => {
                 this.server.to(lobbyId).emit(JoinGameEvents.TurnStarted, playerSocketId);
-                this.gameTurnSyncService.syncPlayerTurnState(this.server, lobbyId, playerSocketId);
-                this.triggerVirtualPlayerTurnIfNeeded(lobbyId, playerSocketId);
+                this.gameTurnSyncService.syncPlayerTurnStateWithoutAutoEnd(this.server, lobbyId, playerSocketId);
+                setImmediate(() => {
+                    this.gameTurnSyncService.autoEndTurnIfNoActions(lobbyId, playerSocketId);
+                    this.triggerVirtualPlayerTurnIfNeeded(lobbyId, playerSocketId);
+                });
                 this.server.to(lobbyId).emit(JoinGameEvents.SanctuaryStateUpdate, {
                     inactiveSanctuaries: this.gameLogicService.getInactiveSanctuaries(lobbyId),
                 });
