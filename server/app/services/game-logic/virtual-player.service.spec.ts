@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GameLogicService } from './game-logic.service';
 import { VirtualPlayerPathfindingService } from './virtual-player-pathfinding.service';
+import { VirtualPlayerScannerService } from './virtual-player-scanner.service';
 import { VirtualPlayerService } from './virtual-player.service';
 
 describe('VirtualPlayerService', () => {
@@ -26,6 +27,7 @@ describe('VirtualPlayerService', () => {
                 VirtualPlayerService,
                 { provide: VirtualPlayerPathfindingService, useValue: mockPathfindingService },
                 { provide: GameLogicService, useValue: mockGameLogicService },
+                { provide: VirtualPlayerScannerService, useValue: {} },
             ],
         }).compile();
 
