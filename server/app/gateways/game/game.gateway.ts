@@ -556,10 +556,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (!canMove && !canFight) this.gameLogicService.endTurn(lobbyId);
     }
 
-    // ------------------------------------
-    // Virtual player integration helpers
-    // ------------------------------------
-
     // Called from 'onTurnStarted'. If the player whose turn just started is a
     // virtual player, we delegate the entire turn to VirtualPlayerService.
     private triggerVirtualPlayerTurnIfNeeded(lobbyId: string, playerSocketId: string): void {
