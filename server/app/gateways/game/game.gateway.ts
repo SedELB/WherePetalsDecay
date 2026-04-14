@@ -1,4 +1,4 @@
-/* eslint-disable */
+/* eslint-disable max-lines */
 import { GameLogicService, SanctuaryUseResult } from '@app/services/game-logic/game-logic.service';
 import { JournalService } from '@app/services/journal/journal.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
@@ -32,13 +32,14 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { GameTurnSyncService } from './game-turn-sync.service';
-
-const COMBAT_ROUND_DELAY_MS = 31000;
-const COMBAT_START_ANNOUNCEMENT_DELAY_MS = 2000;
-const COMBAT_POSTURE_TIMEOUT_MS = 10000;
-const COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS = 2000;
-const COUNTDOWN_TICK_MS = 1000;
-const DEFAULT_POSTURE: Posture = { type: null, bonus: 0 };
+import {
+    COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS,
+    COMBAT_POSTURE_TIMEOUT_MS,
+    COMBAT_ROUND_DELAY_MS,
+    COMBAT_START_ANNOUNCEMENT_DELAY_MS,
+    COUNTDOWN_TICK_MS,
+    DEFAULT_POSTURE,
+} from './game.gateway.constants';
 
 interface CombatSession {
     lobbyId: string;
@@ -254,13 +255,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
         const postureData: PostureReceivedData = { socketId: socket.id, posture: normalizedPosture };
         socket.to(roomId).emit(JoinGameEvents.PostureReceived, postureData);
-
-        const areBothPosturesChosen = [session.attackerId, session.defenderId].every((participantSocketId) =>
-            session.postures.has(participantSocketId),
-        );
-        if (areBothPosturesChosen) {
-            this.resolveCombatSession(roomId);
-        }
     }
 
     @SubscribeMessage(JoinGameEvents.RequestCombat)

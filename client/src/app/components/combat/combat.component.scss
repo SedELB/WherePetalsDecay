@@ -80,6 +80,14 @@
     text-align: center;
 }
 
+.combat-status-slot {
+    width: min(420px, 100%);
+    min-height: 3.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .dice-roll-panel {
     width: min(420px, 100%);
     border-radius: 0.65rem;
@@ -129,6 +137,8 @@
     margin: 0;
     padding: 0.4rem 0.95rem;
     border-radius: 999px;
+    width: 100%;
+    text-align: center;
     color: #fbbf24;
     font-size: 0.95rem;
     font-weight: 800;
@@ -138,7 +148,7 @@
 }
 
 .posture-timer {
-    width: min(420px, 100%);
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -196,9 +206,17 @@
 .stats-panel.compact {
     gap: 0.55rem;
 
+    .bonus-legend {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        margin-top: -0.15rem;
+    }
+
     .stat-row {
         display: grid;
-        grid-template-columns: minmax(7.2rem, 1fr) minmax(6.2rem, max-content) 3.4rem;
+        grid-template-columns: minmax(5.8rem, auto) auto auto;
         align-items: center;
         gap: 0.5rem;
     }
@@ -213,10 +231,8 @@
     .stat-bonuses {
         display: flex;
         align-items: center;
-        justify-content: flex-end;
         gap: 0.35rem;
         min-height: 1.35rem;
-        min-width: 6.2rem;
     }
 
     .bonus-badge {
@@ -227,9 +243,12 @@
         font-weight: 700;
         padding: 0.1rem 0.35rem;
         border-radius: 999px;
-        min-width: 2.3rem;
-        text-align: center;
-        font-variant-numeric: tabular-nums;
+
+        &.bonus-badge--posture {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: rgba(34, 197, 94, 0.55);
+            color: #86efac;
+        }
 
         &.bonus-badge--dice {
             background: rgba(59, 130, 246, 0.2);
@@ -240,12 +259,9 @@
 
     .stat-value {
         justify-self: end;
-        width: 3.4rem;
-        text-align: right;
         font-size: 0.96rem;
         font-weight: 800;
         color: #e9d5ff;
-        font-variant-numeric: tabular-nums;
     }
 }
 
@@ -341,19 +357,17 @@ app-isometric-map {
         display: flex;
         align-items: flex-end;
         justify-content: center;
+        padding: 0 0.75rem 0.75rem;
         pointer-events: none;
-        padding: 0 0.6rem 0.6rem;
     }
 
     .damage-popup {
         @extend %panel-base;
-        min-width: min(20rem, calc(100% - 1rem));
-        width: min(28rem, calc(100% - 1rem));
+        min-width: 20rem;
         max-width: min(28rem, calc(100% - 2rem));
         text-align: center;
         border-color: rgba(0, 255, 255, 0.35);
         background: rgba(12, 14, 34, 0.95);
-        margin: 0;
 
         h3 {
             margin: 0 0 0.55rem 0;

@@ -7,14 +7,14 @@ import { GameCreationEvents } from '@common/socket-events/games.gateway.events';
 
 @WebSocketGateway({ namespace: SocketNamespace.Games, cors: true })
 @Injectable()
-export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
+export class GameCatalogGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     @WebSocketServer() private server: Server;
 
     constructor(private readonly logger: Logger) {
     }
 
     afterInit() {
-        this.logger.log('GamesGateway initialized on /games namespace');
+        this.logger.log('GameCatalogGateway initialized on /games namespace');
     }
 
     handleConnection(socket: Socket) {

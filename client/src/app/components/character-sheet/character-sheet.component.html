@@ -1,0 +1,16 @@
+<h3 class="section-title">Mon Personnage</h3>
+<div class="local-player-info">
+    <ul>
+        @if (player?.character) {
+            <img [src]="player?.character?.avatar" [alt]="player?.character?.name" class="player-avatar"/>
+            <li>Nom : <span>{{ player?.character?.name }}</span></li>
+            <li>PV restants : <span>{{ player?.character?.life }}</span></li>
+            <li>PV max : <span>{{ maxLife }}</span></li>
+            <li>Rapidité : <span>{{ player?.character?.speed }}</span></li>
+            <li>Attaque | Dés : <span>{{ player?.character?.attack }} | {{ player?.character?.attackDice }}</span></li>
+            <li>Défense | Dés : <span>{{ player?.character?.defense }} | {{ player?.character?.defenseDice }}</span></li>
+            <li>Points de mouvement : <span>{{ movementPoints }}</span></li>
+            <li>Points d'action : <span>{{ actionPoints }}</span></li>
+        }
+    </ul>
+</div>

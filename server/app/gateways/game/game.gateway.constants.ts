@@ -1,0 +1,39 @@
+import { Posture } from '@common/character';
+
+// NOTE: ces valeurs doivent rester synchronisées avec `common/constants/combat-timeline.constants.ts`.
+// Le serveur garde un miroir local pour éviter les problèmes de frontière TypeScript/rootDir.
+export const COMBAT_START_ANNOUNCEMENT_DELAY_MS = 2000;
+export const COMBAT_POSTURE_TIMEOUT_MS = 10000;
+export const COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS = 2000;
+export const POSTURE_RESULT_DISPLAY_DURATION_MS = 2000;
+export const ROUND_PHASE_BUFFER_MS = 1000;
+export const DICE_ROLL_DURATION_MS = 2000;
+export const DICE_RESULT_DISPLAY_DURATION_MS = 2000;
+export const DAMAGE_DISPLAY_DURATION_MS = 3000;
+export const FIGHTER_ADVANCE_DURATION_MS = 2000;
+export const FIGHTER_HOLD_DURATION_MS = 1000;
+export const FIGHTER_RETREAT_DURATION_MS = 1000;
+export const STATUS_BUFFER_DURATION_MS = 2000;
+export const NEXT_ROUND_ANNOUNCEMENT_DURATION_MS = 3000;
+
+export const COMBAT_ROUND_DELAY_MS =
+    POSTURE_RESULT_DISPLAY_DURATION_MS +
+    ROUND_PHASE_BUFFER_MS +
+    DICE_ROLL_DURATION_MS +
+    DICE_RESULT_DISPLAY_DURATION_MS +
+    ROUND_PHASE_BUFFER_MS +
+    DAMAGE_DISPLAY_DURATION_MS +
+    ROUND_PHASE_BUFFER_MS +
+    FIGHTER_ADVANCE_DURATION_MS +
+    FIGHTER_HOLD_DURATION_MS +
+    FIGHTER_RETREAT_DURATION_MS +
+    ROUND_PHASE_BUFFER_MS +
+    FIGHTER_ADVANCE_DURATION_MS +
+    FIGHTER_HOLD_DURATION_MS +
+    FIGHTER_RETREAT_DURATION_MS +
+    ROUND_PHASE_BUFFER_MS +
+    STATUS_BUFFER_DURATION_MS +
+    NEXT_ROUND_ANNOUNCEMENT_DURATION_MS;
+
+export const COUNTDOWN_TICK_MS = 1000;
+export const DEFAULT_POSTURE: Posture = { type: null, bonus: 0 };

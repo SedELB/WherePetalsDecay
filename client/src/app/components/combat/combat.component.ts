@@ -3,6 +3,20 @@ import { NgClass, NgStyle } from '@angular/common';
 import { Component, effect, Input, OnChanges, OnDestroy, OnInit } from '@angular/core';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { IsometricMapComponent } from '@app/components/isometric-map/isometric-map.component';
+import {
+  COMBAT_END_POPUP_DISPLAY_DURATION_MS,
+  COMBAT_START_POPUP_DISPLAY_DURATION_MS,
+  DAMAGE_DISPLAY_DURATION_MS,
+  DICE_RESULT_DISPLAY_DURATION_MS,
+  DICE_ROLL_DURATION_MS,
+  FIGHTER_ADVANCE_DURATION_MS,
+  FIGHTER_HOLD_DURATION_MS,
+  FIGHTER_RETREAT_DURATION_MS,
+  NEXT_ROUND_ANNOUNCEMENT_DURATION_MS,
+  POSTURE_RESULT_DISPLAY_DURATION_MS,
+  ROUND_PHASE_BUFFER_MS,
+  STATUS_BUFFER_DURATION_MS,
+} from '@app/constants/combat-timeline.constants';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { Posture } from '@common/character';
 import { TileTexture } from '@common/enums';
@@ -10,56 +24,21 @@ import { CombatResult } from '@common/interfaces/game-view';
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
-
-/** Bonus numérique appliqué lorsqu'un joueur choisit une posture offensive ou défensive. */
-const POSTURE_BONUS = 2;
-/** Durée d'affichage du popup d'ouverture du combat. */
-const COMBAT_START_POPUP_DISPLAY_DURATION_MS = 3000;
-/** Durée d'affichage du popup de fin de combat. */
-const COMBAT_END_POPUP_DISPLAY_DURATION_MS = 5000;
-/** Étape 4 : affichage du résultat des postures. */
-const POSTURE_RESULT_DISPLAY_DURATION_MS = 4000;
-/** Buffer d'une seconde entre deux phases de manche. */
-const ROUND_PHASE_BUFFER_MS = 1000;
-/** Étape 6 : animation des dés. */
-const DICE_ROLL_DURATION_MS = 2000;
-/** Étape 7 : affichage du résultat final des dés. */
-const DICE_RESULT_DISPLAY_DURATION_MS = 4000;
-/** Étape 9 : affichage des dégâts échangés. */
-const DAMAGE_DISPLAY_DURATION_MS = 4000;
-/** Étape 11/13 : avance d'un combattant. */
-const FIGHTER_ADVANCE_DURATION_MS = 2000;
-/** Étape 11/13 : pause en position d'impact. */
-const FIGHTER_HOLD_DURATION_MS = 500;
-/** Étape 11/13 : recul vers la position initiale. */
-const FIGHTER_RETREAT_DURATION_MS = 1000;
-/** Étape 16 : buffer après affichage de l'état des combattants. */
-const STATUS_BUFFER_DURATION_MS = 3000;
-/** Étape 17 : annonce du prochain tour. */
-const NEXT_ROUND_ANNOUNCEMENT_DURATION_MS = 4000;
-
-/** Décale la position d'une demi-tuile pour viser le centre visuel d'une case. */
-const TILE_CENTER_OFFSET = 0.5;
-/** Facteur utilitaire pour convertir un ratio en pourcentage. */
-const TO_PERCENT = 100;
-/** Fréquence (ms) de rafraîchissement des valeurs simulées de dé. */
-const DICE_ROLL_TICK_MS = 90;
-/** Nombre de faces utilisé par défaut si la notation de dé est absente/invalide. */
-const DEFAULT_DICE_FACES = 6;
-
-/** Pour le mouvement fluide en combat (aidé par Codex-5.3) */
-/** Point de bascule de la courbe d'easing. */
-const EASE_PROGRESS_MIDDLE_POINT = 0.5;
-/** Facteur d'accélération de la courbe d'easing. */
-const EASE_ACCELERATION_FACTOR = 4;
-/** Facteur de décélération (partie descendante) de la courbe d'easing. */
-const EASE_DECELERATION_FACTOR = -2;
-/** Exposant de la courbe d'easing. */
-const EASE_POWER = 3;
-/** Diviseur appliqué au terme final d'easing. */
-const EASE_DIVISOR = 2;
-/** Décalage constant utilisé dans la formule de décélération. */
-const EASE_DECELERATION_OFFSET = 2;
+import swal from 'sweetalert2';
+import {
+  COMBAT_TOAST_DEFAULT_DURATION_MS,
+  DEFAULT_DICE_FACES,
+  DICE_ROLL_TICK_MS,
+  EASE_ACCELERATION_FACTOR,
+  EASE_DECELERATION_FACTOR,
+  EASE_DECELERATION_OFFSET,
+  EASE_DIVISOR,
+  EASE_POWER,
+  EASE_PROGRESS_MIDDLE_POINT,
+  POSTURE_BONUS,
+  TILE_CENTER_OFFSET,
+  TO_PERCENT,
+} from './combat.constants';
 
 type TypePosture = 'atk' | 'def' | null;
 type FighterSide = 'player' | 'enemy';
@@ -107,7 +86,6 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
 
   playerPos: Record<string, Vec2> = {};
   isChoosingPosture = false;
-  displayedRoundResult: RoundDetailedResult | null = null;
   roundResult: RoundDetailedResult | null = null;
   activeHitTargetSocketId: string | null = null;
   combatStartPopup: CombatStartPopupData | null = null;
@@ -136,7 +114,6 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
   private diceRollInterval: ReturnType<typeof setInterval> | null = null;
   private combatStartPopupTimeout: ReturnType<typeof setTimeout> | null = null;
   private combatEndPopupTimeout: ReturnType<typeof setTimeout> | null = null;
-  private readonly boundVisibilityChangeHandler = this.handleVisibilityChange.bind(this);
   readonly combatMap: Tile[][] = [
     [{ type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null }],
     [{ type: TileTexture.Wall, item: null }, { type: TileTexture.Floor, item: null }, { type: TileTexture.Wall, item: null }],
@@ -185,15 +162,11 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     return !fighter?.character?.bonusPosture?.type;
   }
 
-  shouldShowPosturePendingSpinner(fighter: Player): boolean {
-    return this.isPosturePending(fighter) && this.isPostureCountdownVisible() && !this.isRoundSequenceInProgress;
-  }
-
   getPostureStatusValue(fighter: Player): string {
     const postureType = fighter?.character?.bonusPosture?.type;
     if (postureType === 'atk') return '⚔️ Offensive';
     if (postureType === 'def') return '🛡️ Défensive';
-    return '⏳ Neutre';
+    return 'Posture en attente';
   }
 
   getStatTotal(side: FighterSide, stat: FighterStatType): number {
@@ -207,17 +180,12 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
   getPostureBonus(side: FighterSide, stat: FighterStatType): number {
     const statResult = this.getRoundStatResult(side, stat);
     if (statResult) return statResult.postureBonus;
-
-    const postureType = this.getFighterBySide(side).character.bonusPosture?.type;
-    if (!postureType) return 0;
-    if (stat === 'attack' && postureType === 'atk') return POSTURE_BONUS;
-    if (stat === 'defense' && postureType === 'def') return POSTURE_BONUS;
     return 0;
   }
 
   getDiceBonusDisplay(side: FighterSide, stat: FighterStatType): string {
     const statResult = this.getRoundStatResult(side, stat);
-    if (!statResult) return '+0';
+    if (!statResult) return '+X';
     return `+${statResult.dice}`;
   }
 
@@ -227,11 +195,9 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.isChoosingPosture = true;
-    document.addEventListener('visibilitychange', this.boundVisibilityChangeHandler);
   }
 
   ngOnDestroy(): void {
-    document.removeEventListener('visibilitychange', this.boundVisibilityChangeHandler);
     this.cancelRoundSequence();
     this.clearCombatStartPopupTimeout();
     this.clearCombatEndPopupTimeout();
@@ -250,6 +216,7 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     if (!enemyPostureType) {
       this.lastEnemyPostureType = null;
     } else if (enemyPostureType !== this.lastEnemyPostureType) {
+      this.showToast('Posture adverse reçue. Le lancé de dés est disponible.', 'info');
       this.lastEnemyPostureType = enemyPostureType;
     }
 
@@ -261,6 +228,7 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
 
     this.player.character.bonusPosture = { type: posture, bonus: POSTURE_BONUS };
     this.isChoosingPosture = false;
+    this.showToast(`Posture ${posture === 'atk' ? 'offensive' : 'défensive'} choisie.`, 'success');
 
     const lobbyId = this.gameViewService.gameLobby()?.lobbyId;
     const roomId = this.gameViewService.getCurrentCombatRoomId();
@@ -276,7 +244,6 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     this.duelKey = newKey;
     this.hasShownStartPopup = false;
     this.lastEnemyPostureType = this.enemy.character.bonusPosture?.type ?? null;
-    this.displayedRoundResult = null;
     this.roundResult = null;
     this.activeHitTargetSocketId = null;
     this.currentAttackerSocketId = null;
@@ -341,14 +308,9 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   private getRoundStatResult(side: FighterSide, stat: FighterStatType): DetailedStatLine | null {
-    const fighterResult = side === 'player' ? this.displayedRoundResult?.player : this.displayedRoundResult?.enemy;
+    const fighterResult = side === 'player' ? this.roundResult?.player : this.roundResult?.enemy;
     if (!fighterResult) return null;
     return stat === 'attack' ? fighterResult.attack : fighterResult.defense;
-  }
-
-  private revealCurrentRoundResultInStats(): void {
-    if (!this.roundResult) return;
-    this.displayedRoundResult = this.roundResult;
   }
 
   private clearCombatStartPopupTimeout(): void {
@@ -411,26 +373,6 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
   private createRoundSequenceToken(): number {
     this.activeRoundSequenceToken++;
     return this.activeRoundSequenceToken;
-  }
-
-  private handleVisibilityChange(): void {
-    if (!document.hidden) return;
-    this.fastForwardCurrentRoundSequence();
-  }
-
-  private fastForwardCurrentRoundSequence(): void {
-    if (!this.isAnySequenceActivityInProgress()) return;
-
-    this.cancelRoundSequence();
-    this.hideDamagePopup();
-    this.postureResultPopup = null;
-    this.roundAnnouncementPopup = null;
-    this.statusPopup = null;
-    this.playerPos = this.getBaseCombatPositions();
-    this.revealCurrentRoundResultInStats();
-
-    this.showPendingCombatEndPopupIfReady();
-    this.applyPendingRoundResultIfReady();
   }
 
   private isRoundSequenceTokenActive(token: number): boolean {
@@ -580,12 +522,7 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     };
   }
 
-  private playRoundDiceAnimation(sequenceToken: number, onFinished: () => void): void {
-    if (!this.roundResult) {
-      onFinished();
-      return;
-    }
-
+  private playRoundDiceAnimation(sequenceToken: number, roundResult: RoundDetailedResult, onFinished: () => void): void {
     this.clearDiceRollAnimations();
     this.isDiceRollInProgress = true;
 
@@ -621,12 +558,12 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     }, DICE_ROLL_TICK_MS);
 
     const settleTimeout = setTimeout(() => {
-      if (!this.isRoundSequenceTokenActive(sequenceToken) || !this.roundResult) return;
+      if (!this.isRoundSequenceTokenActive(sequenceToken)) return;
 
       this.clearDiceRollInterval();
       this.diceRollDisplay = {
-        player: this.buildDiceDisplayData(this.roundResult.player.attack.dice, this.roundResult.player.defense.dice, 'player'),
-        enemy: this.buildDiceDisplayData(this.roundResult.enemy.attack.dice, this.roundResult.enemy.defense.dice, 'enemy'),
+        player: this.buildDiceDisplayData(roundResult.player.attack.dice, roundResult.player.defense.dice, 'player'),
+        enemy: this.buildDiceDisplayData(roundResult.enemy.attack.dice, roundResult.enemy.defense.dice, 'enemy'),
         isFinal: true,
       };
 
@@ -749,43 +686,47 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     this.applyPendingRoundResultIfReady();
   }
 
-  private runRoundResolutionSequence(sequenceToken: number, damageDealt: number, damageReceived: number, roundIndex: number): void {
-    this.showPostureResultPopup(roundIndex);
+  private runRoundResolutionSequence(
+    sequenceToken: number,
+    roundResult: RoundDetailedResult,
+    damageDealt: number,
+    damageReceived: number,
+    roundIndex: number,
+  ): void {
+    this.playRoundDiceAnimation(sequenceToken, roundResult, () => {
+      this.roundResult = roundResult;
+      this.showPostureResultPopup(roundIndex);
 
-    this.enqueueRoundStep(sequenceToken, POSTURE_RESULT_DISPLAY_DURATION_MS, () => {
-      this.postureResultPopup = null;
+      this.enqueueRoundStep(sequenceToken, POSTURE_RESULT_DISPLAY_DURATION_MS, () => {
+        this.postureResultPopup = null;
 
-      this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
-        this.playRoundDiceAnimation(sequenceToken, () => {
-          this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
-            this.showDamagePopup(damageDealt, damageReceived, roundIndex);
+        this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
+          this.showDamagePopup(damageDealt, damageReceived, roundIndex);
 
-            this.enqueueRoundStep(sequenceToken, DAMAGE_DISPLAY_DURATION_MS, () => {
-              this.hideDamagePopup();
+          this.enqueueRoundStep(sequenceToken, DAMAGE_DISPLAY_DURATION_MS, () => {
+            this.hideDamagePopup();
 
-              this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
-                this.runFighterMovementPhase(sequenceToken, this.player.socketId, this.enemy.socketId, () => {
-                  this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
-                    this.runFighterMovementPhase(sequenceToken, this.enemy.socketId, this.player.socketId, () => {
-                      this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
-                        this.revealCurrentRoundResultInStats();
-                        this.showStatusPopup(roundIndex);
+            this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
+              this.runFighterMovementPhase(sequenceToken, this.player.socketId, this.enemy.socketId, () => {
+                this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
+                  this.runFighterMovementPhase(sequenceToken, this.enemy.socketId, this.player.socketId, () => {
+                    this.enqueueRoundStep(sequenceToken, ROUND_PHASE_BUFFER_MS, () => {
+                      this.showStatusPopup(roundIndex);
 
-                        this.enqueueRoundStep(sequenceToken, STATUS_BUFFER_DURATION_MS, () => {
-                          this.statusPopup = null;
+                      this.enqueueRoundStep(sequenceToken, STATUS_BUFFER_DURATION_MS, () => {
+                        this.statusPopup = null;
 
-                          if (this.pendingCombatEndPopup) {
-                            this.finishRoundSequence(sequenceToken);
-                            return;
-                          }
+                        if (this.pendingCombatEndPopup) {
+                          this.finishRoundSequence(sequenceToken);
+                          return;
+                        }
 
-                          const nextRoundIndex = this.getCurrentRoundIndex() + 1;
-                          this.showRoundAnnouncementPopup(nextRoundIndex);
+                        const nextRoundIndex = this.getCurrentRoundIndex() + 1;
+                        this.showRoundAnnouncementPopup(nextRoundIndex);
 
-                          this.enqueueRoundStep(sequenceToken, NEXT_ROUND_ANNOUNCEMENT_DURATION_MS, () => {
-                            this.roundAnnouncementPopup = null;
-                            this.finishRoundSequence(sequenceToken);
-                          });
+                        this.enqueueRoundStep(sequenceToken, NEXT_ROUND_ANNOUNCEMENT_DURATION_MS, () => {
+                          this.roundAnnouncementPopup = null;
+                          this.finishRoundSequence(sequenceToken);
                         });
                       });
                     });
@@ -860,7 +801,7 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     const enemy = localIsAttacker ? result.defender : result.attacker;
 
     this.rollCount++;
-    this.roundResult = {
+    const computedRoundResult: RoundDetailedResult = {
       player: {
         attack: {
           base: local.attack.base,
@@ -901,18 +842,27 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     this.statusPopup = null;
     this.hideDamagePopup();
 
-    if (document.hidden) {
-      this.isRoundSequenceInProgress = false;
-      this.playerPos = this.getBaseCombatPositions();
-      this.revealCurrentRoundResultInStats();
-      this.showPendingCombatEndPopupIfReady();
-      this.applyPendingRoundResultIfReady();
-      return;
-    }
-
     this.isRoundSequenceInProgress = true;
     this.clearRoundSequenceTimeouts();
     const sequenceToken = this.createRoundSequenceToken();
-    this.runRoundResolutionSequence(sequenceToken, local.damageDealt, enemy.damageDealt, this.rollCount);
+    this.runRoundResolutionSequence(sequenceToken, computedRoundResult, local.damageDealt, enemy.damageDealt, this.rollCount);
+  }
+
+  private showToast(
+    title: string,
+    icon: 'success' | 'info' | 'warning',
+    html?: string,
+    timer = COMBAT_TOAST_DEFAULT_DURATION_MS,
+  ): void {
+    void swal.fire({
+      toast: true,
+      position: 'bottom-end',
+      icon,
+      title,
+      html,
+      showConfirmButton: false,
+      timer,
+      timerProgressBar: true,
+    });
   }
 }

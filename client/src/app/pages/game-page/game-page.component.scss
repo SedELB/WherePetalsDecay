@@ -161,112 +161,17 @@
 
 .game-info,
 .list,
-.local-player-info {
-    align-self: flex-start;
-    margin-left: 0.625rem;
-    width: calc(100% - 1.25rem);
-    ul {
-        padding-left: 0;
-        text-align: left;
-        list-style: none;
-    }
 
-    li {
-        margin-bottom: 0.3125rem;
-    }
-
-    li span {
-        color: aqua;
-    }
-}
-
-.players-list {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-
-    .info {
-        display: flex;
-        align-items: center;
-        flex-wrap: nowrap;
-        gap: 0.5rem;
-        width: 100%;
-        box-sizing: border-box;
-        overflow: hidden;
-    }
-
-    .name {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        flex-shrink: 1;
-    }
-
-    .stats-icon,
-    .host-indicator,
-    .flag-indicator,
-    .turn-indicator,
-    .virtual-player-badge {
-        flex-shrink: 0;
-        white-space: nowrap;
-    }
-
-    .virtual-player-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.3rem;
-        font-size: 0.85em;
-        font-weight: 600;
-        padding: 0.2rem 0.5rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: #fff;
-        border-radius: 0.25rem;
-        box-shadow: 0 2px 4px rgba(102, 126, 234, 0.4);
-        margin-left: auto;
-    }
-
-    .vp-icon {
-        width: 0.9em;
-        height: 0.9em;
-        display: inline-block;
-        filter: brightness(0) saturate(100%) invert(88%) sepia(41%) saturate(934%) hue-rotate(127deg);
-    }
-}
 
 .list p {
     margin-top: 0px;
 }
 
-.players-list li.active .name {
-    color: #78bc75;
-}
 
-.players-list li.active .info {
-    border: 1px solid #78bc75;
-    border-radius: 0.35rem;
-    padding: 0.3rem 0.6rem;
-    box-shadow:
-        0 0 8px rgba(120, 188, 117, 0.6),
-        inset 0 0 4px rgba(120, 188, 117, 0.3);
-    background-color: rgba(120, 188, 117, 0.1);
-}
 
-.players-list li.active .turn-indicator {
-    color: #78bc75;
-}
 
-.turn-indicator {
-    order: -1;
-}
 
-.players-list li.abandonned .name {
-    color: red;
-}
 
-.abandonned .name {
-    text-decoration: line-through;
-}
 
 .game-board-wrapper {
     display: flex;
@@ -438,17 +343,6 @@
     filter: drop-shadow(0 1px 0.125rem rgba(0, 0, 0, 0.5));
 }
 
-.local-player-info img.player-avatar {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    width: 6.25rem;
-    height: 6.25rem;
-    margin: 0;
-    border-radius: 25%;
-    object-fit: cover;
-    box-shadow: 0 0.375rem 0.875rem rgba(0, 0, 0, 0.35);
-}
 
 .chat-box {
     flex: 1;
@@ -536,10 +430,7 @@
     border-bottom: solid rgba(255, 255, 255, 0.4);
 }
 
-.side-panel.right .local-player-info {
-    position: relative;
-}
-
+.side-panel.right 
 .action-bar {
     display: flex;
     justify-content: space-between;
@@ -730,29 +621,7 @@
     }
 }
 
-.game-over-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
 
-.game-over-message {
-    background: rgba(12, 14, 34, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 0.875rem;
-    padding: 2rem 3rem;
-    text-align: center;
-    color: white;
-    box-shadow: 0 1rem 2.125rem rgba(0, 0, 0, 0.5);
-
-    h2 {
-        margin-bottom: 0.5rem;
-    }
-}
 
 .tile-info-popup {
     position: fixed;

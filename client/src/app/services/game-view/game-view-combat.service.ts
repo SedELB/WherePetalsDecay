@@ -1,4 +1,6 @@
+/* eslint-disable max-lines */
 import { Injectable, signal } from '@angular/core';
+import { COMBAT_POSTURE_TIMEOUT_MS } from '@app/constants/combat-timeline.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Debuf, Posture } from '@common/character';
 import { SocketNamespace, TileItem } from '@common/enums';
@@ -16,10 +18,8 @@ import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
-
-const ONE_SECOND_DELAY = 1000;
-const DEFAULT_POSTURE_CHOICE_TIMEOUT_MS = 10000;
-const DEFAULT_COMBAT_POSTURE: Posture = { type: null, bonus: 0 };
+import swal from 'sweetalert2';
+import { COMBAT_END_NOTIFICATION_DELAY, DEFAULT_COMBAT_POSTURE, ONE_SECOND_DELAY } from './game-view.constants';
 
 interface CombatListenerDependencies {
     getLocalSocketId: () => string | undefined;
@@ -63,7 +63,7 @@ export class GameViewCombatService {
         this.registerCombatStartedListener(dependencies);
         this.registerCombatRoundStartedListener();
         this.registerCombatRoundCountdownListener();
-        this.registerCombatRoundResolvedListener();
+        this.registerCombatRoundResolvedListener(dependencies);
         this.registerCombatAttackAnimationListener(dependencies);
         this.registerPostureReceivedListener();
     }
@@ -331,7 +331,7 @@ export class GameViewCombatService {
                     },
                 },
             }));
-            const postureChoiceTimeoutMs = data.postureTimeoutMs > 0 ? data.postureTimeoutMs : DEFAULT_POSTURE_CHOICE_TIMEOUT_MS;
+            const postureChoiceTimeoutMs = data.postureTimeoutMs > 0 ? data.postureTimeoutMs : COMBAT_POSTURE_TIMEOUT_MS;
             const countdownMax = Math.ceil(postureChoiceTimeoutMs / ONE_SECOND_DELAY);
             this.combatPostureCountdownMax.set(countdownMax);
             this.combatPostureCountdown.set(0);
@@ -353,7 +353,7 @@ export class GameViewCombatService {
         });
     }
 
-    private registerCombatRoundResolvedListener(): void {
+    private registerCombatRoundResolvedListener(dependencies: CombatListenerDependencies): void {
         if (!this.webSocketService || !this.namespace) return;
 
         this.webSocketService.onNamespace<CombatRoundResolvedData>(this.namespace, JoinGameEvents.CombatRoundResolved, (data) => {
@@ -363,6 +363,20 @@ export class GameViewCombatService {
             this.isRoundTransitioning.set(true);
             this.combatRoundIndex.set(data.roundIndex);
             this.combatPostureCountdown.set(0);
+
+            const localId = dependencies.getLocalSocketId();
+            if (!localId || !data.timedOutSocketIds?.includes(localId)) return;
+
+            void swal.fire({
+                toast: true,
+                position: 'bottom-end',
+                icon: 'info',
+                title: 'Posture par défaut',
+                text: 'Temps écoulé : posture neutre appliquée pour ce round.',
+                showConfirmButton: false,
+                timer: COMBAT_END_NOTIFICATION_DELAY,
+                timerProgressBar: true,
+            });
         });
     }
 

@@ -1,0 +1,84 @@
+<h3 class="section-title">Ordre des tours</h3>
+@if (gameMode === gameModeEnum.Classic){
+    <div class="list">
+        <ul>
+            @for (player of orderedPlayers; track player.socketId) {
+                <li [class.active]="player.socketId === activePlayerSocketId"
+                    [class.abandonned]="player.hasAbandonned">
+                    <div class="player-info">
+                        <span class="info">
+                            <span class="name" title="{{ player.character.name }}">{{ player.character.name }}</span>
+                            <span class="stats-icon">⚔️ {{ player.winsCount }}</span>
+                            @if (player.isHost) { <span class="host-indicator">👑</span> }
+                            @if (player.socketId === activePlayerSocketId) { <span class="turn-indicator">▶</span> }
+                            @if (player.playerType === 'virtual') {
+                                @if (player.virtualProfile === 'aggressive') {
+                                    <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
+                                } @else {
+                                    <span class="virtual-player-badge"><img src="./assets/icons/shield.svg" class="vp-icon" alt="icône bouclier"/> BOT</span>
+                                }
+                            }
+                        </span>
+                    </div>
+                </li>
+            }
+        </ul>
+    </div>
+} @else {
+    <!-- Mode CTF -->
+    <div class="team-section team-a-section">
+        <h4 class="section-title team-title" style="color: #3b82f6;">Équipe A</h4>
+        <div class="list">
+            <ul>
+                @for (player of teamA; track player.socketId) {
+                    <li [class.active]="player.socketId === activePlayerSocketId"
+                        [class.abandonned]="player.hasAbandonned">
+                        <div class="player-info">
+                            <span class="info">
+                                <span class="name" title="{{ player.character.name }}">{{ player.character.name }}</span>
+                                @if (player.hasFlag) { <span class="flag-indicator" title="Possède le drapeau">🚩</span> }
+                                @if (player.isHost) { <span class="host-indicator">👑</span> }
+                                @if (player.socketId === activePlayerSocketId) { <span class="turn-indicator turn-indicator-a">▶</span> }
+                                @if (player.playerType === 'virtual') {
+                                    @if (player.virtualProfile === 'aggressive') {
+                                        <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
+                                    } @else {
+                                        <span class="virtual-player-badge"><img src="./assets/icons/shield.svg" class="vp-icon" alt="icône bouclier"/> BOT</span>
+                                    }
+                                }
+                            </span>
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <div class="team-section team-b-section">
+        <h4 class="section-title team-title" style="color: #ef4444;">Équipe B</h4>
+        <div class="list">
+            <ul>
+                @for (player of teamB; track player.socketId) {
+                    <li [class.active]="player.socketId === activePlayerSocketId"
+                        [class.abandonned]="player.hasAbandonned">
+                        <div class="player-info">
+                            <span class="info">
+                                <span class="name" title="{{ player.character.name }}">{{ player.character.name }}</span>
+                                @if (player.hasFlag) { <span class="flag-indicator">🚩</span> }
+                                @if (player.isHost) { <span class="host-indicator">👑</span> }
+                                @if (player.socketId === activePlayerSocketId) { <span class="turn-indicator turn-indicator-b">▶</span> }
+                                @if (player.playerType === 'virtual') {
+                                    @if (player.virtualProfile === 'aggressive') {
+                                        <span class="virtual-player-badge"><img src="./assets/icons/katana.svg" class="vp-icon" alt="icône katanas"/> BOT</span>
+                                    } @else {
+                                        <span class="virtual-player-badge"><img src="./assets/icons/shield.svg" class="vp-icon" alt="icône bouclier"/> BOT</span>
+                                    }
+                                }
+                            </span>
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+}
