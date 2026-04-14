@@ -39,7 +39,7 @@ import {
   POSTURE_BONUS,
   TILE_CENTER_OFFSET,
   TO_PERCENT,
-} from './combat.constants';
+} from '@app/components/combat/combat.constants';
 
 type TypePosture = 'atk' | 'def' | null;
 type FighterSide = 'player' | 'enemy';
