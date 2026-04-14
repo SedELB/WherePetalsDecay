@@ -189,6 +189,7 @@ export class GameViewListenersService {
 
         this.webSocketService.onNamespace<{ position: Vec2; newType: TileTexture }>(
             ns, JoinGameEvents.DoorToggled, (data) => {
+                signals.triggerDoorAnimation(data.position.x, data.position.y, data.newType);
                 signals.gameLobby.update((lobby) => {
                     if (!lobby) return lobby;
                     const updatedGrid = lobby.game.grid.map((row, y) =>

@@ -1,7 +1,9 @@
 import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
 import { DIRECTION_OFFSETS } from '@common/direction';
 import { Lobby } from '@common/lobby';
+import { TileTexture } from '@common/enums';
 import { Player } from '@common/player';
+import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
 
 const TEN = 10;
@@ -11,6 +13,24 @@ export interface TileClickContext {
     currentPlayer: Player;
     targetPlayer: Player;
     targetSocketId: string;
+}
+
+export interface ActionHighlightParams {
+    isSubMenuOpen: boolean;
+    activeSubAction: ActionHighlightType | null;
+    attackTargets: Vec2[];
+    requestFlagTargets: Vec2[];
+    giveFlagTargets: Vec2[];
+    adjacentDoorTiles: Vec2[];
+}
+
+export interface HasAnyActionParams {
+    isMyTurn: boolean;
+    actionPoints: number;
+    attackTargets: Vec2[];
+    requestFlagTargets: Vec2[];
+    giveFlagTargets: Vec2[];
+    adjacentDoorTiles: Vec2[];
 }
 
 export function isPlayerInTeam(team: Player[], socketId: string): boolean {
@@ -177,29 +197,45 @@ export function getAdjacentPlayers(
     });
 }
 
-export function getActionHighlightTiles(
-    isSubMenuOpen: boolean,
-    activeSubAction: ActionHighlightType | null,
-    attackTargets: Vec2[],
-    requestFlagTargets: Vec2[],
-    giveFlagTargets: Vec2[],
-): ActionTileHighlight[] {
+export function getAdjacentDoorTiles(
+    isMyTurn: boolean,
+    localId: string | undefined,
+    positions: Record<string, Vec2>,
+    grid: Tile[][] | undefined,
+): Vec2[] {
+    if (!isMyTurn || !localId || !grid) return [];
+    const myPos = positions[localId];
+    if (!myPos) return [];
+
+    return Object.values(DIRECTION_OFFSETS)
+        .map((offset) => ({ x: myPos.x + offset.x, y: myPos.y + offset.y }))
+        .filter(({ x, y }) => {
+            const type = grid[y]?.[x]?.type;
+            return type === TileTexture.DoorClosed || type === TileTexture.DoorOpened;
+        });
+}
+
+export function getDoorActionLabel(doorTiles: Vec2[], grid: Tile[][] | undefined): string {
+    if (doorTiles.length === 0 || !grid) return 'Porte';
+    const firstDoor = doorTiles[0];
+    const isClosed = grid[firstDoor.y]?.[firstDoor.x]?.type === TileTexture.DoorClosed;
+    return isClosed ? 'Ouvrir porte' : 'Fermer porte';
+}
+
+export function getActionHighlightTiles(params: ActionHighlightParams): ActionTileHighlight[] {
+    const { isSubMenuOpen, activeSubAction, attackTargets, requestFlagTargets, giveFlagTargets, adjacentDoorTiles } = params;
     if (!isSubMenuOpen || !activeSubAction) return [];
     const typeMap: Record<ActionHighlightType, Vec2[]> = {
         attack: attackTargets,
         requestFlag: requestFlagTargets,
         giveFlag: giveFlagTargets,
+        toggleDoor: adjacentDoorTiles,
     };
     return (typeMap[activeSubAction] ?? []).map((pos) => ({ pos, type: activeSubAction }));
 }
 
-export function checkHasAnyAction(
-    isMyTurn: boolean,
-    actionPoints: number,
-    attackTargets: Vec2[],
-    requestFlagTargets: Vec2[],
-    giveFlagTargets: Vec2[],
-): boolean {
-    return isMyTurn && actionPoints > 0 && 
-           (attackTargets.length > 0 || requestFlagTargets.length > 0 || giveFlagTargets.length > 0);
+export function checkHasAnyAction(params: HasAnyActionParams): boolean {
+    const { isMyTurn, actionPoints, attackTargets, requestFlagTargets, giveFlagTargets, adjacentDoorTiles } = params;
+    return isMyTurn && actionPoints > 0 &&
+           (attackTargets.length > 0 || requestFlagTargets.length > 0 || giveFlagTargets.length > 0 || adjacentDoorTiles.length > 0);
 }
