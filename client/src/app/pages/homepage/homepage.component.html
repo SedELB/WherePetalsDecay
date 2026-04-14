@@ -1,26 +1,20 @@
 <div class="container page-background">
-    <header class="game-header">
-        <img src="./assets/GrimStoneLogo.png" alt="Logo du jeu" class="game-logo" />
-        <h1 class="game-title">{{ gameTitle }}</h1>
-    </header>
-
     <nav class="menu-options">
-        <app-button [width]="200" [route]="'/join'">
+        <app-button [variant]="buttonVariant.Menu" [route]="'/join'">
             Joindre une partie
         </app-button>
 
-        <app-button [width]="200" [route]="'/create'">
+        <app-button [variant]="buttonVariant.Menu" [route]="'/create'">
             Créer une partie
         </app-button>
 
-
-        <app-button [width]="200" [route]="'/admin'">
+        <app-button [variant]="buttonVariant.Menu" [route]="'/admin'">
             Administrer les jeux
         </app-button>
     </nav>
-
-    <footer class="team-info">
-        <h3>Équipe {{ teamNumber }}</h3>
-        <p>{{ teamMembers.join(', ') }}</p>
-    </footer>
 </div>
+
+<footer class="team-info">
+    <h3>Équipe {{ teamNumber }}</h3>
+    <p>{{ teamMembers.join(', ') }}</p>
+</footer>

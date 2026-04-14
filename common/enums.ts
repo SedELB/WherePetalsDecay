@@ -52,6 +52,7 @@ export enum ButtonVariant {
     Edit = 'edit',
     ToggleVisibility = 'toggle-visibility',
     AddVirtualPlayer = 'add-virtual-player',
+    Menu = 'menu',
 }
 
 export enum MapSetupMode {
