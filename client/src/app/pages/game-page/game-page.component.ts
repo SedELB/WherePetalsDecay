@@ -1,14 +1,14 @@
 import { Component, HostListener, OnInit, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
+import { CharacterSheetComponent } from '@app/components/character-sheet/character-sheet.component';
 import { ChatComponent } from '@app/components/chat/chat.component';
 import { CombatComponent } from '@app/components/combat/combat.component';
+import { GameOverOverlayComponent } from '@app/components/game-over-overlay/game-over-overlay.component';
 import { IsometricMapComponent } from '@app/components/isometric-map/isometric-map.component';
 import { JournalComponent } from '@app/components/journal/journal.component';
-import { SakuraComponent } from '@app/components/sakura/sakura.component';
-import { CharacterSheetComponent } from '@app/components/character-sheet/character-sheet.component';
-import { GameOverOverlayComponent } from '@app/components/game-over-overlay/game-over-overlay.component';
 import { PlayersListComponent } from '@app/components/players-list/players-list.component';
+import { SakuraComponent } from '@app/components/sakura/sakura.component';
 import { SanctuaryModalComponent } from '@app/components/sanctuary-modal/sanctuary-modal.component';
 import { OBJECT_PLACEMENT_TOOL } from '@app/constants/map-setup-page-constant';
 import { ROUTES } from '@app/constants/routes.constants';
@@ -22,8 +22,8 @@ import { GamePageSignalsService } from './game-page-signals.service';
 import {
     TileClickContext,
     buildTileClickContext,
-    getPlayerAtPosition as helperGetPlayerAtPosition,
     getCurrentPlayerIceDebuff,
+    getPlayerAtPosition as helperGetPlayerAtPosition,
     getPlayerName as helperGetPlayerName,
     getTimerDisplay as helperGetTimerDisplay,
     getTimerLabel as helperGetTimerLabel,
@@ -255,9 +255,6 @@ export class GamePageComponent implements OnInit {
         this.gamePageSignalService.closeSubMenu();
         return true;
     }
-
-
-
     onUseSanctuary(mode: 'normal' | 'doubleOrNothing'): void {
         const lobbyId = this.gamePageSignalService.lobby()?.lobbyId;
         if (!lobbyId || !this.pendingSanctuaryPosition) return;
@@ -294,8 +291,8 @@ export class GamePageComponent implements OnInit {
     }
 
     isTeleportable(col: number, row: number): boolean {
-        return this.gamePageSignalService.isDebugModeActive() 
-        && this.gamePageSignalService.reachableTilesForTeleport().some((tile) => tile.x === col && tile.y === row);
+        return this.gamePageSignalService.isDebugModeActive()
+            && this.gamePageSignalService.reachableTilesForTeleport().some((tile) => tile.x === col && tile.y === row);
     }
 
     getPlayerAtPosition(x: number, y: number): string | null {
@@ -307,9 +304,9 @@ export class GamePageComponent implements OnInit {
     }
 
     getTimerLabel(): string {
-        return helperGetTimerLabel(this.gamePageSignalService.activePlayerSocketId(), 
-        this.gameViewService.getLocalSocketId(), 
-        this.gamePageSignalService.lobby()?.players ?? []);
+        return helperGetTimerLabel(this.gamePageSignalService.activePlayerSocketId(),
+            this.gameViewService.getLocalSocketId(),
+            this.gamePageSignalService.lobby()?.players ?? []);
     }
 
     getTimerDisplay(): string {
