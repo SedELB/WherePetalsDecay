@@ -1,5 +1,5 @@
 import { DIRECTION_OFFSETS } from '@common/direction';
-import { TileItem } from '@common/enums';
+import { TileItem, TileTexture } from '@common/enums';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
@@ -20,9 +20,11 @@ export interface DijkstraResult {
 @Injectable()
 export class VirtualPlayerPathfindingService {
 
-    // Runs Dijkstra from 'startPos' across the entire game grid (Without Walls & Closed doors)
+    // Runs Dijkstra from 'startPos' across the game grid.
+    // withDoors = true : closed doors are treated as cost 1 tile
+    // withDoors = false : closed doors are impassable
     // Tiles occupied by other players are NOT excluded here
-    computeFullDijkstra(game: ActiveGame, startPos: Vec2): DijkstraResult {
+    computeFullDijkstra(game: ActiveGame, startPos: Vec2, withDoors = false): DijkstraResult {
         const costToPosition = new Map<string, number>();
         const predecessorKey = new Map<string, string | null>();
         const queue: DijkstraNode[] = [];
@@ -49,7 +51,9 @@ export class VirtualPlayerPathfindingService {
                 if (!this.isInsideBounds(game, neighbourPos)) continue;
 
                 const tile = game.lobby.game.grid[neighbourPos.y][neighbourPos.x];
-                const moveCost = TILE_COSTS[tile.type];
+                const moveCost = (withDoors && tile.type === TileTexture.DoorClosed)
+                    ? 1
+                    : TILE_COSTS[tile.type];
                 if (moveCost === Infinity) continue;
                 if (this.isSanctuaryTile(game, neighbourPos)) continue;
 
@@ -97,13 +101,16 @@ export class VirtualPlayerPathfindingService {
         path: Vec2[],
         remainingMovementPoints: number,
         excludedSocketId: string,
+        withDoors = false,
     ): Vec2 | null {
         let accumulatedCost = 0;
         let bestReachablePosition: Vec2 | null = null;
 
         for (const step of path) {
             const tile = game.lobby.game.grid[step.y][step.x];
-            const moveCost = TILE_COSTS[tile.type];
+            const moveCost = (withDoors && tile.type === TileTexture.DoorClosed)
+                ? 1
+                : TILE_COSTS[tile.type];
             if (moveCost === Infinity) break;
 
             accumulatedCost += moveCost;
@@ -125,8 +132,9 @@ export class VirtualPlayerPathfindingService {
         startPos: Vec2,
         remainingMovementPoints: number,
         excludedSocketId: string,
+        withDoors = false,
     ): Vec2[] {
-        const { costToPosition } = this.computeFullDijkstra(game, startPos);
+        const { costToPosition } = this.computeFullDijkstra(game, startPos, withDoors);
         const reachable: Vec2[] = [];
         const startKey = this.positionKey(startPos);
 
@@ -136,6 +144,8 @@ export class VirtualPlayerPathfindingService {
 
             const [x, y] = key.split(',').map(z => Number(z));
             const pos: Vec2 = { x, y };
+
+            if (withDoors && game.lobby.game.grid[y]?.[x]?.type === TileTexture.DoorClosed) continue;
 
             if (!this.isTileOccupiedByAnotherPlayer(game, pos, excludedSocketId)) {
                 reachable.push(pos);
