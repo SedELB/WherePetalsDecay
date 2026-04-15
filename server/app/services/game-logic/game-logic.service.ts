@@ -1,7 +1,7 @@
 /* eslint-disable */
 import { BASE_STATS } from '@common/constants/character.constants';
 import { Direction, DIRECTION_OFFSETS } from '@common/direction';
-import { GameMode, PlayerType, TileItem, TileTexture } from '@common/enums';
+import { GameMode, PlayerType, TileItem, TileTexture, SanctuaryMode } from '@common/enums';
 import { GameStats } from '@common/interfaces/game-stats';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
@@ -185,10 +185,10 @@ export class GameLogicService {
         return { position: landingPos, flagJustTaken };
     }
 
-    getReachableTilesForTeleport(lobbyId: string, socketId: string): Vec2[] {
+    getReachableTilesForTeleport(lobbyId: string): Vec2[] {
         const game = this.activeGames.get(lobbyId);
         if (!game) return [];
-        return this.movementService.getReachableTilesForTeleport(game, socketId);
+        return this.movementService.getReachableTilesForTeleport(game);
     }
 
     getReachableTiles(lobbyId: string, socketId: string): Vec2[] {
@@ -348,7 +348,7 @@ export class GameLogicService {
 
     // Sanctuary methods
 
-    useSanctuary(lobbyId: string, socketId: string, position: Vec2, mode: 'normal' | 'doubleOrNothing'): SanctuaryUseResult | null {
+    useSanctuary(lobbyId: string, socketId: string, position: Vec2, mode: SanctuaryMode): SanctuaryUseResult | null {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
         return this.sanctuaryService.useSanctuary(game, socketId, position, mode);
@@ -430,10 +430,14 @@ export class GameLogicService {
         }
 
         if (activePlayers.length <= 1 || activeRealPlayers.length === 0) {
-            const winnerId = activePlayers.length === 1 ? activePlayers[0].socketId : null;
             const gameStats = this.getGameStats(lobbyId);
             const allPlayers = [...game.lobby.players];
-            server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId: winnerId, isForfeit: true, players: allPlayers, gameStats });
+            server.to(lobbyId).emit(JoinGameEvents.GameOver, { 
+                winnerSocketId: null, 
+                isForfeit: true, 
+                players: allPlayers, 
+                gameStats 
+            });
             this.endGame(lobbyId);
             return true;
         }
