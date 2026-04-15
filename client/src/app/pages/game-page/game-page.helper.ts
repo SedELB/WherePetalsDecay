@@ -1,6 +1,6 @@
 import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
 import { DIRECTION_OFFSETS } from '@common/direction';
-import { TileItem, TileTexture } from '@common/enums';
+import { TileItem, TileTexture, PlayerAction } from '@common/enums';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
@@ -11,8 +11,8 @@ const TEN = 10;
 export interface TileClickContext {
     lobbyId: string;
     currentPlayer: Player;
-    targetPlayer: Player;
-    targetSocketId: string;
+    targetPlayer?: Player;
+    targetSocketId?: string;
 }
 
 export interface ActionHighlightParams {
@@ -143,13 +143,13 @@ export function buildTileClickContext(args: {
     const { lobby, currentSocketId, actionPoints, targetSocketId, isHighlighted } = args;
     const lobbyId = lobby?.lobbyId;
     const currentPlayer = lobby?.players.find((player) => player.socketId === currentSocketId);
-    if (!lobbyId || !currentSocketId || !currentPlayer || actionPoints <= 0) return null;
-    if (!targetSocketId || targetSocketId === currentSocketId || !isHighlighted) return null;
+    if (!lobbyId || !currentSocketId || !currentPlayer || actionPoints <= 0 || !isHighlighted) return null;
+
+    if (targetSocketId === currentSocketId) return null;
 
     const targetPlayer = lobby?.players.find((player) => player.socketId === targetSocketId);
-    if (!targetPlayer) return null;
 
-    return { lobbyId, currentPlayer, targetPlayer, targetSocketId };
+    return { lobbyId, currentPlayer, targetPlayer, targetSocketId: targetSocketId ?? undefined };
 }
 
 export function getCurrentPlayerIceDebuff(
@@ -224,44 +224,76 @@ export function getDoorActionLabel(doorTiles: Vec2[], grid: Tile[][] | undefined
     return isClosed ? 'Ouvrir porte' : 'Fermer porte';
 }
 
+function findSanctuaryTopLeft(grid: Tile[][], x: number, y: number, item: TileItem): Vec2 {
+    let tlX = x;
+    let tlY = y;
+    while (grid[tlY - 1]?.[tlX]?.item === item) tlY--;
+    while (grid[tlY]?.[tlX - 1]?.item === item) tlX--;
+    return { x: tlX, y: tlY };
+}
+
+function addSanctuaryBlock(results: Vec2[], tl: Vec2): void {
+    const SANCTUARY_SIZE = 2;
+    for (let dy = 0; dy < SANCTUARY_SIZE; dy++) {
+        for (let dx = 0; dx < SANCTUARY_SIZE; dx++) {
+            results.push({ x: tl.x + dx, y: tl.y + dy });
+        }
+    }
+}
+
 export function getSanctuaryTargets(
     localId: string | undefined,
     positions: Record<string, Vec2>,
     grid: Tile[][],
     inactiveSanctuaries: Vec2[],
 ): Vec2[] {
-    if (!localId) return [];
+    if (!localId || !positions[localId]) return [];
     const myPos = positions[localId];
-    if (!myPos) return [];
+    const results: Vec2[] = [];
+    const visitedTopLeft = new Set<string>();
     const adjacent = Object.values(DIRECTION_OFFSETS).map((offset) => ({ x: myPos.x + offset.x, y: myPos.y + offset.y }));
-    return adjacent.filter((pos) => {
+
+    for (const pos of adjacent) {
         const tile = grid[pos.y]?.[pos.x];
-        if (!tile) return false;
+        if (!tile?.item) continue;
+
         const isSanctuary = tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary;
         const isInactive = inactiveSanctuaries.some((s) => s.x === pos.x && s.y === pos.y);
-        return isSanctuary && !isInactive;
-    });
+
+        if (isSanctuary && !isInactive) {
+            const tl = findSanctuaryTopLeft(grid, pos.x, pos.y, tile.item as TileItem);
+            const key = `${tl.x},${tl.y}`;
+            if (!visitedTopLeft.has(key)) {
+                visitedTopLeft.add(key);
+                addSanctuaryBlock(results, tl);
+            }
+        }
+    }
+    return results;
 }
 
 export function getActionHighlightTiles(params: ActionHighlightParams): ActionTileHighlight[] {
     const { isSubMenuOpen, activeSubAction, attackTargets, requestFlagTargets, giveFlagTargets, adjacentDoorTiles, sanctuaryTargets } = params;
     if (!isSubMenuOpen || !activeSubAction) return [];
     const typeMap: Record<ActionHighlightType, Vec2[]> = {
-        attack: attackTargets,
-        requestFlag: requestFlagTargets,
-        giveFlag: giveFlagTargets,
-        toggleDoor: adjacentDoorTiles,
-        sanctuary: sanctuaryTargets,
+        [PlayerAction.Attack]: attackTargets,
+        [PlayerAction.RequestFlag]: requestFlagTargets,
+        [PlayerAction.GiveFlag]: giveFlagTargets,
+        [PlayerAction.ToggleDoor]: adjacentDoorTiles,
+        [PlayerAction.Sanctuary]: sanctuaryTargets,
     };
     return (typeMap[activeSubAction] ?? []).map((pos) => ({ pos, type: activeSubAction }));
 }
 
 export function checkHasAnyAction(params: HasAnyActionParams): boolean {
     const { isMyTurn, actionPoints, attackTargets, requestFlagTargets, giveFlagTargets, adjacentDoorTiles, sanctuaryTargets } = params;
-    if (!isMyTurn) return false;
-    const hasPaidAction = actionPoints > 0 && (
-        attackTargets.length > 0 || requestFlagTargets.length > 0 ||
-        giveFlagTargets.length > 0 || adjacentDoorTiles.length > 0
+    if (!isMyTurn || actionPoints <= 0) return false;
+
+    return (
+        attackTargets.length > 0 ||
+        requestFlagTargets.length > 0 ||
+        giveFlagTargets.length > 0 ||
+        adjacentDoorTiles.length > 0 ||
+        sanctuaryTargets.length > 0
     );
-    return hasPaidAction || sanctuaryTargets.length > 0;
 }
