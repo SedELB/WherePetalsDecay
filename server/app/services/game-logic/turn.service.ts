@@ -98,8 +98,6 @@ export class TurnService {
         let secondsLeft = initialSeconds;
         this.turnSnapshots.set(lobbyId, { phase: 'between-turn', secondsLeft });
 
-        this.callbacks.onBetweenTurnCountdown(lobbyId, secondsLeft);
-
         const delayTimer = setInterval(() => {
             secondsLeft--;
             if (secondsLeft <= 0) {
@@ -113,6 +111,7 @@ export class TurnService {
         }, SECOND);
 
         this.delayTimers.set(lobbyId, delayTimer);
+        this.callbacks.onBetweenTurnCountdown(lobbyId, initialSeconds);
     }
 
     private beginTurn(game: ActiveGame): void {
@@ -124,9 +123,8 @@ export class TurnService {
         game.movementPoints.set(currentSocketId, player.character.speed);
         game.actionPoints.set(currentSocketId, MAX_ACTION_POINTS);
 
-        this.callbacks.onTurnStarted(lobbyId, currentSocketId);
-
         this.startTurnTimer(game, TURN_DURATION);
+        this.callbacks.onTurnStarted(lobbyId, currentSocketId);
     }
 
     private startTurnTimer(game: ActiveGame, initialSeconds: number): void {
@@ -138,8 +136,6 @@ export class TurnService {
 
         let secondsLeft = initialSeconds;
         this.turnSnapshots.set(lobbyId, { phase: 'active-turn', secondsLeft });
-        this.callbacks.onTurnCountdown(lobbyId, secondsLeft);
-
         const turnTimer = setInterval(() => {
             secondsLeft--;
             if (secondsLeft <= 0) {
@@ -153,6 +149,7 @@ export class TurnService {
         }, SECOND);
 
         this.turnTimers.set(lobbyId, turnTimer);
+        this.callbacks.onTurnCountdown(lobbyId, initialSeconds);
     }
 
     private advanceToNextPlayer(game: ActiveGame): void {

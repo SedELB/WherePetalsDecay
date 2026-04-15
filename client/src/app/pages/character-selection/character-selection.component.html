@@ -3,7 +3,6 @@
 
     <section class="character-creation">
         <h2>Création de personnage</h2>
-        
         <p>Jeu sélectionné : {{ selectedGame?.name || 'Chargement...' }}</p>
 
         <div class="list-container">
@@ -41,35 +40,51 @@
                     <div class="form-group">
                         <label class="att-title">Attributs du personnage</label>
                         
-                        <div class="stats-board">
-                            <div class="stat-card">
-                                <span class="stat-icon">❤️</span>
-                                <div class="stat-info">
-                                    <span class="stat-name">Vie</span>
-                                    <span class="stat-value">{{ lifeValue }}</span>
+                        <div class="stats-ledger">
+                            <div class="stat-entry life">
+                                <span class="stat-code">Points de vie</span>
+                                <div class="stat-data">
+                                    <div class="tally-container">
+                                        <span class="stat-numeric-value">{{ lifeValue }}</span>
+                                        @for (i of [].constructor(lifeValue); track $index) {
+                                            <span class="tally-mark"></span>
+                                        }
+                                    </div>
                                 </div>
                             </div>
-                            <div class="stat-card">
-                                <span class="stat-icon">⚡</span>
-                                <div class="stat-info">
-                                    <span class="stat-name">Rapidité</span>
-                                    <span class="stat-value">{{ speedValue }}</span>
+                            <div class="stat-entry speed">
+                                <span class="stat-code">Vitesse</span>
+                                <div class="stat-data">
+                                    <div class="tally-container">
+                                        <span class="stat-numeric-value">{{ speedValue }}</span>
+                                        @for (i of [].constructor(speedValue); track $index) {
+                                            <span class="tally-mark"></span>
+                                        }
+                                    </div>
                                 </div>
                             </div>
-                            <div class="stat-card">
-                                <span class="stat-icon">⚔️</span>
-                                <div class="stat-info">
-                                    <span class="stat-name">Attaque</span>
-                                    <span class="stat-value">{{ attackValue }}</span>
-                                    <span class="stat-dice">{{ attackDice }}</span>
+                            <div class="stat-entry attack">
+                                <span class="stat-code">Attaque</span>
+                                <div class="stat-data">
+                                    <div class="tally-container">
+                                        <span class="stat-numeric-value">{{ attackValue }}</span>
+                                        @for (i of [].constructor(attackValue); track $index) {
+                                            <span class="tally-mark"></span>
+                                        }
+                                        <span class="dice-note">[{{ attackDice }}]</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="stat-card">
-                                <span class="stat-icon">🛡️</span>
-                                <div class="stat-info">
-                                    <span class="stat-name">Défense</span>
-                                    <span class="stat-value">{{ defenseValue }}</span>
-                                    <span class="stat-dice">{{ defenseDice }}</span>
+                            <div class="stat-entry defense">
+                                <span class="stat-code">Défense</span>
+                                <div class="stat-data">
+                                    <div class="tally-container">
+                                        <span class="stat-numeric-value">{{ defenseValue }}</span>
+                                        @for (i of [].constructor(defenseValue); track $index) {
+                                            <span class="tally-mark"></span>
+                                        }
+                                        <span class="dice-note">[{{ defenseDice }}]</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

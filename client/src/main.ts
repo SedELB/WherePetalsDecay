@@ -19,20 +19,22 @@ if (environment.production) {
     enableProdMode();
 }
 
+const title = 'Where Petals Decay';
+
 const routes: Routes = [
     { path: '', redirectTo: '/home', pathMatch: 'full' },
-    { path: 'home', component: HomePageComponent },
-    { path: 'admin', component: AdminPageComponent },
+    { path: 'home', component: HomePageComponent, title },
+    { path: 'admin', component: AdminPageComponent, title: title + ' - Admin'},
     { path: 'admin/create', component: CreateGamePageComponent },
-    { path: 'editor/new', component: MapSetupPageComponent },
-    { path: 'editor/:id', component: MapSetupPageComponent },
-    { path: 'create', component: GameCreationComponent },
+    { path: 'editor/new', component: MapSetupPageComponent, title: title + ' - New Map' },
+    { path: 'editor/:id', component: MapSetupPageComponent, title: title + ' - Edit Map' },
+    { path: 'create', component: GameCreationComponent, title: title + ' - Host a Game' },
     { path: 'character-selection/:lobbyId', component: CharacterSelectionComponent },
-    { path: 'character-selection', component: CharacterSelectionComponent },
-    { path: 'game/:id', component: GamePageComponent },
+    { path: 'character-selection', component: CharacterSelectionComponent, title: 'WPD - Select your character' },
+    { path: 'game/:id', component: GamePageComponent, title: title + ' - In-game' },
     { path: 'waiting-room/:lobbyId', component: WaitingRoomComponent },
-    { path: 'join', component: JoinGamePageComponent },
-    { path: 'end-game', component: EndGamePageComponent },
+    { path: 'join', component: JoinGamePageComponent, title: title + ' - Join a Game' },
+    { path: 'end-game', component: EndGamePageComponent, title: title + ' - Game Statistics' },
     { path: '**', redirectTo: '/home' },
 ];
 
