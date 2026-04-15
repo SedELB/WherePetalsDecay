@@ -303,19 +303,6 @@ export class GameViewService {
         }
         if (data.players) this.endGamePlayersSignal.set(data.players);
         if (data.gameStats) this.endGameStatsSignal.set(data.gameStats);
-        const gameOverMessage = this.buildGameOverMessage(data);
-
-        void swal.fire({
-            toast: true,
-            position: 'bottom-end',
-            icon: 'success',
-            title: 'Fin de partie',
-            text: gameOverMessage,
-            showConfirmButton: false,
-            showCloseButton: true,
-            timer: END_GAME_REDIRECT_DELAY,
-            timerProgressBar: true,
-        });
 
         setTimeout(() => {
             this.router.navigate([ROUTES.endGame]);
@@ -336,13 +323,6 @@ export class GameViewService {
         }
 
         return true;
-    }
-
-    private buildGameOverMessage(data: GameOverEventData): string {
-        const winnerName = data.players?.find((player) => player.socketId === data.winnerSocketId)?.character.name;
-        if (data.abandonTeam) return `L'équipe ${data.abandonTeam} a abandonné. Fin de partie.`;
-        if (winnerName) return `${winnerName} remporte la partie.`;
-        return 'Partie terminée.';
     }
 
     sendPostureChoice(lobbyId: string, roomId: string, posture: Posture): void {

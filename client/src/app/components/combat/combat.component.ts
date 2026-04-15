@@ -25,9 +25,8 @@ import { CombatResult, CombatRoundTimelineData } from '@common/interfaces/game-v
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
-import swal from 'sweetalert2';
+
 import {
-  COMBAT_TOAST_DEFAULT_DURATION_MS,
   DEFAULT_DICE_FACES,
   DICE_ROLL_TICK_MS,
   EASE_ACCELERATION_FACTOR,
@@ -281,7 +280,6 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     if (!enemyPostureType) {
       this.lastEnemyPostureType = null;
     } else if (enemyPostureType !== this.lastEnemyPostureType) {
-      this.showToast('Posture adverse reçue. Le lancé de dés est disponible.', 'info');
       this.lastEnemyPostureType = enemyPostureType;
     }
 
@@ -293,7 +291,6 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
 
     this.player.character.bonusPosture = { type: posture, bonus: POSTURE_BONUS };
     this.isChoosingPosture = false;
-    this.showToast(`Posture ${posture === 'atk' ? 'offensive' : 'défensive'} choisie.`, 'success');
 
     const lobbyId = this.gameViewService.gameLobby()?.lobbyId;
     const roomId = this.gameViewService.getCurrentCombatRoomId();
@@ -1028,21 +1025,5 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     });
   }
 
-  private showToast(
-    title: string,
-    icon: 'success' | 'info' | 'warning',
-    html?: string,
-    timer = COMBAT_TOAST_DEFAULT_DURATION_MS,
-  ): void {
-    void swal.fire({
-      toast: true,
-      position: 'bottom-end',
-      icon,
-      title,
-      html,
-      showConfirmButton: false,
-      timer,
-      timerProgressBar: true,
-    });
-  }
+
 }

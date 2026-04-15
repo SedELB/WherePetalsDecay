@@ -1,16 +1,36 @@
-<h3 class="section-title">Mon Personnage</h3>
-<div class="local-player-info">
-    <ul>
-        @if (player?.character) {
-            <img [src]="player?.character?.avatar" [alt]="player?.character?.name" class="player-avatar"/>
-            <li>Nom : <span>{{ player?.character?.name }}</span></li>
-            <li>PV restants : <span>{{ player?.character?.life }}</span></li>
-            <li>PV max : <span>{{ maxLife }}</span></li>
-            <li>Rapidité : <span>{{ player?.character?.speed }}</span></li>
-            <li>Attaque | Dés : <span>{{ player?.character?.attack }} | {{ player?.character?.attackDice }}</span></li>
-            <li>Défense | Dés : <span>{{ player?.character?.defense }} | {{ player?.character?.defenseDice }}</span></li>
-            <li>Points de mouvement : <span>{{ movementPoints }}</span></li>
-            <li>Points d'action : <span>{{ actionPoints }}</span></li>
-        }
-    </ul>
+<div class="character-sheet-inner">
+    @if (player?.character) {
+        <div class="sheet-header">
+            <img [src]="player?.character?.avatar" [alt]="player?.character?.name" class="character-avatar"/>
+            <div class="character-name-block">
+                <span class="character-name">{{ player?.character?.name }}</span>
+                <div class="hp-bar-wrapper">
+                    <div class="hp-bar" [style.width.%]="(player!.character!.life / maxLife) * 100"></div>
+                </div>
+                <span class="hp-label">{{ player?.character?.life }} / {{ maxLife }} PV</span>
+            </div>
+        </div>
+        <div class="sheet-stats">
+            <div class="stat-row">
+                <span class="stat-label">Mouvement</span>
+                <span class="stat-value">{{ movementPoints > 0 ? movementPoints : '—' }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Action</span>
+                <span class="stat-value">{{ actionPoints > 0 ? actionPoints : '—' }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Rapidité</span>
+                <span class="stat-value">{{ player?.character?.speed }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Attaque</span>
+                <span class="stat-value">{{ player?.character?.attack }} <span class="dice">D{{ player?.character?.attackDice }}</span></span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Défense</span>
+                <span class="stat-value">{{ player?.character?.defense }} <span class="dice">D{{ player?.character?.defenseDice }}</span></span>
+            </div>
+        </div>
+    }
 </div>

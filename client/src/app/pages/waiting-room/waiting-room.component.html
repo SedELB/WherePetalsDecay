@@ -5,7 +5,7 @@
         @if (currentLobby()) {
         <div class="room-info">
             <p class="room-code">
-                Partie : <strong>{{ currentLobby()?.lobbyId }}</strong>
+                ID Partie : <strong>{{ currentLobby()?.lobbyId }}</strong>
             </p>
             <p class="game-name">Jeu : {{ currentLobby()?.game?.name }}</p>
             <p class="player-count">

@@ -343,8 +343,8 @@
 }
 
 // Add Virtual Player button
-$vp-color: #8b5cf6;
-$vp-hover: #7c3aed;
+$vp-color: $red-button;
+$vp-hover: darken($red-button, 10%);
 $vp-size: 3.5rem;
 $vp-sub-size: 2.5rem;
 
@@ -435,9 +435,9 @@ $vp-sub-size: 2.5rem;
     width: $vp-sub-size;
     height: $vp-sub-size;
     border-radius: 50%;
-    border: none;
-    background: #fff;
-    color: #6b7280;
+    background: rgba(0, 0, 0, 0.85);
+    color: #eddea7;
+    border: 1px solid rgba(240, 198, 116, 0.3);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -455,18 +455,13 @@ $vp-sub-size: 2.5rem;
     .vp-icon {
         width: 1.2rem;
         height: 1.2rem;
-        filter: grayscale(1) brightness(0.2);
+        filter: invert(1);
         transition: filter 0.3s ease;
     }
 
     .vp-menu.open &:hover:not(:disabled) {
-        background: #f3f4f6;
+        background: rgba(240, 198, 116, 0.15);
         transform: translateX(var(--menu-offset-x)) scale(1.1);
-
-        .vp-icon {
-            // Create $vp-color with filter
-            filter: brightness(0) saturate(100%) invert(34%) sepia(82%) saturate(1209%) hue-rotate(243deg) brightness(97%) contrast(93%);
-        }
     }
 
     .vp-menu.open &:active:not(:disabled) {
