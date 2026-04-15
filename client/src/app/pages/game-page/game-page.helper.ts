@@ -224,42 +224,48 @@ export function getDoorActionLabel(doorTiles: Vec2[], grid: Tile[][] | undefined
     return isClosed ? 'Ouvrir porte' : 'Fermer porte';
 }
 
+function findSanctuaryTopLeft(grid: Tile[][], x: number, y: number, item: TileItem): Vec2 {
+    let tlX = x;
+    let tlY = y;
+    while (grid[tlY - 1]?.[tlX]?.item === item) tlY--;
+    while (grid[tlY]?.[tlX - 1]?.item === item) tlX--;
+    return { x: tlX, y: tlY };
+}
+
+function addSanctuaryBlock(results: Vec2[], tl: Vec2): void {
+    const SANCTUARY_SIZE = 2;
+    for (let dy = 0; dy < SANCTUARY_SIZE; dy++) {
+        for (let dx = 0; dx < SANCTUARY_SIZE; dx++) {
+            results.push({ x: tl.x + dx, y: tl.y + dy });
+        }
+    }
+}
+
 export function getSanctuaryTargets(
     localId: string | undefined,
     positions: Record<string, Vec2>,
     grid: Tile[][],
     inactiveSanctuaries: Vec2[],
 ): Vec2[] {
-    if (!localId) return [];
+    if (!localId || !positions[localId]) return [];
     const myPos = positions[localId];
-    if (!myPos) return [];
-
     const results: Vec2[] = [];
     const visitedTopLeft = new Set<string>();
     const adjacent = Object.values(DIRECTION_OFFSETS).map((offset) => ({ x: myPos.x + offset.x, y: myPos.y + offset.y }));
 
     for (const pos of adjacent) {
         const tile = grid[pos.y]?.[pos.x];
-        if (!tile) continue;
+        if (!tile?.item) continue;
 
         const isSanctuary = tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary;
         const isInactive = inactiveSanctuaries.some((s) => s.x === pos.x && s.y === pos.y);
 
         if (isSanctuary && !isInactive) {
-            let tlX = pos.x;
-            let tlY = pos.y;
-            const item = tile.item;
-            while (grid[tlY - 1]?.[tlX]?.item === item) tlY--;
-            while (grid[tlY]?.[tlX - 1]?.item === item) tlX--;
-
-            const key = `${tlX},${tlY}`;
+            const tl = findSanctuaryTopLeft(grid, pos.x, pos.y, tile.item as TileItem);
+            const key = `${tl.x},${tl.y}`;
             if (!visitedTopLeft.has(key)) {
                 visitedTopLeft.add(key);
-                for (let dy = 0; dy < 2; dy++) {
-                    for (let dx = 0; dx < 2; dx++) {
-                        results.push({ x: tlX + dx, y: tlY + dy });
-                    }
-                }
+                addSanctuaryBlock(results, tl);
             }
         }
     }
