@@ -8,11 +8,11 @@
         <div class="sanctuary-divider"></div>
 
         <div class="sanctuary-actions">
-            <button class="modal-btn normal" (click)="onUse('normal')">
+            <button class="modal-btn normal" (click)="onUse(SanctuaryMode.Normal)">
                 <span class="btn-label">Normal</span>
                 <span class="btn-sub">Effet garanti</span>
             </button>
-            <button class="modal-btn risky" (click)="onUse('doubleOrNothing')">
+            <button class="modal-btn risky" (click)="onUse(SanctuaryMode.DoubleOrNothing)">
                 <span class="btn-label">Double ou Rien</span>
                 <span class="btn-sub">50 % de chance : effet doublé ou aucun effet</span>
             </button>

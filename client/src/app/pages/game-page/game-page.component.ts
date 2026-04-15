@@ -14,14 +14,14 @@ import { SanctuaryModalComponent } from '@app/components/sanctuary-modal/sanctua
 import { OBJECT_PLACEMENT_TOOL } from '@app/constants/map-setup-page-constant';
 import { ROUTES } from '@app/constants/routes.constants';
 import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
+import { ITEM_NAMES, MOVE_COOLDOWN_MS, TILE_NAMES, TO_PERCENT } from '@app/pages/game-page/game-page.constants';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS, KEY_TO_DIRECTION } from '@common/direction';
-import { GameMode, TileItem, TileTexture } from '@common/enums';
+import { GameMode, PlayerAction, SanctuaryMode, TileItem, TileTexture } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
-import { ITEM_NAMES, MOVE_COOLDOWN_MS, TILE_NAMES, TO_PERCENT } from '@app/pages/game-page/game-page.constants';
 import {
     TileClickContext,
     buildTileClickContext,
@@ -72,6 +72,7 @@ export class GamePageComponent implements OnInit {
 
     readonly tileNames: Record<string, string> = TILE_NAMES;
     readonly itemNames: Record<string, string> = ITEM_NAMES;
+    protected readonly PlayerAction = PlayerAction;
 
     showSanctuaryModal = false;
     pendingSanctuaryPosition: Vec2 | null = null;
@@ -236,6 +237,16 @@ export class GamePageComponent implements OnInit {
     }
 
     onAbandon(): void {
+        if (this.gamePageSignalService.isLocalCombatParticipant()) {
+            swal.fire({
+                title: 'Impossible de quitter',
+                text: 'Vous ne pouvez pas abandonner la partie pendant un combat !',
+                icon: 'error',
+                confirmButtonText: 'OK',
+            });
+            return;
+        }
+
         swal.fire({
             title: 'Quitter ?',
             text: MESSAGE_ERROR,
@@ -261,7 +272,7 @@ export class GamePageComponent implements OnInit {
     }
 
     onSelectSanctuaryAction(): void {
-        this.selectSubAction('sanctuary');
+        this.selectSubAction(PlayerAction.Sanctuary);
     }
 
     onTileClick(x: number, y: number): void {
@@ -316,7 +327,7 @@ export class GamePageComponent implements OnInit {
         return true;
     }
 
-    onUseSanctuary(mode: 'normal' | 'doubleOrNothing'): void {
+    onUseSanctuary(mode: SanctuaryMode): void {
         const lobbyId = this.lobby()?.lobbyId;
         if (!lobbyId || !this.pendingSanctuaryPosition) return;
         this.gameViewService.sendUseSanctuary(lobbyId, this.pendingSanctuaryPosition, mode);
@@ -335,9 +346,12 @@ export class GamePageComponent implements OnInit {
     onRightClick(event: MouseEvent, position: Vec2): void {
         event.preventDefault();
         const lobbyId = this.lobby()?.lobbyId;
-        if (!lobbyId) return;
+        if (!lobbyId || !this.isMyTurn() || this.gamePageSignalService.disableEndTurn()) return;
+
         if (this.isDebugModeActive()) {
-            this.gameViewService.teleportMove(lobbyId, position);
+            if (this.isTeleportable(position.x, position.y)) {
+                this.gameViewService.teleportMove(lobbyId, position);
+            }
             return;
         }
         this.gameViewService.sendTileInfoRequest(lobbyId, position);

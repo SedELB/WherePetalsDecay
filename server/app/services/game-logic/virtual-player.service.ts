@@ -2,7 +2,7 @@
 import { Posture } from '@common/character';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS } from '@common/direction';
-import { GameMode, TileItem, TileTexture, VirtualPlayerProfile } from '@common/enums';
+import { GameMode, TileItem, TileTexture, VirtualPlayerProfile, SanctuaryMode } from '@common/enums';
 import { Player } from '@common/player';
 import { SanctuaryType } from '@common/tile';
 import { TILE_COSTS } from '@common/tile-costs';
@@ -439,7 +439,7 @@ export class VirtualPlayerService {
         const sanctuaryPos = this.findAdjacentSanctuaryPosition(game, currentPos, sanctuaryType);
         if (!sanctuaryPos) return false;
 
-        const useResult = this.gameLogicService.useSanctuary(lobbyId, virtualPlayer.socketId, sanctuaryPos, 'normal');
+        const useResult = this.gameLogicService.useSanctuary(lobbyId, virtualPlayer.socketId, sanctuaryPos, SanctuaryMode.Normal);
         return Boolean(useResult);
     }
 
