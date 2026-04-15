@@ -14,6 +14,7 @@ import { SanctuaryModalComponent } from '@app/components/sanctuary-modal/sanctua
 import { OBJECT_PLACEMENT_TOOL } from '@app/constants/map-setup-page-constant';
 import { ROUTES } from '@app/constants/routes.constants';
 import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
+import { ITEM_NAMES, MOVE_COOLDOWN_MS, TILE_NAMES, TO_PERCENT } from '@app/pages/game-page/game-page.constants';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS, KEY_TO_DIRECTION } from '@common/direction';
@@ -21,7 +22,6 @@ import { GameMode, TileItem, TileTexture } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
-import { ITEM_NAMES, MOVE_COOLDOWN_MS, TILE_NAMES, TO_PERCENT } from '@app/pages/game-page/game-page.constants';
 import {
     TileClickContext,
     buildTileClickContext,
@@ -79,6 +79,9 @@ export class GamePageComponent implements OnInit {
 
     isChatFocused = false;
     private isMoveCoolingDown = false;
+    readonly frozenTurnCountdown = signal<number | null>(null);
+    readonly frozenTurnCountdownMax = signal<number | null>(null);
+    readonly frozenActivePlayerSocketId = signal<string | null>(null);
     isJournalOpen = false;
     isLeftPanelOpen = true;
     readonly isSubMenuOpen = signal(false);
@@ -186,6 +189,29 @@ export class GamePageComponent implements OnInit {
                 this.showSanctuaryModal = false;
                 this.pendingSanctuaryPosition = null;
                 this.pendingSanctuaryType = null;
+            }
+        });
+
+        effect(() => {
+            const isCombatOverlayVisible = this.isCombatOverlayVisible();
+
+            if (isCombatOverlayVisible) {
+                if (this.frozenTurnCountdown() === null) {
+                    this.frozenTurnCountdown.set(this.turnCountdown());
+                    this.frozenTurnCountdownMax.set(this.gameViewService.turnCountdownMax());
+                    this.frozenActivePlayerSocketId.set(this.activePlayerSocketId());
+                }
+                return;
+            }
+
+            if (
+                this.frozenTurnCountdown() !== null ||
+                this.frozenTurnCountdownMax() !== null ||
+                this.frozenActivePlayerSocketId() !== null
+            ) {
+                this.frozenTurnCountdown.set(null);
+                this.frozenTurnCountdownMax.set(null);
+                this.frozenActivePlayerSocketId.set(null);
             }
         });
     }
@@ -360,19 +386,44 @@ export class GamePageComponent implements OnInit {
     }
 
     getTimerLabel(): string {
-        return helperGetTimerLabel(this.activePlayerSocketId(), this.gameViewService.getLocalSocketId(), this.lobby()?.players ?? []);
+        return helperGetTimerLabel(this.getEffectiveActivePlayerSocketId(), this.gameViewService.getLocalSocketId(), this.lobby()?.players ?? []);
     }
 
     getTimerDisplay(): string {
-        return helperGetTimerDisplay(this.turnCountdown(), this.activePlayerSocketId());
+        return helperGetTimerDisplay(this.getEffectiveTurnCountdown(), this.getEffectiveActivePlayerSocketId());
     }
 
     getTurnCountdownProgressPercent(): number {
-        const countdownMax = this.gameViewService.turnCountdownMax();
-        if (countdownMax <= 0 || !this.activePlayerSocketId()) return 0;
+        const countdownMax = this.getEffectiveTurnCountdownMax();
+        if (countdownMax <= 0 || !this.getEffectiveActivePlayerSocketId()) return 0;
 
-        const progressPercent = (this.turnCountdown() / countdownMax) * TO_PERCENT;
+        const progressPercent = (this.getEffectiveTurnCountdown() / countdownMax) * TO_PERCENT;
         return Math.min(TO_PERCENT, Math.max(0, progressPercent));
+    }
+
+    getTimerActivePlayer(): Player | undefined {
+        const activeSocketId = this.getEffectiveActivePlayerSocketId();
+        if (!activeSocketId) return undefined;
+        return this.lobby()?.players.find((player) => player.socketId === activeSocketId);
+    }
+
+    hasTimerActivePlayer(): boolean {
+        return Boolean(this.getEffectiveActivePlayerSocketId());
+    }
+
+    private getEffectiveTurnCountdown(): number {
+        if (!this.isCombatOverlayVisible()) return this.turnCountdown();
+        return this.frozenTurnCountdown() ?? this.turnCountdown();
+    }
+
+    private getEffectiveTurnCountdownMax(): number {
+        if (!this.isCombatOverlayVisible()) return this.gameViewService.turnCountdownMax();
+        return this.frozenTurnCountdownMax() ?? this.gameViewService.turnCountdownMax();
+    }
+
+    private getEffectiveActivePlayerSocketId(): string | null {
+        if (!this.isCombatOverlayVisible()) return this.activePlayerSocketId();
+        return this.frozenActivePlayerSocketId() ?? this.activePlayerSocketId();
     }
 
     private handleAttackAction(lobbyId: string, currentPlayer: Player, targetPlayer: Player, x: number, y: number): void {

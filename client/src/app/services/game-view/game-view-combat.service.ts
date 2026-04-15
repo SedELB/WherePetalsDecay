@@ -1,8 +1,9 @@
 /* eslint-disable max-lines */
 import { Injectable, signal } from '@angular/core';
-import { COMBAT_POSTURE_TIMEOUT_MS } from '@app/constants/combat-timeline.constants';
+import { COMBAT_END_NOTIFICATION_DELAY, DEFAULT_COMBAT_POSTURE, ONE_SECOND_DELAY } from '@app/services/game-view/game-view.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Debuf, Posture } from '@common/character';
+import { COMBAT_POSTURE_TIMEOUT_MS } from '@common/constants/combat-timeline.constants';
 import { SocketNamespace, TileItem } from '@common/enums';
 import {
     CombatAttackAnimationData,
@@ -19,7 +20,6 @@ import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
-import { COMBAT_END_NOTIFICATION_DELAY, DEFAULT_COMBAT_POSTURE, ONE_SECOND_DELAY } from '@app/services/game-view/game-view.constants';
 
 interface CombatListenerDependencies {
     getLocalSocketId: () => string | undefined;

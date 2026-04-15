@@ -291,6 +291,16 @@
         font-weight: 800;
         color: #e9d5ff;
     }
+
+    &.is-dead {
+        filter: grayscale(1);
+        opacity: 0.55;
+
+        .life-bar-fill {
+            transition: none;
+            animation: none;
+        }
+    }
 }
 
 .posture-status {
@@ -368,13 +378,6 @@ app-isometric-map {
 
     app-isometric-map {
         z-index: 1;
-        pointer-events: none;
-    }
-
-    .combat-map-overlays {
-        position: absolute;
-        inset: 0;
-        z-index: 2;
         pointer-events: none;
     }
 

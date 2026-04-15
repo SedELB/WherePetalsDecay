@@ -11,10 +11,13 @@ import {
     EASE_POWER,
     EASE_PROGRESS_MIDDLE_POINT,
     POSTURE_BONUS,
-    TILE_CENTER_OFFSET,
     TO_PERCENT,
 } from '@app/components/combat/combat.constants';
+import { GameViewService } from '@app/services/game-view/game-view.service';
+import { Posture } from '@common/character';
+import { BASE_STATS } from '@common/constants/character.constants';
 import {
+    COMBAT_ANIMATION_SPEED_MULTIPLIER,
     COMBAT_END_POPUP_DISPLAY_DURATION_MS,
     COMBAT_START_POPUP_DISPLAY_DURATION_MS,
     DAMAGE_DISPLAY_DURATION_MS,
@@ -27,10 +30,7 @@ import {
     POSTURE_RESULT_DISPLAY_DURATION_MS,
     ROUND_PHASE_BUFFER_MS,
     STATUS_BUFFER_DURATION_MS,
-} from '@app/constants/combat-timeline.constants';
-import { GameViewService } from '@app/services/game-view/game-view.service';
-import { Posture } from '@common/character';
-import { BASE_STATS } from '@common/constants/character.constants';
+} from '@common/constants/combat-timeline.constants';
 import { TileTexture } from '@common/enums';
 import { CombatResult, CombatRoundTimelineData } from '@common/interfaces/game-view';
 import { Player } from '@common/player';
@@ -48,9 +48,7 @@ interface RoundDetailedResult { player: FighterDetailedResult; enemy: FighterDet
 interface DamagePopupData { damageDealt: number; damageReceived: number; rollIndex: number; }
 interface CombatStartPopupData { title: string; message: string; }
 interface PendingRoundResult { result: CombatResult; resultKey: string; timeline: CombatRoundTimelineData | null; }
-interface PostureResultPopupData { playerPosture: string; enemyPosture: string; roundIndex: number; }
 interface RoundAnnouncementPopupData { roundIndex: number; message: string; }
-interface StatusPopupData { playerLife: number; enemyLife: number; roundIndex: number; }
 type LifeBySide = Record<FighterSide, number>;
 interface FighterDiceDisplayData {
     fighterName: string;
@@ -103,12 +101,9 @@ export class CombatLogicService {
     playerPos: Record<string, Vec2> = {};
     isChoosingPosture = false;
     roundResult: RoundDetailedResult | null = null;
-    activeHitTargetSocketId: string | null = null;
     combatStartPopup: CombatStartPopupData | null = null;
     combatEndPopup: CombatStartPopupData | null = null;
-    postureResultPopup: PostureResultPopupData | null = null;
     roundAnnouncementPopup: RoundAnnouncementPopupData | null = null;
-    statusPopup: StatusPopupData | null = null;
     damagePopup: DamagePopupData | null = null;
     diceRollDisplay: DiceRollDisplayData | null = null;
 
@@ -168,7 +163,16 @@ export class CombatLogicService {
     }
 
     getPostureCountdown(): number {
-        if (this.isRoundSequenceInProgress || this.combatStartPopup || this.roundAnnouncementPopup) return 0;
+        if (this.hasDeadFighter()) return 0;
+        if (
+            this.isRoundSequenceInProgress ||
+            this.combatStartPopup ||
+            this.roundAnnouncementPopup ||
+            this.combatEndPopup ||
+            this.pendingCombatEndPopup
+        ) {
+            return 0;
+        }
         return this.gameViewService.combatPostureCountdown();
     }
 
@@ -186,6 +190,7 @@ export class CombatLogicService {
     }
 
     shouldShowAttackAnnouncement(): boolean {
+        if (this.hasDeadFighter()) return false;
         return this.isAttackAnimationInProgress && !!this.currentAttackerSocketId;
     }
 
@@ -194,7 +199,17 @@ export class CombatLogicService {
     }
 
     isPosturePending(fighter: Player): boolean {
+        if (this.hasDeadFighter()) return false;
         return !fighter?.character?.bonusPosture?.type && this.isPostureCountdownVisible();
+    }
+
+    isFighterDead(side: FighterSide): boolean {
+        if (!this.duelKey) return false;
+        return this.displayedLifeBySide[side] <= 0;
+    }
+
+    hasDeadFighter(): boolean {
+        return this.isFighterDead('player') || this.isFighterDead('enemy');
     }
 
     getPostureStatusValue(fighter: Player): string {
@@ -253,6 +268,7 @@ export class CombatLogicService {
     }
 
     shouldShowPosturePanel(): boolean {
+        if (this.hasDeadFighter()) return false;
         return this.isChoosingPosture && this.isPostureCountdownVisible() && !this.isRoundSequenceInProgress;
     }
 
@@ -271,6 +287,8 @@ export class CombatLogicService {
 
         this.initializeDuelIfNeeded();
 
+        this.applyLatestServerResult();
+
         if (!this.isRoundSequenceInProgress && !this.pendingLifeBySide) {
             this.syncDisplayedLivesWithCurrentFighters();
         }
@@ -287,7 +305,6 @@ export class CombatLogicService {
             this.lastEnemyPostureType = enemyPostureType;
         }
 
-        this.applyLatestServerResult();
     }
 
     choosePosture(posture: TypePosture): void {
@@ -304,21 +321,6 @@ export class CombatLogicService {
         this.gameViewService.sendPostureChoice(lobbyId, roomId, this.player.character.bonusPosture as Posture);
     }
 
-    getOverlayStyle(socketId: string): Record<string, string> {
-        const position = this.playerPos[socketId] ?? this.getBaseCombatPositions()[socketId];
-        if (!position) return { left: '50%', top: '50%' };
-
-        const rowCount = this.combatMap.length;
-        const colCount = this.combatMap[0]?.length ?? 1;
-        const left = ((position.x + TILE_CENTER_OFFSET) / colCount) * TO_PERCENT;
-        const top = ((position.y + TILE_CENTER_OFFSET) / rowCount) * TO_PERCENT;
-
-        return {
-            left: `${left}%`,
-            top: `${top}%`,
-        };
-    }
-
     private initializeDuelIfNeeded(): void {
         const newKey = `${this.player.socketId}:${this.enemy.socketId}`;
         if (newKey === this.duelKey) return;
@@ -327,7 +329,6 @@ export class CombatLogicService {
         this.hasShownStartPopup = false;
         this.lastEnemyPostureType = this.enemy.character.bonusPosture?.type ?? null;
         this.roundResult = null;
-        this.activeHitTargetSocketId = null;
         this.currentAttackerSocketId = null;
         this.pendingRoundResult = null;
         this.pendingCombatEndPopup = null;
@@ -400,7 +401,24 @@ export class CombatLogicService {
     }
 
     private getRoundTimeline(timeline: CombatRoundTimelineData | null): CombatRoundTimelineData {
-        return { ...this.defaultRoundTimeline, ...(timeline ?? {}) };
+        const rawTimeline = { ...this.defaultRoundTimeline, ...(timeline ?? {}) };
+        return {
+            ...rawTimeline,
+            postureResultDisplayDurationMs: this.scaleDuration(rawTimeline.postureResultDisplayDurationMs),
+            roundPhaseBufferMs: this.scaleDuration(rawTimeline.roundPhaseBufferMs),
+            diceRollDurationMs: this.scaleDuration(rawTimeline.diceRollDurationMs),
+            diceResultDisplayDurationMs: this.scaleDuration(rawTimeline.diceResultDisplayDurationMs),
+            damageDisplayDurationMs: this.scaleDuration(rawTimeline.damageDisplayDurationMs),
+            fighterAdvanceDurationMs: this.scaleDuration(rawTimeline.fighterAdvanceDurationMs),
+            fighterHoldDurationMs: this.scaleDuration(rawTimeline.fighterHoldDurationMs),
+            fighterRetreatDurationMs: this.scaleDuration(rawTimeline.fighterRetreatDurationMs),
+            statusBufferDurationMs: this.scaleDuration(rawTimeline.statusBufferDurationMs),
+            nextRoundAnnouncementDurationMs: this.scaleDuration(rawTimeline.nextRoundAnnouncementDurationMs),
+        };
+    }
+
+    private scaleDuration(durationMs: number): number {
+        return Math.max(0, Math.round(durationMs * COMBAT_ANIMATION_SPEED_MULTIPLIER));
     }
 
     private clearCombatStartPopupTimeout(): void {
@@ -454,10 +472,7 @@ export class CombatLogicService {
         this.isRoundSequenceInProgress = false;
         this.isAttackAnimationInProgress = false;
         this.currentAttackerSocketId = null;
-        this.activeHitTargetSocketId = null;
-        this.postureResultPopup = null;
         this.roundAnnouncementPopup = null;
-        this.statusPopup = null;
     }
 
     private createRoundSequenceToken(): number {
@@ -510,9 +525,7 @@ export class CombatLogicService {
             this.isAnySequenceActivityInProgress() ||
             this.damagePopup ||
             this.combatStartPopup ||
-            this.postureResultPopup ||
             this.roundAnnouncementPopup ||
-            this.statusPopup ||
             !this.pendingCombatEndPopup
         ) {
             return;
@@ -552,14 +565,6 @@ export class CombatLogicService {
         this.roundAnnouncementPopup = {
             roundIndex,
             message: `Tour ${roundIndex} dans un instant...`,
-        };
-    }
-
-    private showStatusPopup(roundIndex: number): void {
-        this.statusPopup = {
-            roundIndex,
-            playerLife: this.getDisplayedLife('player'),
-            enemyLife: this.getDisplayedLife('enemy'),
         };
     }
 
@@ -654,10 +659,10 @@ export class CombatLogicService {
         this.diceRollInterval = setInterval(() => {
             if (!this.isRoundSequenceTokenActive(sequenceToken)) return;
 
-            playerAttackValue = (playerAttackValue % playerAttackFaces) + 1;
-            playerDefenseValue = (playerDefenseValue % playerDefenseFaces) + 1;
-            enemyAttackValue = (enemyAttackValue % enemyAttackFaces) + 1;
-            enemyDefenseValue = (enemyDefenseValue % enemyDefenseFaces) + 1;
+            playerAttackValue = Math.floor(Math.random() * playerAttackFaces) + 1;
+            playerDefenseValue = Math.floor(Math.random() * playerDefenseFaces) + 1;
+            enemyAttackValue = Math.floor(Math.random() * enemyAttackFaces) + 1;
+            enemyDefenseValue = Math.floor(Math.random() * enemyDefenseFaces) + 1;
 
             this.diceRollDisplay = {
                 player: this.buildDiceDisplayData(playerAttackValue, playerDefenseValue, 'player'),
@@ -750,7 +755,6 @@ export class CombatLogicService {
 
         this.isAttackAnimationInProgress = true;
         this.currentAttackerSocketId = attackerSocketId;
-        this.activeHitTargetSocketId = null;
 
         this.animateFighterPosition({
             sequenceToken,
@@ -761,9 +765,7 @@ export class CombatLogicService {
             onComplete: () => {
                 if (!this.isRoundSequenceTokenActive(sequenceToken)) return;
 
-                this.activeHitTargetSocketId = defenderSocketId;
                 this.enqueueRoundStep(sequenceToken, holdDurationMs, () => {
-                    this.activeHitTargetSocketId = null;
                     this.animateFighterPosition({
                         sequenceToken,
                         fighterSocketId: attackerSocketId,
@@ -862,18 +864,9 @@ export class CombatLogicService {
                 },
             },
             {
-                delayMs: roundTimeline.roundPhaseBufferMs,
+                delayMs: 0,
                 action: (next) => {
-                    this.showStatusPopup(roundIndex);
-                    next();
-                },
-            },
-            {
-                delayMs: roundTimeline.statusBufferDurationMs,
-                action: (next) => {
-                    this.statusPopup = null;
-
-                    if (this.pendingCombatEndPopup) {
+                    if (this.hasDeadFighter() || this.pendingCombatEndPopup) {
                         this.finishRoundSequence(sequenceToken);
                         return;
                     }
@@ -902,7 +895,6 @@ export class CombatLogicService {
         this.isAttackAnimationInProgress = false;
         this.isDiceRollInProgress = false;
         this.currentAttackerSocketId = null;
-        this.activeHitTargetSocketId = null;
         this.playerPos = this.getBaseCombatPositions();
 
         this.showPendingCombatEndPopupIfReady();
@@ -926,7 +918,6 @@ export class CombatLogicService {
             roundTimeline.diceResultDisplayDurationMs,
             () => {
                 this.roundResult = roundResult;
-                this.postureResultPopup = null;
 
                 const roundSteps = this.buildRoundResolutionSteps(
                     sequenceToken,
@@ -1008,13 +999,6 @@ export class CombatLogicService {
         const enemy = localIsAttacker ? result.defender : result.attacker;
 
         this.rollCount++;
-
-        const playerLifeBeforeRound = local.lifeAfter + enemy.damageDealt;
-        const enemyLifeBeforeRound = enemy.lifeAfter + local.damageDealt;
-        this.displayedLifeBySide = {
-            player: playerLifeBeforeRound,
-            enemy: enemyLifeBeforeRound,
-        };
         this.pendingLifeBySide = {
             player: local.lifeAfter,
             enemy: enemy.lifeAfter,
@@ -1056,9 +1040,7 @@ export class CombatLogicService {
             rollIndex: this.rollCount,
         };
 
-        this.postureResultPopup = null;
         this.roundAnnouncementPopup = null;
-        this.statusPopup = null;
         this.hideDamagePopup();
 
         this.isRoundSequenceInProgress = true;

@@ -28,12 +28,12 @@
                 </div>
                 <div class="timer-display">
                     <div class="timer-row">
-                        @if (activePlayer()?.character?.avatar) {
-                            <img [src]="activePlayer()?.character?.avatar" alt="Avatar actif" style="width: 1.2rem; height: 1.2rem; border-radius: 25%; object-fit: cover;" />
+                        @if (getTimerActivePlayer()?.character?.avatar) {
+                            <img [src]="getTimerActivePlayer()?.character?.avatar" alt="Avatar actif" style="width: 1.2rem; height: 1.2rem; border-radius: 25%; object-fit: cover;" />
                         }
                         <span class="timer-label">{{ getTimerLabel() }}</span>
                         <span class="timer-countdown">{{ getTimerDisplay() }}</span>
-                        @if (activePlayerSocketId()) {
+                        @if (hasTimerActivePlayer()) {
                             <div class="timer-line">
                                 <div class="timer-line-fill" [style.width.%]="getTurnCountdownProgressPercent()"></div>
                             </div>
