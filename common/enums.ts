@@ -75,3 +75,21 @@ export enum VirtualPlayerProfile {
     Aggressive = 'aggressive',
     Defensive = 'defensive',
 }
+
+export enum TurnPhase {
+    BetweenTurn = 'between-turn',
+    ActiveTurn = 'active-turn',
+}
+
+export enum PlayerAction {
+    Attack = 'attack',
+    ToggleDoor = 'toggleDoor',
+    RequestFlag = 'requestFlag',
+    GiveFlag = 'giveFlag',
+    Sanctuary = 'sanctuary',
+}
+
+export enum SanctuaryMode {
+    Normal = 'normal',
+    DoubleOrNothing = 'doubleOrNothing',
+}

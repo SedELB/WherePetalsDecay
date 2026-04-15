@@ -6,7 +6,7 @@ import { GameViewCombatService } from '@app/services/game-view/game-view-combat.
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Posture } from '@common/character';
 import { Direction } from '@common/direction';
-import { SocketNamespace, TileTexture } from '@common/enums';
+import { SocketNamespace, TileTexture, SanctuaryMode } from '@common/enums';
 import { GameStats } from '@common/interfaces/game-stats';
 import {
     CombatLockStateData,
@@ -318,7 +318,8 @@ export class GameViewService {
         });
 
         setTimeout(() => {
-            this.router.navigate([ROUTES.endGame]);
+            const destination = data.isForfeit || data.abandonTeam ? ROUTES.home : ROUTES.endGame;
+            this.router.navigate([destination]);
         }, END_GAME_REDIRECT_DELAY);
     }
 
@@ -339,8 +340,8 @@ export class GameViewService {
     }
 
     private buildGameOverMessage(data: GameOverEventData): string {
+        if (data.isForfeit || data.abandonTeam) return 'Fin de partie prématurée.';
         const winnerName = data.players?.find((player) => player.socketId === data.winnerSocketId)?.character.name;
-        if (data.abandonTeam) return `L'équipe ${data.abandonTeam} a abandonné. Fin de partie.`;
         if (winnerName) return `${winnerName} remporte la partie.`;
         return 'Partie terminée.';
     }
@@ -408,7 +409,7 @@ export class GameViewService {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestToggleDoor, { lobbyId, position });
     }
 
-    sendUseSanctuary(lobbyId: string, position: Vec2, mode: 'normal' | 'doubleOrNothing'): void {
+    sendUseSanctuary(lobbyId: string, position: Vec2, mode: SanctuaryMode): void {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestUseSanctuary, { lobbyId, position, mode });
     }
 

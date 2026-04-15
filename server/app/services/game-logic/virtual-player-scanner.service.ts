@@ -42,8 +42,9 @@ export class VirtualPlayerScannerService {
         game: ActiveGame,
         virtualPlayer: Player,
         vpPos: Vec2,
+        withDoors = false,
     ): { player: Player; position: Vec2 } | null {
-        const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, vpPos);
+        const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, vpPos, withDoors);
         let lowestCost = Infinity;
         let result: { player: Player; position: Vec2 } | null = null;
 
@@ -71,9 +72,11 @@ export class VirtualPlayerScannerService {
         }) ?? null;
     }
 
-    chooseFleeTile(game: ActiveGame, virtualPlayer: Player, vpPos: Vec2): Vec2 | null {
+    chooseFleeTile(game: ActiveGame, virtualPlayer: Player, vpPos: Vec2, withDoors = false): Vec2 | null {
         const remainingMvtPts = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
-        const reachableTiles = this.pathfindingService.getReachableTilesWithinBudget(game, vpPos, remainingMvtPts, virtualPlayer.socketId);
+        const reachableTiles = this.pathfindingService.getReachableTilesWithinBudget(
+            game, vpPos, remainingMvtPts, virtualPlayer.socketId, withDoors,
+        );
 
         const opponentPositions = game.lobby.players
             .filter((p) => !p.hasAbandonned && p.socketId !== virtualPlayer.socketId && this.isOpponent(game, virtualPlayer, p))
