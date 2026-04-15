@@ -391,7 +391,7 @@ export class GameLogicService {
         return game.lobby;
     }
 
-    executePlayerAbandon(lobbyId: string, socket: Socket, server: Server): boolean {
+    executePlayerAbandon(lobbyId: string, socket: Socket, server: Server, deferTurnAdvance = false): boolean {
         const game = this.activeGames.get(lobbyId);
         if (!game) return false;
 
@@ -438,7 +438,7 @@ export class GameLogicService {
             return true;
         }
 
-        if (wasCurrentTurn) {
+        if (wasCurrentTurn && !deferTurnAdvance) {
             this.endTurn(lobbyId);
             return false;
         }

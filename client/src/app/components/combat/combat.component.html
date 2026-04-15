@@ -4,7 +4,7 @@
             <img class="pfp" [src]="player.character.avatar" [alt]="player.character.name">
             <h3>{{ player.character.name }} (vous)</h3>
 
-            <div class="stats-panel compact unified">
+            <div class="stats-panel compact unified" [ngClass]="{ 'is-dead': isFighterDead('player') }">
                 <h4>Stats de combat</h4>
                 <div class="bonus-legend" aria-label="Légende des bonus">
                     <span class="bonus-badge bonus-badge--posture">Bonus posture</span>
@@ -97,12 +97,6 @@
                 [playerPositions]="playerPos"
             ></app-isometric-map>
 
-            <div class="combat-map-overlays">
-                @if (activeHitTargetSocketId; as targetId) {
-                    <div class="hit-marker" [ngStyle]="getOverlayStyle(targetId)">⚔️</div>
-                }
-            </div>
-
             @if (combatEndPopup; as popup) {
                 <div class="damage-popup-overlay">
                     <div class="damage-popup damage-popup--end">
@@ -124,28 +118,12 @@
                         <p>{{ roundAnnouncementPopup.message }}</p>
                     </div>
                 </div>
-            } @else if (postureResultPopup) {
-                <div class="damage-popup-overlay">
-                    <div class="damage-popup damage-popup--posture">
-                        <h3>Bonus appliqués — Manche #{{ postureResultPopup.roundIndex }}</h3>
-                        <p><b>Votre posture :</b> {{ postureResultPopup.playerPosture }}</p>
-                        <p><b>Posture adverse :</b> {{ postureResultPopup.enemyPosture }}</p>
-                    </div>
-                </div>
             } @else if (damagePopup) {
                 <div class="damage-popup-overlay">
                     <div class="damage-popup">
                         <h3>Résultat de la manche #{{ damagePopup.rollIndex }}</h3>
                         <p><b>Dégâts infligés:</b> {{ damagePopup.damageDealt }}</p>
                         <p><b>Dégâts subis:</b> {{ damagePopup.damageReceived }}</p>
-                    </div>
-                </div>
-            } @else if (statusPopup) {
-                <div class="damage-popup-overlay">
-                    <div class="damage-popup damage-popup--status">
-                        <h3>État des combattants — Manche #{{ statusPopup.roundIndex }}</h3>
-                        <p><b>{{ player.character.name }} :</b> {{ statusPopup.playerLife }} PV</p>
-                        <p><b>{{ enemy.character.name }} :</b> {{ statusPopup.enemyLife }} PV</p>
                     </div>
                 </div>
             }
@@ -169,7 +147,7 @@
             <img class="pfp" [src]="enemy.character.avatar" [alt]="enemy.character.name">
             <h3>{{ enemy.character.name }}</h3>
 
-            <div class="stats-panel compact unified">
+            <div class="stats-panel compact unified" [ngClass]="{ 'is-dead': isFighterDead('enemy') }">
                 <h4>Stats de combat</h4>
                 <div class="bonus-legend" aria-label="Légende des bonus">
                     <span class="bonus-badge bonus-badge--posture">Bonus posture</span>
