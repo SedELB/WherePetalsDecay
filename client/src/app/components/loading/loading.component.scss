@@ -1,9 +1,9 @@
 /* Loader inspired by https://uiverse.io/fateself/tricky-crab-38 */
 
-$mauve: #c084fc;
-$mauve-glow-1: rgba(192, 132, 252, 0.6);
-$mauve-glow-2: rgba(192, 132, 252, 0.3);
-$mauve-glow-3: rgba(192, 132, 252, 0.1);
+$red: rgba(138, 47, 51);
+$red-glow-1: rgba(138, 47, 51);
+$red-glow-2: rgba(138, 47, 51);
+$red-glow-3: rgba(138, 47, 51);
 
 .loader {
     position: relative;
@@ -43,14 +43,14 @@ $mauve-glow-3: rgba(192, 132, 252, 0.1);
         width: 7px;
         height: 7px;
         border-radius: 50%;
-        background: $mauve;
+        background: $red;
         box-shadow:
-            0 0 10px $mauve,
-            0 0 20px $mauve,
-            0 0 40px $mauve,
-            0 0 60px $mauve-glow-1,
-            0 0 80px $mauve-glow-2,
-            0 0 100px $mauve-glow-3;
+            0 0 10px $red,
+            0 0 20px $red,
+            0 0 40px $red,
+            0 0 60px $red-glow-1,
+            0 0 80px $red-glow-2,
+            0 0 100px $red-glow-3;
         animation: animate 2s linear infinite;
         animation-delay: calc(0.1s * var(--i));
     }
