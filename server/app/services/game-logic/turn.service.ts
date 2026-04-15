@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ActiveGame, MAX_ACTION_POINTS, SECOND, TURN_DELAY, TURN_DURATION, TurnCallbacks } from './active-game.interface';
+import { TurnPhase } from '@common/enums';
 
-type TurnPhase = 'between-turn' | 'active-turn';
 
 interface TurnCycleSnapshot {
     phase: TurnPhase;
@@ -50,6 +50,8 @@ export class TurnService {
     }
 
     isPlayerTurn(game: ActiveGame, socketId: string): boolean {
+        const snapshot = this.turnSnapshots.get(game.lobby.lobbyId);
+        if (!snapshot || snapshot.phase !== TurnPhase.ActiveTurn) return false;
         return game.turnOrder[game.currentTurnIndex] === socketId;
     }
 
@@ -73,7 +75,7 @@ export class TurnService {
         }
 
         this.pausedLobbies.delete(lobbyId);
-        if (snapshot.phase === 'between-turn') {
+        if (snapshot.phase === TurnPhase.BetweenTurn) {
             this.startCountdown(game, snapshot.secondsLeft);
             return true;
         }
@@ -96,7 +98,7 @@ export class TurnService {
         }
 
         let secondsLeft = initialSeconds;
-        this.turnSnapshots.set(lobbyId, { phase: 'between-turn', secondsLeft });
+        this.turnSnapshots.set(lobbyId, { phase: TurnPhase.BetweenTurn, secondsLeft });
 
         const delayTimer = setInterval(() => {
             secondsLeft--;
@@ -105,7 +107,7 @@ export class TurnService {
                 this.delayTimers.delete(lobbyId);
                 this.beginTurn(game);
             } else {
-                this.turnSnapshots.set(lobbyId, { phase: 'between-turn', secondsLeft });
+                this.turnSnapshots.set(lobbyId, { phase: TurnPhase.BetweenTurn, secondsLeft });
                 this.callbacks.onBetweenTurnCountdown(lobbyId, secondsLeft);
             }
         }, SECOND);
@@ -135,7 +137,7 @@ export class TurnService {
         }
 
         let secondsLeft = initialSeconds;
-        this.turnSnapshots.set(lobbyId, { phase: 'active-turn', secondsLeft });
+        this.turnSnapshots.set(lobbyId, { phase: TurnPhase.ActiveTurn, secondsLeft });
         const turnTimer = setInterval(() => {
             secondsLeft--;
             if (secondsLeft <= 0) {
@@ -143,7 +145,7 @@ export class TurnService {
                 this.turnTimers.delete(lobbyId);
                 this.endTurn(game);
             } else {
-                this.turnSnapshots.set(lobbyId, { phase: 'active-turn', secondsLeft });
+                this.turnSnapshots.set(lobbyId, { phase: TurnPhase.ActiveTurn, secondsLeft });
                 this.callbacks.onTurnCountdown(lobbyId, secondsLeft);
             }
         }, SECOND);

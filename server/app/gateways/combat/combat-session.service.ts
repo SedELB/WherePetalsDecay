@@ -7,7 +7,7 @@ export const COMBAT_POSTURE_TIMEOUT_MS = 10000;
 export const COUNTDOWN_TICK_MS = 1000;
 export const ATTACK_ANIMATION_DURATION_MS = 2000;
 export const DEFAULT_POSTURE: Posture = { type: null, bonus: 0 };
-export const VP_POSTURE_MAX_DELAY_MS = 9000;
+export const VP_POSTURE_MAX_DELAY_MS = 1500;
 
 export interface CombatSession {
     lobbyId: string;
