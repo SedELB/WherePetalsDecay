@@ -1,6 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { SanctuaryMode } from '@common/enums';
-import { TileItem } from '@common/enums';
+import { SanctuaryMode, TileItem } from '@common/enums';
 
 @Component({
     selector: 'app-sanctuary-modal',
@@ -12,7 +11,7 @@ import { TileItem } from '@common/enums';
 export class SanctuaryModalComponent {
     @Input({ required: true }) type!: TileItem;
     @Output() use = new EventEmitter<SanctuaryMode>();
-    protected readonly SanctuaryMode = SanctuaryMode;
+    protected readonly sanctuaryMode = SanctuaryMode;
     @Output() cancel = new EventEmitter<void>();
 
     itemTypes = TileItem;

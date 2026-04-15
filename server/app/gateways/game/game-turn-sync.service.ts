@@ -46,7 +46,7 @@ export class GameTurnSyncService {
     }
 
     emitReachableTilesForTeleport(server: Server, lobbyId: string, socketId: string): void {
-        const reachableTiles = this.gameLogicService.getReachableTilesForTeleport(lobbyId, socketId);
+        const reachableTiles = this.gameLogicService.getReachableTilesForTeleport(lobbyId);
         server.to(lobbyId).emit(JoinGameEvents.ReachableTilesForTeleport, {
             socketId,
             tiles: reachableTiles,

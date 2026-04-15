@@ -72,7 +72,7 @@ export class GamePageComponent implements OnInit {
 
     readonly tileNames: Record<string, string> = TILE_NAMES;
     readonly itemNames: Record<string, string> = ITEM_NAMES;
-    protected readonly PlayerAction = PlayerAction;
+    protected readonly playerAction = PlayerAction;
 
     showSanctuaryModal = false;
     pendingSanctuaryPosition: Vec2 | null = null;
