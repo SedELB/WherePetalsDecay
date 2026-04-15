@@ -1,6 +1,6 @@
 import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
 import { DIRECTION_OFFSETS } from '@common/direction';
-import { TileItem, TileTexture } from '@common/enums';
+import { TileItem, TileTexture, PlayerAction } from '@common/enums';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
@@ -247,21 +247,24 @@ export function getActionHighlightTiles(params: ActionHighlightParams): ActionTi
     const { isSubMenuOpen, activeSubAction, attackTargets, requestFlagTargets, giveFlagTargets, adjacentDoorTiles, sanctuaryTargets } = params;
     if (!isSubMenuOpen || !activeSubAction) return [];
     const typeMap: Record<ActionHighlightType, Vec2[]> = {
-        attack: attackTargets,
-        requestFlag: requestFlagTargets,
-        giveFlag: giveFlagTargets,
-        toggleDoor: adjacentDoorTiles,
-        sanctuary: sanctuaryTargets,
+        [PlayerAction.Attack]: attackTargets,
+        [PlayerAction.RequestFlag]: requestFlagTargets,
+        [PlayerAction.GiveFlag]: giveFlagTargets,
+        [PlayerAction.ToggleDoor]: adjacentDoorTiles,
+        [PlayerAction.Sanctuary]: sanctuaryTargets,
     };
     return (typeMap[activeSubAction] ?? []).map((pos) => ({ pos, type: activeSubAction }));
 }
 
 export function checkHasAnyAction(params: HasAnyActionParams): boolean {
     const { isMyTurn, actionPoints, attackTargets, requestFlagTargets, giveFlagTargets, adjacentDoorTiles, sanctuaryTargets } = params;
-    if (!isMyTurn) return false;
-    const hasPaidAction = actionPoints > 0 && (
-        attackTargets.length > 0 || requestFlagTargets.length > 0 ||
-        giveFlagTargets.length > 0 || adjacentDoorTiles.length > 0
+    if (!isMyTurn || actionPoints <= 0) return false;
+
+    return (
+        attackTargets.length > 0 ||
+        requestFlagTargets.length > 0 ||
+        giveFlagTargets.length > 0 ||
+        adjacentDoorTiles.length > 0 ||
+        sanctuaryTargets.length > 0
     );
-    return hasPaidAction || sanctuaryTargets.length > 0;
 }

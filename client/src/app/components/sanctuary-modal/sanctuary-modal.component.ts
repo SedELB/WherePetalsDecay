@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { SanctuaryMode } from '@common/enums';
 import { TileItem } from '@common/enums';
 
 @Component({
@@ -10,7 +11,8 @@ import { TileItem } from '@common/enums';
 })
 export class SanctuaryModalComponent {
     @Input({ required: true }) type!: TileItem;
-    @Output() use = new EventEmitter<'normal' | 'doubleOrNothing'>();
+    @Output() use = new EventEmitter<SanctuaryMode>();
+    protected readonly SanctuaryMode = SanctuaryMode;
     @Output() cancel = new EventEmitter<void>();
 
     itemTypes = TileItem;
@@ -19,7 +21,7 @@ export class SanctuaryModalComponent {
         return this.type === TileItem.HealingSanctuary ? 'Soin (+2 PV)' : 'Combat (+1 ATK / +1 DEF)';
     }
 
-    onUse(mode: 'normal' | 'doubleOrNothing'): void {
+    onUse(mode: SanctuaryMode): void {
         this.use.emit(mode);
     }
 

@@ -34,41 +34,25 @@ export class MovementService {
 
         if (!this.isValidTeleportMove(game, targetPos)) return null;
 
+        const reachable = this.getReachableTilesForTeleport(game, socketId);
+        const isReachableCheck = reachable.some((p) => p.x === targetPos.x && p.y === targetPos.y);
+        if (!isReachableCheck) return null;
+
         game.playerPositions.set(socketId, targetPos);
 
         return targetPos;
     }
 
     getReachableTilesForTeleport(game: ActiveGame, socketId: string): Vec2[] {
-        const startPos = game.playerPositions.get(socketId);
-        if (!startPos) return [];
-
         const reachable: Vec2[] = [];
-        const visited = new Map<string, number>();
-        const queue: { pos: Vec2; cost: number }[] = [{ pos: startPos, cost: 0 }];
+        const grid = game.lobby.game.grid;
 
-        visited.set(this.posKey(startPos), 0);
-
-        while (queue.length > 0) {
-            const current = queue.shift();
-
-            for (const offset of Object.values(DIRECTION_OFFSETS)) {
-                const nextPos: Vec2 = { x: current.pos.x + offset.x, y: current.pos.y + offset.y };
-                const key = this.posKey(nextPos);
-
-                if (!this.isWithinBounds(game.lobby.game, nextPos)) continue;
-                if (visited.has(key)) continue;
-                visited.set(key, 0);
-
-                const tile = game.lobby.game.grid[nextPos.y][nextPos.x];
-                const tileCost = TILE_COSTS[tile.type];
-                if (tileCost === Infinity) continue;
-                if (this.isSanctuaryTile(game, nextPos)) continue;
-                if (tile.item === TileItem.Spawn) continue;
-                if (this.isTileOccupied(game, nextPos)) continue;
-
-                reachable.push(nextPos);
-                queue.push({ pos: nextPos, cost: 0 });
+        for (let y = 0; y < grid.length; y++) {
+            for (let x = 0; x < grid[y].length; x++) {
+                const pos = { x, y };
+                if (this.isValidTeleportMove(game, pos)) {
+                    reachable.push(pos);
+                }
             }
         }
 

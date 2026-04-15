@@ -130,45 +130,47 @@
             </section>
 
             <div class="sub-action-panel" [class.open]="gamePageSignalService.isSubMenuOpen()">
-                @if (gamePageSignalService.attackTargets().length > 0) {
-                    <button
-                        id="sub-action-attack"
-                        class="sub-action-btn attack"
-                        [class.selected]="gamePageSignalService.activeSubAction() === 'attack'"
-                        (click)="gamePageSignalService.selectSubAction('attack')"
-                    >Attaquer</button>
-                }
-                @if (gamePageSignalService.adjacentDoorTiles().length > 0) {
-                    <button
-                        id="sub-action-door"
-                        class="sub-action-btn door"
-                        [class.selected]="gamePageSignalService.activeSubAction() === 'toggleDoor'"
-                        (click)="gamePageSignalService.selectSubAction('toggleDoor')"
-                    >{{ gamePageSignalService.doorActionLabel() }}</button>
-                }
-                @if (gamePageSignalService.requestFlagTargets().length > 0) {
-                    <button
-                        id="sub-action-request-flag"
-                        class="sub-action-btn flag-req"
-                        [class.selected]="gamePageSignalService.activeSubAction() === 'requestFlag'"
-                        (click)="gamePageSignalService.selectSubAction('requestFlag')"
-                    >Demander drapeau</button>
-                }
-                @if (gamePageSignalService.giveFlagTargets().length > 0) {
-                    <button
-                        id="sub-action-give-flag"
-                        class="sub-action-btn flag-give"
-                        [class.selected]="gamePageSignalService.activeSubAction() === 'giveFlag'"
-                        (click)="gamePageSignalService.selectSubAction('giveFlag')"
-                    >Donner drapeau</button>
-                }
-                @if (gamePageSignalService.sanctuaryTargets().length > 0) {
-                    <button
-                        id="sub-action-sanctuary"
-                        class="sub-action-btn sanctuary"
-                        [class.selected]="gamePageSignalService.activeSubAction() === 'sanctuary'"
-                        (click)="onSelectSanctuaryAction()"
-                    >Utiliser sanctuaire</button>
+                @if (gamePageSignalService.actionPoints() > 0) {
+                    @if (gamePageSignalService.attackTargets().length > 0) {
+                        <button
+                            id="sub-action-attack"
+                            class="sub-action-btn attack"
+                            [class.selected]="gamePageSignalService.activeSubAction() === PlayerAction.Attack"
+                            (click)="gamePageSignalService.selectSubAction(PlayerAction.Attack)"
+                        >Attaquer</button>
+                    }
+                    @if (gamePageSignalService.adjacentDoorTiles().length > 0) {
+                        <button
+                            id="sub-action-door"
+                            class="sub-action-btn door"
+                            [class.selected]="gamePageSignalService.activeSubAction() === PlayerAction.ToggleDoor"
+                            (click)="gamePageSignalService.selectSubAction(PlayerAction.ToggleDoor)"
+                        >{{ gamePageSignalService.doorActionLabel() }}</button>
+                    }
+                    @if (gamePageSignalService.requestFlagTargets().length > 0) {
+                        <button
+                            id="sub-action-request-flag"
+                            class="sub-action-btn flag-req"
+                            [class.selected]="gamePageSignalService.activeSubAction() === PlayerAction.RequestFlag"
+                            (click)="gamePageSignalService.selectSubAction(PlayerAction.RequestFlag)"
+                        >Demander drapeau</button>
+                    }
+                    @if (gamePageSignalService.giveFlagTargets().length > 0) {
+                        <button
+                            id="sub-action-give-flag"
+                            class="sub-action-btn flag-give"
+                            [class.selected]="gamePageSignalService.activeSubAction() === PlayerAction.GiveFlag"
+                            (click)="gamePageSignalService.selectSubAction(PlayerAction.GiveFlag)"
+                        >Donner drapeau</button>
+                    }
+                    @if (gamePageSignalService.sanctuaryTargets().length > 0) {
+                        <button
+                            id="sub-action-sanctuary"
+                            class="sub-action-btn sanctuary"
+                            [class.selected]="gamePageSignalService.activeSubAction() === PlayerAction.Sanctuary"
+                            (click)="onSelectSanctuaryAction()"
+                        >Utiliser sanctuaire</button>
+                    }
                 }
             </div>
 
