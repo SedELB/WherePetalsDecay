@@ -4,7 +4,7 @@ import { GameLogicService, SanctuaryUseResult } from '@app/services/game-logic/g
 import { JournalService } from '@app/services/journal/journal.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Direction } from '@common/direction';
-import { GameMode, SocketNamespace, TileItem, TileTexture } from '@common/enums';
+import { GameMode, SocketNamespace, TileItem, TileTexture, SanctuaryMode } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
@@ -123,7 +123,7 @@ export class MovementGateway {
     @SubscribeMessage(JoinGameEvents.RequestUseSanctuary)
     handleRequestUseSanctuary(
         @ConnectedSocket() socket: Socket,
-        @MessageBody() payload: { lobbyId: string; position: { x: number; y: number }; mode: 'normal' | 'doubleOrNothing' },
+        @MessageBody() payload: { lobbyId: string; position: { x: number; y: number }; mode: SanctuaryMode },
     ) {
         const { lobbyId, position, mode } = payload;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
@@ -156,7 +156,7 @@ export class MovementGateway {
         }
 
         const sanctuaryLabel = result.sanctuaryType === TileItem.HealingSanctuary ? 'soin' : 'combat';
-        const modeLabel = mode === 'doubleOrNothing' ? ' (double ou rien)' : '';
+        const modeLabel = mode === SanctuaryMode.DoubleOrNothing ? ' (double ou rien)' : '';
         this.server.to(lobbyId).emit(JoinGameEvents.JournalEntry,
             `${result.playerName} a utilisé un sanctuaire de ${sanctuaryLabel}${modeLabel}.`,
         );

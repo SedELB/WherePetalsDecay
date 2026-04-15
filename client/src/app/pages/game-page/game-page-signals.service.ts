@@ -1,6 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
+import { PlayerAction } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import { BASE_STATS } from '@common/constants/character.constants';
@@ -25,7 +26,7 @@ import {
 export class GamePageSignalsService {
     readonly isSubMenuOpen = signal(false);
     readonly activeSubAction = signal<ActionHighlightType | null>(null);
-    readonly toggleDoorAction: ActionHighlightType = 'toggleDoor';
+    readonly toggleDoorAction: ActionHighlightType = PlayerAction.ToggleDoor;
 
     readonly disableEndTurn = computed(() => this.gameViewService.disableEndTurn());
     readonly isDebugModeActive = computed(() => this.gameViewService.isDebugModeActive());

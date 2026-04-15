@@ -2,8 +2,9 @@
     <div class="game-over-message">
         <h2>Partie terminée</h2>
 
-        @if (gameOver.isForfeit && gameOver.winnerSocketId === localPlayerSocketId) {
-            <p>Vous avez gagné car tous les autres joueurs ont quitté !</p>
+        @if (gameOver.isForfeit) {
+            <p>La partie a pris fin prématurément (abandon).</p>
+            <p>Redirection vers le menu principal...</p>
         }
         @else if (gameOver.winnerSocketId) {
             @if (gameOver.winnerSocketId === localPlayerSocketId) {

@@ -1,8 +1,9 @@
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
+import { PlayerAction } from '@common/enums';
 
-export type ActionHighlightType = 'attack' | 'giveFlag' | 'requestFlag' | 'toggleDoor' | 'sanctuary';
+export type ActionHighlightType = PlayerAction;
 
 export interface ActionTileHighlight {
   pos: Vec2;
