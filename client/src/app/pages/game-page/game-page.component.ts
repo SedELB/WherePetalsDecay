@@ -390,47 +390,49 @@ export class GamePageComponent implements OnInit {
                 this.gameViewService.sendToggleDoor(clickContext.lobbyId, { x, y });
                 return;
             case PlayerAction.Sanctuary:
-                {
-                    const myId = this.currentPlayerId();
-                    const myPos = myId ? this.playerPositions()[myId] : null;
-                    const grid = this.game()?.grid;
-                    if (!myPos || !grid) return;
-
-                    const tileItem = grid[y]?.[x].item as TileItem;
-                    let tlX = x;
-                    let tlY = y;
-                    while (grid[tlY - 1]?.[tlX]?.item === tileItem) tlY--;
-                    while (grid[tlY]?.[tlX - 1]?.item === tileItem) tlX--;
-
-                    const sanctuaryCells = [
-                        { x: tlX, y: tlY }, { x: tlX + 1, y: tlY },
-                        { x: tlX, y: tlY + 1 }, { x: tlX + 1, y: tlY + 1 },
-                    ];
-
-                    const isAdjacent = sanctuaryCells.some((cell) =>
-                        Object.values(DIRECTION_OFFSETS).some(
-                            (offset) => myPos.x + offset.x === cell.x && myPos.y + offset.y === cell.y,
-                        ),
-                    );
-
-                    if (!isAdjacent) {
-                        swal.fire({
-                            toast: true,
-                            position: 'top-end',
-                            icon: 'warning',
-                            title: 'Trop loin !',
-                            showConfirmButton: false,
-                            timer: 2000,
-                        });
-                        return;
-                    }
-
-                    this.pendingSanctuaryPosition = { x, y };
-                    this.pendingSanctuaryType = tileItem;
-                    this.showSanctuaryModal = true;
-                }
+                this.handleSanctuaryAction(x, y);
                 return;
         }
+    }
+
+    private handleSanctuaryAction(x: number, y: number): void {
+        const myId = this.currentPlayerId();
+        const myPos = myId ? this.playerPositions()[myId] : null;
+        const grid = this.game()?.grid;
+        if (!myPos || !grid) return;
+
+        const tileItem = grid[y]?.[x].item as TileItem;
+        let tlX = x;
+        let tlY = y;
+        while (grid[tlY - 1]?.[tlX]?.item === tileItem) tlY--;
+        while (grid[tlY]?.[tlX - 1]?.item === tileItem) tlX--;
+
+        const sanctuaryCells = [
+            { x: tlX, y: tlY }, { x: tlX + 1, y: tlY },
+            { x: tlX, y: tlY + 1 }, { x: tlX + 1, y: tlY + 1 },
+        ];
+
+        const isAdjacent = sanctuaryCells.some((cell) =>
+            Object.values(DIRECTION_OFFSETS).some(
+                (offset) => myPos.x + offset.x === cell.x && myPos.y + offset.y === cell.y,
+            ),
+        );
+
+        if (!isAdjacent) {
+            swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'warning',
+                title: 'Trop loin !',
+                showConfirmButton: false,
+                timer: 2000,
+            });
+            return;
+        }
+
+        this.pendingSanctuaryPosition = { x, y };
+        this.pendingSanctuaryType = tileItem;
+        this.showSanctuaryModal = true;
     }
 
     private resolveTileClickContext(x: number, y: number): TileClickContext | null {
