@@ -56,9 +56,25 @@ export function canPlaceSanctuary(game: Game, rowIndex: number, colIndex: number
 }
 
 export function findSanctuaryTopLeft(game: Game, rowIndex: number, colIndex: number, item: TileItem): Vec2 {
-    let r = rowIndex;
-    let c = colIndex;
-    if (r > 0 && game.grid[r - 1]?.[c]?.item === item) r--;
-    if (c > 0 && game.grid[r]?.[c - 1]?.item === item) c--;
-    return { y: r, x: c };
+    const visited = new Set<string>();
+    for (let y = 0; y < game.grid.length; y++) {
+        for (let x = 0; x < game.grid[y].length; x++) {
+            if (game.grid[y][x].item === item && !visited.has(`${y},${x}`)) {
+                visited.add(`${y},${x}`);
+                visited.add(`${y},${x + 1}`);
+                visited.add(`${y + 1},${x}`);
+                visited.add(`${y + 1},${x + 1}`);
+                
+                if (
+                    (rowIndex === y && colIndex === x) ||
+                    (rowIndex === y && colIndex === x + 1) ||
+                    (rowIndex === y + 1 && colIndex === x) ||
+                    (rowIndex === y + 1 && colIndex === x + 1)
+                ) {
+                    return { y, x };
+                }
+            }
+        }
+    }
+    return { y: rowIndex, x: colIndex };
 }

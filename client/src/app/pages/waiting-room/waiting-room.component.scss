@@ -1,7 +1,5 @@
 @use '@src/styles.scss' as *;
 
-$primary-color: #8b5cf6;
-$text-color: #ffffff;
 
 .container {
     min-height: 100vh;
@@ -14,12 +12,15 @@ $text-color: #ffffff;
 }
 
 .waiting-room-card {
-    background: rgba(0, 0, 0, 0.85);
-    border-radius: 0.75rem;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 1.25rem 3.125rem rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border-radius: 1.25rem;
     padding: 1rem 2rem;
     max-width: 75rem;
     width: 100%;
-    color: $text-color;
+    color: white;
     height: 85vh;
     display: flex;
     flex-direction: column;
@@ -28,17 +29,20 @@ $text-color: #ffffff;
 
 h1 {
     text-align: center;
-    margin-bottom: 1rem;
+    margin-bottom: 0.2rem;
     margin-top: 0;
-    color: $primary-color;
+    color: #eddea7;
+    text-shadow: 0 0px 4px rgba(0, 0, 0, 0.3), 0 0 0.8rem rgba(128, 128, 128, 0.3);
+    font-size: 2.5rem;
     flex-shrink: 0;
 }
 
 h2 {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     margin-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(237, 222, 167, 0.1);
     padding-bottom: 0.5rem;
+    color: #eddea7;
 }
 
 .room-info {
@@ -54,9 +58,10 @@ h2 {
     flex-shrink: 0;
 
     .room-code {
-        font-size: 1.2rem;
+        font-size: 1.25rem;
+        color: #eddea7;
         strong {
-            color: $primary-color;
+            color: #f0c674;
             font-family: monospace;
             font-size: 1.5rem;
         }
@@ -69,6 +74,8 @@ h2 {
 
     p {
         margin: 0;
+        font-size: 1.25rem;
+        color: #eddea7;
     }
 }
 
@@ -167,7 +174,7 @@ h2 {
     }
 
     &::-webkit-scrollbar-thumb {
-        background: $primary-color;
+        background: $red-button;
         border-radius: 0.1875rem;
     }
 }
@@ -249,21 +256,21 @@ h2 {
     display: inline-flex;
     align-items: center;
     gap: 0.2rem;
-    color: $primary-color;
+    color: #f0c674;
 }
 
 .organizer-badge {
     font-size: 0.85rem;
-    color: gold;
+    color: #f0c674;
     white-space: nowrap;
 }
 
 .kick-btn {
     flex-shrink: 0;
     padding: 0.4rem 0.8rem;
-    background: #dc3545;
-    color: white;
-    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 0.25rem;
     cursor: pointer;
     font-size: 0.85rem;

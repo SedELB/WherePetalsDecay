@@ -67,13 +67,13 @@ export const TILE_TOOLS: Record<TileTexture, TileTool> = {
     [TileTexture.Water]: {
         type: TileTexture.Water,
         label: 'Eau',
-        description: 'Zone liquide, ralentit ou bloque selon les règles.',
+        description: 'Zone liquide.',
         image: './assets/tiles/water.png',
     },
     [TileTexture.Ice]: {
         type: TileTexture.Ice,
         label: 'Glace',
-        description: 'Surface glissante qui modifie les déplacements.',
+        description: 'Réduit ATK et DEF. Ne coûte aucun point de déplacement.',
         image: './assets/tiles/ice.png',
     },
     [TileTexture.DoorOpened]: {
@@ -85,7 +85,7 @@ export const TILE_TOOLS: Record<TileTexture, TileTool> = {
     [TileTexture.DoorClosed]: {
         type: TileTexture.DoorClosed,
         label: 'Porte',
-        description: 'Porte fermée qui bloque le passage des joueurs.',
+        description: 'Porte qui peut être ouverte ou fermée.',
         image: './assets/tiles/closed_door.png',
     },
 };
