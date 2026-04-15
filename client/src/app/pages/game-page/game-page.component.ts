@@ -17,7 +17,7 @@ import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isomet
 import { ITEM_NAMES, MOVE_COOLDOWN_MS, TILE_NAMES, TO_PERCENT } from '@app/pages/game-page/game-page.constants';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { BASE_STATS } from '@common/constants/character.constants';
-import { DIRECTION_OFFSETS, KEY_TO_DIRECTION } from '@common/direction';
+import { KEY_TO_DIRECTION } from '@common/direction';
 import { GameMode, PlayerAction, SanctuaryMode, TileItem, TileTexture } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
@@ -280,12 +280,6 @@ export class GamePageComponent implements OnInit {
         const lobbyId = this.lobby()?.lobbyId;
         if (!lobbyId || !this.isMyTurn()) return;
 
-        const tile = this.game()?.grid[y]?.[x];
-        const isAdjacent = this.isTileAdjacentToPlayer(x, y);
-
-        if (this.tryHandleDoorClick(lobbyId, x, y, tile?.type, isAdjacent)) return;
-        if (this.tryHandleSanctuaryClick(x, y, tile?.item as TileItem | null | undefined, isAdjacent)) return;
-
         this.handleSubActionClick(x, y);
     }
 
@@ -301,30 +295,6 @@ export class GamePageComponent implements OnInit {
 
     isOnIce(pos: Vec2): 2 | 0 {
         return this.game()?.grid[pos.y][pos.x].type === TileTexture.Ice ? 2 : 0;
-    }
-
-    private isTileAdjacentToPlayer(col: number, row: number): boolean {
-        const localId = this.gameViewService.getLocalSocketId();
-        const myPos = localId ? this.playerPositions()[localId] : null;
-        if (!myPos) return false;
-        return Object.values(DIRECTION_OFFSETS).some((offset) => myPos.x + offset.x === col && myPos.y + offset.y === row);
-    }
-
-    private tryHandleDoorClick(lobbyId: string, col: number, row: number, tileType: TileTexture | undefined, isAdjacent: boolean): boolean {
-        const isDoor = tileType === TileTexture.DoorClosed || tileType === TileTexture.DoorOpened;
-        if (!isDoor || !isAdjacent) return false;
-        this.gameViewService.sendToggleDoor(lobbyId, { x: col, y: row });
-        return true;
-    }
-
-    private tryHandleSanctuaryClick(col: number, row: number, tileItem: TileItem | null | undefined, isAdjacent: boolean): boolean {
-        const isSanctuary = tileItem === TileItem.HealingSanctuary || tileItem === TileItem.CombatSanctuary;
-        const isInactive = this.inactiveSanctuaries().some((p) => p.x === col && p.y === row);
-        if (!isSanctuary || !isAdjacent || isInactive) return false;
-        this.pendingSanctuaryPosition = { x: col, y: row };
-        this.pendingSanctuaryType = tileItem;
-        this.showSanctuaryModal = true;
-        return true;
     }
 
     onUseSanctuary(mode: SanctuaryMode): void {
@@ -401,14 +371,31 @@ export class GamePageComponent implements OnInit {
 
     private executeTileAction(action: ActionHighlightType, clickContext: TileClickContext, x: number, y: number): void {
         switch (action) {
-            case 'attack':
-                this.handleAttackAction(clickContext.lobbyId, clickContext.currentPlayer, clickContext.targetPlayer, x, y);
+            case PlayerAction.Attack:
+                if (clickContext.targetPlayer) {
+                    this.handleAttackAction(clickContext.lobbyId, clickContext.currentPlayer, clickContext.targetPlayer, x, y);
+                }
                 return;
-            case 'giveFlag':
-                this.gameViewService.giveFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
+            case PlayerAction.GiveFlag:
+                if (clickContext.targetSocketId) {
+                    this.gameViewService.giveFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
+                }
                 return;
-            case 'requestFlag':
-                this.gameViewService.requestFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
+            case PlayerAction.RequestFlag:
+                if (clickContext.targetSocketId) {
+                    this.gameViewService.requestFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
+                }
+                return;
+            case PlayerAction.ToggleDoor:
+                this.gameViewService.sendToggleDoor(clickContext.lobbyId, { x, y });
+                return;
+            case PlayerAction.Sanctuary:
+                {
+                    const tileItem = this.game()?.grid[y]?.[x].item;
+                    this.pendingSanctuaryPosition = { x, y };
+                    this.pendingSanctuaryType = tileItem as TileItem;
+                    this.showSanctuaryModal = true;
+                }
                 return;
         }
     }

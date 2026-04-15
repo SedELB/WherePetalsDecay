@@ -11,8 +11,8 @@ const TEN = 10;
 export interface TileClickContext {
     lobbyId: string;
     currentPlayer: Player;
-    targetPlayer: Player;
-    targetSocketId: string;
+    targetPlayer?: Player;
+    targetSocketId?: string;
 }
 
 export interface ActionHighlightParams {
@@ -143,13 +143,13 @@ export function buildTileClickContext(args: {
     const { lobby, currentSocketId, actionPoints, targetSocketId, isHighlighted } = args;
     const lobbyId = lobby?.lobbyId;
     const currentPlayer = lobby?.players.find((player) => player.socketId === currentSocketId);
-    if (!lobbyId || !currentSocketId || !currentPlayer || actionPoints <= 0) return null;
-    if (!targetSocketId || targetSocketId === currentSocketId || !isHighlighted) return null;
+    if (!lobbyId || !currentSocketId || !currentPlayer || actionPoints <= 0 || !isHighlighted) return null;
+
+    if (targetSocketId === currentSocketId) return null;
 
     const targetPlayer = lobby?.players.find((player) => player.socketId === targetSocketId);
-    if (!targetPlayer) return null;
 
-    return { lobbyId, currentPlayer, targetPlayer, targetSocketId };
+    return { lobbyId, currentPlayer, targetPlayer, targetSocketId: targetSocketId ?? undefined };
 }
 
 export function getCurrentPlayerIceDebuff(
