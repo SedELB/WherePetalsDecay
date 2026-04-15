@@ -17,7 +17,7 @@ import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isomet
 import { ITEM_NAMES, MOVE_COOLDOWN_MS, TILE_NAMES, TO_PERCENT } from '@app/pages/game-page/game-page.constants';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { BASE_STATS } from '@common/constants/character.constants';
-import { KEY_TO_DIRECTION } from '@common/direction';
+import { DIRECTION_OFFSETS, KEY_TO_DIRECTION } from '@common/direction';
 import { GameMode, PlayerAction, SanctuaryMode, TileItem, TileTexture } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
@@ -391,9 +391,42 @@ export class GamePageComponent implements OnInit {
                 return;
             case PlayerAction.Sanctuary:
                 {
-                    const tileItem = this.game()?.grid[y]?.[x].item;
+                    const myId = this.currentPlayerId();
+                    const myPos = myId ? this.playerPositions()[myId] : null;
+                    const grid = this.game()?.grid;
+                    if (!myPos || !grid) return;
+
+                    const tileItem = grid[y]?.[x].item as TileItem;
+                    let tlX = x;
+                    let tlY = y;
+                    while (grid[tlY - 1]?.[tlX]?.item === tileItem) tlY--;
+                    while (grid[tlY]?.[tlX - 1]?.item === tileItem) tlX--;
+
+                    const sanctuaryCells = [
+                        { x: tlX, y: tlY }, { x: tlX + 1, y: tlY },
+                        { x: tlX, y: tlY + 1 }, { x: tlX + 1, y: tlY + 1 },
+                    ];
+
+                    const isAdjacent = sanctuaryCells.some((cell) =>
+                        Object.values(DIRECTION_OFFSETS).some(
+                            (offset) => myPos.x + offset.x === cell.x && myPos.y + offset.y === cell.y,
+                        ),
+                    );
+
+                    if (!isAdjacent) {
+                        swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'warning',
+                            title: 'Trop loin !',
+                            showConfirmButton: false,
+                            timer: 2000,
+                        });
+                        return;
+                    }
+
                     this.pendingSanctuaryPosition = { x, y };
-                    this.pendingSanctuaryType = tileItem as TileItem;
+                    this.pendingSanctuaryType = tileItem;
                     this.showSanctuaryModal = true;
                 }
                 return;
