@@ -233,14 +233,37 @@ export function getSanctuaryTargets(
     if (!localId) return [];
     const myPos = positions[localId];
     if (!myPos) return [];
+
+    const results: Vec2[] = [];
+    const visitedTopLeft = new Set<string>();
     const adjacent = Object.values(DIRECTION_OFFSETS).map((offset) => ({ x: myPos.x + offset.x, y: myPos.y + offset.y }));
-    return adjacent.filter((pos) => {
+
+    for (const pos of adjacent) {
         const tile = grid[pos.y]?.[pos.x];
-        if (!tile) return false;
+        if (!tile) continue;
+
         const isSanctuary = tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary;
         const isInactive = inactiveSanctuaries.some((s) => s.x === pos.x && s.y === pos.y);
-        return isSanctuary && !isInactive;
-    });
+
+        if (isSanctuary && !isInactive) {
+            let tlX = pos.x;
+            let tlY = pos.y;
+            const item = tile.item;
+            while (grid[tlY - 1]?.[tlX]?.item === item) tlY--;
+            while (grid[tlY]?.[tlX - 1]?.item === item) tlX--;
+
+            const key = `${tlX},${tlY}`;
+            if (!visitedTopLeft.has(key)) {
+                visitedTopLeft.add(key);
+                for (let dy = 0; dy < 2; dy++) {
+                    for (let dx = 0; dx < 2; dx++) {
+                        results.push({ x: tlX + dx, y: tlY + dy });
+                    }
+                }
+            }
+        }
+    }
+    return results;
 }
 
 export function getActionHighlightTiles(params: ActionHighlightParams): ActionTileHighlight[] {
