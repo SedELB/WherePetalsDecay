@@ -6,7 +6,7 @@ import { GameViewCombatService } from '@app/services/game-view/game-view-combat.
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Posture } from '@common/character';
 import { Direction } from '@common/direction';
-import { SocketNamespace, TileTexture } from '@common/enums';
+import { SocketNamespace, TileTexture, SanctuaryMode } from '@common/enums';
 import { GameStats } from '@common/interfaces/game-stats';
 import {
     CombatLockStateData,
@@ -305,7 +305,8 @@ export class GameViewService {
         if (data.gameStats) this.endGameStatsSignal.set(data.gameStats);
 
         setTimeout(() => {
-            this.router.navigate([ROUTES.endGame]);
+            const destination = data.isForfeit || data.abandonTeam ? ROUTES.home : ROUTES.endGame;
+            this.router.navigate([destination]);
         }, END_GAME_REDIRECT_DELAY);
     }
 
@@ -388,7 +389,7 @@ export class GameViewService {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestToggleDoor, { lobbyId, position });
     }
 
-    sendUseSanctuary(lobbyId: string, position: Vec2, mode: 'normal' | 'doubleOrNothing'): void {
+    sendUseSanctuary(lobbyId: string, position: Vec2, mode: SanctuaryMode): void {
         this.webSocketService.emitNamespace(this.namespace, JoinGameEvents.RequestUseSanctuary, { lobbyId, position, mode });
     }
 

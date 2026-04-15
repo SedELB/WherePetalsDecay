@@ -1,6 +1,6 @@
 import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS } from '@common/direction';
-import { TileItem } from '@common/enums';
+import { TileItem, SanctuaryMode } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
@@ -14,7 +14,7 @@ const DOUBLE_OR_NOTHING_CHANCE = 0.5;
 export interface SanctuaryUseResult {
     success: boolean;
     sanctuaryType: TileItem;
-    mode: 'normal' | 'doubleOrNothing';
+    mode: SanctuaryMode;
     healAmount: number;
     combatBonusApplied: boolean;
     playerNewLife: number;
@@ -30,7 +30,7 @@ interface SanctuaryValidation {
 
 @Injectable()
 export class SanctuaryService {
-    useSanctuary(game: ActiveGame, socketId: string, position: Vec2, mode: 'normal' | 'doubleOrNothing'): SanctuaryUseResult | null {
+    useSanctuary(game: ActiveGame, socketId: string, position: Vec2, mode: SanctuaryMode): SanctuaryUseResult | null {
         const validated = this.validateSanctuaryUse(game, socketId, position);
         if (!validated) return null;
 
@@ -120,9 +120,9 @@ export class SanctuaryService {
         );
     }
 
-    private applyHealingEffect(player: Player, mode: 'normal' | 'doubleOrNothing'): number {
+    private applyHealingEffect(player: Player, mode: SanctuaryMode): number {
         let amount = SANCTUARY_HEAL_AMOUNT;
-        if (mode === 'doubleOrNothing') {
+        if (mode === SanctuaryMode.DoubleOrNothing) {
             amount = Math.random() < DOUBLE_OR_NOTHING_CHANCE ? SANCTUARY_HEAL_AMOUNT * 2 : 0;
         }
         const maxLife = player.character.lifeBonus ? BASE_STATS.life + BASE_STATS.bonus : BASE_STATS.life;
@@ -130,10 +130,10 @@ export class SanctuaryService {
         return amount;
     }
 
-    private applyCombatEffect(game: ActiveGame, socketId: string, player: Player, mode: 'normal' | 'doubleOrNothing'): boolean {
+    private applyCombatEffect(game: ActiveGame, socketId: string, player: Player, mode: SanctuaryMode): boolean {
         if (game.playerCombatBonusTurns.has(socketId)) return false;
 
-        const apply = mode !== 'doubleOrNothing' || Math.random() < DOUBLE_OR_NOTHING_CHANCE;
+        const apply = mode !== SanctuaryMode.DoubleOrNothing || Math.random() < DOUBLE_OR_NOTHING_CHANCE;
         if (!apply) return false;
 
         player.character.attack += SANCTUARY_COMBAT_BONUS;
