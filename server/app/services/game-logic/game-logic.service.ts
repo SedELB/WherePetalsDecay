@@ -185,10 +185,10 @@ export class GameLogicService {
         return { position: landingPos, flagJustTaken };
     }
 
-    getReachableTilesForTeleport(lobbyId: string, socketId: string): Vec2[] {
+    getReachableTilesForTeleport(lobbyId: string): Vec2[] {
         const game = this.activeGames.get(lobbyId);
         if (!game) return [];
-        return this.movementService.getReachableTilesForTeleport(game, socketId);
+        return this.movementService.getReachableTilesForTeleport(game);
     }
 
     getReachableTiles(lobbyId: string, socketId: string): Vec2[] {

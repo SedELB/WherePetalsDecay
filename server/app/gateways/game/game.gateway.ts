@@ -68,8 +68,6 @@ interface CombatSession {
     vpPostureHandles: ReturnType<typeof setTimeout>[];
 }
 
-const VP_POSTURE_MIN_DELAY_MS = 500;
-const VP_POSTURE_MAX_DELAY_MS = 1000;
 
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()

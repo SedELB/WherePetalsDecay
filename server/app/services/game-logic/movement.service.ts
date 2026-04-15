@@ -34,7 +34,7 @@ export class MovementService {
 
         if (!this.isValidTeleportMove(game, targetPos)) return null;
 
-        const reachable = this.getReachableTilesForTeleport(game, socketId);
+        const reachable = this.getReachableTilesForTeleport(game);
         const isReachableCheck = reachable.some((p) => p.x === targetPos.x && p.y === targetPos.y);
         if (!isReachableCheck) return null;
 
@@ -43,7 +43,7 @@ export class MovementService {
         return targetPos;
     }
 
-    getReachableTilesForTeleport(game: ActiveGame, socketId: string): Vec2[] {
+    getReachableTilesForTeleport(game: ActiveGame): Vec2[] {
         const reachable: Vec2[] = [];
         const grid = game.lobby.game.grid;
 

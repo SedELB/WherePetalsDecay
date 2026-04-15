@@ -7,7 +7,7 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { GameViewService } from '@app/services/game-view/game-view.service';
-import { GameMode, PlayerType } from '@common/enums';
+import { GameMode, PlayerAction, PlayerType } from '@common/enums';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { GamePageComponent } from '@app/pages/game-page/game-page.component';
@@ -345,7 +345,7 @@ describe('GamePageComponent', () => {
             });
             mockGameViewService.actionPoints.set(1);
             component.gamePageSignalService.isSubMenuOpen.set(true);
-            component.gamePageSignalService.activeSubAction.set('attack');
+            component.gamePageSignalService.activeSubAction.set(PlayerAction.Attack);
             spyOn(component, 'isOnIce').and.returnValue(0);
             component.onTileClick(1, 0);
             expect(mockGameViewService.sendCombat).toHaveBeenCalledWith(
@@ -360,6 +360,7 @@ describe('GamePageComponent', () => {
         /** Blocks the default browser context menu from appearing and instead leverages the right-click action to request detailed tile information from the server. */
         it('should prevent the context menu and request tile info', () => {
             mockGameViewService.gameLobby.set(createLobby());
+            mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
             const event = new MouseEvent('contextmenu');
             spyOn(event, 'preventDefault');
             component.onRightClick(event, { x: TILE_X, y: TILE_Y });
