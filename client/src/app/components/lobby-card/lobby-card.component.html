@@ -1,7 +1,15 @@
 <div class="lobbyCard">
   <div class="player-badge">{{ lobby.playerCount }} / {{ lobby.game.maxPlayers }}</div>
   <div class="image-frame">
-    <img class="thumbnail" [src]="lobby.game.thumbnail" [alt]="lobby.game.name"/>
+    <img
+      class="thumbnail"
+      [src]="lobby.game.thumbnail"
+      [alt]="lobby.game.name"
+      (mouseenter)="onMouseEnter()"
+      (mouseleave)="onMouseLeave()"
+      (mousemove)="updateTooltipPosition()"
+      #thumbnail
+    />
   </div>
 
   <div class="card-info">
@@ -28,4 +36,8 @@
       <ng-content></ng-content>
     </div>
   </div>
+</div>
+
+<div class="tooltip" [style.top.px]="tooltipVerticalPos" [style.left.px]="tooltipHorizontalPos" [style.opacity]="show ? 1 : 0" #tooltip>
+  {{ lobby.game.description }}
 </div>
