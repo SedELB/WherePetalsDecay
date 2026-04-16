@@ -51,8 +51,8 @@ export class CombatFlowService {
         if (!activeGame || !attackerPlayer || !defenderPlayer) return;
 
         const roomId = `fight${this.combatState.incrementFightCounter()}`;
-        const attackerSocket = server.sockets.sockets.get(attackerId);
-        const defenderSocket = server.sockets.sockets.get(defenderId);
+        const attackerSocket = server.sockets.get(attackerId);
+        const defenderSocket = server.sockets.get(defenderId);
 
         if (attackerSocket) attackerSocket.join(roomId);
         if (defenderSocket) defenderSocket.join(roomId);
