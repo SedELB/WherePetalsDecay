@@ -93,7 +93,7 @@ export class GameViewListenerService {
             }
             if (data.flagTaken) {
                 this.gameViewService.gameLobby.update(
-                    (lobby) => lobby ? this.gameLogicService.applyFlagPickup(lobby, data.socketId, data.position) : lobby
+                    (lobby) => lobby ? this.gameLogicService.applyFlagPickup(lobby, data.socketId, data.position) : lobby,
                 );
                 this.gameViewService.isFlagTaken.set(true);
             }
