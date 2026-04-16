@@ -150,7 +150,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             lobby: activeGame.lobby,
             turnOrder: activeGame.turnOrder,
             playerPositions: this.gameLogicService.getPlayerPositions(lobbyId),
-            playerStartPositions: activeGame.playerStartPositions,
+            playerStartPositions: this.gameLogicService.getPlayerStartPositions(lobbyId),
         });
 
         this.gameLogicService.startTurnCycle(lobbyId);
