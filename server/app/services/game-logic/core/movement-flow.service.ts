@@ -74,6 +74,8 @@ export class MovementFlowService {
             position: newPosition.position,
             flagTaken: newPosition.flagJustTaken,
         });
+
+        this.addPostMoveJournalEntries(lobbyId, socket.id, newPosition.position, newPosition.flagJustTaken);
         this.gameTurnSyncService.refreshPlayerNavigationState(server, lobbyId, socket.id);
     }
 

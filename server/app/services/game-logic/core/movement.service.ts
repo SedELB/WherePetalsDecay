@@ -33,7 +33,7 @@ export class MovementService {
         const currentPos = game.playerPositions.get(socketId);
         if (!currentPos) return null;
 
-        if (!this.isValidTeleportMove(game, targetPos)) return null;
+        if (!this.isValidTeleportMove(game, targetPos, socketId)) return null;
 
         const reachable = this.getReachableTilesForTeleport(game);
         const isReachableCheck = reachable.some((p) => p.x === targetPos.x && p.y === targetPos.y);
@@ -151,7 +151,7 @@ export class MovementService {
         return tile?.item === TileItem.HealingSanctuary || tile?.item === TileItem.CombatSanctuary;
     }
 
-    private isValidTeleportMove(game: ActiveGame, targetPos: Vec2): boolean {
+    private isValidTeleportMove(game: ActiveGame, targetPos: Vec2, excludeSocketId?: string): boolean {
         if (!this.isWithinBounds(game.lobby.game, targetPos)) return false;
 
         const tile = game.lobby.game.grid[targetPos.y][targetPos.x];
@@ -160,7 +160,7 @@ export class MovementService {
         if (cost === Infinity) return false;
         if (this.isSanctuaryTile(game, targetPos)) return false;
         if (tile.item === TileItem.Spawn) return false;
-        if (this.isTileOccupied(game, targetPos)) return false;
+        if (this.isTileOccupied(game, targetPos, excludeSocketId)) return false;
 
         return true;
     }
@@ -174,7 +174,7 @@ export class MovementService {
         if (cost === Infinity) return false;
         if (cost > game.movementPoints.get(socketId)) return false;
         if (this.isSanctuaryTile(game, targetPos)) return false;
-        if (this.isTileOccupied(game, targetPos)) return false;
+        if (this.isTileOccupied(game, targetPos, socketId)) return false;
 
         return true;
     }
@@ -183,8 +183,9 @@ export class MovementService {
         return pos.y >= 0 && pos.y < game.grid.length && pos.x >= 0 && pos.x < game.grid[0].length;
     }
 
-    private isTileOccupied(game: ActiveGame, pos: Vec2): boolean {
-        for (const [, playerPos] of game.playerPositions) {
+    private isTileOccupied(game: ActiveGame, pos: Vec2, excludeSocketId?: string): boolean {
+        for (const [socketId, playerPos] of game.playerPositions) {
+            if (socketId === excludeSocketId) continue;
             if (playerPos.x === pos.x && playerPos.y === pos.y) return true;
         }
         return false;

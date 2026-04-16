@@ -316,10 +316,16 @@ export class GameLogicService {
         );
     }
 
-    applyFlagPickup(lobby: Lobby, socketId: string): Lobby {
+    applyFlagPickup(lobby: Lobby, socketId: string, position?: Vec2): Lobby {
         const updatedLobby = { ...lobby };
         const player = updatedLobby.players.find((p) => p.socketId === socketId);
         if (player) player.hasFlag = true;
+
+        if (position) {
+            updatedLobby.game.grid = updatedLobby.game.grid.map((row, y) =>
+                y === position.y ? row.map((tile, x) => (x === position.x ? { ...tile, item: null } : tile)) : row,
+            );
+        }
         return updatedLobby;
     }
 

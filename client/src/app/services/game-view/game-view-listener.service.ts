@@ -92,7 +92,9 @@ export class GameViewListenerService {
                 this.gameViewService.movementPoints.set(data.movementPoints);
             }
             if (data.flagTaken) {
-                this.gameViewService.gameLobby.update((lobby) => lobby ? this.gameLogicService.applyFlagPickup(lobby, data.socketId) : lobby);
+                this.gameViewService.gameLobby.update(
+                    (lobby) => lobby ? this.gameLogicService.applyFlagPickup(lobby, data.socketId, data.position) : lobby
+                );
                 this.gameViewService.isFlagTaken.set(true);
             }
         });
