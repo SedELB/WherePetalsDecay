@@ -96,23 +96,7 @@ export class VirtualPlayerService {
     // Classic mode
 
     private runClassicTurn(context: TurnContext, currentPos: Vec2): void {
-        const { game, virtualPlayer } = context;
-        const isInjured = virtualPlayer.character.life <= this.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
-        const hasCombatBonus = this.hasCombatBonus(game, virtualPlayer.socketId);
-
-        // Always attempt to use a sanctuary at current position first
-        // If injured: healing sanctuary takes priority over combat sanctuary
-        if (isInjured && this.tryUseSanctuaryAtCurrentPosition(context, TileItem.HealingSanctuary)) {
-            this.continueTurnAfterSanctuary(context);
-            return;
-        }
-        // Only try combat sanctuary if VP doesn't already have the bonus
-        if (!hasCombatBonus && this.tryUseSanctuaryAtCurrentPosition(context, TileItem.CombatSanctuary)) {
-            this.continueTurnAfterSanctuary(context);
-            return;
-        }
-
-
+        const { virtualPlayer } = context;
         if (virtualPlayer.virtualProfile === VirtualPlayerProfile.Aggressive) {
             this.runAggressiveClassicTurn(context, currentPos);
         } else {
@@ -120,39 +104,32 @@ export class VirtualPlayerService {
         }
     }
 
-    // Aggressive :
-    //   1. Combat sanctuary reachable this turn (only if no combat bonus yet) -> go use it
-    //   2. Healing sanctuary reachable if injured -> go use it
-    //   3. Enemy adjacent -> attack
-    //   4. Neither reachable -> compare distances, go toward the closest
+    // Aggressive classic:
+    //   1. if Adjacent enemy : attack immediately
+    //   2. if Enemy reachable this turn : move toward enemy (opening doors), then attack
+    //   3. Enemy NOT reachable:
+    //      a. Door on path : save AP for door, move toward enemy, skip sanctuaries
+    //      b. No door on path : check sanctuary on path, then move toward enemy
     private runAggressiveClassicTurn(context: TurnContext, currentPos: Vec2): void {
         const { game, virtualPlayer, lobbyId } = context;
         const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
-        const canUseDoors = actionPoints > 0;
 
         if (actionPoints <= 0) {
             this.runAggressivePostCombatMovement(context, currentPos);
             return;
         }
 
-        const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, currentPos, canUseDoors);
-        const isInjured = virtualPlayer.character.life <= this.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
-        const hasCombatBonus = this.hasCombatBonus(game, virtualPlayer.socketId);
-
-        // Priority 1: attack adjacent enemy first
+        // Priority 1: attack adjacent enemy
         if (this.tryAttackAdjacentEnemy(context)) return;
 
-        // Priority 2
-        if (!hasCombatBonus && this.tryGoToCombatSanctuaryThisTurn(context, currentPos, costToPosition)) return;
+        const nearestEnemy = this.scanner.findNearestEnemy(game, virtualPlayer, currentPos, true);
+        if (!nearestEnemy) {
+            this.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
 
-        // Priority 3
-        if (isInjured && this.tryMoveAndUseSanctuary(context, currentPos, TileItem.HealingSanctuary)) return;
-
-        // Priority 4
-        const nearestEnemy = this.scanner.findNearestEnemy(game, virtualPlayer, currentPos, canUseDoors);
-        if (!hasCombatBonus && this.tryGoToCloserCombatSanctuary(context, currentPos, costToPosition, nearestEnemy)) return;
-
-        if (nearestEnemy) {
+        // Priority 2: enemy reachable this turn → move and attack
+        if (this.isEnemyReachableThisTurn(game, virtualPlayer, currentPos, nearestEnemy.position)) {
             this.moveTowardThenActWithDoors(context, currentPos, nearestEnemy.position, () => {
                 const hasStartedCombat = this.tryAttackAdjacentEnemy(context);
                 if (!hasStartedCombat) this.continueTurnAfterMovement(context);
@@ -160,160 +137,128 @@ export class VirtualPlayerService {
             return;
         }
 
-        this.endVirtualPlayerTurn(lobbyId);
+        // Priority 3: enemy NOT reachable this turn
+        const hasDoorOnPath = this.hasClosedDoorOnPath(game, currentPos, nearestEnemy.position);
+
+        // 3a. No door on path : try sanctuary along the way to the enemy
+        if (!hasDoorOnPath && this.tryClassicPathSanctuary(context, currentPos, nearestEnemy.position)) return;
+
+        // 3b. Move toward enemy (opening doors if needed along the way)
+        this.moveTowardThenActWithDoors(context, currentPos, nearestEnemy.position, () => {
+            const hasStartedCombat = this.tryAttackAdjacentEnemy(context);
+            if (!hasStartedCombat) this.continueTurnAfterMovement(context);
+        });
     }
 
-    // Moves toward a combat sanctuary border reachable this turn, returns true if one was found
-    private tryGoToCombatSanctuaryThisTurn(context: TurnContext, currentPos: Vec2, costToPosition: Map<string, number>): boolean {
-        const { game, virtualPlayer } = context;
-        const border = this.scanner.findNearestTileAdjacentToSanctuary(game, virtualPlayer, currentPos, {
-            sanctuaryType: TileItem.CombatSanctuary,
-            reachableThisTurn: true,
-            precomputedCostToPosition: costToPosition,
-        });
-        if (!border) return false;
-
-        this.moveTowardThenActWithDoors(context, currentPos, border, () => {
-            const used = this.tryUseSanctuaryAtCurrentPosition(context, TileItem.CombatSanctuary);
-            if (used) {
-                this.continueTurnAfterSanctuary(context);
-            } else {
-                this.continueTurnAfterMovement(context);
-            }
-        });
-        return true;
-    }
-
-    // Compares distance to nearest combat sanctuary vs nearest enemy. Goes toward sanctuary if closer.
-    private tryGoToCloserCombatSanctuary(
-        context: TurnContext,
-        currentPos: Vec2,
-        costToPosition: Map<string, number>,
-        nearestEnemy: { player: Player; position: Vec2 } | null,
-    ): boolean {
-        const { game, virtualPlayer } = context;
-        const border = this.scanner.findNearestTileAdjacentToSanctuary(game, virtualPlayer, currentPos, {
-            sanctuaryType: TileItem.CombatSanctuary,
-            precomputedCostToPosition: costToPosition,
-        });
-        if (!border) return false;
-
-        const enemyCost = nearestEnemy
-            ? (costToPosition.get(this.pathfindingService.positionKey(nearestEnemy.position)) ?? Infinity)
-            : Infinity;
-        const sanctuaryCost = costToPosition.get(this.pathfindingService.positionKey(border)) ?? Infinity;
-        if (sanctuaryCost > enemyCost) return false;
-
-        this.moveTowardThenActWithDoors(context, currentPos, border, () => {
-            const used = this.tryUseSanctuaryAtCurrentPosition(context, TileItem.CombatSanctuary);
-            if (used) {
-                this.continueTurnAfterSanctuary(context);
-            } else {
-                this.continueTurnAfterMovement(context);
-            }
-        });
-        return true;
-    }
-
-    // Post-sanctuary / post-combat aggressive movement:
-    //   - If injured, prefer a nearby healing sanctuary
-    //   - Otherwise, chase nearest enemy
+    // Post-combat aggressive movement (AP=0):
+    //   Move toward nearest enemy, no sanctuary detours
     private runAggressivePostCombatMovement(context: TurnContext, currentPos: Vec2): void {
         const { game, virtualPlayer, lobbyId } = context;
-        const isInjured = virtualPlayer.character.life < this.getMaxLife(virtualPlayer);
-        const dijkstraResult = this.pathfindingService.computeFullDijkstra(game, currentPos);
-        const { costToPosition } = dijkstraResult;
 
-        // Priority 1: Healing sanctuary when injured and reachable with current movement budget
-        if (isInjured) {
-            const healingBorder = this.scanner.findNearestTileAdjacentToSanctuary(game, virtualPlayer, currentPos, {
-                sanctuaryType: TileItem.HealingSanctuary,
-                reachableThisTurn: true,
-                precomputedCostToPosition: costToPosition,
-            });
-            if (healingBorder && (healingBorder.x !== currentPos.x || healingBorder.y !== currentPos.y)) {
-                this.moveTowardThenActWithDoors(context, currentPos, healingBorder, () => this.continueTurnAfterMovement(context));
-                return;
-            }
-        }
-
-        // Priority 2: Move toward nearest enemy.
-        // Use door aware enemy detection to still target enemies behind closed doors.
         const nearestEnemy = this.scanner.findNearestEnemy(game, virtualPlayer, currentPos, true);
-        if (nearestEnemy) {
-            this.moveTowardThenActWithDoors(context, currentPos, nearestEnemy.position, () => {
-                const hasStartedCombat = this.tryAttackAdjacentEnemy(context);
-                if (!hasStartedCombat) {
-                    const actionPoints = context.game.actionPoints.get(context.virtualPlayer.socketId) ?? 0;
-                    const currentPosAfterMove = context.game.playerPositions.get(context.virtualPlayer.socketId);
-                    const isEnemyAdjacent = currentPosAfterMove
-                        ? this.scanner.getAdjacentOpponents(context.game, context.virtualPlayer, currentPosAfterMove).length > 0
-                        : false;
-
-                    if (actionPoints <= 0 && isEnemyAdjacent) {
-                        this.endVirtualPlayerTurn(context.lobbyId);
-                        return;
-                    }
-
-                    this.continueTurnAfterMovement(context);
-                }
-            });
-            return;
-        }
-
-        this.endVirtualPlayerTurn(lobbyId);
-    }
-
-    // Defensive : flee all enemies → if a sanctuary is on the flee path, use it and continue
-    //   - Prioritize healing sanctuary if injured, otherwise take combat sanctuary if on path
-    //   - If cornered, attack
-    //   - When the VP has an AP, considers tiles reachable by opening a closed door
-    private runDefensiveClassicTurn(context: TurnContext, currentPos: Vec2): void {
-        const { game, virtualPlayer, lobbyId } = context;
-        const isInjured = virtualPlayer.character.life < this.getMaxLife(virtualPlayer);
-        const hasCombatBonus = this.hasCombatBonus(game, virtualPlayer.socketId);
-        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
-
-        // Special defensive door control: when boxed in and an enemy is right behind
-        // an adjacent door, avoid opening a closed door; if already open, close it.
-        if (this.tryHandleDefensiveBlockedDoor(context, currentPos)) {
-            return;
-        }
-
-        if (this.isDefensiveFullyCorneredByEnemy(context, currentPos)) {
+        if (!nearestEnemy) {
             this.endVirtualPlayerTurn(lobbyId);
             return;
         }
 
-        // When the VP has an AP, consider tiles reachable by opening a closed door
-        const fleeTarget = this.scanner.chooseFleeTile(game, virtualPlayer, currentPos, actionPoints > 0);
+        this.moveTowardThenActWithDoors(context, currentPos, nearestEnemy.position, () => {
+            const hasStartedCombat = this.tryAttackAdjacentEnemy(context);
+            if (!hasStartedCombat) {
+                const ap = context.game.actionPoints.get(context.virtualPlayer.socketId) ?? 0;
+                const posAfterMove = context.game.playerPositions.get(context.virtualPlayer.socketId);
+                const isEnemyAdjacent = posAfterMove
+                    ? this.scanner.getAdjacentOpponents(context.game, context.virtualPlayer, posAfterMove).length > 0
+                    : false;
 
-        if (fleeTarget) {
-            const retreatTarget = this.chooseBestRetreatTarget(context, currentPos, fleeTarget, isInjured, hasCombatBonus);
-            this.moveTowardThenActWithDoors(context, currentPos, retreatTarget, () => {
-                // After reaching retreat target, try to use whichever sanctuary we're now adjacent to
-                const usedSanctuary =
-                    (isInjured && this.tryUseSanctuaryAtCurrentPosition(context, TileItem.HealingSanctuary)) ||
-                    this.tryUseSanctuaryAtCurrentPosition(context, TileItem.CombatSanctuary);
-                if (usedSanctuary) {
-                    this.continueTurnAfterSanctuary(context);
-                } else {
-                    this.continueTurnAfterMovement(context);
+                if (ap <= 0 && isEnemyAdjacent) {
+                    this.endVirtualPlayerTurn(context.lobbyId);
+                    return;
                 }
+
+                this.continueTurnAfterMovement(context);
+            }
+        });
+    }
+
+    // Defensive classic:
+    //   1. Cornered (no reachable tile + enemy adjacent) : end turn (never attack)
+    //   2. Flee: maximize distance from enemies
+    //   3. Door on flee path : open door and flee, NO sanctuary
+    //   4. No door on flee path : check sanctuary on path (healing > combat)
+    private runDefensiveClassicTurn(context: TurnContext, currentPos: Vec2): void {
+        const { game, virtualPlayer, lobbyId } = context;
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
+
+        // Defensive door control: if cornered near a door with an enemy behind it,
+        // close the door to block the threat before ending turn.
+        if (this.tryHandleDefensiveBlockedDoor(context, currentPos)) {
+            return;
+        }
+
+        // Cornered: no reachable tiles and enemy adjacent → end turn (never initiate combat)
+        if (this.isDefensiveFullyCornered(context, currentPos)) {
+            this.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
+
+        const fleeTarget = this.scanner.chooseFleeTile(game, virtualPlayer, currentPos, actionPoints > 0);
+        if (!fleeTarget) {
+            this.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
+
+        const hasDoorOnFleePath = this.hasClosedDoorOnPath(game, currentPos, fleeTarget);
+
+        if (hasDoorOnFleePath) {
+            // Door on flee path : open door and flee, no sanctuary usage
+            this.moveTowardThenActWithDoors(context, currentPos, fleeTarget, () => {
+                this.continueTurnAfterMovement(context);
             });
             return;
         }
 
-        // Defensive VP does not proactively start combat when it cannot flee.
-        this.endVirtualPlayerTurn(lobbyId);
+        // No door on flee path : try sanctuary along the flee path
+        if (actionPoints > 0) {
+            const isInjured = virtualPlayer.character.life <= this.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
+            const hasCombatBonus = this.hasCombatBonus(game, virtualPlayer.socketId);
+
+            if ((isInjured || !hasCombatBonus) && this.tryClassicPathSanctuary(context, currentPos, fleeTarget)) return;
+        }
+
+        // Just flee
+        this.moveTowardThenActWithDoors(context, currentPos, fleeTarget, () => {
+            this.continueTurnAfterMovement(context);
+        });
+    }
+
+    // Returns true if the VP cannot take any step from its current position.
+    // Checks direct neighbors instead of Dijkstra to avoid seeing through blocking players.
+    private isDefensiveFullyCornered(context: TurnContext, currentPos: Vec2): boolean {
+        const { game, virtualPlayer } = context;
+        const remainingMovement = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
+        if (remainingMovement <= 0) return true;
+
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
+
+        const hasWalkableNeighbor = (Object.values(DIRECTION_OFFSETS) as Vec2[]).some((offset) => {
+            const neighbor = { x: currentPos.x + offset.x, y: currentPos.y + offset.y };
+            const tile = game.lobby.game.grid[neighbor.y]?.[neighbor.x];
+            if (!tile) return false;
+            if (this.pathfindingService.isSanctuaryTile(game, neighbor)) return false;
+            if (this.pathfindingService.isTileOccupiedByAnotherPlayer(game, neighbor, virtualPlayer.socketId)) return false;
+            if (tile.type === TileTexture.DoorClosed) return actionPoints > 0;
+            const cost = TILE_COSTS[tile.type];
+            return cost !== Infinity && cost <= remainingMovement;
+        });
+
+        return !hasWalkableNeighbor;
     }
 
     private tryHandleDefensiveBlockedDoor(context: TurnContext, currentPos: Vec2): boolean {
         const { game, virtualPlayer, lobbyId } = context;
         const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
 
-        // Defensive priority: if an adjacent opened door has an enemy on the other side,
-        // close it if possible, otherwise end turn.
+        // If an adjacent opened door has an enemy on the other side, close it to block the threat.
         const openedThreatDoor = this.findAdjacentThreatDoor(context, currentPos, true);
         if (openedThreatDoor) {
             if (actionPoints > 0) this.tryToggleDoorAtPosition(context, openedThreatDoor, TileTexture.DoorOpened);
@@ -321,6 +266,7 @@ export class VirtualPlayerService {
             return true;
         }
 
+        // If the only adjacent tiles are doors and a closed door has an enemy behind it, don't open it.
         if (this.hasReachableNonDoorTile(game, virtualPlayer, currentPos)) return false;
 
         const threatDoor = this.findAdjacentThreatDoor(context, currentPos, false);
@@ -335,11 +281,7 @@ export class VirtualPlayerService {
     private hasReachableNonDoorTile(game: ActiveGame, virtualPlayer: Player, currentPos: Vec2): boolean {
         const remainingMovement = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
         const reachableWithoutDoors = this.pathfindingService.getReachableTilesWithinBudget(
-            game,
-            currentPos,
-            remainingMovement,
-            virtualPlayer.socketId,
-            false,
+            game, currentPos, remainingMovement, virtualPlayer.socketId, false,
         );
         return reachableWithoutDoors.some((pos) => {
             const tile = game.lobby.game.grid[pos.y]?.[pos.x];
@@ -365,22 +307,6 @@ export class VirtualPlayerService {
         return null;
     }
 
-    private isDefensiveFullyCorneredByEnemy(context: TurnContext, currentPos: Vec2): boolean {
-        const { game, virtualPlayer } = context;
-        const remainingMovement = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
-        const reachableWithoutDoors = this.pathfindingService.getReachableTilesWithinBudget(
-            game,
-            currentPos,
-            remainingMovement,
-            virtualPlayer.socketId,
-            false,
-        );
-        if (reachableWithoutDoors.length > 0) return false;
-
-        const adjacentEnemies = this.scanner.getAdjacentOpponents(game, virtualPlayer, currentPos);
-        return adjacentEnemies.length > 0;
-    }
-
     private isOpponentAdjacentToDoor(context: TurnContext, doorPos: Vec2, currentPos: Vec2): boolean {
         const { game, virtualPlayer } = context;
 
@@ -393,35 +319,44 @@ export class VirtualPlayerService {
             if (pos.x === currentPos.x && pos.y === currentPos.y) return false;
 
             const distanceToDoor = Math.abs(pos.x - doorPos.x) + Math.abs(pos.y - doorPos.y);
-            // Threat if enemy is on the door tile itself or directly adjacent to it.
             return distanceToDoor <= 1;
         });
     }
 
-    // Chooses the best tile to retreat to on the flee path:
-    // Prefers a sanctuary border tile along the path (healing if injured, otherwise combat)
-    private chooseBestRetreatTarget(context: TurnContext, currentPos: Vec2, fleeTarget: Vec2, isInjured: boolean, hasCombatBonus: boolean): Vec2 {
-        const { game } = context;
-        const dijkstraResult = this.pathfindingService.computeFullDijkstra(game, currentPos);
-        const fleePath = this.pathfindingService.reconstructPath(fleeTarget, dijkstraResult.predecessorKey);
-        if (!fleePath) return fleeTarget;
+    // Finds the first usable sanctuary along the path to a target.
+    // If injured → healing, else if no combat bonus → combat.
+    // Moves to sanctuary border, uses it, then continues.
+    private tryClassicPathSanctuary(context: TurnContext, currentPos: Vec2, targetPos: Vec2): boolean {
+        const { game, virtualPlayer } = context;
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
+        if (actionPoints <= 0) return false;
 
-        // Scan path for sanctuary border tiles — healing takes priority over combat
-        let healingBorderOnPath: Vec2 | null = null;
-        let combatBorderOnPath: Vec2 | null = null;
+        const isInjured = virtualPlayer.character.life <= this.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
+        const hasCombatBonus = this.hasCombatBonus(game, virtualPlayer.socketId);
 
-        for (const pathStep of fleePath) {
-            if (!healingBorderOnPath && this.scanner.isTileAdjacentToSanctuary(game, pathStep, TileItem.HealingSanctuary)) {
-                healingBorderOnPath = pathStep;
-            }
-            if (!hasCombatBonus && !combatBorderOnPath && this.scanner.isTileAdjacentToSanctuary(game, pathStep, TileItem.CombatSanctuary)) {
-                combatBorderOnPath = pathStep;
-            }
+        // Try at current position first
+        if (isInjured && this.tryUseSanctuaryAtCurrentPosition(context, TileItem.HealingSanctuary)) {
+            this.continueTurnAfterSanctuary(context);
+            return true;
+        }
+        if (!hasCombatBonus && this.tryUseSanctuaryAtCurrentPosition(context, TileItem.CombatSanctuary)) {
+            this.continueTurnAfterSanctuary(context);
+            return true;
         }
 
-        if (isInjured && healingBorderOnPath) return healingBorderOnPath;
-        if (combatBorderOnPath) return combatBorderOnPath;
-        return fleeTarget;
+        // Find first sanctuary on path to target
+        const dijkstraResult = this.pathfindingService.computeFullDijkstra(game, currentPos, true);
+        const path = this.pathfindingService.reconstructPath(targetPos, dijkstraResult.predecessorKey);
+        if (!path || path.length === 0) return false;
+
+        const sanctuaryOnPath = this.findFirstReachableSanctuaryOnPath(context, path);
+        if (!sanctuaryOnPath) return false;
+
+        this.moveTowardThenActWithDoors(context, currentPos, sanctuaryOnPath.position, () => {
+            this.tryUseSanctuaryAtCurrentPosition(context, sanctuaryOnPath.type);
+            setTimeout(() => this.runDecisionCycle(context), VP_STEP_DELAY_MS);
+        });
+        return true;
     }
 
     private tryUseSanctuaryAtCurrentPosition(context: TurnContext, sanctuaryType: SanctuaryType): boolean {
@@ -483,35 +418,6 @@ export class VirtualPlayerService {
         return true;
     }
 
-    private tryMoveAndUseSanctuary(context: TurnContext, currentPos: Vec2, sanctuaryType: SanctuaryType): boolean {
-        const { game, virtualPlayer } = context;
-        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
-        if (actionPoints <= 0) return false;
-
-        if (sanctuaryType === TileItem.HealingSanctuary) {
-            const isInjured = virtualPlayer.character.life <= this.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
-            if (!isInjured) return false;
-        }
-
-        const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, currentPos);
-
-        const border = this.scanner.findNearestTileAdjacentToSanctuary(game, virtualPlayer, currentPos, {
-            sanctuaryType,
-            reachableThisTurn: true,
-            precomputedCostToPosition: costToPosition,
-        });
-        if (!border) return false;
-
-        this.moveTowardThenActWithDoors(context, currentPos, border, () => {
-            const used = this.tryUseSanctuaryAtCurrentPosition(context, sanctuaryType);
-            if (used) {
-                this.continueTurnAfterSanctuary(context);
-            } else {
-                this.continueTurnAfterMovement(context);
-            }
-        });
-        return true;
-    }
 
     private findAdjacentSanctuaryPosition(game: ActiveGame, currentPos: Vec2, sanctuaryType: SanctuaryType): Vec2 | null {
         const candidatesPos: Vec2[] = [
@@ -674,7 +580,7 @@ export class VirtualPlayerService {
         if (virtualPlayer.virtualProfile === VirtualPlayerProfile.Aggressive) {
             // Aggressive: chase the carrier. Need AP only if VP will reach the carrier this turn or there's a door.
             const willReachCarrier = this.isEnemyReachableThisTurn(game, virtualPlayer, currentPos, carrierPos);
-            const hasClosedDoor = this.hasClosedDoorOnCtfPath(game, currentPos, carrierPos);
+            const hasClosedDoor = this.hasClosedDoorOnPath(game, currentPos, carrierPos);
             if (this.tryCtfPathSanctuary(context, currentPos, carrierPos, hasClosedDoor || willReachCarrier)) return;
 
             this.moveTowardThenActWithDoors(context, currentPos, carrierPos, () => {
@@ -692,8 +598,21 @@ export class VirtualPlayerService {
             if (this.tryCtfPathSanctuary(context, currentPos, target, needsAp)) return;
 
             this.moveTowardThenActWithDoors(context, currentPos, target, () => {
-                const hasStartedCombat = this.tryAttackAdjacentEnemy(context);
-                if (!hasStartedCombat) this.endVirtualPlayerTurn(lobbyId);
+                // Only attack an enemy that is blocking the carrier's spawn position
+                if (carrierStartPos) {
+                    const vpPosNow = game.playerPositions.get(virtualPlayer.socketId) ?? currentPos;
+                    const adjacentEnemies = this.scanner.getAdjacentOpponents(game, virtualPlayer, vpPosNow);
+                    const enemyOnSpawn = adjacentEnemies.find((e) => {
+                        const ePos = game.playerPositions.get(e.socketId);
+                        return ePos && ePos.x === carrierStartPos.x && ePos.y === carrierStartPos.y;
+                    });
+                    if (enemyOnSpawn) {
+                        virtualPlayer.character.bonusPosture = this.postureForProfile(virtualPlayer.virtualProfile);
+                        context.startCombat(lobbyId, virtualPlayer.socketId, enemyOnSpawn.socketId);
+                        return;
+                    }
+                }
+                this.endVirtualPlayerTurn(lobbyId);
             });
         }
     }
@@ -711,13 +630,9 @@ export class VirtualPlayerService {
         }
     }
 
-    // Defensive: guard the ally's spawn
-    //   1. If has AP and a reachable enemy exists: attack, then return near spawn.
-    //   2. Otherwise : move to an adjacent tile of the ally's spawn and stay
+    // Defensive: guard the ally's spawn – never proactively attack
     private runCtfDefensiveGuard(context: TurnContext, currentPos: Vec2, allyCarrier: Player): void {
         const { game, virtualPlayer, lobbyId } = context;
-        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
-        const movementPoints = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
 
         const allySpawn = game.playerStartPositions.get(allyCarrier.socketId);
         if (!allySpawn) {
@@ -725,27 +640,10 @@ export class VirtualPlayerService {
             return;
         }
 
-        // If has AP and movement, look for a reachable enemy to intercept
-        if (actionPoints > 0 && movementPoints > 0) {
-            const nearestEnemy = this.scanner.findNearestEnemy(game, virtualPlayer, currentPos, true);
-            if (nearestEnemy) {
-                const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, currentPos, true);
-                const enemyCost = costToPosition.get(this.pathfindingService.positionKey(nearestEnemy.position)) ?? Infinity;
-                if (enemyCost <= movementPoints) {
-                    // AP will be used for combat – no sanctuary
-                    this.moveTowardThenActWithDoors(context, currentPos, nearestEnemy.position, () => {
-                        if (this.tryAttackAdjacentEnemy(context)) return;
-                        this.moveBackToSpawnArea(context, allySpawn);
-                    });
-                    return;
-                }
-            }
-        }
-
-        // No enemy to fight – try sanctuary on the way to the spawn area
+        // Move to the ally's spawn area and hold position – no combat
         const guardTarget = this.scanner.findNearestFreePositionAround(game, allySpawn, virtualPlayer.socketId);
         if (guardTarget && (guardTarget.x !== currentPos.x || guardTarget.y !== currentPos.y)) {
-            const hasClosedDoor = this.hasClosedDoorOnCtfPath(game, currentPos, guardTarget);
+            const hasClosedDoor = this.hasClosedDoorOnPath(game, currentPos, guardTarget);
             if (this.tryCtfPathSanctuary(context, currentPos, guardTarget, hasClosedDoor)) return;
 
             this.moveTowardThenActWithDoors(context, currentPos, guardTarget, () => {
@@ -776,7 +674,7 @@ export class VirtualPlayerService {
         }
 
         // No adjacent enemy – try sanctuary on the way to the ally
-        const hasClosedDoor = this.hasClosedDoorOnCtfPath(game, currentPos, allyPos);
+        const hasClosedDoor = this.hasClosedDoorOnPath(game, currentPos, allyPos);
         const hasAdjacentEnemy = this.scanner.getAdjacentOpponents(game, virtualPlayer, currentPos).length > 0;
         if (this.tryCtfPathSanctuary(context, currentPos, allyPos, hasClosedDoor || hasAdjacentEnemy)) return;
 
@@ -809,11 +707,11 @@ export class VirtualPlayerService {
 
     // Standard check: AP is needed if there's a closed door on the path or an enemy on the target tile
     private ctfPathNeedsAp(game: ActiveGame, virtualPlayer: Player, currentPos: Vec2, targetPos: Vec2): boolean {
-        return this.hasClosedDoorOnCtfPath(game, currentPos, targetPos)
+        return this.hasClosedDoorOnPath(game, currentPos, targetPos)
             || this.isEnemyOnTile(game, virtualPlayer, targetPos);
     }
 
-    private hasClosedDoorOnCtfPath(game: ActiveGame, currentPos: Vec2, targetPos: Vec2): boolean {
+    private hasClosedDoorOnPath(game: ActiveGame, currentPos: Vec2, targetPos: Vec2): boolean {
         const dijkstraResult = this.pathfindingService.computeFullDijkstra(game, currentPos, true);
         const path = this.pathfindingService.reconstructPath(targetPos, dijkstraResult.predecessorKey);
         if (!path) return false;
