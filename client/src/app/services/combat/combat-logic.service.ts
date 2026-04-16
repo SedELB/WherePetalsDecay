@@ -47,7 +47,12 @@ interface FighterDetailedResult { attack: DetailedStatLine; defense: DetailedSta
 interface RoundDetailedResult { player: FighterDetailedResult; enemy: FighterDetailedResult; rollIndex: number; }
 interface DamagePopupData { damageDealt: number; damageReceived: number; rollIndex: number; }
 interface CombatStartPopupData { title: string; message: string; }
-interface PendingRoundResult { result: CombatResult; resultKey: string; timeline: CombatRoundTimelineData | null; }
+interface PendingRoundResult {
+    result: CombatResult;
+    resultKey: string;
+    timeline: CombatRoundTimelineData | null;
+    debugDiceMode: boolean;
+}
 interface RoundAnnouncementPopupData { roundIndex: number; message: string; }
 type LifeBySide = Record<FighterSide, number>;
 interface FighterDiceDisplayData {
@@ -86,11 +91,20 @@ interface RoundResolutionSequenceParams {
     damageReceived: number;
     roundIndex: number;
     timeline: CombatRoundTimelineData | null;
+    debugDiceMode: boolean;
 }
 type RoundPhaseAction = (next: () => void) => void;
 interface RoundPhaseStep {
     delayMs: number;
     action: RoundPhaseAction;
+}
+interface RoundDiceAnimationParams {
+    sequenceToken: number;
+    roundResult: RoundDetailedResult;
+    rollDurationMs: number;
+    resultDurationMs: number;
+    debugDiceMode: boolean;
+    onFinished: () => void;
 }
 
 @Injectable()
@@ -647,20 +661,21 @@ export class CombatLogicService {
         };
     }
 
-    private playRoundDiceAnimation(
-        sequenceToken: number,
-        roundResult: RoundDetailedResult,
-        rollDurationMs: number,
-        resultDurationMs: number,
-        onFinished: () => void,
-    ): void {
+    private playRoundDiceAnimation({
+        sequenceToken,
+        roundResult,
+        rollDurationMs,
+        resultDurationMs,
+        debugDiceMode,
+        onFinished,
+    }: RoundDiceAnimationParams): void {
         this.clearDiceRollAnimations();
         this.isDiceRollInProgress = true;
 
-        let playerAttackValue = 1;
-        let playerDefenseValue = 1;
-        let enemyAttackValue = 1;
-        let enemyDefenseValue = 1;
+        let playerAttackValue = debugDiceMode ? roundResult.player.attack.dice : 1;
+        let playerDefenseValue = debugDiceMode ? roundResult.player.defense.dice : 1;
+        let enemyAttackValue = debugDiceMode ? roundResult.enemy.attack.dice : 1;
+        let enemyDefenseValue = debugDiceMode ? roundResult.enemy.defense.dice : 1;
 
         const playerAttackFaces = this.getDiceFaces(this.player.character.attackDice);
         const playerDefenseFaces = this.getDiceFaces(this.player.character.defenseDice);
@@ -676,10 +691,17 @@ export class CombatLogicService {
         this.diceRollInterval = setInterval(() => {
             if (!this.isRoundSequenceTokenActive(sequenceToken)) return;
 
-            playerAttackValue = Math.floor(Math.random() * playerAttackFaces) + 1;
-            playerDefenseValue = Math.floor(Math.random() * playerDefenseFaces) + 1;
-            enemyAttackValue = Math.floor(Math.random() * enemyAttackFaces) + 1;
-            enemyDefenseValue = Math.floor(Math.random() * enemyDefenseFaces) + 1;
+            if (debugDiceMode) {
+                playerAttackValue = roundResult.player.attack.dice;
+                playerDefenseValue = roundResult.player.defense.dice;
+                enemyAttackValue = roundResult.enemy.attack.dice;
+                enemyDefenseValue = roundResult.enemy.defense.dice;
+            } else {
+                playerAttackValue = Math.floor(Math.random() * playerAttackFaces) + 1;
+                playerDefenseValue = Math.floor(Math.random() * playerDefenseFaces) + 1;
+                enemyAttackValue = Math.floor(Math.random() * enemyAttackFaces) + 1;
+                enemyDefenseValue = Math.floor(Math.random() * enemyDefenseFaces) + 1;
+            }
 
             this.diceRollDisplay = {
                 player: this.buildDiceDisplayData(playerAttackValue, playerDefenseValue, 'player'),
@@ -925,15 +947,17 @@ export class CombatLogicService {
         damageReceived,
         roundIndex,
         timeline,
+        debugDiceMode,
     }: RoundResolutionSequenceParams): void {
         const roundTimeline = this.getRoundTimeline(timeline);
 
-        this.playRoundDiceAnimation(
+        this.playRoundDiceAnimation({
             sequenceToken,
             roundResult,
-            roundTimeline.diceRollDurationMs,
-            roundTimeline.diceResultDisplayDurationMs,
-            () => {
+            rollDurationMs: roundTimeline.diceRollDurationMs,
+            resultDurationMs: roundTimeline.diceResultDisplayDurationMs,
+            debugDiceMode,
+            onFinished: () => {
                 this.roundResult = roundResult;
 
                 const roundSteps = this.buildRoundResolutionSteps(
@@ -945,7 +969,7 @@ export class CombatLogicService {
                 );
                 this.runRoundPhasePipeline(sequenceToken, roundSteps);
             },
-        );
+        });
     }
 
     private applyLatestServerResult(): void {
@@ -956,16 +980,22 @@ export class CombatLogicService {
         if (resultKey === this.lastAppliedResultKey || resultKey === this.pendingRoundResult?.resultKey) return;
 
         if (this.isAnySequenceActivityInProgress()) {
-            this.pendingRoundResult = { result: payload.result, resultKey, timeline: payload.timeline };
+            this.pendingRoundResult = {
+                result: payload.result,
+                resultKey,
+                timeline: payload.timeline,
+                debugDiceMode: Boolean(payload.debugDiceMode),
+            };
             return;
         }
 
-        this.applyRoundResult(payload.result, resultKey, payload.timeline);
+        this.applyRoundResult(payload.result, resultKey, payload.timeline, Boolean(payload.debugDiceMode));
     }
 
     private getLatestCombatResultPayload(): {
         result: CombatResult;
         timeline: CombatRoundTimelineData | null;
+        debugDiceMode?: boolean;
         roundIndex?: number;
         resolvedAtEpochMs?: number;
     } | null {
@@ -976,6 +1006,7 @@ export class CombatLogicService {
         return {
             result: roundResolved.result,
             timeline: roundResolved.timeline ?? null,
+            debugDiceMode: roundResolved.debugDiceMode,
             roundIndex: roundResolved.roundIndex,
             resolvedAtEpochMs: roundResolved.resolvedAtEpochMs,
         };
@@ -1005,10 +1036,20 @@ export class CombatLogicService {
         if (this.isAnySequenceActivityInProgress() || !this.pendingRoundResult) return;
         const pendingRoundResult = this.pendingRoundResult;
         this.pendingRoundResult = null;
-        this.applyRoundResult(pendingRoundResult.result, pendingRoundResult.resultKey, pendingRoundResult.timeline);
+        this.applyRoundResult(
+            pendingRoundResult.result,
+            pendingRoundResult.resultKey,
+            pendingRoundResult.timeline,
+            pendingRoundResult.debugDiceMode,
+        );
     }
 
-    private applyRoundResult(result: CombatResult, resultKey: string, timeline: CombatRoundTimelineData | null): void {
+    private applyRoundResult(
+        result: CombatResult,
+        resultKey: string,
+        timeline: CombatRoundTimelineData | null,
+        debugDiceMode: boolean,
+    ): void {
         this.lastAppliedResultKey = resultKey;
 
         const localIsAttacker = result.attacker.socketId === this.player.socketId;
@@ -1070,6 +1111,7 @@ export class CombatLogicService {
             damageReceived: enemy.damageDealt,
             roundIndex: this.rollCount,
             timeline,
+            debugDiceMode,
         });
     }
 

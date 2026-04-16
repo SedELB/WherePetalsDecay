@@ -7,7 +7,6 @@ import { Posture } from '@common/character';
 import {
     COMBAT_POST_ABANDON_RESUME_DELAY_MS,
     COMBAT_POST_DEATH_RESUME_DELAY_MS,
-    COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS,
     COMBAT_POSTURE_TIMEOUT_MS,
     COMBAT_ROUND_DELAY_MS,
     COMBAT_START_ANNOUNCEMENT_DELAY_MS,
@@ -25,7 +24,7 @@ import {
     STATUS_BUFFER_DURATION_MS,
 } from '@common/constants/combat-timeline.constants';
 import { Direction } from '@common/direction';
-import { GameMode, PlayerType, SocketNamespace, TileItem, TileTexture, VirtualPlayerProfile, SanctuaryMode } from '@common/enums';
+import { GameMode, PlayerType, SanctuaryMode, SocketNamespace, TileItem, TileTexture } from '@common/enums';
 import {
     CombatEndedData,
     CombatLockStateData,
@@ -65,11 +64,8 @@ interface CombatSession {
     awaitingPostures: boolean;
     consumeActionPointOnNextRound: boolean;
     timeoutHandle?: ReturnType<typeof setTimeout>;
-    countdownStartHandle?: ReturnType<typeof setTimeout>;
     countdownHandle?: ReturnType<typeof setInterval>;
-    vpPostureHandles: ReturnType<typeof setTimeout>[];
 }
-
 
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
@@ -307,15 +303,11 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const defender = activeGame.lobby.players.find((player) => player.socketId === enemy.socketId);
         if (!attacker || !defender) return;
 
+        const enemySocket = socket.nsp.sockets.get(defender.socketId);
+        if (!enemySocket) return;
+
         socket.join(roomId);
-        if (defender.playerType !== PlayerType.Virtual) {
-            const enemySocket = socket.nsp.sockets.get(defender.socketId);
-            if (!enemySocket) {
-                socket.leave(roomId);
-                return;
-            }
-            enemySocket.join(roomId);
-        }
+        enemySocket.join(roomId);
 
         const combatSession: CombatSession = {
             lobbyId,
@@ -326,7 +318,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             roundIndex: 1,
             awaitingPostures: false,
             consumeActionPointOnNextRound: true,
-            vpPostureHandles: [],
         };
 
         this.combatSessions.set(roomId, combatSession);
@@ -502,9 +493,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
     @SubscribeMessage(JoinGameEvents.PlayerAbandon)
     handlePlayerAbandon(@ConnectedSocket() socket: Socket): void {
-        const combatSession = this.findCombatSessionByPlayer(socket.id);
-        if (combatSession) return;
-
         this.processGameDisconnect(socket);
         socket.emit(JoinGameEvents.LeftLobby);
     }
@@ -630,6 +618,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const session = this.combatSessions.get(roomId);
         if (!session) return;
 
+        const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
+        const debugDiceMode = Boolean(activeGame?.isDebugMode);
+
         const timeline: CombatRoundTimelineData = {
             postureResultDisplayDurationMs: POSTURE_RESULT_DISPLAY_DURATION_MS,
             roundPhaseBufferMs: ROUND_PHASE_BUFFER_MS,
@@ -669,6 +660,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             result: combatResult,
             resolvedAtEpochMs: Date.now(),
             timeline,
+            debugDiceMode,
             ...(timedOutSocketIds.length > 0 ? { timedOutSocketIds } : {}),
         };
         this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundResolved, roundResolvedData);
@@ -862,11 +854,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             roomId: session.roomId,
             roundIndex: session.roundIndex,
             postureTimeoutMs: COMBAT_POSTURE_TIMEOUT_MS,
-            postureCountdownDelayMs: COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS,
         };
         this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundStarted, roundStartedData);
-
-        this.scheduleVirtualPlayerPostures(session);
 
         let secondsLeft = Math.ceil(COMBAT_POSTURE_TIMEOUT_MS / COUNTDOWN_TICK_MS);
         const emitCountdown = () => {
@@ -878,33 +867,24 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundCountdown, roundCountdownData);
         };
 
-        const startCountdown = () => {
-            if (!session.awaitingPostures) return;
+        emitCountdown();
+        session.countdownHandle = setInterval(() => {
+            if (!session.awaitingPostures) {
+                this.clearCombatSessionTimers(session);
+                return;
+            }
+
+            secondsLeft--;
+            if (secondsLeft <= 0) {
+                if (session.countdownHandle) {
+                    clearInterval(session.countdownHandle);
+                    session.countdownHandle = undefined;
+                }
+                return;
+            }
 
             emitCountdown();
-            session.countdownHandle = setInterval(() => {
-                if (!session.awaitingPostures) {
-                    this.clearCombatSessionTimers(session);
-                    return;
-                }
-
-                secondsLeft--;
-                if (secondsLeft <= 0) {
-                    if (session.countdownHandle) {
-                        clearInterval(session.countdownHandle);
-                        session.countdownHandle = undefined;
-                    }
-                    return;
-                }
-
-                emitCountdown();
-            }, COUNTDOWN_TICK_MS);
-        };
-
-        session.countdownStartHandle = setTimeout(() => {
-            session.countdownStartHandle = undefined;
-            startCountdown();
-        }, COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS);
+        }, COUNTDOWN_TICK_MS);
 
         session.timeoutHandle = setTimeout(() => {
             if (!session.awaitingPostures) return;
@@ -915,7 +895,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             }
 
             this.resolveCombatSession(session.roomId, timedOutSocketIds);
-        }, COMBAT_POSTURE_TIMEOUT_MS + COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS);
+        }, COMBAT_POSTURE_TIMEOUT_MS);
     }
 
     private clearCombatSessionTimers(session: CombatSession): void {
@@ -924,41 +904,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             session.timeoutHandle = undefined;
         }
 
-        if (session.countdownStartHandle) {
-            clearTimeout(session.countdownStartHandle);
-            session.countdownStartHandle = undefined;
-        }
-
         if (session.countdownHandle) {
             clearInterval(session.countdownHandle);
             session.countdownHandle = undefined;
-        }
-
-        for (const handle of session.vpPostureHandles) {
-            clearTimeout(handle);
-        }
-        session.vpPostureHandles = [];
-    }
-
-    private scheduleVirtualPlayerPostures(session: CombatSession): void {
-        const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
-        if (!activeGame) return;
-
-        for (const participantId of [session.attackerId, session.defenderId]) {
-            const participant = activeGame.lobby.players.find((p) => p.socketId === participantId);
-            if (!participant || participant.playerType !== PlayerType.Virtual) continue;
-
-            const posture: Posture = participant.virtualProfile === VirtualPlayerProfile.Aggressive
-                ? { type: 'atk', bonus: 2 }
-                : { type: 'def', bonus: 2 };
-
-            session.postures.set(participantId, posture);
-            const postureData: PostureReceivedData = { socketId: participantId, posture };
-            this.server.to(session.roomId).emit(JoinGameEvents.PostureReceived, postureData);
-        }
-
-        if (session.postures.has(session.attackerId) && session.postures.has(session.defenderId)) {
-            this.resolveCombatSession(session.roomId);
         }
     }
 
@@ -1012,7 +960,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             roundIndex: 1,
             awaitingPostures: false,
             consumeActionPointOnNextRound: true,
-            vpPostureHandles: [],
         };
 
         this.combatSessions.set(roomId, combatSession);

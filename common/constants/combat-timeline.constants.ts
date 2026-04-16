@@ -3,7 +3,6 @@ import { Posture } from '@common/character';
 // Constants for timing, common to front-end and back-end.
 export const COMBAT_POSTURE_TIMEOUT_MS = 10000;
 export const COMBAT_START_ANNOUNCEMENT_DELAY_MS = 3000;
-export const COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS = 3000;
 
 export const COMBAT_START_POPUP_DISPLAY_DURATION_MS = 3000;
 export const COMBAT_END_POPUP_DISPLAY_DURATION_MS = 4000;
