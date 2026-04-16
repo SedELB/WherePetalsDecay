@@ -1,7 +1,7 @@
 <div class="combat-container">
     <section class="fighter-column">
-        <div class="profile-card">
-            <img class="pfp" [src]="player.character.avatar" [alt]="player.character.name">
+        <div class="profile-card" [ngClass]="{ 'is-dead': isFighterDead('player') }">
+            <img class="pfp" id="player-pfp" [src]="player.character.avatar" [alt]="player.character.name"  [ngClass]="{ 'is-dead': isFighterDead('player') }">
             <h3>{{ player.character.name }} (vous)</h3>
 
             <div class="stats-panel compact unified">
@@ -9,6 +9,7 @@
                 <div class="bonus-legend" aria-label="Légende des bonus">
                     <span class="bonus-badge bonus-badge--posture">Bonus posture</span>
                     <span class="bonus-badge bonus-badge--dice">Bonus dé</span>
+                    <span class="bonus-badge bonus-badge--debuff">Malus glace</span>
                 </div>
                 <div class="stat-row stat-row--hp">
                     <span class="stat-label">❤️ HP</span>
@@ -26,6 +27,9 @@
                         @if (getDiceBonus('player', 'attack') > 0) {
                             <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('player', 'attack') }}</span>
                         }
+                        @if (getIceDebuff('player', 'attack') > 0) {
+                            <span class="bonus-badge bonus-badge--debuff">{{ getIceDebuffDisplay('player', 'attack') }}</span>
+                        }
                     </span>
                     <span class="stat-value">{{ getStatTotal('player', 'attack') }}</span>
                 </div>
@@ -37,6 +41,9 @@
                         }
                         @if (getDiceBonus('player', 'defense') > 0) {
                             <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('player', 'defense') }}</span>
+                        }
+                        @if (getIceDebuff('player', 'defense') > 0) {
+                            <span class="bonus-badge bonus-badge--debuff">{{ getIceDebuffDisplay('player', 'defense') }}</span>
                         }
                     </span>
                     <span class="stat-value">{{ getStatTotal('player', 'defense') }}</span>
@@ -56,10 +63,9 @@
     </section>
 
     <main class="fight-panel">
-        <h1>Interface de combat</h1>
-        <p class="subtitle">
+        <h1 class="round-counter">
             Round #{{ getCurrentRoundIndex() }}
-        </p>
+        </h1>
         <div class="combat-status-slot">
             @if (shouldShowAttackAnnouncement()) {
                 <p class="attack-announcement">{{ getAttackAnnouncementMessage() }}</p>
@@ -72,38 +78,48 @@
                 </div>
             }
         </div>
-        @if (diceRollDisplay; as roll) {
-            <div class="dice-roll-panel" [ngClass]="{ 'is-final': roll.isFinal }">
-                <p class="dice-roll-title">{{ roll.isFinal ? '🎲 Résultat des dés' : '🎲 Lancer des dés en cours' }}</p>
-                <div class="dice-roll-values dice-roll-values--stack">
-                    <span>
-                        {{ roll.player.fighterName }} ·
-                        ⚔️ D{{ roll.player.attackFaces }} : <b>{{ roll.player.attackValue }}</b> ·
-                        🛡️ D{{ roll.player.defenseFaces }} : <b>{{ roll.player.defenseValue }}</b>
-                    </span>
-                    <span>
-                        {{ roll.enemy.fighterName }} ·
-                        ⚔️ D{{ roll.enemy.attackFaces }} : <b>{{ roll.enemy.attackValue }}</b> ·
-                        🛡️ D{{ roll.enemy.defenseFaces }} : <b>{{ roll.enemy.defenseValue }}</b>
-                    </span>
-                </div>
-            </div>
-        }
 
         <div class="combat">
             <app-isometric-map
+                class="map"
                 [grid]="combatMap"
                 [players]="[player, enemy]"
                 [playerPositions]="playerPos"
                 [showDirectionalKeys]="false"
                 [playerFlipXMap]="combatFlipMap"
+                [lockCamera]="true"
             ></app-isometric-map>
 
-            <div class="combat-map-overlays">
-                @if (activeHitTargetSocketId; as targetId) {
-                    <div class="hit-marker" [ngStyle]="getOverlayStyle(targetId)">⚔️</div>
-                }
-            </div>
+            @for (impactPopup of impactDamagePopups; track impactPopup.id) {
+                <div
+                    class="impact-damage-float"
+                    [style.left.%]="impactPopup.leftPercent"
+                    [style.top.%]="impactPopup.topPercent"
+                    [style.--impact-tilt]="impactPopup.tiltDeg + 'deg'"
+                >
+                    {{ impactPopup.text }}
+                </div>
+            }
+
+            @if (diceRollDisplay; as roll) {
+                <div class="dice-roll-overlay">
+                    <div class="dice-roll-panel" [ngClass]="{ 'is-final': roll.isFinal }">
+                        <p class="dice-roll-title">{{ roll.isFinal ? '🎲 Résultat des dés' : '🎲 Lancer des dés en cours' }}</p>
+                        <div class="dice-roll-values dice-roll-values--stack">
+                            <span>
+                                {{ roll.player.fighterName }} ·
+                                ⚔️ D{{ roll.player.attackFaces }} : <b>{{ roll.player.attackValue }}</b> ·
+                                🛡️ D{{ roll.player.defenseFaces }} : <b>{{ roll.player.defenseValue }}</b>
+                            </span>
+                            <span>
+                                {{ roll.enemy.fighterName }} ·
+                                ⚔️ D{{ roll.enemy.attackFaces }} : <b>{{ roll.enemy.attackValue }}</b> ·
+                                🛡️ D{{ roll.enemy.defenseFaces }} : <b>{{ roll.enemy.defenseValue }}</b>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            }
 
             @if (combatEndPopup; as popup) {
                 <div class="damage-popup-overlay">
@@ -126,28 +142,12 @@
                         <p>{{ roundAnnouncementPopup.message }}</p>
                     </div>
                 </div>
-            } @else if (postureResultPopup) {
-                <div class="damage-popup-overlay">
-                    <div class="damage-popup damage-popup--posture">
-                        <h3>Bonus appliqués — Manche #{{ postureResultPopup.roundIndex }}</h3>
-                        <p><b>Votre posture :</b> {{ postureResultPopup.playerPosture }}</p>
-                        <p><b>Posture adverse :</b> {{ postureResultPopup.enemyPosture }}</p>
-                    </div>
-                </div>
             } @else if (damagePopup) {
                 <div class="damage-popup-overlay">
                     <div class="damage-popup">
                         <h3>Résultat de la manche #{{ damagePopup.rollIndex }}</h3>
                         <p><b>Dégâts infligés:</b> {{ damagePopup.damageDealt }}</p>
                         <p><b>Dégâts subis:</b> {{ damagePopup.damageReceived }}</p>
-                    </div>
-                </div>
-            } @else if (statusPopup) {
-                <div class="damage-popup-overlay">
-                    <div class="damage-popup damage-popup--status">
-                        <h3>État des combattants — Manche #{{ statusPopup.roundIndex }}</h3>
-                        <p><b>{{ player.character.name }} :</b> {{ statusPopup.playerLife }} PV</p>
-                        <p><b>{{ enemy.character.name }} :</b> {{ statusPopup.enemyLife }} PV</p>
                     </div>
                 </div>
             }
@@ -167,7 +167,7 @@
     </main>
 
     <section class="fighter-column">
-        <div class="profile-card">
+        <div class="profile-card" [ngClass]="{ 'is-dead': isFighterDead('enemy') }">
             <img class="pfp" [src]="enemy.character.avatar" [alt]="enemy.character.name">
             <h3>{{ enemy.character.name }}</h3>
 
@@ -176,6 +176,7 @@
                 <div class="bonus-legend" aria-label="Légende des bonus">
                     <span class="bonus-badge bonus-badge--posture">Bonus posture</span>
                     <span class="bonus-badge bonus-badge--dice">Bonus dé</span>
+                    <span class="bonus-badge bonus-badge--debuff">Malus glace</span>
                 </div>
                 <div class="stat-row stat-row--hp">
                     <span class="stat-label">❤️ HP</span>
@@ -193,6 +194,9 @@
                         @if (getDiceBonus('enemy', 'attack') > 0) {
                             <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('enemy', 'attack') }}</span>
                         }
+                        @if (getIceDebuff('enemy', 'attack') > 0) {
+                            <span class="bonus-badge bonus-badge--debuff">{{ getIceDebuffDisplay('enemy', 'attack') }}</span>
+                        }
                     </span>
                     <span class="stat-value">{{ getStatTotal('enemy', 'attack') }}</span>
                 </div>
@@ -204,6 +208,9 @@
                         }
                         @if (getDiceBonus('enemy', 'defense') > 0) {
                             <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('enemy', 'defense') }}</span>
+                        }
+                        @if (getIceDebuff('enemy', 'defense') > 0) {
+                            <span class="bonus-badge bonus-badge--debuff">{{ getIceDebuffDisplay('enemy', 'defense') }}</span>
                         }
                     </span>
                     <span class="stat-value">{{ getStatTotal('enemy', 'defense') }}</span>
