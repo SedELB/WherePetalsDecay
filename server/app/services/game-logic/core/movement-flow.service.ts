@@ -118,7 +118,7 @@ export class MovementFlowService {
         }
 
         this.gameTurnSyncService.emitActionPoints(server, lobbyId, socket.id);
-        this.gameTurnSyncService.autoEndTurnIfNoActions(lobbyId, socket.id);
+        this.gameTurnSyncService.refreshPlayerNavigationState(server, lobbyId, socket.id);
     }
 
     useSanctuary(server: Server, socket: Socket, payload: RequestUseSanctuaryPayload): void {
