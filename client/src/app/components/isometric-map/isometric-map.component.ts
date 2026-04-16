@@ -21,6 +21,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   @Input() grid: Tile[][] = [];
   @Input() players: Player[] = [];
   @Input() playerPositions: Record<string, Vec2> = {};
+  @Input() playerStartPositions: Record<string, Vec2> = {};
   @Input() reachableTiles: Vec2[] = [];
   @Input() teleportableTiles: Vec2[] = [];
   @Input() actionHighlightTiles: ActionTileHighlight[] = [];
@@ -218,9 +219,13 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
     ctx.clearRect(0, 0, rect.width, rect.height);
 
     this.isometricViewService.renderBoard({
-      ctx, width: rect.width, height: rect.height,
-      grid: this.grid, players: this.players,
+      ctx,
+      width: rect.width,
+      height: rect.height,
+      grid: this.grid,
+      players: this.players,
       playerPositions: this.animationService.getAnimatedPositions(),
+      playerStartPositions: this.playerStartPositions,
       camera: { x: this.cameraX, y: this.cameraY, zoom: this.zoom },
       needsRecenter: this.needsRecenter,
       reachableTiles: this.reachableTiles,

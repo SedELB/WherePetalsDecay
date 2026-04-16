@@ -10,7 +10,7 @@ import { GameLogicService, SanctuaryUseResult } from '@app/services/game-logic/c
 import { GameTurnSyncService } from '@app/services/game-logic/core/game-turn-sync.service';
 import { JournalService } from '@app/services/journal/journal.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
-import { GameMode, SanctuaryMode, TileItem, TileTexture } from '@common/enums';
+import { GameMode, TileTexture } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
@@ -152,9 +152,12 @@ export class MovementFlowService {
             });
         }
 
-        const sanctuaryLabel = result.sanctuaryType === TileItem.HealingSanctuary ? 'soin' : 'combat';
-        const modeLabel = mode === SanctuaryMode.DoubleOrNothing ? ' (double ou rien)' : '';
-        this.journalService.addSanctuaryUsedWithModeEntry(lobbyId, result.playerName, sanctuaryLabel, modeLabel);
+        this.journalService.addSanctuaryUsedEntry(lobbyId, result.playerName, {
+            sanctuaryType: result.sanctuaryType,
+            mode: result.mode,
+            healAmount: result.healAmount,
+            combatBonusApplied: result.combatBonusApplied,
+        });
 
         this.gameTurnSyncService.emitActionPoints(server, lobbyId, socket.id);
         this.gameTurnSyncService.autoEndTurnIfNoActions(lobbyId, socket.id);

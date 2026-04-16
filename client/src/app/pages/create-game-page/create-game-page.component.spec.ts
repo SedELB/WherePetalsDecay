@@ -33,13 +33,13 @@ describe('CreateGamePageComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  // No selection initially
-  it('should have no game mode selected initially', () => {
-    expect(component.gameMode).toBeNull();
+  // Pre-selections: Classic game mode and Small map size
+  it('should pre-select Classic game mode', () => {
+    expect(component.gameMode).toBe(GameMode.Classic);
   });
 
-  it('should have no map size selected initially', () => {
-    expect(component.mapSize).toBeNull();
+  it('should pre-select Small map size', () => {
+    expect(component.mapSize).toBe(MapSizeKey.Small);
   });
 
   // Test game mode selection
@@ -231,7 +231,6 @@ describe('CreateGamePageComponent', () => {
 
   // Test return button appears
   it('should render return button on the page', () => {
-    fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const returnButton = compiled.querySelector('app-button');
 
@@ -240,7 +239,6 @@ describe('CreateGamePageComponent', () => {
 
   // Test create button appears
   it('should render create button on the page', () => {
-    fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const createButton = compiled.querySelector('#save-button');
 
@@ -249,7 +247,6 @@ describe('CreateGamePageComponent', () => {
 
   // Test map size buttons appears
   it('should render all three map size buttons', () => {
-    fixture.detectChanges();
     const EXPECTED_SIZE_CARD_COUNT = 3;
     const compiled = fixture.nativeElement as HTMLElement;
     const sizeCards = compiled.querySelectorAll('.size-card');
@@ -259,7 +256,6 @@ describe('CreateGamePageComponent', () => {
 
   // Test game mode buttons appears
   it('should render both game mode buttons', () => {
-    fixture.detectChanges();
     const EXPECTED_GAME_MODE_COUNT = 2;
     const compiled = fixture.nativeElement as HTMLElement;
     const gameModeButtonGroup = compiled.querySelector('.gamemode-button-group');

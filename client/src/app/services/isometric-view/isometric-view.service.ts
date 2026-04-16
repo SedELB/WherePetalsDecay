@@ -1,15 +1,16 @@
 import { Injectable } from '@angular/core';
 import { ISO_ITEM_ASSETS, RENDER_CONSTANTS, STROKE_COLOR, TILE_LINE_WIDTH, TILE_THICKNESS } from '@app/constants/isometric.constants';
-import { PlayerShadowData, RenderBoardConfig, TileDepthParams, TileItemRenderData, TileRenderParams } from '@app/interfaces/isometric-interfaces';
+import { RenderBoardConfig, TileDepthParams, TileRenderParams } from '@app/interfaces/isometric-interfaces';
 import { PlayerAction, TileItem, TileTexture } from '@common/enums';
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
 import { applyCameraTransform, buildVertexMap, buildViewConfig, calculateAutoZoom, toIso } from './isometric-camera.helper';
 import { drawIsometricTileBase } from './isometric-terrain.helper';
+import { renderPlayers } from './player-render.helper';
 import { drawPortcullisBars } from './portcullis-render.helper';
 import { drawSanctuarySprite } from './sanctuary-render.helper';
-
+import { drawSpawnIcon } from './spawn-render.helper';
 const HALF_TILE_POSITION_OFFSET = 0.5;
 
 const DIRECTION_KEY_PRESS_OFFSET = 8;
@@ -99,7 +100,7 @@ export class IsometricViewService {
                 drawIsometricTileBase(params, depthParams, config, this.getImage);
 
                 // 2. Draw Entities
-                this.drawAssetsOnTile(params);
+                this.drawAssetsOnTile(params, col, row, config);
 
                 // 3. Draw Portcullis Bars (top layer)
                 if (tile.type === TileTexture.DoorClosed || tile.type === TileTexture.DoorOpened) {
@@ -163,7 +164,7 @@ export class IsometricViewService {
         );
     }
 
-    private drawAssetsOnTile(params: TileRenderParams): void {
+    private drawAssetsOnTile(params: TileRenderParams, col: number, row: number, config: RenderBoardConfig): void {
         const { context: ctx, surfaceTopLeft: north, surfaceTopRight: east,
             surfaceBottomRight: south, surfaceBottomLeft: west } = params;
 
@@ -173,153 +174,27 @@ export class IsometricViewService {
         const tileH = south.y - north.y;
 
         const renderData = { ctx, cx, cy, tileW, tileH };
-
-        this.drawItemAt(params.tile, renderData);
+        this.drawItemAt(params.tile, renderData, col, row, config);
     }
 
     private renderPlayers(vertices: Vec2[][], config: RenderBoardConfig): void {
-        const sortedPlayers = this.players
-            .map((player) => ({ player, position: this.playerPositions[player.socketId] }))
-            .filter((entry): entry is { player: Player; position: Vec2 } => !!entry.position)
-            .sort((left, right) => {
-                const leftDepth = left.position.x + left.position.y;
-                const rightDepth = right.position.x + right.position.y;
-                if (leftDepth !== rightDepth) return leftDepth - rightDepth;
-                return left.position.x - right.position.x;
-            });
-
-        for (const entry of sortedPlayers) {
-            this.drawPlayerAtPosition(entry.player, entry.position, vertices, config);
-        }
-    }
-
-    private drawPlayerAtPosition(player: Player, position: Vec2, vertices: Vec2[][], config: RenderBoardConfig): void {
-        if (!player?.character?.avatar) return;
-
-        const projectedData = this.projectPlayerPosition(position, vertices);
-        if (!projectedData) return;
-
-        const playerImg = this.getImage(player.character.avatar);
-        if (!playerImg?.complete || playerImg.naturalWidth <= 0) return;
-
-        const aspect = playerImg.naturalWidth / playerImg.naturalHeight;
-        const imgW = projectedData.tileW * RENDER_CONSTANTS.playerWidthRatio;
-        const imgH = (imgW / aspect) * RENDER_CONSTANTS.playerHeightAdjustment;
-
-        this.drawPlayerShadow(config.ctx, {
-            cx: projectedData.cx,
-            cy: projectedData.cy,
-            tileH: projectedData.tileH,
-            imgW,
-            imgH,
+        renderPlayers({
+            ctx: config.ctx,
+            players: this.players,
+            playerPositions: this.playerPositions,
+            vertices,
+            config,
+            getImage: this.getImage,
         });
-
-        this.drawPlayerSprite(
-            config.ctx,
-            playerImg,
-            {
-                x: projectedData.cx - imgW / 2,
-                y: projectedData.cy - imgH + (projectedData.tileH * RENDER_CONSTANTS.playerDepthOffset),
-                w: imgW,
-                h: imgH,
-                isFlipped: config.flipXMap?.[player.socketId] ?? false,
-                glowColor: this.getPlayerGlowColor(player, config),
-            },
-        );
     }
 
-    private getPlayerGlowColor(player: Player, config: RenderBoardConfig): string | null {
-        if (config.isCTF) {
-            if (config.teamA?.some((t) => t.socketId === player.socketId)) return '#3b82f6';
-            if (config.teamB?.some((t) => t.socketId === player.socketId)) return '#ef4444';
-            return null;
-        }
-
-        return player.socketId === config.localPlayerSocketId ? '#00f2fe' : null;
-    }
-
-    private drawPlayerSprite(
-        ctx: CanvasRenderingContext2D,
-        img: HTMLImageElement,
-        params: { x: number; y: number; w: number; h: number; isFlipped: boolean; glowColor: string | null },
+    private drawItemAt(
+        tile: Tile,
+        data: { ctx: CanvasRenderingContext2D; cx: number; cy: number; tileW: number; tileH: number },
+        col: number,
+        row: number,
+        config: RenderBoardConfig,
     ): void {
-        const { x, y, w, h, isFlipped, glowColor } = params;
-        const SHADOW_BLUR_L1 = 30;
-        const SHADOW_BLUR_L2 = 18;
-        const SHADOW_BLUR_L3 = 8;
-        const SHADOW_BLUR_OFF = 0;
-
-        ctx.save();
-        if (glowColor) {
-            ctx.shadowColor = glowColor;
-        }
-
-        if (isFlipped) {
-            const centerX = x + w / 2;
-            const centerY = y + h / 2;
-            ctx.translate(centerX, centerY);
-            ctx.scale(-1, 1);
-            ctx.translate(-centerX, -centerY);
-        }
-
-        if (glowColor) {
-            ctx.shadowBlur = SHADOW_BLUR_L1; ctx.drawImage(img, x, y, w, h);
-            ctx.shadowBlur = SHADOW_BLUR_L2; ctx.drawImage(img, x, y, w, h);
-            ctx.shadowBlur = SHADOW_BLUR_L3; ctx.drawImage(img, x, y, w, h);
-            ctx.shadowBlur = SHADOW_BLUR_OFF; ctx.drawImage(img, x, y, w, h);
-        } else {
-            ctx.drawImage(img, x, y, w, h);
-        }
-
-        ctx.restore();
-    }
-
-    private projectPlayerPosition(position: Vec2, vertices: Vec2[][]): {
-        cx: number;
-        cy: number;
-        tileW: number;
-        tileH: number;
-    } | null {
-        const totalRows = vertices.length - 1;
-        const totalColumns = vertices[0]?.length ? vertices[0].length - 1 : 0;
-        if (totalRows <= 0 || totalColumns <= 0) return null;
-
-        const centerX = position.x + HALF_TILE_POSITION_OFFSET;
-        const centerY = position.y + HALF_TILE_POSITION_OFFSET;
-
-        if (centerX < 0 || centerY < 0 || centerX > totalColumns || centerY > totalRows) return null;
-
-        const baseColumn = Math.min(Math.max(Math.floor(centerX), 0), totalColumns - 1);
-        const baseRow = Math.min(Math.max(Math.floor(centerY), 0), totalRows - 1);
-
-        const tx = centerX - baseColumn;
-        const ty = centerY - baseRow;
-
-        const topLeft = vertices[baseRow][baseColumn];
-        const topRight = vertices[baseRow][baseColumn + 1];
-        const bottomLeft = vertices[baseRow + 1][baseColumn];
-        const bottomRight = vertices[baseRow + 1][baseColumn + 1];
-
-        const topX = topLeft.x + ((topRight.x - topLeft.x) * tx);
-        const topY = topLeft.y + ((topRight.y - topLeft.y) * tx);
-        const bottomX = bottomLeft.x + ((bottomRight.x - bottomLeft.x) * tx);
-        const bottomY = bottomLeft.y + ((bottomRight.y - bottomLeft.y) * ty);
-
-        const cx = topX + ((bottomX - topX) * ty);
-        const cy = topY + ((bottomY - topY) * ty);
-
-        const tileW = Math.max(1, Math.abs(topRight.x - bottomLeft.x));
-        const tileH = Math.max(1, Math.abs(bottomRight.y - topLeft.y));
-
-        return {
-            cx,
-            cy,
-            tileW,
-            tileH,
-        };
-    }
-
-    private drawItemAt(tile: Tile, data: TileItemRenderData): void {
         if (tile.item == null) return;
 
         const imageSrc = ISO_ITEM_ASSETS[tile.item];
@@ -338,11 +213,27 @@ export class IsometricViewService {
 
         const verticalShift = data.tileH * RENDER_CONSTANTS.itemVerticalOffset;
 
-        this.drawItemShadow(data.ctx, {
-            cx: data.cx, cy: data.cy, tileW: data.tileW, tileH: data.tileH,
-            floatOffset, verticalShift,
-        });
-        data.ctx.drawImage(itemImg, data.cx - imgW / 2, data.cy - imgH / 2 + floatOffset + verticalShift, imgW, imgH);
+        this.drawItemShadow(data.ctx, { cx: data.cx, cy: data.cy, tileW: data.tileW, tileH: data.tileH, floatOffset, verticalShift });
+
+        const drawRect = {
+            x: data.cx - imgW / 2,
+            y: data.cy - imgH / 2 + floatOffset + verticalShift,
+            width: imgW,
+            height: imgH,
+        };
+
+        if (tile.item === TileItem.Spawn) {
+            let isLocalSpawn = false;
+            if (config.localPlayerSocketId && config.playerStartPositions) {
+                const startPos = config.playerStartPositions[config.localPlayerSocketId];
+                if (startPos && startPos.x === col && startPos.y === row) {
+                    isLocalSpawn = true;
+                }
+            }
+            drawSpawnIcon(data.ctx, itemImg, drawRect, isLocalSpawn);
+        } else {
+            data.ctx.drawImage(itemImg, drawRect.x, drawRect.y, drawRect.width, drawRect.height);
+        }
     }
 
 
@@ -366,20 +257,6 @@ export class IsometricViewService {
         ctx.restore();
     }
 
-    private drawPlayerShadow(ctx: CanvasRenderingContext2D, data: PlayerShadowData): void {
-        const shadowY = data.cy + (data.tileH * RENDER_CONSTANTS.shadowOffsetYRatio);
-        const radiusX = data.imgW * RENDER_CONSTANTS.shadowRadiusXRatio;
-        const radiusY = data.imgH * RENDER_CONSTANTS.shadowRadiusYRatio;
-        const ALPHA_SHADOW = 0.4;
-        const CIRCLE_RADIANS = 2 * Math.PI;
-
-        ctx.save();
-        ctx.fillStyle = `rgba(0, 0, 0, ${ALPHA_SHADOW})`;
-        ctx.beginPath();
-        ctx.ellipse(data.cx, shadowY, radiusX, radiusY, 0, 0, CIRCLE_RADIANS);
-        ctx.fill();
-        ctx.restore();
-    }
 
     // Method generated by Claude 4.6 Sonnet on April 15th 2026
     private drawDirectionKey(

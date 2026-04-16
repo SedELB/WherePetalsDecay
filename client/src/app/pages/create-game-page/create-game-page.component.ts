@@ -24,8 +24,8 @@ export class CreateGamePageComponent {
 
   gameModeEnum = GameMode;
   mapSizeEnum = MapSizeKey;
-  gameMode: GameMode | null = null;
-  mapSize: MapSizeKey | null = null;
+  gameMode: GameMode | null = GameMode.Classic;
+  mapSize: MapSizeKey | null = MapSizeKey.Small;
 
   gameModeSelected(gameMode: GameMode): void {
     this.gameMode = gameMode;

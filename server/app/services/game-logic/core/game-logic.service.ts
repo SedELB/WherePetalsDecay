@@ -1,4 +1,4 @@
-import { InitiateCombatPayload, NearestEnemyResult, PlayerMoveResult, TransferFlagPayload } from '@app/interfaces/game-logic.interface';
+import { InitiateCombatPayload, PlayerMoveResult, TransferFlagPayload } from '@app/interfaces/game-logic.interface';
 import { SanctuaryUseResult } from '@app/interfaces/sanctuary.interface';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { Direction, DIRECTION_OFFSETS } from '@common/direction';
@@ -302,6 +302,16 @@ export class GameLogicService {
         if (!game) return {};
         const positions: Record<string, Vec2> = {};
         game.playerPositions.forEach((pos, socketId) => {
+            positions[socketId] = pos;
+        });
+        return positions;
+    }
+
+    getPlayerStartPositions(lobbyId: string): Record<string, Vec2> {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return {};
+        const positions: Record<string, Vec2> = {};
+        game.playerStartPositions.forEach((pos, socketId) => {
             positions[socketId] = pos;
         });
         return positions;

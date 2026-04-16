@@ -43,9 +43,9 @@ export class VirtualPlayerProfileService {
         const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
 
         if (actionPoints <= 0) {
-            const nearestEnemy = this.action.combat.scanner.findNearestEnemy(game, virtualPlayer, currentPos, true);
-            if (nearestEnemy) {
-                handlers.moveTowardThenActWithDoors(context, currentPos, nearestEnemy.position, () => {
+            const postCombatEnemy = this.action.combat.scanner.findNearestEnemy(game, virtualPlayer, currentPos, true);
+            if (postCombatEnemy) {
+                handlers.moveTowardThenActWithDoors(context, currentPos, postCombatEnemy.position, () => {
                     const hasStartedCombat = handlers.tryAttackAdjacentEnemy(context);
                     if (!hasStartedCombat) handlers.endVirtualPlayerTurn(lobbyId);
                 });

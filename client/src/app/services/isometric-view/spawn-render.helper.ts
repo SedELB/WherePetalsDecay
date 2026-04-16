@@ -1,5 +1,10 @@
-const LOCAL_SPAWN_ICON_TINT = 'rgba(140, 35, 35, 0.85)';
-const OTHER_SPAWN_ICON_TINT = 'rgba(20, 20, 20, 0.85)';
+const SPAWN_CENTER_Y_OFFSET_RATIO = 0.35;
+const SPAWN_PEDESTAL_WIDTH_RATIO = 0.4;
+const SPAWN_PEDESTAL_HEIGHT_RATIO = 0.15;
+const SPAWN_OTHER_ALPHA = 0.45;
+const SPAWN_GLOW_BLUR = 15;
+const SPAWN_PEDESTAL_ALPHA = 0.4;
+const SPAWN_LINE_WIDTH = 2;
 
 export function drawSpawnIcon(
   ctx: CanvasRenderingContext2D,
@@ -8,9 +13,26 @@ export function drawSpawnIcon(
   isLocalSpawn: boolean,
 ): void {
   ctx.save();
-  ctx.drawImage(image, drawRect.x, drawRect.y, drawRect.width, drawRect.height);
-  ctx.globalCompositeOperation = 'source-atop';
-  ctx.fillStyle = isLocalSpawn ? LOCAL_SPAWN_ICON_TINT : OTHER_SPAWN_ICON_TINT;
-  ctx.fillRect(drawRect.x, drawRect.y, drawRect.width, drawRect.height);
+  
+  if (isLocalSpawn) {
+    const centerX = drawRect.x + drawRect.width / 2;
+    const centerY = drawRect.y + drawRect.height / 2 + drawRect.height * SPAWN_CENTER_Y_OFFSET_RATIO;
+    
+    ctx.beginPath();
+    ctx.ellipse(centerX, centerY, drawRect.width * SPAWN_PEDESTAL_WIDTH_RATIO, drawRect.height * SPAWN_PEDESTAL_HEIGHT_RATIO, 0, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 255, 0, ${SPAWN_PEDESTAL_ALPHA})`;
+    ctx.fill();
+    ctx.strokeStyle = '#ffff00';
+    ctx.lineWidth = SPAWN_LINE_WIDTH;
+    ctx.stroke();
+
+    ctx.shadowColor = 'yellow';
+    ctx.shadowBlur = SPAWN_GLOW_BLUR;
+    ctx.drawImage(image, drawRect.x, drawRect.y, drawRect.width, drawRect.height);
+  } else {
+    ctx.globalAlpha = SPAWN_OTHER_ALPHA;
+    ctx.drawImage(image, drawRect.x, drawRect.y, drawRect.width, drawRect.height);
+  }
+  
   ctx.restore();
 }

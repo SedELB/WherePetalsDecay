@@ -40,6 +40,7 @@
                     [grid]="signals.game()?.grid ?? []"
                     [players]="signals.lobby()?.players ?? []"
                     [playerPositions]="signals.playerPositions()"
+                    [playerStartPositions]="signals.playerStartPositions()"
                     [reachableTiles]="signals.reachableTiles()"
                     [teleportableTiles]="signals.isDebugModeActive() ? signals.reachableTilesForTeleport() : []"
                     [localPlayerSocketId]="signals.localPlayer()?.socketId"
