@@ -16,7 +16,7 @@ import {
     CombatRoundTimelineData, PostureReceivedData,
 } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { Namespace, Socket, Server } from 'socket.io';
 import { CombatStateService } from './combat-state.service';
 import { GameLogicService } from './game-logic.service';
@@ -28,9 +28,9 @@ export class CombatFlowService {
     @Inject(JournalService) private readonly journalService: JournalService;
 
     constructor(
-        @Inject(forwardRef(() => GameLogicService)) private readonly gameLogicService: GameLogicService,
+        @Inject(GameLogicService) private readonly gameLogicService: GameLogicService,
         private readonly combatState: CombatStateService,
-        @Inject(forwardRef(() => VirtualPlayerService)) private readonly virtualPlayerService: VirtualPlayerService,
+        @Inject(VirtualPlayerService) private readonly virtualPlayerService: VirtualPlayerService,
     ) {}
 
     private server: Server;
