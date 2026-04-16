@@ -1,23 +1,23 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { GameViewService } from '@app/services/game-view/game-view.service';
 import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
+import { GameViewService } from '@app/services/game-view/game-view.service';
+import { BASE_STATS } from '@common/constants/character.constants';
 import { PlayerAction } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
-import { BASE_STATS } from '@common/constants/character.constants';
 import {
-    getOrderedPlayers,
-    getAdjacentPlayers,
-    getTeamPlayers,
-    getAttackTargets,
-    getRequestFlagTargets,
-    getGiveFlagTargets,
-    getAdjacentDoorTiles,
-    getDoorActionLabel,
-    getSanctuaryTargets,
-    getActionHighlightTiles,
     checkHasAnyAction,
+    getActionHighlightTiles,
+    getAdjacentDoorTiles,
+    getAdjacentPlayers,
+    getAttackTargets,
+    getDoorActionLabel,
+    getGiveFlagTargets,
+    getOrderedPlayers,
     getPlayerName,
+    getRequestFlagTargets,
+    getSanctuaryTargets,
+    getTeamPlayers,
 } from './game-page.helper';
 
 @Injectable({

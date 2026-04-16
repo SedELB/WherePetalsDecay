@@ -74,7 +74,7 @@
             {{ isLeftPanelOpen ? '▶' : '◀' }} Info
         </button>
         <aside class="side-panel left" [class.collapsed]="!isLeftPanelOpen" [class.debug-background]="this.isDebugModeActive()">
-            <section class="game-stats" [class.collapsed]="shouldCollapseGameInfo()">
+            <section class="game-stats">
                 <h3 class="section-title">Informations de partie</h3>
                 <div class="game-info">
                     <div class="info-item">

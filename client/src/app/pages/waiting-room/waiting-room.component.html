@@ -7,9 +7,9 @@
             <p class="room-code">
                 ID Partie : <strong>{{ currentLobby()?.lobbyId }}</strong>
             </p>
-            <p class="game-name">Jeu : {{ currentLobby()?.game?.name }}</p>
+            <p class="game-name">Jeu : <strong>{{ currentLobby()?.game?.name }}</strong></p>
             <p class="player-count">
-                Joueurs : {{ currentLobby()?.playerCount }} / {{ currentLobby()?.game?.maxPlayers }}
+                Joueurs : <strong>{{ currentLobby()?.playerCount }} / {{ currentLobby()?.game?.maxPlayers }}</strong>
             </p>
         </div>
 
@@ -67,9 +67,6 @@
                 <div class="actions">
                     @if (isOrganizer()) {
                     <app-button (clicked)="onStartGame()" [disabled]="!canStartGame()"> Démarrer la partie </app-button>
-                    <app-button (clicked)="onToggleLock()" [disabled]="currentLobby()?.playerCount === currentLobby()?.game?.maxPlayers">
-                        {{ currentLobby()?.isLocked ? 'Déverrouiller' : 'Verrouiller' }}
-                    </app-button>
                     }
                     <app-button (clicked)="leaveLobby()">
                         {{ isOrganizer() ? 'Annuler la partie' : 'Quitter' }}
