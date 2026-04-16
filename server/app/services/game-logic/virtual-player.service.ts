@@ -22,9 +22,9 @@ const HEALING_SANCTUARY_MIN_MISSING_HP = 2;
 const AGGRESSIVE_POSTURE: Posture = { type: 'atk', bonus: 2 };
 const DEFENSIVE_POSTURE: Posture = { type: 'def', bonus: 2 };
 
-const EVENT_PLAYER_MOVED = 'playerMoved'; // TODO : move to common/events.ts
-const EVENT_DOOR_TOGGLED = 'doorToggled';  // TODO : move to common/events.ts
-const EVENT_ACTION_POINTS = 'actionPoints'; // TODO : move to common/events.ts
+const EVENT_PLAYER_MOVED = 'playerMoved';
+const EVENT_DOOR_TOGGLED = 'doorToggled';
+const EVENT_ACTION_POINTS = 'actionPoints';
 
 // Function used by VirtualPlayerService to ask the gateway to start VP combat
 type StartVirtualPlayerCombat = (lobbyId: string, attackerId: string, defenderId: string) => void;
@@ -74,6 +74,13 @@ export class VirtualPlayerService {
             return;
         }
 
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
+        const movementPoints = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
+        if (actionPoints <= 0 && movementPoints <= 0) {
+            this.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
+
         if (game.lobby.game.gameMode === GameMode.Ctf) {
             this.runCtfTurn(context, currentPos);
         } else {
@@ -100,11 +107,7 @@ export class VirtualPlayerService {
             this.continueTurnAfterSanctuary(context);
             return;
         }
-        // Fallback: healing sanctuary if injured and combat wasn't applicable
-        if (isInjured && this.tryUseSanctuaryAtCurrentPosition(context, TileItem.HealingSanctuary)) {
-            this.continueTurnAfterSanctuary(context);
-            return;
-        }
+
 
         if (virtualPlayer.virtualProfile === VirtualPlayerProfile.Aggressive) {
             this.runAggressiveClassicTurn(context, currentPos);
@@ -309,7 +312,7 @@ export class VirtualPlayerService {
         // close it if possible, otherwise end turn.
         const openedThreatDoor = this.findAdjacentThreatDoor(context, currentPos, true);
         if (openedThreatDoor) {
-            if (actionPoints > 0) this.tryCloseDoorAtPosition(context, openedThreatDoor);
+            if (actionPoints > 0) this.tryToggleDoorAtPosition(context, openedThreatDoor, TileTexture.DoorOpened);
             this.endVirtualPlayerTurn(lobbyId);
             return true;
         }
@@ -414,7 +417,6 @@ export class VirtualPlayerService {
 
         if (isInjured && healingBorderOnPath) return healingBorderOnPath;
         if (combatBorderOnPath) return combatBorderOnPath;
-        if (isInjured && healingBorderOnPath) return healingBorderOnPath;
         return fleeTarget;
     }
 
@@ -454,9 +456,6 @@ export class VirtualPlayerService {
         }
 
         const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, currentPos);
-
-        // TODO: check later if we can delete this
-        // if (!this.scanner.findNearestReachableSanctuary(game, virtualPlayer, currentPos, [sanctuaryType], costToPosition)) return false;
 
         const border = this.scanner.findNearestTileAdjacentToSanctuary(game, virtualPlayer, currentPos, {
             sanctuaryType,
@@ -568,8 +567,6 @@ export class VirtualPlayerService {
     // --------
     // CTF mode
 
-    // TODO : if we are in ctf and the VP is defensive, maybe we can use the 10s delay and make the choice in a random time
-
     private runCtfTurn(context: TurnContext, currentPos: Vec2): void {
         const { game, virtualPlayer, lobbyId } = context;
 
@@ -580,12 +577,20 @@ export class VirtualPlayerService {
                 this.endVirtualPlayerTurn(lobbyId);
                 return;
             }
-            this.moveTowardThenAct(context, currentPos, startPos, () => {
+            const needsAp = this.ctfPathNeedsAp(game, virtualPlayer, currentPos, startPos);
+            if (this.tryCtfPathSanctuary(context, currentPos, startPos, needsAp)) return;
+
+            this.moveTowardThenActWithDoors(context, currentPos, startPos, () => {
                 const pos = game.playerPositions.get(virtualPlayer.socketId);
                 if (pos) {
                     const winner = this.gameLogicService.checkWinCondition(lobbyId, virtualPlayer.socketId, pos);
-                    if (winner) context.onGameEnded(lobbyId, winner.socketId);
+                    if (winner) {
+                        context.onGameEnded(lobbyId, winner.socketId);
+                        return;
+                    }
                 }
+                // if an enemy blocking the spawn, attack them to clear the path
+                if (this.tryAttackAdjacentEnemy(context)) return;
                 this.endVirtualPlayerTurn(lobbyId);
             });
             return;
@@ -594,7 +599,13 @@ export class VirtualPlayerService {
         // Flag is on the ground
         const flagOnGroundPos = this.scanner.findFlagOnMap(game);
         if (flagOnGroundPos) {
-            this.moveTowardThenAct(context, currentPos, flagOnGroundPos, () => this.endVirtualPlayerTurn(lobbyId));
+            const needsAp = this.ctfPathNeedsAp(game, virtualPlayer, currentPos, flagOnGroundPos);
+            if (this.tryCtfPathSanctuary(context, currentPos, flagOnGroundPos, needsAp)) return;
+
+            this.moveTowardThenActWithDoors(context, currentPos, flagOnGroundPos, () => {
+                // VP just races to pick it up
+                this.endVirtualPlayerTurn(lobbyId);
+            });
             return;
         }
 
@@ -608,6 +619,13 @@ export class VirtualPlayerService {
             }
         }
 
+        // Flag is held by an ally
+        const allyCarrier = this.scanner.findAllyFlagCarrier(game, virtualPlayer);
+        if (allyCarrier) {
+            this.runCtfAllyHasFlag(context, currentPos, allyCarrier);
+            return;
+        }
+
         // No flag anywhere relevant – fall back to classic profile behaviour.
         this.runClassicTurn(context, currentPos);
     }
@@ -616,19 +634,26 @@ export class VirtualPlayerService {
         const { game, virtualPlayer, lobbyId } = context;
 
         if (virtualPlayer.virtualProfile === VirtualPlayerProfile.Aggressive) {
-            // Chase and attack the carrier.
-            this.moveTowardThenAct(context, currentPos, carrierPos, () => {
+            // Aggressive: chase the carrier. Need AP only if VP will reach the carrier this turn or there's a door.
+            const willReachCarrier = this.isEnemyReachableThisTurn(game, virtualPlayer, currentPos, carrierPos);
+            const hasClosedDoor = this.hasClosedDoorOnCtfPath(game, currentPos, carrierPos);
+            if (this.tryCtfPathSanctuary(context, currentPos, carrierPos, hasClosedDoor || willReachCarrier)) return;
+
+            this.moveTowardThenActWithDoors(context, currentPos, carrierPos, () => {
                 const hasStartedCombat = this.tryAttackAdjacentEnemy(context);
                 if (!hasStartedCombat) this.endVirtualPlayerTurn(lobbyId);
             });
         } else {
-            // Block the carrier's start position.
+            // Defensive: block the carrier's start position.
             const carrierStartPos = game.playerStartPositions.get(enemyCarrier.socketId);
             const blockadeTarget = carrierStartPos
                 ? this.scanner.findNearestFreePositionAround(game, carrierStartPos, virtualPlayer.socketId)
                 : null;
+            const target = blockadeTarget ?? carrierPos;
+            const needsAp = this.ctfPathNeedsAp(game, virtualPlayer, currentPos, target);
+            if (this.tryCtfPathSanctuary(context, currentPos, target, needsAp)) return;
 
-            this.moveTowardThenAct(context, currentPos, blockadeTarget ?? carrierPos, () => {
+            this.moveTowardThenActWithDoors(context, currentPos, target, () => {
                 const hasStartedCombat = this.tryAttackAdjacentEnemy(context);
                 if (!hasStartedCombat) this.endVirtualPlayerTurn(lobbyId);
             });
@@ -636,33 +661,222 @@ export class VirtualPlayerService {
     }
 
     // --------
-    // Movement
+    // CTF ally-has-flag behaviour
 
-    // Computes Dijkstra to 'targetPos' and steps as far as the VP's
-    // movement points allows, then calls 'onDone'
-    private moveTowardThenAct(context: TurnContext, currentPos: Vec2, targetPos: Vec2, onDone: () => void): void {
-        const { game, virtualPlayer } = context;
-        const dijkstraResult = this.pathfindingService.computeFullDijkstra(game, currentPos);
-        const fullPath = this.pathfindingService.reconstructPath(targetPos, dijkstraResult.predecessorKey);
+    private runCtfAllyHasFlag(context: TurnContext, currentPos: Vec2, allyCarrier: Player): void {
+        const { virtualPlayer } = context;
 
-        if (!fullPath || fullPath.length === 0) {
-            onDone();
-            return;
+        if (virtualPlayer.virtualProfile === VirtualPlayerProfile.Aggressive) {
+            this.runCtfAggressiveEscort(context, currentPos, allyCarrier);
+        } else {
+            this.runCtfDefensiveGuard(context, currentPos, allyCarrier);
         }
-
-        const remainingMovement = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
-        const furthestStep = this.pathfindingService.findFurthestReachablePositionOnPath(
-            game, fullPath, remainingMovement, virtualPlayer.socketId,
-        );
-
-        if (!furthestStep) {
-            onDone();
-            return;
-        }
-
-        const travelPath = this.pathfindingService.reconstructPath(furthestStep, dijkstraResult.predecessorKey) ?? [];
-        this.stepAlongPath(context, travelPath, 0, onDone);
     }
+
+    // Defensive: guard the ally's spawn
+    //   1. If has AP and a reachable enemy exists: attack, then return near spawn.
+    //   2. Otherwise : move to an adjacent tile of the ally's spawn and stay
+    private runCtfDefensiveGuard(context: TurnContext, currentPos: Vec2, allyCarrier: Player): void {
+        const { game, virtualPlayer, lobbyId } = context;
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
+        const movementPoints = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
+
+        const allySpawn = game.playerStartPositions.get(allyCarrier.socketId);
+        if (!allySpawn) {
+            this.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
+
+        // If has AP and movement, look for a reachable enemy to intercept
+        if (actionPoints > 0 && movementPoints > 0) {
+            const nearestEnemy = this.scanner.findNearestEnemy(game, virtualPlayer, currentPos, true);
+            if (nearestEnemy) {
+                const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, currentPos, true);
+                const enemyCost = costToPosition.get(this.pathfindingService.positionKey(nearestEnemy.position)) ?? Infinity;
+                if (enemyCost <= movementPoints) {
+                    // AP will be used for combat – no sanctuary
+                    this.moveTowardThenActWithDoors(context, currentPos, nearestEnemy.position, () => {
+                        if (this.tryAttackAdjacentEnemy(context)) return;
+                        this.moveBackToSpawnArea(context, allySpawn);
+                    });
+                    return;
+                }
+            }
+        }
+
+        // No enemy to fight – try sanctuary on the way to the spawn area
+        const guardTarget = this.scanner.findNearestFreePositionAround(game, allySpawn, virtualPlayer.socketId);
+        if (guardTarget && (guardTarget.x !== currentPos.x || guardTarget.y !== currentPos.y)) {
+            const hasClosedDoor = this.hasClosedDoorOnCtfPath(game, currentPos, guardTarget);
+            if (this.tryCtfPathSanctuary(context, currentPos, guardTarget, hasClosedDoor)) return;
+
+            this.moveTowardThenActWithDoors(context, currentPos, guardTarget, () => {
+                this.endVirtualPlayerTurn(lobbyId);
+            });
+            return;
+        }
+
+        this.endVirtualPlayerTurn(lobbyId);
+    }
+
+    // Aggressive: escort the ally
+    //   - Move toward the ally's current position
+    //   - Attack any adjacent enemy encountered along the way
+    //   - Continue approaching after combat
+    //   - End turn when 0 AP and 0 MP
+    private runCtfAggressiveEscort(context: TurnContext, currentPos: Vec2, allyCarrier: Player): void {
+        const { game, virtualPlayer, lobbyId } = context;
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
+
+        // If adjacent to an enemy and has AP, attack before moving (AP needed for combat)
+        if (actionPoints > 0 && this.tryAttackAdjacentEnemy(context)) return;
+
+        const allyPos = game.playerPositions.get(allyCarrier.socketId);
+        if (!allyPos) {
+            this.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
+
+        // No adjacent enemy – try sanctuary on the way to the ally
+        const hasClosedDoor = this.hasClosedDoorOnCtfPath(game, currentPos, allyPos);
+        const hasAdjacentEnemy = this.scanner.getAdjacentOpponents(game, virtualPlayer, currentPos).length > 0;
+        if (this.tryCtfPathSanctuary(context, currentPos, allyPos, hasClosedDoor || hasAdjacentEnemy)) return;
+
+        this.moveTowardThenActWithDoors(context, currentPos, allyPos, () => {
+            if (this.tryAttackAdjacentEnemy(context)) return;
+            this.endVirtualPlayerTurn(lobbyId);
+        });
+    }
+
+    // Helper: move back toward spawn area after an interception, then end turn
+    private moveBackToSpawnArea(context: TurnContext, spawnPos: Vec2): void {
+        const { game, virtualPlayer, lobbyId } = context;
+        const currentPos = game.playerPositions.get(virtualPlayer.socketId);
+        const remainingMp = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
+        if (!currentPos || remainingMp <= 0) {
+            this.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
+
+        const returnTarget = this.scanner.findNearestFreePositionAround(game, spawnPos, virtualPlayer.socketId);
+        if (returnTarget && (returnTarget.x !== currentPos.x || returnTarget.y !== currentPos.y)) {
+            this.moveTowardThenActWithDoors(context, currentPos, returnTarget, () => this.endVirtualPlayerTurn(lobbyId));
+        } else {
+            this.endVirtualPlayerTurn(lobbyId);
+        }
+    }
+
+    // --------
+    // CTF sanctuary helpers
+
+    // Standard check: AP is needed if there's a closed door on the path or an enemy on the target tile
+    private ctfPathNeedsAp(game: ActiveGame, virtualPlayer: Player, currentPos: Vec2, targetPos: Vec2): boolean {
+        return this.hasClosedDoorOnCtfPath(game, currentPos, targetPos)
+            || this.isEnemyOnTile(game, virtualPlayer, targetPos);
+    }
+
+    private hasClosedDoorOnCtfPath(game: ActiveGame, currentPos: Vec2, targetPos: Vec2): boolean {
+        const dijkstraResult = this.pathfindingService.computeFullDijkstra(game, currentPos, true);
+        const path = this.pathfindingService.reconstructPath(targetPos, dijkstraResult.predecessorKey);
+        if (!path) return false;
+        return path.some((step) => game.lobby.game.grid[step.y]?.[step.x]?.type === TileTexture.DoorClosed);
+    }
+
+    private isEnemyOnTile(game: ActiveGame, virtualPlayer: Player, pos: Vec2): boolean {
+        return game.lobby.players.some((p) => {
+            if (p.socketId === virtualPlayer.socketId || p.hasAbandonned) return false;
+            if (!this.scanner.isOpponent(game, virtualPlayer, p)) return false;
+            const pPos = game.playerPositions.get(p.socketId);
+            return pPos !== undefined && pPos.x === pos.x && pPos.y === pos.y;
+        });
+    }
+
+    // Returns true if the VP can reach a tile adjacent to the enemy this turn
+    private isEnemyReachableThisTurn(game: ActiveGame, virtualPlayer: Player, currentPos: Vec2, enemyPos: Vec2): boolean {
+        const remainingMp = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
+        const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, currentPos, true);
+        return (Object.values(DIRECTION_OFFSETS) as Vec2[]).some((offset) => {
+            const adj = { x: enemyPos.x + offset.x, y: enemyPos.y + offset.y };
+            const cost = costToPosition.get(this.pathfindingService.positionKey(adj)) ?? Infinity;
+            return cost <= remainingMp;
+        });
+    }
+
+    // Attempts to use the first sanctuary along the CTF path.
+    // Returns true if sanctuary usage was initiated (caller should return).
+    private tryCtfPathSanctuary(context: TurnContext, currentPos: Vec2, targetPos: Vec2, needsApForTarget: boolean): boolean {
+        if (needsApForTarget) return false;
+
+        const { game, virtualPlayer } = context;
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
+        if (actionPoints <= 0) return false;
+
+        const isInjured = virtualPlayer.character.life <= this.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
+        const hasCombatBonus = this.hasCombatBonus(game, virtualPlayer.socketId);
+
+        // Priority 1: use sanctuary at current position
+        if (isInjured && this.tryUseSanctuaryAtCurrentPosition(context, TileItem.HealingSanctuary)) {
+            setTimeout(() => this.runDecisionCycle(context), VP_STEP_DELAY_MS);
+            return true;
+        }
+        if (!hasCombatBonus && this.tryUseSanctuaryAtCurrentPosition(context, TileItem.CombatSanctuary)) {
+            setTimeout(() => this.runDecisionCycle(context), VP_STEP_DELAY_MS);
+            return true;
+        }
+
+        // Priority 2: find the first sanctuary border on the reachable path to the target
+        const dijkstraResult = this.pathfindingService.computeFullDijkstra(game, currentPos, true);
+        const path = this.pathfindingService.reconstructPath(targetPos, dijkstraResult.predecessorKey);
+        if (!path || path.length === 0) return false;
+
+        const sanctuaryOnPath = this.findFirstReachableSanctuaryOnPath(context, path);
+        if (!sanctuaryOnPath) return false;
+
+        this.moveTowardThenActWithDoors(context, currentPos, sanctuaryOnPath.position, () => {
+            this.tryUseSanctuaryAtCurrentPosition(context, sanctuaryOnPath.type);
+            setTimeout(() => this.runDecisionCycle(context), VP_STEP_DELAY_MS);
+        });
+        return true;
+    }
+
+    // Walks along 'path' and returns the first tile (reachable within current MP) that borders a usable sanctuary
+    private findFirstReachableSanctuaryOnPath(
+        context: TurnContext,
+        path: Vec2[],
+    ): { position: Vec2; type: TileItem.HealingSanctuary | TileItem.CombatSanctuary } | null {
+        const { game, virtualPlayer } = context;
+        const remainingMp = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
+        const hasCombatBonus = this.hasCombatBonus(game, virtualPlayer.socketId);
+        const isInjured = virtualPlayer.character.life <= this.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
+
+        let accumulatedCost = 0;
+        for (const step of path) {
+            const tile = game.lobby.game.grid[step.y]?.[step.x];
+            if (!tile) break;
+
+            const moveCost = tile.type === TileTexture.DoorClosed ? 1 : TILE_COSTS[tile.type];
+            if (moveCost === Infinity) break;
+
+            accumulatedCost += moveCost;
+            if (accumulatedCost > remainingMp) break;
+
+            // Skip door tiles and occupied tiles
+            if (tile.type === TileTexture.DoorClosed || tile.type === TileTexture.DoorOpened) continue;
+            if (this.pathfindingService.isTileOccupiedByAnotherPlayer(game, step, virtualPlayer.socketId)) continue;
+
+            if (isInjured && this.scanner.isTileAdjacentToSanctuary(game, step, TileItem.HealingSanctuary)) {
+                return { position: step, type: TileItem.HealingSanctuary };
+            }
+            if (!hasCombatBonus && this.scanner.isTileAdjacentToSanctuary(game, step, TileItem.CombatSanctuary)) {
+                return { position: step, type: TileItem.CombatSanctuary };
+            }
+        }
+
+        return null;
+    }
+
+    // --------
+    // Movement
 
     // Door aware:
     //   - targeting enemies behind closed doors & depends on AP
@@ -707,7 +921,7 @@ export class VirtualPlayerService {
         // If the VP is adjacent to a closed door and has AP but no movement left,
         // open the door before ending turn.
         if (canOpenDoorsNow && remainingMovement <= 0 && firstTile?.type === TileTexture.DoorClosed) {
-            this.tryOpenDoorAtPosition(context, firstStep);
+            this.tryToggleDoorAtPosition(context, firstStep, TileTexture.DoorClosed);
             onDone();
             return;
         }
@@ -739,7 +953,7 @@ export class VirtualPlayerService {
         // If the next tile is a closed door and the VP has an AP, open it before moving.
         const tileAtTarget = game.lobby.game.grid[targetStep.y]?.[targetStep.x];
         if (tileAtTarget?.type === TileTexture.DoorClosed) {
-            const opened = this.tryOpenDoorAtPosition(context, targetStep);
+            const opened = this.tryToggleDoorAtPosition(context, targetStep, TileTexture.DoorClosed);
             if (!opened) {
                 onDone();
                 return;
@@ -775,36 +989,16 @@ export class VirtualPlayerService {
         );
     }
 
-    // Opens a closed door adjacent to the VP's current position
-    // Returns true on success, false if the VP has no AP or the door can't be opened
-    private tryOpenDoorAtPosition(context: TurnContext, doorPos: Vec2): boolean {
-        const { server, game, virtualPlayer, lobbyId } = context;
-
-        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
-        if (actionPoints <= 0) return false;
-
-        const result = this.gameLogicService.toggleDoor(lobbyId, virtualPlayer.socketId, doorPos);
-        if (!result) return false;
-
-        server.to(lobbyId).emit(EVENT_DOOR_TOGGLED, {
-            position: doorPos,
-            newType: game.lobby.game.grid[doorPos.y][doorPos.x].type,
-        });
-
-        const updatedAp = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
-        server.to(lobbyId).emit(EVENT_ACTION_POINTS, { socketId: virtualPlayer.socketId, actionPoints: updatedAp });
-
-        return true;
-    }
-
-    private tryCloseDoorAtPosition(context: TurnContext, doorPos: Vec2): boolean {
+    // Toggles a door (open or close) adjacent to the VP's current position if it matches expectedType
+    // Returns true on success, false if the VP has no AP or the door can't be toggled
+    private tryToggleDoorAtPosition(context: TurnContext, doorPos: Vec2, expectedType: TileTexture): boolean {
         const { server, game, virtualPlayer, lobbyId } = context;
 
         const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
         if (actionPoints <= 0) return false;
 
         const tile = game.lobby.game.grid[doorPos.y]?.[doorPos.x];
-        if (tile?.type !== TileTexture.DoorOpened) return false;
+        if (tile?.type !== expectedType) return false;
 
         const result = this.gameLogicService.toggleDoor(lobbyId, virtualPlayer.socketId, doorPos);
         if (!result) return false;
@@ -816,6 +1010,7 @@ export class VirtualPlayerService {
 
         const updatedAp = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
         server.to(lobbyId).emit(EVENT_ACTION_POINTS, { socketId: virtualPlayer.socketId, actionPoints: updatedAp });
+
         return true;
     }
 
@@ -870,8 +1065,7 @@ export class VirtualPlayerService {
 
         const target = this.selectBestAttackTarget(adjacentEnemies, game, virtualPlayer);
 
-        // Apply the VP's posture before combat so CombatService uses the right bonus.
-        // TODO : here we preselect the posture****
+        // Pre-select the VP's posture before combat so CombatService uses the right bonus.
         virtualPlayer.character.bonusPosture = this.postureForProfile(virtualPlayer.virtualProfile);
 
         startCombat(lobbyId, virtualPlayer.socketId, target.socketId);
@@ -914,7 +1108,6 @@ export class VirtualPlayerService {
         if (!tile) return;
 
         const key = this.pathfindingService.positionKey(pos);
-        // TODO : does is work with open door ?
         const isPassableTerrain = tile.type === 'floor' || tile.type === 'water' || tile.type === 'ice' || tile.type === 'doorOpened';
 
         if (isPassableTerrain) {
