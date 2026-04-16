@@ -228,10 +228,7 @@ export class LobbyService {
             delete lobby.pendingAvatars[socketIdToUnselect];
         }
 
-        // TODO: noms disponibles ??
-        const randomNameIndex: number = Math.floor(Math.random() * RANDOM_NAMES.length);
-        const randomName = RANDOM_NAMES[randomNameIndex];
-        const finalName = this.getValidName(randomName, lobby);
+        const availableName = this.getAvailableVirtualPlayerName(lobby);
 
         const lifeBonus: boolean = Math.random() < RANDOM_PROBABILITY;
         const attackDiceD6: boolean = Math.random() < RANDOM_PROBABILITY;
@@ -240,7 +237,7 @@ export class LobbyService {
         const speedValue = BASE_STATS.speed + (!lifeBonus ? BASE_STATS.bonus : 0);
 
         const character: Character = {
-            name: finalName,
+            name: availableName,
             avatar: randomAvatar,
             life: lifeValue,
             speed: speedValue,
@@ -302,6 +299,18 @@ export class LobbyService {
         }
 
         return finalName;
+    }
+
+    private getAvailableVirtualPlayerName(lobby: Lobby): string {
+        const usedNames = new Set(lobby.players.map((player) => player.character.name));
+        let randomName: string;
+        
+        do {
+            const randomNameIndex = Math.floor(Math.random() * RANDOM_NAMES.length);
+            randomName = RANDOM_NAMES[randomNameIndex];
+        } while (usedNames.has(randomName));
+        
+        return randomName;
     }
 
     getLobbyValidationError(lobby: Lobby | undefined): string | undefined {
