@@ -1,6 +1,6 @@
 import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS } from '@common/direction';
-import { TileItem, SanctuaryMode } from '@common/enums';
+import { SanctuaryMode, TileItem } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
@@ -48,7 +48,9 @@ export class SanctuaryService {
         }
 
         game.actionPoints.set(socketId, ap - 1);
-        game.sanctuaryCooldowns.set(cooldownKey, SANCTUARY_COOLDOWN_TURNS);
+        if (!game.isDebugMode) {
+            game.sanctuaryCooldowns.set(cooldownKey, SANCTUARY_COOLDOWN_TURNS);
+        }
 
         return {
             success: true,
@@ -75,6 +77,8 @@ export class SanctuaryService {
     }
 
     computeInactiveSanctuaries(game: ActiveGame): Vec2[] {
+        if (game.isDebugMode) return [];
+
         return Array.from(game.sanctuaryCooldowns.keys()).map((key) => {
             const [x, y] = key.split(',').map(Number);
             return { x, y };
@@ -93,7 +97,7 @@ export class SanctuaryService {
         if (!isSanctuary) return null;
 
         const topLeft = this.findSanctuaryTopLeft(game, position, sanctuaryType);
-        if (game.sanctuaryCooldowns.has(`${topLeft.x},${topLeft.y}`)) return null;
+        if (!game.isDebugMode && game.sanctuaryCooldowns.has(`${topLeft.x},${topLeft.y}`)) return null;
 
         if (!this.isPlayerAdjacentToSanctuary(game, socketId, topLeft)) return null;
 

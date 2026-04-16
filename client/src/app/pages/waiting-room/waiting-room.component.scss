@@ -67,6 +67,26 @@ h2 {
         }
     }
 
+    .player-count {
+        font-size: 1.25rem;
+        color: #eddea7;
+        strong {
+            color: #f0c674;
+            font-family: monospace;
+            font-size: 1.5rem;
+        }
+    }
+
+    .game-name {
+        font-size: 1.25rem;
+        color: #eddea7;
+        strong {
+            color: #f0c674;
+            font-family: monospace;
+            font-size: 1.5rem;
+        }
+    }
+
     .lock-badge {
         margin-left: 0.5rem;
         color: #ffa500;
@@ -188,10 +208,6 @@ h2 {
     transition: all 0.3s ease;
     border: 0.125rem solid transparent;
 
-    &:hover {
-        background: rgba(255, 255, 255, 0.1);
-    }
-
     &.is-me {
         background: rgba(255, 215, 0, 0.1);
         border-color: rgba(255, 215, 0, 0.5);
@@ -275,6 +291,7 @@ h2 {
 
     &:hover {
         background: #c82333;
+        color: white;
     }
 }
 

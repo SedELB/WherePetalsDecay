@@ -178,12 +178,6 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
         }
     }
 
-    onToggleLock(): void {
-        if (this.isOrganizer()) {
-            this.webSocketService.emitNamespace(SocketNamespace.Join, JoinGameEvents.ToggleLock, this.lobbyId());
-        }
-    }
-
     @HostListener('window:popstate')
     onBrowserBack(): void {
         this.leaveLobby();

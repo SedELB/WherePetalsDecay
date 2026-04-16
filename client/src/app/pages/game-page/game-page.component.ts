@@ -83,6 +83,7 @@ export class GamePageComponent implements OnInit {
     readonly frozenTurnCountdown = signal<number | null>(null);
     readonly frozenTurnCountdownMax = signal<number | null>(null);
     readonly frozenActivePlayerSocketId = signal<string | null>(null);
+    readonly pressedDirectionKey = signal<'W' | 'A' | 'S' | 'D' | null>(null);
     isJournalOpen = false;
     isLeftPanelOpen = true;
     private wasAutoCollapseActive = false;
@@ -231,9 +232,24 @@ export class GamePageComponent implements OnInit {
     ngOnInit(): void {
         if (!this.lobby()) this.router.navigate([this.routes.home]);
     }
+
+    @HostListener('window:keydown', ['$event'])
+    onKeyDown(event: KeyboardEvent): void {
+        if (this.showCombatInProgressModal()) return;
+        if (!this.canHandleMovementInput()) return;
+
+        const direction = KEY_TO_DIRECTION[event.key];
+        if (!direction) return;
+
+        this.pressedDirectionKey.set(direction);
+    }
+
     @HostListener('window:keyup', ['$event'])
     onKeyUp(event: KeyboardEvent): void {
         const lobbyId = this.lobby()?.lobbyId;
+        const direction = KEY_TO_DIRECTION[event.key];
+        if (direction) this.pressedDirectionKey.set(null);
+
         if (this.showCombatInProgressModal()) return;
 
         if (event.key === 'm' || event.key === 'M') {
@@ -241,8 +257,7 @@ export class GamePageComponent implements OnInit {
             return;
         }
 
-        if (!this.isMyTurn() || this.isChatFocused || this.showSanctuaryModal || this.isMoveCoolingDown) return;
-        const direction = KEY_TO_DIRECTION[event.key];
+        if (!this.canHandleMovementInput()) return;
         if (!direction) return;
 
         this.isMoveCoolingDown = true;
@@ -251,6 +266,11 @@ export class GamePageComponent implements OnInit {
         this.gamePageSignalService.closeSubMenu();
 
         if (lobbyId) this.gameViewService.sendMove(lobbyId, direction);
+    }
+
+    @HostListener('window:blur')
+    onWindowBlur(): void {
+        this.pressedDirectionKey.set(null);
     }
 
     onChatFocusChange(focused: boolean): void {
@@ -525,5 +545,9 @@ export class GamePageComponent implements OnInit {
     private closeSubMenu(): void {
         this.isSubMenuOpen.set(false);
         this.activeSubAction.set(null);
+    }
+
+    private canHandleMovementInput(): boolean {
+        return this.isMyTurn() && !this.isChatFocused && !this.showSanctuaryModal && !this.isMoveCoolingDown;
     }
 }

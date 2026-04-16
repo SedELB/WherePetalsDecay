@@ -124,6 +124,22 @@ describe('LobbyCardComponent', () => {
         expect(img.src).toContain('thumb.png');
     });
 
+    it('should toggle tooltip visibility on thumbnail hover events', () => {
+        component.lobby = createMockLobby();
+        fixture.detectChanges();
+
+        const img = (fixture.nativeElement as HTMLElement).querySelector('img.thumbnail') as HTMLImageElement;
+        expect(component.show).toBeFalse();
+
+        img.dispatchEvent(new Event('mouseenter'));
+        fixture.detectChanges();
+        expect(component.show).toBeTrue();
+
+        img.dispatchEvent(new Event('mouseleave'));
+        fixture.detectChanges();
+        expect(component.show).toBeFalse();
+    });
+
     // Alt text should match the game name for accessibility
     it('should use the game name as the thumbnail alt text', () => {
         component.lobby = createMockLobby({ game: createMockGame({ name: 'Aventure Spatiale' }) });

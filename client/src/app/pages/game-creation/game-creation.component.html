@@ -8,18 +8,7 @@
             @if (games.length > 0) {
                 <div class="list-container">
                     @for(game of games; track game._id){
-                        <app-game-card
-                            [game]="{
-                                name: game.name,
-                                description: game.description,
-                                size: getGameSizeLabel(game),
-                                gameMode: game.gameMode,
-                                createdAt: game.createdAt,
-                                updatedAt: game.updatedAt,
-                                thumbnail: game.thumbnail,
-                                isVisible: game.isVisible,
-                            }"
-                        >
+                        <app-game-card [game]="game">
                             <app-button [height]="50" (click)="selectGame(game)">Sélectionner</app-button>
                         </app-game-card>
                     }

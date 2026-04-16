@@ -64,10 +64,6 @@ export class GameCreationComponent implements OnInit, OnDestroy {
         this.router.navigate(['/character-selection'], { state: { game } });
     }
 
-    getGameSizeLabel(game: Game): { rows: number; cols: number } {
-        return game.size;
-    }
-
     ngOnDestroy(): void {
         this.gamesSubscription?.unsubscribe();
     }

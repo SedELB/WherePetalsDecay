@@ -18,7 +18,8 @@
     overflow: hidden;
 }
 
-.entries-list {
+.entries-list .list-container {
+    background-color:#010202;
     min-height: 12.5rem;
     overflow-y: scroll;
     padding: 0.75rem;
@@ -80,7 +81,7 @@
     border-radius: 50%;
     border: 1px solid rgba(255, 255, 255, 0.15);
     background: rgb(37, 37, 107, 0.2);
-    color: rgb(71, 105, 179);
+    color: #5B3F06;
     font-size: 1.25rem;
     cursor: pointer;
     display: flex;
@@ -91,6 +92,7 @@
 
     &:hover {
         background: rgba(37, 37, 107, 0.4);
+        color: #885e09;
         transform: scale(1.1);
     }
 

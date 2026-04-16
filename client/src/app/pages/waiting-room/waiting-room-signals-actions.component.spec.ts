@@ -340,26 +340,6 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
             });
         });
 
-        describe('onToggleLock', () => {
-            it('should emit ToggleLock event when organizer toggles lock', () => {
-                component.onToggleLock();
-
-                expect(webSocketService.emitNamespace).toHaveBeenCalledWith(
-                    SocketNamespace.Join,
-                    JoinGameEvents.ToggleLock,
-                    LOBBY_ID,
-                );
-            });
-
-            it('should not emit ToggleLock when non-organizer tries', () => {
-                webSocketService.getSocketId.and.returnValue(PLAYER_SOCKET_ID);
-                component.currentLobby.set(createMockLobby());
-
-                component.onToggleLock();
-                expect(webSocketService.emitNamespace).not.toHaveBeenCalled();
-            });
-        });
-
         describe('leaveLobby', () => {
             it('should emit LeaveLobby event', () => {
                 component.leaveLobby();
