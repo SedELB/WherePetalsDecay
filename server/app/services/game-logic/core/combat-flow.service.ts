@@ -17,6 +17,7 @@ import {
 } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import type { Namespace, Socket } from 'socket.io';
 import { Server } from 'socket.io';
 import { CombatStateService } from './combat-state.service';
 import { GameLogicService } from './game-logic.service';
@@ -51,8 +52,9 @@ export class CombatFlowService {
         if (!activeGame || !attackerPlayer || !defenderPlayer) return;
 
         const roomId = `fight${this.combatState.incrementFightCounter()}`;
-        const attackerSocket = server.sockets.get(attackerId);
-        const defenderSocket = server.sockets.get(defenderId);
+        const socketsMap = (this.server as unknown as Namespace).sockets as Map<string, Socket>;
+        const attackerSocket = socketsMap?.get(attackerId);
+        const defenderSocket = socketsMap?.get(defenderId);
 
         if (attackerSocket) attackerSocket.join(roomId);
         if (defenderSocket) defenderSocket.join(roomId);
