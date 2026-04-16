@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { CombatEndPopupData, CombatListenerDependencies } from '@app/interfaces/combat.interfaces';
 import { DEFAULT_COMBAT_POSTURE, ONE_SECOND_DELAY } from '@app/services/game-view/game-view.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Debuf, Posture } from '@common/character';
@@ -20,16 +21,6 @@ import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import { GameLogicService } from './game-logic.service';
 
-export interface CombatListenerDependencies {
-    getLocalSocketId: () => string | undefined;
-    getGameLobby: () => Lobby | null;
-    getPlayerPositions: () => Record<string, Vec2>;
-    updateGameLobby: (updater: (lobby: Lobby | null) => Lobby | null) => void;
-    updatePlayerPositions: (updater: (positions: Record<string, Vec2>) => Record<string, Vec2>) => void;
-    setFlagTaken: (value: boolean) => void;
-}
-
-interface CombatEndPopupData { title: string; message: string; }
 
 @Injectable({
     providedIn: 'root',

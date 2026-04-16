@@ -1,8 +1,9 @@
 import { Player } from '@common/player';
 import { Posture } from '@common/character';
+import { DiceRollMode } from '@common/enums';
 import { Vec2 } from '@common/vec2';
 
-export type DiceRollMode = 'random' | 'max' | 'min';
+export { DiceRollMode };
 
 export interface CombatDiceStrategy {
     attacker: DiceRollMode;

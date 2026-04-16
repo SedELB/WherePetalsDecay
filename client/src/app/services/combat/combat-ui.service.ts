@@ -2,9 +2,10 @@ import { Injectable, signal } from '@angular/core';
 import swal from 'sweetalert2';
 import {
     CombatStartPopupData,
-    RoundAnnouncementPopupData,
     DamagePopupData,
+    GridDimensions,
     ImpactDamagePopupData,
+    RoundAnnouncementPopupData,
 } from '@app/interfaces/combat.interfaces';
 import {
     COMBAT_TOAST_DEFAULT_DURATION_MS,
@@ -57,7 +58,7 @@ export class CombatUiService {
         this.combatEndPopup.set(popup);
     }
 
-    spawnImpactDamagePopup(targetSocketId: string, damage: number, gridDimensions: { rows: number; cols: number }): void {
+    spawnImpactDamagePopup(targetSocketId: string, damage: number, gridDimensions: GridDimensions): void {
         if (damage <= 0) return;
 
         const targetPosition = this.combatState.playerPos()[targetSocketId];

@@ -1,8 +1,8 @@
-import { InitiateCombatPayload, TransferFlagPayload } from '@app/interfaces/game-logic.interface';
+import { InitiateCombatPayload, NearestEnemyResult, PlayerMoveResult, TransferFlagPayload } from '@app/interfaces/game-logic.interface';
 import { SanctuaryUseResult } from '@app/interfaces/sanctuary.interface';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { Direction, DIRECTION_OFFSETS } from '@common/direction';
-import { GameMode, SanctuaryMode, TileTexture } from '@common/enums';
+import { DiceRollMode, GameMode, SanctuaryMode, TileTexture } from '@common/enums';
 import { GameStats } from '@common/interfaces/game-stats';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
@@ -118,7 +118,7 @@ export class GameLogicService {
         return game ? this.manager.isPlayerTurn(game, socketId) : false;
     }
 
-    movePlayer(lobbyId: string, socketId: string, direction: Direction): { position: Vec2; flagJustTaken: boolean } | null {
+    movePlayer(lobbyId: string, socketId: string, direction: Direction): PlayerMoveResult | null {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
         const targetPos = this.action.movePlayer(game, socketId, direction);
@@ -133,7 +133,7 @@ export class GameLogicService {
         return { position: targetPos, flagJustTaken };
     }
 
-    teleportPlayer(lobbyId: string, socketId: string, targetPos: Vec2): { position: Vec2; flagJustTaken: boolean } | null {
+    teleportPlayer(lobbyId: string, socketId: string, targetPos: Vec2): PlayerMoveResult | null {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
         const landingPos = this.action.teleportPlayer(game, socketId, targetPos);
@@ -176,7 +176,7 @@ export class GameLogicService {
     initiateCombat({ lobbyId, attackerId, defenderId, consumeActionPoint = true }: InitiateCombatPayload) {
         const game = this.activeGames.get(lobbyId);
         if (!game) return null;
-        const diceStrategy = game.isDebugMode ? { attacker: 'max' as const, defender: 'min' as const } : undefined;
+        const diceStrategy = game.isDebugMode ? { attacker: DiceRollMode.Max, defender: DiceRollMode.Min } : undefined;
         const result = this.action.initiateCombat(game, attackerId, defenderId, consumeActionPoint, diceStrategy);
         if (!result) return null;
         const attacker = game.lobby.players.find((p) => p.socketId === attackerId);

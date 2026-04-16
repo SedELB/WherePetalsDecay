@@ -179,10 +179,10 @@ export class GamePageComponent implements OnInit {
         this.signals.selectSubAction(PlayerAction.Sanctuary);
     }
 
-    onUseSanctuary(mode: string): void {
+    onUseSanctuary(mode: SanctuaryMode): void {
         const lobbyId = this.signals.lobby()?.lobbyId;
         if (lobbyId && this.pendingSanctuaryPosition) {
-            this.gameViewService.sendUseSanctuary(lobbyId, this.pendingSanctuaryPosition, mode as SanctuaryMode);
+            this.gameViewService.sendUseSanctuary(lobbyId, this.pendingSanctuaryPosition, mode);
             this.onCancelSanctuary();
         }
     }
@@ -242,7 +242,8 @@ export class GamePageComponent implements OnInit {
         const grid = this.signals.game()?.grid;
         if (!grid) return;
 
-        const tileItem = grid[y]?.[x].item as TileItem;
+        const tileItem = grid[y]?.[x].item;
+        if (!tileItem) return;
         const result = this.gameLogicService.getSanctuaryCanonicalInfo(
             { x, y },
             {

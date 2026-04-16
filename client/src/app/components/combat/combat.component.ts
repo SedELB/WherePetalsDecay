@@ -4,6 +4,7 @@ import { ButtonComponent } from '@app/components/button/button.component';
 import { IsometricMapComponent } from '@app/components/isometric-map/isometric-map.component';
 import { FighterSide, FighterStatType, TypePosture } from '@app/interfaces/combat.interfaces';
 import { CombatLogicService } from '@app/services/combat/combat-logic.service';
+import { PostureType } from '@common/enums';
 import { Player } from '@common/player';
 
 @Component({
@@ -16,6 +17,8 @@ import { Player } from '@common/player';
 export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     @Input() player!: Player;
     @Input() enemy!: Player;
+
+    readonly postureType = PostureType;
 
     constructor(private readonly combatLogicService: CombatLogicService) {}
 

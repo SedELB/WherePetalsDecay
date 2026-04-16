@@ -5,19 +5,10 @@ import { ChatComponent } from '@app/components/chat/chat.component';
 import { JournalComponent } from '@app/components/journal/journal.component';
 import { ROUTES } from '@app/constants/routes.constants';
 import { GameViewService } from '@app/services/game-view/game-view.service';
+import { SortColumn } from '@app/interfaces/page.interfaces';
 import { PERCENT } from '@common/constants/game-stats.constants';
 import { GameStats } from '@common/interfaces/game-stats';
 import { Player } from '@common/player';
-
-// Possible values
-type SortColumn =
-    | 'name'
-    | 'combatCount'
-    | 'winsCount'
-    | 'lossCount'
-    | 'totalHpLost'
-    | 'totalHpDealt'
-    | 'visitedTilesPercent';
 
 @Component({
     selector: 'app-end-game-page',

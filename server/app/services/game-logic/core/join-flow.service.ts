@@ -1,10 +1,14 @@
 import { GameLogicService } from '@app/services/game-logic/core/game-logic.service';
+import {
+    AddVirtualPlayerPayload,
+    CreateLobbyPayload,
+    JoinLobbyPayload,
+    SelectAvatarPayload,
+    TargetPlayerPayload,
+} from '@app/interfaces/gateway.interfaces';
 import { LobbyService } from '@app/services/lobby/lobby.service';
-import { VirtualPlayerProfile } from '@common/enums';
-import { Game } from '@common/game';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
-import { Player } from '@common/player';
 import { Injectable, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 
@@ -26,7 +30,7 @@ export class JoinFlowService {
         setTimeout(() => this.emitAvailableLobbies(server), LOBBIES_REFRESH_DELAY_MS);
     }
 
-    createLobby(server: Server, socket: Socket, payload: { game: Game; player: Player }): void {
+    createLobby(server: Server, socket: Socket, payload: CreateLobbyPayload): void {
         this.logger.log(`Payload (Lobby Created) by ${socket.id}`);
         this.lobbyService.initializeRealPlayer(payload.player, socket.id, true);
         const createdLobby = this.lobbyService.createLobby(payload.game, socket.id, payload.player);
@@ -40,7 +44,7 @@ export class JoinFlowService {
         }
     }
 
-    joinLobby(server: Server, socket: Socket, payload: { lobbyId: string; player: Player }): void {
+    joinLobby(server: Server, socket: Socket, payload: JoinLobbyPayload): void {
         const lobby = this.lobbyService.getLobby(payload.lobbyId);
         const lobbyError = this.lobbyService.getLobbyValidationError(lobby);
         if (lobbyError) {
@@ -80,7 +84,7 @@ export class JoinFlowService {
         }
     }
 
-    selectAvatar(server: Server, socket: Socket, payload: { lobbyId: string; avatar: string }): void {
+    selectAvatar(server: Server, socket: Socket, payload: SelectAvatarPayload): void {
         const lobby = this.lobbyService.getLobby(payload.lobbyId);
         if (!lobby) return;
 
@@ -108,7 +112,7 @@ export class JoinFlowService {
         }
     }
 
-    kickPlayer(server: Server, socket: Socket, payload: { lobbyId: string; targetSocketId: string }): void {
+    kickPlayer(server: Server, socket: Socket, payload: TargetPlayerPayload): void {
         const success = this.lobbyService.kickPlayer(payload.lobbyId, socket.id, payload.targetSocketId);
         if (!success) return;
 
@@ -123,7 +127,7 @@ export class JoinFlowService {
         this.emitAvailableLobbies(server);
     }
 
-    addVirtualPlayer(server: Server, socket: Socket, payload: { lobbyId: string; profile: VirtualPlayerProfile }): void {
+    addVirtualPlayer(server: Server, socket: Socket, payload: AddVirtualPlayerPayload): void {
         const lobby = this.lobbyService.getLobby(payload.lobbyId);
         const lobbyError = this.lobbyService.getLobbyValidationError(lobby);
         if (lobbyError) {

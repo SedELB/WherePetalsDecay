@@ -5,7 +5,7 @@
 import { ChatFlowService } from '@app/services/game-logic/core/chat-flow.service';
 import { JoinFlowService } from '@app/services/game-logic/core/join-flow.service';
 import { JournalBroadcastService } from '@app/services/game-logic/core/journal-broadcast.service';
-import { GameMode, PlayerType, VirtualPlayerProfile } from '@common/enums';
+import { DiceType, GameMode, PlayerType, VirtualPlayerProfile } from '@common/enums';
 import { Game } from '@common/game';
 import { Player } from '@common/player';
 import { Logger } from '@nestjs/common';
@@ -32,7 +32,7 @@ describe('JoinGateway', () => {
     const makeMockPlayer = (): Player => ({
         socketId: '', character: {
             name: 'MOCK_PLAYER', avatar: 'mockavatar.png', life: 0, speed: 0, attack: 0, defense: 0,
-            lifeBonus: false, attackDice: 'D4', defenseDice: 'D6',
+            lifeBonus: false, attackDice: DiceType.D4, defenseDice: DiceType.D6,
         },
         isHost: false, winsCount: 0, hasAbandonned: false, playerType: PlayerType.Reel, hasFlag: false,
         combatCount: 0, lossCount: 0, totalHpLost: 0, totalHpDealt: 0, visitedTilesCount: 0,

@@ -1,4 +1,4 @@
-import { TileVisitParams } from '@app/interfaces/game-logic.interface';
+import { PositionCostEntry, TileVisitParams } from '@app/interfaces/game-logic.interface';
 import { Direction, DIRECTION_OFFSETS } from '@common/direction';
 import { TileItem, TileTexture } from '@common/enums';
 import { Game } from '@common/game';
@@ -96,7 +96,7 @@ export class MovementService {
         return game.movementPoints.get(socketId) ?? 0;
     }
 
-    private popLowestCostEntry(queue: { pos: Vec2; cost: number }[]): { pos: Vec2; cost: number } {
+    private popLowestCostEntry(queue: PositionCostEntry[]): PositionCostEntry {
         let minIndex = 0;
         for (let i = 1; i < queue.length; i++) {
             if (queue[i].cost < queue[minIndex].cost) minIndex = i;

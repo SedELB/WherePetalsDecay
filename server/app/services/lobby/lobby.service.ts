@@ -1,12 +1,13 @@
 import { ChatMessage } from '@common/chat-message';
 import { HISTORY_MAX_MESSAGE } from '@common/constants/validation.constants';
-import { GameMode, PlayerType, VirtualPlayerProfile } from '@common/enums';
+import { DiceType, GameMode, PlayerType, VirtualPlayerProfile } from '@common/enums';
 import { Game } from '@common/game';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Injectable } from '@nestjs/common';
 import { AVATARS_PATH, RANDOM_NAMES, BASE_STATS, RANDOM_PROBABILITY } from '@common/constants/character.constants';
 import { Character } from '@common/character';
+import { TeamPair } from '@app/interfaces/game-logic.interface';
 
 
 const ALPHANUMERIC_BASE = 36;
@@ -65,7 +66,7 @@ export class LobbyService {
         return this.lobbies.get(lobbyId);
     }
 
-    private createTeams(lobbyId: string): { teamA: Player[], teamB: Player[] } {
+    private createTeams(lobbyId: string): TeamPair {
         const lobby = this.getLobby(lobbyId);
         if (lobby.game.gameMode !== GameMode.Ctf || lobby.playerCount % 2 !== 0) return null;
 
@@ -244,8 +245,8 @@ export class LobbyService {
             attack: BASE_STATS.attack,
             defense: BASE_STATS.defense,
             lifeBonus,
-            attackDice: attackDiceD6 ? 'D6' : 'D4',
-            defenseDice: attackDiceD6 ? 'D4' : 'D6',
+            attackDice: attackDiceD6 ? DiceType.D6 : DiceType.D4,
+            defenseDice: attackDiceD6 ? DiceType.D4 : DiceType.D6,
         };
         const virtualPlayer: Player = {
             socketId: `virtual-${Date.now()}-${Math.floor(Math.random() * VIRTUAL_PLAYER_ID_BASE)}`,

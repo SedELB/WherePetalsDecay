@@ -10,7 +10,7 @@ import { COMBAT_CONSTANTS } from '@app/constants/game-logic.constants';
 import { Posture } from '@common/character';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS } from '@common/direction';
-import { TileTexture } from '@common/enums';
+import { PostureType, TileTexture } from '@common/enums';
 import { CombatResult } from '@common/interfaces/game-view';
 import { Player } from '@common/player';
 import { TILE_COSTS } from '@common/tile-costs';
@@ -123,33 +123,33 @@ export class CombatService {
         participants.attacker.character.debuf = attackerPenalty;
         participants.defender.character.debuf = defenderPenalty;
 
-        const attackerDiceMode = diceStrategy?.attacker ?? 'random';
-        const defenderDiceMode = diceStrategy?.defender ?? 'random';
+        const attackerDiceMode = diceStrategy?.attacker ?? DiceRollMode.Random;
+        const defenderDiceMode = diceStrategy?.defender ?? DiceRollMode.Random;
 
         const attackerAttack = this.buildStat({
             base: participants.attacker.character.attack,
-            postureBonus: this.getPostureBonus(participants.attacker.character.bonusPosture, 'atk'),
+            postureBonus: this.getPostureBonus(participants.attacker.character.bonusPosture, PostureType.Attack),
             diceBonus: this.rollDice(participants.attacker.character.attackDice, attackerDiceMode),
             penalty: attackerPenalty,
         });
 
         const attackerDefense = this.buildStat({
             base: participants.attacker.character.defense,
-            postureBonus: this.getPostureBonus(participants.attacker.character.bonusPosture, 'def'),
+            postureBonus: this.getPostureBonus(participants.attacker.character.bonusPosture, PostureType.Defense),
             diceBonus: this.rollDice(participants.attacker.character.defenseDice, attackerDiceMode),
             penalty: attackerPenalty,
         });
 
         const defenderAttack = this.buildStat({
             base: participants.defender.character.attack,
-            postureBonus: this.getPostureBonus(participants.defender.character.bonusPosture, 'atk'),
+            postureBonus: this.getPostureBonus(participants.defender.character.bonusPosture, PostureType.Attack),
             diceBonus: this.rollDice(participants.defender.character.attackDice, defenderDiceMode),
             penalty: defenderPenalty,
         });
 
         const defenderDefense = this.buildStat({
             base: participants.defender.character.defense,
-            postureBonus: this.getPostureBonus(participants.defender.character.bonusPosture, 'def'),
+            postureBonus: this.getPostureBonus(participants.defender.character.bonusPosture, PostureType.Defense),
             diceBonus: this.rollDice(participants.defender.character.defenseDice, defenderDiceMode),
             penalty: defenderPenalty,
         });
@@ -292,15 +292,15 @@ export class CombatService {
         return false;
     }
 
-    private getPostureBonus(posture: Posture | undefined, postureType: 'atk' | 'def'): number {
+    private getPostureBonus(posture: Posture | undefined, postureType: PostureType): number {
         if (!posture || !posture.type) return 0;
         return posture.type === postureType ? COMBAT_CONSTANTS.postureBonusValue : 0;
     }
 
-    private rollDice(dice: string, mode: DiceRollMode = 'random'): number {
+    private rollDice(dice: string, mode: DiceRollMode = DiceRollMode.Random): number {
         const faces = Number(dice[COMBAT_CONSTANTS.diceFaceIndex]);
-        if (mode === 'max') return faces;
-        if (mode === 'min') return COMBAT_CONSTANTS.diceMinValue;
+        if (mode === DiceRollMode.Max) return faces;
+        if (mode === DiceRollMode.Min) return COMBAT_CONSTANTS.diceMinValue;
         return Math.floor(Math.random() * faces) + COMBAT_CONSTANTS.diceMinValue;
     }
 

@@ -1,7 +1,9 @@
+import { PostureType } from '@common/enums';
 import { CombatResult, CombatRoundTimelineData } from '@common/interfaces/game-view';
+import { Lobby } from '@common/lobby';
 import { Vec2 } from '@common/vec2';
 
-export type TypePosture = 'atk' | 'def' | null;
+export type TypePosture = PostureType | null;
 export type FighterSide = 'player' | 'enemy';
 export type FighterStatType = 'attack' | 'defense';
 
@@ -77,9 +79,35 @@ export interface RoundDiceAnimationParams {
     onFinished: () => void;
 }
 
+export interface GridDimensions {
+    rows: number;
+    cols: number;
+}
+
+export interface DiceAnimationDurations {
+    rollMs: number;
+    resultMs: number;
+}
+
+export interface ImpactPopupPosition {
+    leftPercent: number;
+    topPercent: number;
+}
+
 export interface FighterStatDisplay {
     total: number;
     postureBonus: number;
     diceBonus: number;
     iceDebuff: number;
+}
+
+export interface CombatEndPopupData { title: string; message: string; }
+
+export interface CombatListenerDependencies {
+    getLocalSocketId: () => string | undefined;
+    getGameLobby: () => Lobby | null;
+    getPlayerPositions: () => Record<string, Vec2>;
+    updateGameLobby: (updater: (lobby: Lobby | null) => Lobby | null) => void;
+    updatePlayerPositions: (updater: (positions: Record<string, Vec2>) => Record<string, Vec2>) => void;
+    setFlagTaken: (value: boolean) => void;
 }

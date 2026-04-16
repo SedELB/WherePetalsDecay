@@ -1,3 +1,4 @@
+import { PostureType } from '@common/enums';
 import { Vec2 } from '@common/vec2';
 
 export const POSTURE_BONUS = 2;
@@ -14,7 +15,7 @@ export const COMBAT_ANIMATION_MIN_STEP_MS = 80;
 export const TILE_CENTER_OFFSET = 0.5;
 export const TO_PERCENT = 100;
 
-export type TypePosture = 'atk' | 'def' | null;
+export type TypePosture = PostureType | null;
 
 export interface DetailedStatLine {
     base: number;

@@ -156,10 +156,10 @@
                 <h2>Choisir votre posture</h2>
                 <div class="choices">
                     <div class="posture-choice" data-tooltip="+2 ATK">
-                        <app-button (click)="choosePosture('atk')">Posture offensive</app-button>
+                        <app-button (click)="choosePosture(postureType.Attack)">Posture offensive</app-button>
                     </div>
                     <div class="posture-choice" data-tooltip="+2 DEF">
-                        <app-button (click)="choosePosture('def')">Posture défensive</app-button>
+                        <app-button (click)="choosePosture(postureType.Defense)">Posture défensive</app-button>
                     </div>
                 </div>
             </div>

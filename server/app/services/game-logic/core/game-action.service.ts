@@ -2,11 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { Direction } from '@common/direction';
 import { SanctuaryMode } from '@common/enums';
 import { Vec2 } from '@common/vec2';
+import { CombatDiceStrategy } from '@app/interfaces/combat.interface';
+import { SanctuaryUseResult } from '@app/interfaces/sanctuary.interface';
 import { ActiveGame } from './active-game.interface';
 import { MovementService } from './movement.service';
 import { CombatService } from './combat.service';
 import { SanctuaryService } from './sanctuary.service';
-import { SanctuaryUseResult } from '@app/interfaces/sanctuary.interface';
 
 @Injectable()
 export class GameActionService {
@@ -45,7 +46,7 @@ export class GameActionService {
         attackerId: string,
         defenderId: string,
         consumeActionPoint: boolean,
-        diceStrategy?: { attacker: 'max' | 'min'; defender: 'max' | 'min' },
+        diceStrategy?: CombatDiceStrategy,
     ) {
         return this.combatService.initiateCombat(game, attackerId, defenderId, consumeActionPoint, diceStrategy);
     }

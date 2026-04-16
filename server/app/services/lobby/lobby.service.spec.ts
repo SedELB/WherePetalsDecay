@@ -7,7 +7,7 @@
  * - Edge cases: empty lobbies, full lobbies, missing lobbies, duplicate socket removals
  */
 
-import { GameMode, PlayerType } from '@common/enums';
+import { DiceType, GameMode, PlayerType } from '@common/enums';
 import { Game } from '@common/game';
 import { Player } from '@common/player';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -40,8 +40,8 @@ describe('LobbyService', () => {
             attack: 0,
             defense: 0,
             lifeBonus: false,
-            attackDice: 'D4',
-            defenseDice: 'D6',
+            attackDice: DiceType.D4,
+            defenseDice: DiceType.D6,
         },
         isHost: false,
         winsCount: 0,

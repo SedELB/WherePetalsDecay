@@ -4,7 +4,8 @@ import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { SocketNamespace } from '@common/enums';
 import { Game } from '@common/game';
 import { GameCreationEvents } from '@common/socket-events/games.gateway.events';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { environment } from '@src/environments/environment';
 
 @Injectable({
@@ -58,6 +59,8 @@ export class GameCreationService {
     }
 
     fetchVisibleGames(): Observable<Game[]> {
-        return this.http.get<Game[]>(`${environment.serverUrl}/game/visibleGames`);
+        return this.http.get<Game[]>(`${environment.serverUrl}/game/visibleGames`).pipe(
+            catchError(() => of([])),
+        );
     }
 }

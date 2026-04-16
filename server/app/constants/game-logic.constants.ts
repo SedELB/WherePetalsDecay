@@ -1,3 +1,4 @@
+import { PostureType } from '@common/enums';
 
 // Virtual Player constants
 export const VP_CONSTANTS = {
@@ -5,8 +6,8 @@ export const VP_CONSTANTS = {
     extraActionDelayMs: 2000,
     stepDelayMs: 300,
     healingSanctuaryMinMissingHp: 2,
-    aggressivePosture: { type: 'atk', bonus: 2 } as const,
-    defensivePosture: { type: 'def', bonus: 2 } as const,
+    aggressivePosture: { type: PostureType.Attack, bonus: 2 } as const,
+    defensivePosture: { type: PostureType.Defense, bonus: 2 } as const,
     eventPlayerMoved: 'playerMoved',
     eventDoorToggled: 'doorToggled',
     eventActionPoints: 'actionPoints',

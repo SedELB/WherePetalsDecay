@@ -8,7 +8,7 @@ import { CharacterService } from '@app/services/character/character.service';
 import { NAME_MAX_LENGTH } from '@app/services/game-validator/game-validator.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { AVATARS_PATH, BASE_STATS } from '@common/constants/character.constants';
-import { ButtonVariant, SocketNamespace } from '@common/enums';
+import { ButtonVariant, DiceType, SocketNamespace } from '@common/enums';
 import { Game } from '@common/game';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
@@ -79,12 +79,12 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
         return this.baseStats.speed + (!this.lifeBonusSelected ? this.baseStats.bonus : 0);
     }
 
-    get attackDice(): string {
-        return this.attackDiceD6 ? 'D6' : 'D4';
+    get attackDice(): DiceType {
+        return this.attackDiceD6 ? DiceType.D6 : DiceType.D4;
     }
 
-    get defenseDice(): string {
-        return this.attackDiceD6 ? 'D4' : 'D6';
+    get defenseDice(): DiceType {
+        return this.attackDiceD6 ? DiceType.D4 : DiceType.D6;
     }
 
     get attackValue(): number {

@@ -1,4 +1,6 @@
-export type Posture = { type: 'atk' | 'def' | null, bonus: 2 | 0}
+import { DiceType, PostureType } from './enums';
+
+export type Posture = { type: PostureType | null, bonus: 2 | 0}
 export type Debuf = 2 | 0;
 
 export interface Character {
@@ -9,8 +11,8 @@ export interface Character {
     attack: number;
     defense: number;
     lifeBonus: boolean;
-    attackDice: 'D4' | 'D6';
-    defenseDice: 'D4' | 'D6';
+    attackDice: DiceType;
+    defenseDice: DiceType;
     bonusPosture?: Posture;
     debuf?: Debuf;
 }

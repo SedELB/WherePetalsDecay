@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
+import { GridDimensions, ImpactPopupPosition, FighterPositionAnimationParams } from '@app/interfaces/combat.interfaces';
 import { Vec2 } from '@common/vec2';
 import { CombatStateService } from './combat-state.service';
-import { FighterPositionAnimationParams } from '@app/interfaces/combat.interfaces';
 import {
     EASE_PROGRESS_MIDDLE_POINT,
     EASE_ACCELERATION_FACTOR,
@@ -70,7 +70,7 @@ export class CombatAnimationService {
         this.movementAnimationFrameId = requestAnimationFrame(step);
     }
 
-    projectImpactPopupPosition(targetPosition: Vec2, gridDimensions: { rows: number; cols: number }): { leftPercent: number; topPercent: number } {
+    projectImpactPopupPosition(targetPosition: Vec2, gridDimensions: GridDimensions): ImpactPopupPosition {
         const rows = gridDimensions.rows || IMPACT_POPUP_DEFAULT_GRID_DIMENSION;
         const cols = gridDimensions.cols || IMPACT_POPUP_DEFAULT_GRID_DIMENSION;
         const totalGridDimensions = cols + rows;

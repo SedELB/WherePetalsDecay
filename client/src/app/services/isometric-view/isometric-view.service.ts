@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ISO_ITEM_ASSETS, RENDER_CONSTANTS, STROKE_COLOR, TILE_LINE_WIDTH, TILE_THICKNESS } from '@app/constants/isometric.constants';
-import { RenderBoardConfig, TileDepthParams, TileRenderParams } from '@app/interfaces/isometric-interfaces';
+import { PlayerShadowData, RenderBoardConfig, TileDepthParams, TileItemRenderData, TileRenderParams } from '@app/interfaces/isometric-interfaces';
 import { TileItem, TileTexture, PlayerAction } from '@common/enums';
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
@@ -309,7 +309,7 @@ export class IsometricViewService {
         };
     }
 
-    private drawItemAt(tile: Tile, data: { ctx: CanvasRenderingContext2D; cx: number; cy: number; tileW: number; tileH: number }): void {
+    private drawItemAt(tile: Tile, data: TileItemRenderData): void {
         if (tile.item == null) return;
 
         const imageSrc = ISO_ITEM_ASSETS[tile.item];
@@ -356,7 +356,7 @@ export class IsometricViewService {
         ctx.restore();
     }
 
-    private drawPlayerShadow(ctx: CanvasRenderingContext2D, data: { cx: number; cy: number; tileH: number; imgW: number; imgH: number }): void {
+    private drawPlayerShadow(ctx: CanvasRenderingContext2D, data: PlayerShadowData): void {
         const shadowY = data.cy + (data.tileH * RENDER_CONSTANTS.shadowOffsetYRatio);
         const radiusX = data.imgW * RENDER_CONSTANTS.shadowRadiusXRatio;
         const radiusY = data.imgH * RENDER_CONSTANTS.shadowRadiusYRatio;

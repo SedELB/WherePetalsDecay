@@ -9,7 +9,7 @@ import { provideRouter, Router } from '@angular/router';
 import { GamePageComponent } from '@app/pages/game-page/game-page.component';
 import { GameLogicService } from '@app/services/game-view/game-logic.service';
 import { GameViewService } from '@app/services/game-view/game-view.service';
-import { GameMode, PlayerAction, PlayerType } from '@common/enums';
+import { DiceType, GameMode, PlayerAction, PlayerType } from '@common/enums';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
@@ -53,8 +53,8 @@ describe('GamePageComponent', () => {
                 attack: 4,
                 defense: 4,
                 lifeBonus: false,
-                attackDice: 'D6',
-                defenseDice: 'D4',
+                attackDice: DiceType.D6,
+                defenseDice: DiceType.D4,
             },
             ...restOverrides,
         };
@@ -222,7 +222,7 @@ describe('GamePageComponent', () => {
                         isHost: true,
                         character: {
                             name: 'Tank', avatar: '', life: BONUS_LIFE, speed: 4,
-                            attack: 4, defense: 4, lifeBonus: true, attackDice: 'D6', defenseDice: 'D4',
+                            attack: 4, defense: 4, lifeBonus: true, attackDice: DiceType.D6, defenseDice: DiceType.D4,
                         },
                     }),
                     createPlayer(OTHER_SOCKET),

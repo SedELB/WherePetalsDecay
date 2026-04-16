@@ -12,6 +12,7 @@ import {
     ROUND_PHASE_DELAY_MS,
     TO_PERCENT,
 } from '@app/components/combat/combat.constants';
+import { PostureType } from '@common/enums';
 import {
     CombatStartPopupData,
     FighterSide,
@@ -95,7 +96,7 @@ export class CombatLogicService {
 
         player.character.bonusPosture = { type: posture, bonus: POSTURE_BONUS };
         this.state.isChoosingPosture.set(false);
-        this.ui.showToast(`Posture ${posture === 'atk' ? 'offensive' : 'défensive'} choisie.`, 'success');
+        this.ui.showToast(`Posture ${posture === PostureType.Attack ? 'offensive' : 'défensive'} choisie.`, 'success');
 
         const lobbyId = this.gameViewService.gameLobby()?.lobbyId;
         const roomId = this.gameViewService.getCurrentCombatRoomId();
@@ -133,7 +134,7 @@ export class CombatLogicService {
         const result = this.getStatFromResult(side, stat);
         if (result) return result.postureBonus;
         const type = (side === 'player' ? this.state.player() : this.state.enemy())?.character?.bonusPosture?.type;
-        return (stat === 'attack' && type === 'atk') || (stat === 'defense' && type === 'def') ? POSTURE_BONUS : 0;
+        return (stat === 'attack' && type === PostureType.Attack) || (stat === 'defense' && type === PostureType.Defense) ? POSTURE_BONUS : 0;
     }
 
     getIceDebuff(side: FighterSide, stat: FighterStatType): number {
@@ -369,7 +370,7 @@ export class CombatLogicService {
     }
     getPostureStatusValue(fighter: Player): string {
         const type = fighter?.character?.bonusPosture?.type;
-        return type === 'atk' ? '⚔️ Offensive' : type === 'def' ? '🛡️ Défensive' : '⏳ Neutre';
+        return type === PostureType.Attack ? '⚔️ Offensive' : type === PostureType.Defense ? '🛡️ Défensive' : '⏳ Neutre';
     }
     shouldShowAttackAnnouncement(): boolean {
         return this.state.isAttackAnimationInProgress() && !!this.state.currentAttackerSocketId();

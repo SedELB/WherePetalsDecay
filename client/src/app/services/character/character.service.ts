@@ -1,13 +1,8 @@
 import { Injectable } from '@angular/core';
+import { RandomCharacter } from '@app/interfaces/page.interfaces';
 import { Character } from '@common/character';
 import { AVATARS_PATH, BASE_STATS, RANDOM_NAMES, RANDOM_PROBABILITY } from '@common/constants/character.constants';
-
-type RandomCharacter = {
-    name: string;
-    avatarPath: string;
-    lifeBonus: boolean;
-    attackDiceD6: boolean;
-};
+import { DiceType } from '@common/enums';
 
 @Injectable({
     providedIn: 'root',
@@ -25,8 +20,8 @@ export class CharacterService {
             attack: BASE_STATS.attack,
             defense: BASE_STATS.defense,
             lifeBonus,
-            attackDice: attackDiceD6 ? 'D6' : 'D4',
-            defenseDice: attackDiceD6 ? 'D4' : 'D6',
+            attackDice: attackDiceD6 ? DiceType.D6 : DiceType.D4,
+            defenseDice: attackDiceD6 ? DiceType.D4 : DiceType.D6,
         };
     }
 

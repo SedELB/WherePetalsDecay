@@ -1,10 +1,15 @@
 import { ChatFlowService, ChatMessagePayload } from '@app/services/game-logic/core/chat-flow.service';
 import { JoinFlowService } from '@app/services/game-logic/core/join-flow.service';
 import { JournalBroadcastService } from '@app/services/game-logic/core/journal-broadcast.service';
-import { SocketNamespace, VirtualPlayerProfile } from '@common/enums';
-import { Game } from '@common/game';
+import {
+    AddVirtualPlayerPayload,
+    CreateLobbyPayload,
+    JoinLobbyPayload,
+    SelectAvatarPayload,
+    TargetPlayerPayload,
+} from '@app/interfaces/gateway.interfaces';
+import { SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { Player } from '@common/player';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
     ConnectedSocket,
@@ -50,7 +55,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     }
 
     @SubscribeMessage(JoinGameEvents.CreateLobby)
-    handleCreateLobby(@ConnectedSocket() socket: Socket, @MessageBody() payload: { game: Game; player: Player }): void {
+    handleCreateLobby(@ConnectedSocket() socket: Socket, @MessageBody() payload: CreateLobbyPayload): void {
         this.joinFlow.createLobby(this.server, socket, payload);
     }
 
@@ -70,7 +75,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     }
 
     @SubscribeMessage(JoinGameEvents.JoinLobby)
-    handleJoinLobby(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; player: Player }): void {
+    handleJoinLobby(@ConnectedSocket() socket: Socket, @MessageBody() payload: JoinLobbyPayload): void {
         this.joinFlow.joinLobby(this.server, socket, payload);
     }
 
@@ -80,7 +85,7 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     }
 
     @SubscribeMessage(JoinGameEvents.SelectAvatar)
-    handleSelectAvatar(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; avatar: string }): void {
+    handleSelectAvatar(@ConnectedSocket() socket: Socket, @MessageBody() payload: SelectAvatarPayload): void {
         this.joinFlow.selectAvatar(this.server, socket, payload);
     }
 
@@ -95,12 +100,12 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     }
 
     @SubscribeMessage(JoinGameEvents.KickPlayer)
-    handleKickPlayer(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; targetSocketId: string }): void {
+    handleKickPlayer(@ConnectedSocket() socket: Socket, @MessageBody() payload: TargetPlayerPayload): void {
         this.joinFlow.kickPlayer(this.server, socket, payload);
     }
 
     @SubscribeMessage(JoinGameEvents.AddVirtualPlayer)
-    handleAddVirtualPlayer(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; profile: VirtualPlayerProfile }): void {
+    handleAddVirtualPlayer(@ConnectedSocket() socket: Socket, @MessageBody() payload: AddVirtualPlayerPayload): void {
         this.joinFlow.addVirtualPlayer(this.server, socket, payload);
     }
 

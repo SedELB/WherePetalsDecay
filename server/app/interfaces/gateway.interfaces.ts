@@ -2,7 +2,8 @@ import { Direction } from '@common/direction';
 import { Player } from '@common/player';
 import { Posture } from '@common/character';
 import { Vec2 } from '@common/vec2';
-import { SanctuaryMode } from '@common/enums';
+import { SanctuaryMode, VirtualPlayerProfile } from '@common/enums';
+import { Game } from '@common/game';
 
 export interface MoveRequestPayload {
     lobbyId: string;
@@ -27,8 +28,27 @@ export interface SendPosturePayload {
 
 export interface RequestCombatPayload {
     lobbyId: string;
+    enemy: { socketId: string };
+}
+
+export interface CreateLobbyPayload {
+    game: Game;
     player: Player;
-    enemy: Player;
+}
+
+export interface JoinLobbyPayload {
+    lobbyId: string;
+    player: Player;
+}
+
+export interface SelectAvatarPayload {
+    lobbyId: string;
+    avatar: string;
+}
+
+export interface AddVirtualPlayerPayload {
+    lobbyId: string;
+    profile: VirtualPlayerProfile;
 }
 
 export interface TargetPlayerPayload {

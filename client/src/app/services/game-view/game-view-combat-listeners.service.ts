@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
-import { CombatListenerDependencies, GameViewCombatService } from '@app/services/game-view/game-view-combat.service';
+import { CombatListenerDependencies } from '@app/interfaces/combat.interfaces';
+import { GameViewCombatService } from '@app/services/game-view/game-view-combat.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { SocketNamespace } from '@common/enums';
 import {

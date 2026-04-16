@@ -24,7 +24,7 @@ import { ActivatedRoute, provideRouter } from '@angular/router';
 import { ChatService } from '@app/services/chat/chat.service';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
-import { GameMode, PlayerType, SocketNamespace } from '@common/enums';
+import { DiceType, GameMode, PlayerType, SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
@@ -67,8 +67,8 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
                 attack: 4,
                 defense: 4,
                 lifeBonus: true,
-                attackDice: 'D6',
-                defenseDice: 'D4',
+                attackDice: DiceType.D6,
+                defenseDice: DiceType.D4,
             },
             ...restOverrides,
         };
@@ -96,8 +96,8 @@ describe('WaitingRoomComponent - Signals, Actions & Cleanup', () => {
                         attack: 4,
                         defense: 4,
                         lifeBonus: false,
-                        attackDice: 'D4',
-                        defenseDice: 'D6',
+                        attackDice: DiceType.D4,
+                        defenseDice: DiceType.D6,
                     },
                 }),
             ],

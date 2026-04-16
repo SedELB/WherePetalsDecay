@@ -1,6 +1,7 @@
 import {
     FlagTransferResponsePayload,
     MoveRequestPayload,
+    RequestCombatPayload,
     RequestTileInfoPayload,
     RequestToggleDoorPayload,
     RequestUseSanctuaryPayload,
@@ -77,7 +78,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     }
 
     @SubscribeMessage(JoinGameEvents.RequestCombat)
-    handleRequestCombat(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; enemy: { socketId: string } }): void {
+    handleRequestCombat(@ConnectedSocket() socket: Socket, @MessageBody() payload: RequestCombatPayload): void {
         this.combatFlow.initializeCombat(this.server, payload.lobbyId, socket.id, payload.enemy.socketId);
     }
 

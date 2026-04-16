@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { DEFAULT_DICE_FACES, DICE_ROLL_TICK_MS } from '@app/components/combat/combat.constants';
 import {
+    DiceAnimationDurations,
     DiceRollDisplayData,
     FighterDiceDisplayData,
     FighterSide,
@@ -22,7 +23,7 @@ export class CombatDiceService {
     playDiceAnimation(
         sequenceToken: number,
         roundResult: RoundDetailedResult,
-        durations: { rollMs: number; resultMs: number },
+        durations: DiceAnimationDurations,
         debugDiceMode: boolean,
         onFinished: () => void,
     ): void {
