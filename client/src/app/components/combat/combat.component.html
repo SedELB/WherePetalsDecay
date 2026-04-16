@@ -1,4 +1,4 @@
-﻿<div class="combat-container">
+<div class="combat-container">
     <section class="fighter-column">
         <div class="profile-card">
             <img class="pfp" [src]="player.character.avatar" [alt]="player.character.name">
@@ -95,6 +95,8 @@
                 [grid]="combatMap"
                 [players]="[player, enemy]"
                 [playerPositions]="playerPos"
+                [showDirectionalKeys]="false"
+                [playerFlipXMap]="combatFlipMap"
             ></app-isometric-map>
 
             <div class="combat-map-overlays">

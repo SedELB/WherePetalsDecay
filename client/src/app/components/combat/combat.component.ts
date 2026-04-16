@@ -160,6 +160,12 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     });
   }
 
+  get combatFlipMap(): Record<string, boolean> {
+    const flipMap: Record<string, boolean> = {};
+    if (this.player?.socketId) flipMap[this.player.socketId] = true;
+    return flipMap;
+  }
+
   getCurrentRoundIndex(): number {
     return this.gameViewService.combatRoundIndex();
   }

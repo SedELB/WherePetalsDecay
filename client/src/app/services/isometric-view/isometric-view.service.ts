@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { ISO_ITEM_ASSETS, RENDER_CONSTANTS, STROKE_COLOR, TILE_LINE_WIDTH, TILE_THICKNESS } from '@app/constants/isometric.constants';
 import { RenderBoardConfig, TileDepthParams, TileRenderParams } from '@app/interfaces/isometric-interfaces';
-import { TileItem, TileTexture } from '@common/enums';
+import { TileItem, TileTexture, PlayerAction } from '@common/enums';
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
@@ -49,15 +49,17 @@ export class IsometricViewService {
 
         const positions = {
             north: { col: Math.floor(totalColumns / 2) - 1, row: - rowOffset },
-            west:  { col: -2, row: Math.floor(totalRows / 2) - 1 },
+            west: { col: -2, row: Math.floor(totalRows / 2) - 1 },
             south: { col: Math.floor(totalColumns / 2) - 1, row: totalRows + rowOffset },
-            east:  { col: totalColumns + rowOffset, row: Math.floor(totalRows / 2) - 1 },
+            east: { col: totalColumns + rowOffset, row: Math.floor(totalRows / 2) - 1 },
         };
 
-        this.drawDirectionKey(config.ctx, 'W', positions.north.col, positions.north.row, viewConfig);
-        this.drawDirectionKey(config.ctx, 'A', positions.west.col,  positions.west.row,  viewConfig);
-        this.drawDirectionKey(config.ctx, 'S', positions.south.col, positions.south.row, viewConfig);
-        this.drawDirectionKey(config.ctx, 'D', positions.east.col,  positions.east.row,  viewConfig);
+        if (config.showDirectionalKeys !== false) {
+            this.drawDirectionKey(config.ctx, 'W', positions.north.col, positions.north.row, viewConfig);
+            this.drawDirectionKey(config.ctx, 'A', positions.west.col, positions.west.row, viewConfig);
+            this.drawDirectionKey(config.ctx, 'S', positions.south.col, positions.south.row, viewConfig);
+            this.drawDirectionKey(config.ctx, 'D', positions.east.col, positions.east.row, viewConfig);
+        }
 
         config.ctx.restore();
     }
@@ -93,39 +95,59 @@ export class IsometricViewService {
 
                 // 2. Draw Entities
                 this.drawAssetsOnTile(params);
-
-                // 3. Draw Sancturaries (2x2)
-                if (tile.item && isSanctuary(tile.item)) {
-                    const isBottom = row > 0 && config.grid[row - 1][col].item === tile.item;
-                    const isRight = col > 0 && config.grid[row][col - 1].item === tile.item;
-                    const isDiagonal = row > 0 && col > 0 && config.grid[row - 1][col - 1].item === tile.item;
-
-                    if (isBottom && isRight && isDiagonal) {
-                        drawSanctuarySprite(
-                            config.ctx,
-                            tile.item,
-                            {
-                                north: vertices[row - 1][col - 1],
-                                east: vertices[row - 1][col + 1],
-                                south: vertices[row + 1][col + 1],
-                                west: vertices[row + 1][col - 1],
-                            },
-                            this.getImage,
-                        );
-                    }
-                }
-
-                // 4. Draw Portcullis Bars (top layer)
+                
+                // 3. Draw Portcullis Bars (top layer)
                 if (tile.type === TileTexture.DoorClosed || tile.type === TileTexture.DoorOpened) {
                     drawPortcullisBars(
                         config.ctx,
-                        { north: params.surfaceTopLeft, east: params.surfaceTopRight,
-                            south: params.surfaceBottomRight, west: params.surfaceBottomLeft },
+                        {
+                            north: params.surfaceTopLeft, east: params.surfaceTopRight,
+                            south: params.surfaceBottomRight, west: params.surfaceBottomLeft,
+                        },
                         tile.type === TileTexture.DoorClosed ? 1 : 0,
+                        `${col},${row}`,
                     );
                 }
+
+                // 4. Draw Sancturaries (2x2)
+                this.drawSanctuaryOnTile(row, col, vertices, config);
             }
         }
+    }
+
+    private drawSanctuaryOnTile(row: number, col: number, vertices: Vec2[][], config: RenderBoardConfig): void {
+        const tile = config.grid[row][col];
+        if (!tile.item || !isSanctuary(tile.item)) return;
+
+        const isBottom = row > 0 && config.grid[row - 1][col].item === tile.item;
+        const isRight = col > 0 && config.grid[row][col - 1].item === tile.item;
+        const isDiagonal = row > 0 && col > 0 && config.grid[row - 1][col - 1].item === tile.item;
+
+        if (!(isBottom && isRight && isDiagonal)) return;
+
+        const sanctuaryCells = [
+            { x: col, y: row },
+            { x: col - 1, y: row },
+            { x: col, y: row - 1 },
+            { x: col - 1, y: row - 1 },
+        ];
+        
+        const isGlowing = config.actionHighlightTiles?.some(
+            (h) => h.type === PlayerAction.Sanctuary && sanctuaryCells.some((c) => c.x === h.pos.x && c.y === h.pos.y),
+        ) ?? false;
+
+        drawSanctuarySprite(
+            config.ctx,
+            tile.item,
+            {
+                north: vertices[row - 1][col - 1],
+                east: vertices[row - 1][col + 1],
+                south: vertices[row + 1][col + 1],
+                west: vertices[row + 1][col - 1],
+            },
+            this.getImage,
+            isGlowing,
+        );
     }
 
     private drawAssetsOnTile(params: TileRenderParams): void {
@@ -163,7 +185,6 @@ export class IsometricViewService {
 
         const projectedData = this.projectPlayerPosition(position, vertices);
         if (!projectedData) return;
-        const ctx = config.ctx;
 
         const playerImg = this.getImage(player.character.avatar);
         if (!playerImg?.complete || playerImg.naturalWidth <= 0) return;
@@ -172,7 +193,7 @@ export class IsometricViewService {
         const imgW = projectedData.tileW * RENDER_CONSTANTS.playerWidthRatio;
         const imgH = (imgW / aspect) * RENDER_CONSTANTS.playerHeightAdjustment;
 
-        this.drawPlayerShadow(ctx, {
+        this.drawPlayerShadow(config.ctx, {
             cx: projectedData.cx,
             cy: projectedData.cy,
             tileH: projectedData.tileH,
@@ -180,33 +201,57 @@ export class IsometricViewService {
             imgH,
         });
 
-        const charX = projectedData.cx - imgW / 2;
-        const charY = projectedData.cy - imgH + (projectedData.tileH * RENDER_CONSTANTS.playerDepthOffset);
-        const isLocal = player.socketId === config.localPlayerSocketId;
-        let glowColor: string | null = null;
+        this.drawPlayerSprite(
+            config.ctx,
+            playerImg,
+            {
+                x: projectedData.cx - imgW / 2,
+                y: projectedData.cy - imgH + (projectedData.tileH * RENDER_CONSTANTS.playerDepthOffset),
+                w: imgW,
+                h: imgH,
+                isFlipped: config.flipXMap?.[player.socketId] ?? false,
+                glowColor: this.getPlayerGlowColor(player, config),
+            },
+        );
+    }
 
+    private getPlayerGlowColor(player: Player, config: RenderBoardConfig): string | null {
         if (config.isCTF) {
-            const isTeamA = config.teamA?.some((teamPlayer) => teamPlayer.socketId === player.socketId);
-            const isTeamB = config.teamB?.some((teamPlayer) => teamPlayer.socketId === player.socketId);
+            if (config.teamA?.some((t) => t.socketId === player.socketId)) return '#3b82f6';
+            if (config.teamB?.some((t) => t.socketId === player.socketId)) return '#ef4444';
+            return null;
+        }
 
-            if (isTeamA) glowColor = '#3b82f6';
-            else if (isTeamB) glowColor = '#ef4444';
-        } else if (isLocal) {
-            glowColor = '#00f2fe';
+        return player.socketId === config.localPlayerSocketId ? '#00f2fe' : null;
+    }
+
+    private drawPlayerSprite(
+        ctx: CanvasRenderingContext2D,
+        img: HTMLImageElement,
+        params: { x: number; y: number; w: number; h: number; isFlipped: boolean; glowColor: string | null },
+    ): void {
+        const { x, y, w, h, isFlipped, glowColor } = params;
+        ctx.save();
+        if (glowColor) {
+            ctx.shadowColor = glowColor;
+        }
+
+        if (isFlipped) {
+            ctx.translate(x + w / 2, y + h / 2);
+            ctx.scale(-1, 1);
+            ctx.translate(-(x + w / 2), -(y + h / 2));
         }
 
         if (glowColor) {
-            ctx.save();
-            ctx.shadowColor = glowColor;
-            ctx.shadowBlur = 30; ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-            ctx.shadowBlur = 18; ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-            ctx.shadowBlur = 8; ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-            ctx.shadowBlur = 0; ctx.drawImage(playerImg, charX, charY, imgW, imgH);
-            ctx.restore();
-            return;
+            ctx.shadowBlur = 30; ctx.drawImage(img, x, y, w, h);
+            ctx.shadowBlur = 18; ctx.drawImage(img, x, y, w, h);
+            ctx.shadowBlur = 8; ctx.drawImage(img, x, y, w, h);
+            ctx.shadowBlur = 0; ctx.drawImage(img, x, y, w, h);
+        } else {
+            ctx.drawImage(img, x, y, w, h);
         }
 
-        ctx.drawImage(playerImg, charX, charY, imgW, imgH);
+        ctx.restore();
     }
 
     private projectPlayerPosition(position: Vec2, vertices: Vec2[][]): {

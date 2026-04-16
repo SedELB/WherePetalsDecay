@@ -25,7 +25,7 @@ const routes: Routes = [
     { path: '', redirectTo: '/home', pathMatch: 'full' },
     { path: 'home', component: HomePageComponent, title },
     { path: 'admin', component: AdminPageComponent, title: title + ' - Admin'},
-    { path: 'admin/create', component: CreateGamePageComponent },
+    { path: 'admin/create', component: CreateGamePageComponent, title: title + ' - Create a Map'},
     { path: 'editor/new', component: MapSetupPageComponent, title: title + ' - New Map' },
     { path: 'editor/:id', component: MapSetupPageComponent, title: title + ' - Edit Map' },
     { path: 'create', component: GameCreationComponent, title: title + ' - Host a Game' },

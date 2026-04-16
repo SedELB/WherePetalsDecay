@@ -128,12 +128,9 @@ h2 {
 }
 
 .players-section {
-    // flex: 1; // TODO: to delete
-    // min-height: 100px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    // margin-bottom: 1rem;
 
     h2 {
         flex-shrink: 0;
