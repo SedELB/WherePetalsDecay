@@ -4,7 +4,7 @@ import { COMBAT_END_NOTIFICATION_DELAY, DEFAULT_COMBAT_POSTURE, ONE_SECOND_DELAY
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Debuf, Posture } from '@common/character';
 import { COMBAT_POSTURE_TIMEOUT_MS } from '@common/constants/combat-timeline.constants';
-import { SocketNamespace, TileItem } from '@common/enums';
+import { SocketNamespace, TileItem, TileTexture } from '@common/enums';
 import {
     CombatAttackAnimationData,
     CombatEndedData,
@@ -24,6 +24,7 @@ import swal from 'sweetalert2';
 interface CombatListenerDependencies {
     getLocalSocketId: () => string | undefined;
     getGameLobby: () => Lobby | null;
+    getPlayerPositions: () => Record<string, Vec2>;
     updateGameLobby: (updater: (lobby: Lobby | null) => Lobby | null) => void;
     updatePlayerPositions: (updater: (positions: Record<string, Vec2>) => Record<string, Vec2>) => void;
     setFlagTaken: (value: boolean) => void;
@@ -289,23 +290,7 @@ export class GameViewCombatService {
                 ? data
                 : { player: data.enemy, enemy: data.player, roomId: data.roomId };
 
-            const normalizedCombatData: CombatStartedData = {
-                roomId: localPlayerData.roomId,
-                player: {
-                    ...localPlayerData.player,
-                    character: {
-                        ...localPlayerData.player.character,
-                        bonusPosture: { ...DEFAULT_COMBAT_POSTURE },
-                    },
-                },
-                enemy: {
-                    ...localPlayerData.enemy,
-                    character: {
-                        ...localPlayerData.enemy.character,
-                        bonusPosture: { ...DEFAULT_COMBAT_POSTURE },
-                    },
-                },
-            };
+            const normalizedCombatData = this.buildCombatStartData(localPlayerData, dependencies);
 
             this.combatInitiatorName.set(data.player.character.name);
             this.isCombatStarted.set(true);
@@ -315,6 +300,63 @@ export class GameViewCombatService {
             this.combatPostureCountdownMax.set(0);
             this.fighters.set(normalizedCombatData);
         });
+    }
+
+    private buildCombatStartData(
+        localPlayerData: CombatStartedData,
+        dependencies: CombatListenerDependencies,
+    ): CombatStartedData {
+        const playerPositions = dependencies.getPlayerPositions();
+        const gameGrid = dependencies.getGameLobby()?.game.grid;
+
+        const playerDebuff = this.resolveCombatStartIceDebuff(
+            localPlayerData.player.socketId,
+            localPlayerData.player.character.debuf,
+            playerPositions,
+            gameGrid,
+        );
+
+        const enemyDebuff = this.resolveCombatStartIceDebuff(
+            localPlayerData.enemy.socketId,
+            localPlayerData.enemy.character.debuf,
+            playerPositions,
+            gameGrid,
+        );
+
+        return {
+            roomId: localPlayerData.roomId,
+            player: {
+                ...localPlayerData.player,
+                character: {
+                    ...localPlayerData.player.character,
+                    bonusPosture: { ...DEFAULT_COMBAT_POSTURE },
+                    debuf: playerDebuff,
+                },
+            },
+            enemy: {
+                ...localPlayerData.enemy,
+                character: {
+                    ...localPlayerData.enemy.character,
+                    bonusPosture: { ...DEFAULT_COMBAT_POSTURE },
+                    debuf: enemyDebuff,
+                },
+            },
+        };
+    }
+
+    private resolveCombatStartIceDebuff(
+        socketId: string,
+        fallbackDebuff: Debuf | undefined,
+        playerPositions: Record<string, Vec2>,
+        gameGrid: Lobby['game']['grid'] | undefined,
+    ): Debuf {
+        const position = playerPositions[socketId];
+        if (!position || !gameGrid) return fallbackDebuff ?? 0;
+
+        const tile = gameGrid[position.y]?.[position.x];
+        if (!tile) return fallbackDebuff ?? 0;
+
+        return tile.type === TileTexture.Ice ? 2 : 0;
     }
 
     private registerCombatRoundStartedListener(): void {

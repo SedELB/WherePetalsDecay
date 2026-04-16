@@ -99,6 +99,14 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
         return this.combatLogicService.getDiceBonusDisplay(side, stat);
     }
 
+    getIceDebuff(side: FighterSide, stat: FighterStatType): number {
+        return this.combatLogicService.getIceDebuff(side, stat);
+    }
+
+    getIceDebuffDisplay(side: FighterSide, stat: FighterStatType): string {
+        return this.combatLogicService.getIceDebuffDisplay(side, stat);
+    }
+
     getDisplayedLife(side: FighterSide): number {
         return this.combatLogicService.getDisplayedLife(side);
     }
