@@ -95,7 +95,7 @@ export class EndGamePageComponent implements OnDestroy, OnInit {
     }
 
     sortIndicator(col: SortColumn): string {
-        if (this.sortColumn() !== col) return ' ⇅';
+        if (this.sortColumn() !== col) return '';
         return this.sortAscending() ? ' ▲' : ' ▼';
     }
 
