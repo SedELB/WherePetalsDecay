@@ -55,6 +55,14 @@ export class EndGamePageComponent implements OnDestroy, OnInit {
 
             if (valA < valB) return asc ? -1 : 1;
             if (valA > valB) return asc ? 1 : -1;
+
+            if (col !== 'name') {
+                const nameA = player1.character.name.toLowerCase();
+                const nameB = player2.character.name.toLowerCase();
+                if (nameA < nameB) return -1;
+                if (nameA > nameB) return 1;
+            }
+
             return 0;
         });
     });

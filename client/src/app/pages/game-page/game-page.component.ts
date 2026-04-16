@@ -110,7 +110,7 @@ export class GamePageComponent implements OnInit {
 
         if (this.signals.showCombatInProgressModal()) return;
 
-        if (event.key === 'm' || event.key === 'M') {
+        if ((event.key === 'm' || event.key === 'M') && this.gameViewService.isHost()) {
             if (lobbyId) this.gameViewService.toggleDebugMode(lobbyId);
             return;
         }
