@@ -63,10 +63,9 @@
     </section>
 
     <main class="fight-panel">
-        <h1>Interface de combat</h1>
-        <p class="subtitle">
+        <h1>
             Round #{{ getCurrentRoundIndex() }}
-        </p>
+        </h1>
         <div class="combat-status-slot">
             @if (shouldShowAttackAnnouncement()) {
                 <p class="attack-announcement">{{ getAttackAnnouncementMessage() }}</p>
