@@ -225,7 +225,12 @@ export class CombatLogicService {
 
         const fighter = this.getFighterBySide(side);
         if (!fighter?.character) return 0;
-        return stat === 'attack' ? fighter.character.attack : fighter.character.defense;
+
+        const baseValue = stat === 'attack' ? fighter.character.attack : fighter.character.defense;
+        const postureBonus = this.getPostureBonus(side, stat);
+        const iceDebuff = this.getIceDebuff(side, stat);
+
+        return Math.max(baseValue + postureBonus - iceDebuff, 0);
     }
 
     getPostureBonus(side: FighterSide, stat: FighterStatType): number {
@@ -247,6 +252,18 @@ export class CombatLogicService {
 
     getDiceBonusDisplay(side: FighterSide, stat: FighterStatType): string {
         return `+${this.getDiceBonus(side, stat)}`;
+    }
+
+    getIceDebuff(side: FighterSide, stat: FighterStatType): number {
+        const statResult = this.getRoundStatResult(side, stat);
+        if (statResult) return statResult.penalty;
+
+        const fighterDebuff = this.getFighterBySide(side)?.character?.debuf ?? 0;
+        return fighterDebuff > 0 ? fighterDebuff : 0;
+    }
+
+    getIceDebuffDisplay(side: FighterSide, stat: FighterStatType): string {
+        return `-${this.getIceDebuff(side, stat)}`;
     }
 
     getDisplayedLife(side: FighterSide): number {

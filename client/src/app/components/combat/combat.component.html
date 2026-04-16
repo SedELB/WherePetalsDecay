@@ -9,6 +9,7 @@
                 <div class="bonus-legend" aria-label="Légende des bonus">
                     <span class="bonus-badge bonus-badge--posture">Bonus posture</span>
                     <span class="bonus-badge bonus-badge--dice">Bonus dé</span>
+                    <span class="bonus-badge bonus-badge--debuff">Malus glace</span>
                 </div>
                 <div class="stat-row stat-row--hp">
                     <span class="stat-label">❤️ HP</span>
@@ -26,6 +27,9 @@
                         @if (getDiceBonus('player', 'attack') > 0) {
                             <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('player', 'attack') }}</span>
                         }
+                        @if (getIceDebuff('player', 'attack') > 0) {
+                            <span class="bonus-badge bonus-badge--debuff">{{ getIceDebuffDisplay('player', 'attack') }}</span>
+                        }
                     </span>
                     <span class="stat-value">{{ getStatTotal('player', 'attack') }}</span>
                 </div>
@@ -37,6 +41,9 @@
                         }
                         @if (getDiceBonus('player', 'defense') > 0) {
                             <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('player', 'defense') }}</span>
+                        }
+                        @if (getIceDebuff('player', 'defense') > 0) {
+                            <span class="bonus-badge bonus-badge--debuff">{{ getIceDebuffDisplay('player', 'defense') }}</span>
                         }
                     </span>
                     <span class="stat-value">{{ getStatTotal('player', 'defense') }}</span>
@@ -152,6 +159,7 @@
                 <div class="bonus-legend" aria-label="Légende des bonus">
                     <span class="bonus-badge bonus-badge--posture">Bonus posture</span>
                     <span class="bonus-badge bonus-badge--dice">Bonus dé</span>
+                    <span class="bonus-badge bonus-badge--debuff">Malus glace</span>
                 </div>
                 <div class="stat-row stat-row--hp">
                     <span class="stat-label">❤️ HP</span>
@@ -169,6 +177,9 @@
                         @if (getDiceBonus('enemy', 'attack') > 0) {
                             <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('enemy', 'attack') }}</span>
                         }
+                        @if (getIceDebuff('enemy', 'attack') > 0) {
+                            <span class="bonus-badge bonus-badge--debuff">{{ getIceDebuffDisplay('enemy', 'attack') }}</span>
+                        }
                     </span>
                     <span class="stat-value">{{ getStatTotal('enemy', 'attack') }}</span>
                 </div>
@@ -180,6 +191,9 @@
                         }
                         @if (getDiceBonus('enemy', 'defense') > 0) {
                             <span class="bonus-badge bonus-badge--dice">{{ getDiceBonusDisplay('enemy', 'defense') }}</span>
+                        }
+                        @if (getIceDebuff('enemy', 'defense') > 0) {
+                            <span class="bonus-badge bonus-badge--debuff">{{ getIceDebuffDisplay('enemy', 'defense') }}</span>
                         }
                     </span>
                     <span class="stat-value">{{ getStatTotal('enemy', 'defense') }}</span>
