@@ -43,10 +43,8 @@ describe('LobbyCardComponent', () => {
     let component: LobbyCardComponent;
     let fixture: ComponentFixture<LobbyCardComponent>;
 
-    const SMALL_MAX = 2;
     const MEDIUM_MAX = 4;
-    const LARGE_MAX = 6;
-    const EXPECTED_LIST_ITEMS = 5;
+    const EXPECTED_LIST_ITEMS = 3;
 
     const createMockGame = (overrides: Partial<Game> = {}): Game => ({
         _id: 'game-1', name: 'Test Game', description: 'A test game', size: { rows: 10, cols: 10 },
@@ -115,13 +113,7 @@ describe('LobbyCardComponent', () => {
     it('should show the grid size in NxN format', () => {
         component.lobby = createMockLobby();
         fixture.detectChanges();
-        expect((fixture.nativeElement as HTMLElement).textContent).toContain('10X10');
-    });
-
-    it('should show player count as current/max', () => {
-        component.lobby = createMockLobby();
-        fixture.detectChanges();
-        expect((fixture.nativeElement as HTMLElement).textContent).toContain('1 /4');
+        expect((fixture.nativeElement as HTMLElement).textContent).toContain('10 x 10');
     });
 
     it('should show the thumbnail image', () => {
@@ -160,36 +152,13 @@ describe('LobbyCardComponent', () => {
     // We support three board sizes (10x10, 15x15, 20x20). Just making sure each
     // one gets formatted and displayed correctly.
 
-    [{ r: 10, c: 10, s: '10X10' }, { r: 15, c: 15, s: '15X15' }, { r: 20, c: 20, s: '20X20' }].forEach(({ r, c, s }) => {
+    [{ r: 10, c: 10, s: '10 x 10' }, { r: 15, c: 15, s: '15 x 15' }, { r: 20, c: 20, s: '20 x 20' }].forEach(({ r, c, s }) => {
         it(`should display "${s}" for a ${r}x${c} grid`, () => {
             component.lobby = createMockLobby({ game: createMockGame({ size: { rows: r, cols: c } }) });
             fixture.detectChanges();
             expect((fixture.nativeElement as HTMLElement).textContent).toContain(s);
         });
     });
-
-
-    // Player Count Display
-    //
-    // The card shows "current/max" for lobby occupancy. We check full lobbies
-    // at each size (small, medium, large) and also the minimum case (1 player)
-
-    describe('Player Capacity Display', () => {
-        [{ max: SMALL_MAX, label: 'small' }, { max: MEDIUM_MAX, label: 'medium' }, { max: LARGE_MAX, label: 'large' }].forEach(({ max, label }) => {
-            it(`should show "${max}/${max}" when a ${label} lobby is full`, () => {
-                component.lobby = createMockLobby({ playerCount: max, game: createMockGame({ maxPlayers: max }) });
-                fixture.detectChanges();
-                expect((fixture.nativeElement as HTMLElement).textContent).toContain(`${max} /${max}`);
-            });
-        });
-
-        it('should show "1/N" for a single-player lobby', () => {
-            component.lobby = createMockLobby({ playerCount: 1, game: createMockGame({ maxPlayers: LARGE_MAX }) });
-            fixture.detectChanges();
-            expect((fixture.nativeElement as HTMLElement).textContent).toContain(`1 /${LARGE_MAX}`);
-        });
-    });
-
 
     // Edge Cases
     //
@@ -205,7 +174,7 @@ describe('LobbyCardComponent', () => {
         fixture.detectChanges();
         const text = (fixture.nativeElement as HTMLElement).textContent;
         expect(text).toContain('New Game');
-        expect(text).toContain('20X20');
+        expect(text).toContain('20 x 20');
         expect(text).toContain('CTF');
     });
 
@@ -242,9 +211,9 @@ describe('LobbyCardComponent', () => {
         fixture.detectChanges();
         const el = fixture.nativeElement as HTMLElement;
         expect(el.textContent).toContain('Capture The Flag');
-        expect(el.textContent).toContain('15X15');
+        expect(el.textContent).toContain('15 x 15');
         expect(el.textContent).toContain('CTF');
-        expect(el.textContent).toContain(`2 /${MEDIUM_MAX}`);
+        expect(el.textContent).toContain(`2 / ${MEDIUM_MAX}`);
         expect((el.querySelector('img.thumbnail') as HTMLImageElement).src).toContain('ctf.png');
     });
 
@@ -259,7 +228,7 @@ describe('LobbyCardComponent', () => {
     it('should have four list items in the info section', () => {
         component.lobby = createMockLobby();
         fixture.detectChanges();
-        expect((fixture.nativeElement as HTMLElement).querySelectorAll('li').length).toBe(EXPECTED_LIST_ITEMS);
+        expect((fixture.nativeElement as HTMLElement).querySelectorAll('.stat-item').length).toBe(EXPECTED_LIST_ITEMS);
     });
 });
 

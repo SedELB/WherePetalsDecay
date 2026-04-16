@@ -211,6 +211,8 @@ export class GamePageComponent implements OnInit {
         this.isMoveCoolingDown = true;
         setTimeout(() => (this.isMoveCoolingDown = false), MOVE_COOLDOWN_MS);
 
+        this.gamePageSignalService.closeSubMenu();
+
         if (lobbyId) this.gameViewService.sendMove(lobbyId, direction);
     }
 
@@ -320,6 +322,7 @@ export class GamePageComponent implements OnInit {
 
         if (this.isDebugModeActive()) {
             if (this.isTeleportable(position.x, position.y)) {
+                this.gamePageSignalService.closeSubMenu();
                 this.gameViewService.teleportMove(lobbyId, position);
             }
             return;

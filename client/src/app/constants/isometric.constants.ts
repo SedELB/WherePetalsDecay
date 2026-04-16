@@ -57,11 +57,9 @@ export const TILE_COLORS: Record<string, TileColorSet> = {
   [TileTexture.DoorOpened]: { top: '#f39c12', left: '#d68910', right: '#b9770e' },
 };
 
-export const ISO_ITEM_ASSETS: Record<TileItem, string> = {
+export const ISO_ITEM_ASSETS: Partial<Record<TileItem, string>> = {
   [TileItem.Spawn]: './assets/icons/spawnPoint.svg',
   [TileItem.Flag]: './assets/icons/japFlagStick.svg',
-  [TileItem.HealingSanctuary]: './assets/icons/healingSanctuary.svg',
-  [TileItem.CombatSanctuary]: './assets/icons/combatSanctuary.svg',
 };
 
 export const ISO_TEXTURE_ASSETS: Record<TileTexture, string> = {
