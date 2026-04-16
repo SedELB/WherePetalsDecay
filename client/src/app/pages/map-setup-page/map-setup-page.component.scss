@@ -90,7 +90,7 @@
     position: absolute;
     top: 0;
     left: 0;
-    color: rgba(237, 222, 167, 0.6);
+    color: #EEDFA8;
     font-size: 1rem;
     font-weight: 600;
     transition: all 0.3s ease;
@@ -104,7 +104,7 @@
     left: 0;
     height: 0.125rem;
     width: 100%;
-    background-color: #f0c674;
+    background-color: #EEDFA8;
     transform: scaleX(0);
     transition: all 0.3s ease;
 }
@@ -215,11 +215,12 @@
 }
 
 .map-title {
-    color: #f0c674;
+    color: #EEDFA8;
     font-weight: 800;
     font-size: 1.5rem;
     text-transform: uppercase;
     letter-spacing: 1px;
+    text-shadow: 0 0 12px rgba(240, 198, 116, 0.5);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -384,8 +385,9 @@
 }
 
 .panel-title {
-    color: #f0c674;
-    font-family: Arial, Helvetica, sans-serif;
+    color: #EEDFA8;
+    font-family: "PT Sans", sans-serif;
+    text-shadow: 0 0 10px rgba(240, 198, 116, 0.4);
     border-bottom: solid rgba(255, 255, 255, 0.26);
     padding-bottom: 1.25rem;
     width: 90%;

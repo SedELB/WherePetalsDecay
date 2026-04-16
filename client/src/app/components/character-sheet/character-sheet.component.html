@@ -12,11 +12,11 @@
         </div>
         <div class="sheet-stats">
             <div class="stat-row">
-                <span class="stat-label">Mouvement</span>
+                <span class="stat-label">Points de mouvement</span>
                 <span class="stat-value">{{ movementPoints > 0 ? movementPoints : '—' }}</span>
             </div>
             <div class="stat-row">
-                <span class="stat-label">Action</span>
+                <span class="stat-label">Actions restantes</span>
                 <span class="stat-value">{{ actionPoints > 0 ? actionPoints : '—' }}</span>
             </div>
             <div class="stat-row">
@@ -25,11 +25,11 @@
             </div>
             <div class="stat-row">
                 <span class="stat-label">Attaque</span>
-                <span class="stat-value">{{ player?.character?.attack }} <span class="dice">D{{ player?.character?.attackDice }}</span></span>
+                <span class="stat-value">{{ player?.character?.attack }} <span class="dice">{{ player?.character?.attackDice }}</span></span>
             </div>
             <div class="stat-row">
                 <span class="stat-label">Défense</span>
-                <span class="stat-value">{{ player?.character?.defense }} <span class="dice">D{{ player?.character?.defenseDice }}</span></span>
+                <span class="stat-value">{{ player?.character?.defense }} <span class="dice">{{ player?.character?.defenseDice }}</span></span>
             </div>
         </div>
     }

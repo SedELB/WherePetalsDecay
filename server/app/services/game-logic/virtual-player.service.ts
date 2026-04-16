@@ -903,7 +903,7 @@ export class VirtualPlayerService {
     // Returns true if the VP already has an active combat sanctuary bonus
     // (prevents seeking or using a second combat sanctuary for a double effect)
     private hasCombatBonus(game: ActiveGame, socketId: string): boolean {
-        return game.playerCombatBonusTurns.has(socketId);
+        return game.playerCombatBonuses.has(socketId);
     }
 
     // -------------------------------------------

@@ -27,7 +27,6 @@ describe('CreateGamePageComponent', () => {
     fixture = TestBed.createComponent(CreateGamePageComponent);
     component = fixture.componentInstance;
     router = TestBed.inject(Router);
-    fixture.detectChanges();
   });
 
   it('should create the component', () => {
@@ -232,6 +231,7 @@ describe('CreateGamePageComponent', () => {
 
   // Test return button appears
   it('should render return button on the page', () => {
+    fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const returnButton = compiled.querySelector('app-button');
 
@@ -240,6 +240,7 @@ describe('CreateGamePageComponent', () => {
 
   // Test create button appears
   it('should render create button on the page', () => {
+    fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const createButton = compiled.querySelector('#save-button');
 
@@ -248,6 +249,7 @@ describe('CreateGamePageComponent', () => {
 
   // Test map size buttons appears
   it('should render all three map size buttons', () => {
+    fixture.detectChanges();
     const EXPECTED_SIZE_CARD_COUNT = 3;
     const compiled = fixture.nativeElement as HTMLElement;
     const sizeCards = compiled.querySelectorAll('.size-card');
@@ -257,10 +259,11 @@ describe('CreateGamePageComponent', () => {
 
   // Test game mode buttons appears
   it('should render both game mode buttons', () => {
+    fixture.detectChanges();
     const EXPECTED_GAME_MODE_COUNT = 2;
     const compiled = fixture.nativeElement as HTMLElement;
-    const gameModeButtons = compiled.querySelector('.gamemode-button');
-    const buttons = gameModeButtons?.querySelectorAll('app-button');
+    const gameModeButtonGroup = compiled.querySelector('.gamemode-button-group');
+    const buttons = gameModeButtonGroup?.querySelectorAll('button');
 
     expect(buttons).toBeTruthy();
     if (buttons) {
@@ -270,32 +273,34 @@ describe('CreateGamePageComponent', () => {
 
   // Test button selection for map size
   it('should mark selected map size button', () => {
+    component.mapSizeSelected(MapSizeKey.Large);
     fixture.detectChanges();
-    component.mapSize = MapSizeKey.Large;
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const buttons = compiled.querySelectorAll('app-button');
+    const buttons = compiled.querySelectorAll('button.marker-btn');
 
     const largeButton = Array.from(buttons).find(btn =>
       btn.textContent?.includes('Grande'),
     );
 
     expect(largeButton).toBeTruthy();
+    expect(largeButton?.classList.contains('selected')).toBeTrue();
   });
 
   // Test button selection for game mode
   it('should mark selected game mode button', () => {
+    component.gameModeSelected(GameMode.Classic);
     fixture.detectChanges();
-    component.gameMode = GameMode.Classic;
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const buttons = compiled.querySelectorAll('app-button');
+    const buttons = compiled.querySelectorAll('button.marker-btn');
 
     const classicButton = Array.from(buttons).find(btn =>
       btn.textContent?.includes('Classique'),
     );
 
     expect(classicButton).toBeTruthy();
+    expect(classicButton?.classList.contains('selected')).toBeTrue();
   });
 
   // Test that gameModeEnum is available
