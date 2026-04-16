@@ -203,9 +203,10 @@
 
     .stat-entry {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         gap: 2rem;
         border-bottom: 1px solid rgba(237, 222, 167, 0.05);
+        padding-top: 0.8rem;
         padding-bottom: 1rem;
 
         .stat-code {

@@ -139,6 +139,12 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
         this.combatLogicService.dispose();
     }
 
+    get combatFlipMap(): Record<string, boolean> {
+        const flipMap: Record<string, boolean> = {};
+        if (this.player?.socketId) flipMap[this.player.socketId] = true;
+        return flipMap;
+    }
+
     ngOnChanges(): void {
         if (!this.player?.socketId || !this.enemy?.socketId) return;
         this.combatLogicService.setCombatants(this.player, this.enemy);

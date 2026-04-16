@@ -11,10 +11,6 @@
                     </div>
                     <div class="commands-wrapper">
                         <span class="controls-title">Commandes</span>
-                        <span class="control"><span class="key">W</span> Haut</span>
-                        <span class="control"><span class="key">A</span> Gauche</span>
-                        <span class="control"><span class="key">S</span> Bas</span>
-                        <span class="control"><span class="key">D</span> Droite</span>
                         <span class="control"><span class="key">Molette</span> Zoom</span>
                         <span class="control"><span class="key">Maintenir clic</span> Déplacer la carte</span>
                         @if (this.gamePageSignalService.isDebugModeActive()){
@@ -81,12 +77,22 @@
             <section class="game-stats" [class.collapsed]="shouldCollapseGameInfo()">
                 <h3 class="section-title">Informations de partie</h3>
                 <div class="game-info">
-                    <ul>
-                        <li>Nom du jeu : <span>{{ gamePageSignalService.game()?.name }}</span></li>
-                        <li>Taille du jeu : <span>{{ gamePageSignalService.game()?.size?.rows }}X{{ gamePageSignalService.game()?.size?.cols }}</span></li>
-                        <li>Mode de jeu : <span>{{ gamePageSignalService.game()?.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</span></li>
-                        <li>Nombre de joueurs : <span>{{ gamePageSignalService.lobby()?.playerCount }}</span></li>
-                    </ul>
+                    <div class="info-item">
+                        <span class="info-label">Nom du jeu</span>
+                        <span class="info-value">{{ gamePageSignalService.game()?.name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Taille du jeu</span>
+                        <span class="info-value">{{ gamePageSignalService.game()?.size?.rows }}X{{ gamePageSignalService.game()?.size?.cols }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Mode de jeu</span>
+                        <span class="info-value">{{ gamePageSignalService.game()?.gameMode === gameMode.Classic ? 'Classique' : 'CTF'}}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Nombre de joueurs</span>
+                        <span class="info-value">{{ gamePageSignalService.lobby()?.playerCount }}</span>
+                    </div>
                 </div>
             </section>
 

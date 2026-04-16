@@ -17,7 +17,7 @@ export interface ActiveGame {
     movementPoints: Map<string, number>;
     actionPoints: Map<string, number>;
     sanctuaryCooldowns: Map<string, number>;
-    playerCombatBonusTurns: Map<string, number>;
+    playerCombatBonuses: Map<string, { turns: number; amount: number }>;
     isDebugMode?: boolean;
     visitedTilesPerPlayer: Map<string, Set<string>>;
     globalVisitedTiles: Set<string>;

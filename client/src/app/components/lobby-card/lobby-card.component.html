@@ -1,19 +1,28 @@
 <div class="lobbyCard">
+  <div class="player-badge">{{ lobby.playerCount }} / {{ lobby.game.maxPlayers }}</div>
   <div class="image-frame">
     <img class="thumbnail" [src]="lobby.game.thumbnail" [alt]="lobby.game.name"/>
   </div>
 
   <div class="card-info">
-    <ul>
-      <li>
-        <span>{{ lobby.playerCount }}</span>
-        <span> /{{ lobby.game.maxPlayers }}</span> joueurs
-      </li>
-      <li>ID du jeu : <span>{{ lobby.lobbyId }}</span></li>
-      <li>Nom du jeu : <span>{{ lobby.game.name }}</span></li>
-      <li>Taille du jeu : <span>{{ lobby.game.size.rows }}X{{ lobby.game.size.cols }}</span></li>
-      <li>Mode de jeu : <span>{{ lobby.game.gameMode == gameMode.Classic ? 'Classique' : 'CTF'}}</span></li>
-    </ul>
+    <div class="card-header">
+      <h3 class="game-name">{{ lobby.game.name }}</h3>
+    </div>
+
+    <div class="card-stats">
+      <div class="stat-item">
+        <span class="label">Taille :</span>
+        <span class="value">{{ lobby.game.size.rows }} x {{ lobby.game.size.cols }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="label">Mode :</span>
+        <span class="value">{{ lobby.game.gameMode == gameMode.Classic ? 'Classique' : 'CTF' }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="label">ID :</span>
+        <span class="value">{{ lobby.lobbyId }}</span>
+      </div>
+    </div>
 
     <div class="card-buttons">
       <ng-content></ng-content>

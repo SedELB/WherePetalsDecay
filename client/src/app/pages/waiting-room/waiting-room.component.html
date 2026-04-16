@@ -5,14 +5,11 @@
         @if (currentLobby()) {
         <div class="room-info">
             <p class="room-code">
-                Partie : <strong>{{ currentLobby()?.lobbyId }}</strong>
+                ID Partie : <strong>{{ currentLobby()?.lobbyId }}</strong>
             </p>
             <p class="game-name">Jeu : {{ currentLobby()?.game?.name }}</p>
             <p class="player-count">
                 Joueurs : {{ currentLobby()?.playerCount }} / {{ currentLobby()?.game?.maxPlayers }}
-                @if (currentLobby()?.isLocked) {
-                <span class="lock-badge">🔒 Verrouillée</span>
-                }
             </p>
         </div>
 

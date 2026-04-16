@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { Injectable, signal } from '@angular/core';
-import { COMBAT_END_NOTIFICATION_DELAY, DEFAULT_COMBAT_POSTURE, ONE_SECOND_DELAY } from '@app/services/game-view/game-view.constants';
+import { DEFAULT_COMBAT_POSTURE, ONE_SECOND_DELAY } from '@app/services/game-view/game-view.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Debuf, Posture } from '@common/character';
 import { COMBAT_POSTURE_TIMEOUT_MS } from '@common/constants/combat-timeline.constants';
@@ -19,7 +19,6 @@ import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
-import swal from 'sweetalert2';
 
 interface CombatListenerDependencies {
     getLocalSocketId: () => string | undefined;
@@ -423,16 +422,7 @@ export class GameViewCombatService {
             const localId = dependencies.getLocalSocketId();
             if (!localId || !data.timedOutSocketIds?.includes(localId)) return;
 
-            void swal.fire({
-                toast: true,
-                position: 'bottom-end',
-                icon: 'info',
-                title: 'Posture par défaut',
-                text: 'Temps écoulé : posture neutre appliquée pour ce round.',
-                showConfirmButton: false,
-                timer: COMBAT_END_NOTIFICATION_DELAY,
-                timerProgressBar: true,
-            });
+
         });
     }
 
