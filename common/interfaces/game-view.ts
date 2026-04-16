@@ -126,6 +126,7 @@ export interface CombatRoundResolvedData {
     timedOutSocketIds?: string[];
     resolvedAtEpochMs?: number;
     timeline?: CombatRoundTimelineData;
+    debugDiceMode?: boolean;
 }
 
 export interface GameStartedData {
