@@ -72,6 +72,13 @@ export class VirtualPlayerScannerService {
         }) ?? null;
     }
 
+    findAllyFlagCarrier(game: ActiveGame, virtualPlayer: Player): Player | null {
+        return game.lobby.players.find((p) => {
+            if (p.socketId === virtualPlayer.socketId || p.hasAbandonned) return false;
+            return p.hasFlag && !this.isOpponent(game, virtualPlayer, p);
+        }) ?? null;
+    }
+
     chooseFleeTile(game: ActiveGame, virtualPlayer: Player, vpPos: Vec2, withDoors = false): Vec2 | null {
         const remainingMvtPts = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
         const reachableTiles = this.pathfindingService.getReachableTilesWithinBudget(
