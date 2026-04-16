@@ -43,7 +43,7 @@ export class CombatFlowService {
         this.onGameOverCallback = onGameOverCallback;
     }
 
-    initializeCombat(server: Server, lobbyId: string, attackerId: string, defenderId: string): void {
+    initializeCombat(lobbyId: string, attackerId: string, defenderId: string): void {
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
         const attackerPlayer = activeGame?.lobby.players.find((p) => p.socketId === attackerId);
         const defenderPlayer = activeGame?.lobby.players.find((p) => p.socketId === defenderId);
@@ -79,7 +79,7 @@ export class CombatFlowService {
             defenderSocketId: defenderId,
         });
 
-        server.to(roomId).emit(JoinGameEvents.CombatStarted, { player: attackerPlayer, enemy: defenderPlayer, roomId });
+        this.server.to(lobbyId).emit(JoinGameEvents.CombatStarted, { player: attackerPlayer, enemy: defenderPlayer, roomId });
         this.journalService.addCombatStartEntry(lobbyId, attackerPlayer.character.name, defenderPlayer.character.name);
 
         combatSession.timeoutHandle = setTimeout(() => {
@@ -96,7 +96,7 @@ export class CombatFlowService {
         session.postures.set(socketId, normalizedPosture);
 
         const postureData: PostureReceivedData = { socketId, posture: normalizedPosture };
-        this.server.to(roomId).emit(JoinGameEvents.PostureReceived, postureData);
+        this.server.to(session.lobbyId).emit(JoinGameEvents.PostureReceived, postureData);
 
         if (session.postures.has(session.attackerId) && session.postures.has(session.defenderId)) {
             this.resolveCombatSession(roomId);
@@ -157,7 +157,7 @@ export class CombatFlowService {
             resolvedAtEpochMs: Date.now(), timeline, debugDiceMode,
             ...(timedOutSocketIds.length > 0 ? { timedOutSocketIds } : {}),
         };
-        this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundResolved, roundResolvedData);
+        this.server.to(session.lobbyId).emit(JoinGameEvents.CombatRoundResolved, roundResolvedData);
         this.server.to(session.lobbyId).emit(JoinGameEvents.CombatResult, combatResult);
         this.emitCombatJournalEntries(session, combatResult);
 
@@ -182,7 +182,7 @@ export class CombatFlowService {
             attackerKilled: combatResult.attacker.killed, defenderKilled: combatResult.defender.killed,
             winnerId: combatResult.winnerId, reason: 'death',
         };
-        this.server.to(session.roomId).emit(JoinGameEvents.CombatEnded, combatEndedData);
+        this.server.to(session.lobbyId).emit(JoinGameEvents.CombatEnded, combatEndedData);
         this.finalizeCombatSession(session, combatResult);
     }
 
@@ -245,7 +245,7 @@ export class CombatFlowService {
             attackerKilled: loserId === session.attackerId, defenderKilled: loserId === session.defenderId,
             winnerId, reason: 'abandon',
         };
-        this.server.to(session.roomId).emit(JoinGameEvents.CombatEnded, combatEndedData);
+        this.server.to(session.lobbyId).emit(JoinGameEvents.CombatEnded, combatEndedData);
         this.emitCombatLockState({
             lobbyId: session.lobbyId, isLocked: false, roomId: session.roomId,
             attackerSocketId: session.attackerId, defenderSocketId: session.defenderId,
@@ -264,7 +264,7 @@ export class CombatFlowService {
 
         const broadcastCountdown = (timeLeft: number) => {
             const data: CombatRoundCountdownData = { roomId: session.roomId, roundIndex: session.roundIndex, secondsLeft: timeLeft };
-            this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundCountdown, data);
+            this.server.to(session.lobbyId).emit(JoinGameEvents.CombatRoundCountdown, data);
         };
 
         broadcastCountdown(secondsLeft);
@@ -277,7 +277,7 @@ export class CombatFlowService {
                 const posture = this.virtualPlayerService.getPosture(session.lobbyId, socketId);
                 if (posture) {
                     session.postures.set(socketId, posture);
-                    this.server.to(session.roomId).emit(JoinGameEvents.PostureReceived, { socketId, posture });
+                    this.server.to(session.lobbyId).emit(JoinGameEvents.PostureReceived, { socketId, posture });
                     if (session.postures.has(session.attackerId) && session.postures.has(session.defenderId)) {
                         this.resolveCombatSession(session.roomId);
                     }
@@ -297,7 +297,7 @@ export class CombatFlowService {
         const roundStartedData: CombatRoundStartedData = {
             roomId: session.roomId, roundIndex: session.roundIndex, postureTimeoutMs: COMBAT_POSTURE_TIMEOUT_MS,
         };
-        this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundStarted, roundStartedData);
+        this.server.to(session.lobbyId).emit(JoinGameEvents.CombatRoundStarted, roundStartedData);
     }
 
     private handleCombatRoundTimeout(roomId: string): void {
@@ -315,7 +315,7 @@ export class CombatFlowService {
         if (player?.playerType !== PlayerType.Virtual) return;
 
         const startCombat = (lid: string, attackerId: string, defenderId: string) => {
-            this.initializeCombat(this.server, lid, attackerId, defenderId);
+            this.initializeCombat(lid, attackerId, defenderId);
         };
 
         const onGameEnded = (lid: string, winnerId: string) => {

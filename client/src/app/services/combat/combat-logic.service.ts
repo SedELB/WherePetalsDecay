@@ -161,6 +161,7 @@ export class CombatLogicService {
 
         this.state.reset();
         this.state.duelKey.set(key);
+        this.state.displayedLifeBySide.set({ player: player.character.life, enemy: enemy.character.life });
         this.state.playerPos.set({ [player.socketId]: { x: 1, y: 2 }, [enemy.socketId]: { x: 1, y: 0 } });
         this.ui.showCombatStartPopup(this.gameViewService.combatInitiatorName() || player.character.name);
     }

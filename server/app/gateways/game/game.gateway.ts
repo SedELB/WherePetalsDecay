@@ -79,7 +79,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
     @SubscribeMessage(JoinGameEvents.RequestCombat)
     handleRequestCombat(@ConnectedSocket() socket: Socket, @MessageBody() payload: RequestCombatPayload): void {
-        this.combatFlow.initializeCombat(this.server, payload.lobbyId, socket.id, payload.enemy.socketId);
+        this.combatFlow.initializeCombat(payload.lobbyId, socket.id, payload.enemy.socketId);
     }
 
     @SubscribeMessage(JoinGameEvents.SendPosture)
