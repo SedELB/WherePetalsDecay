@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { ISO_ITEM_ASSETS, RENDER_CONSTANTS, STROKE_COLOR, TILE_LINE_WIDTH, TILE_THICKNESS } from '@app/constants/isometric.constants';
 import { RenderBoardConfig, TileDepthParams, TileRenderParams } from '@app/interfaces/isometric-interfaces';
-import { TileItem, TileTexture, PlayerAction } from '@common/enums';
+import { PlayerAction, TileItem, TileTexture } from '@common/enums';
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
@@ -95,7 +95,7 @@ export class IsometricViewService {
 
                 // 2. Draw Entities
                 this.drawAssetsOnTile(params);
-                
+
                 // 3. Draw Portcullis Bars (top layer)
                 if (tile.type === TileTexture.DoorClosed || tile.type === TileTexture.DoorOpened) {
                     drawPortcullisBars(
@@ -131,10 +131,12 @@ export class IsometricViewService {
             { x: col, y: row - 1 },
             { x: col - 1, y: row - 1 },
         ];
-        
-        const isGlowing = config.actionHighlightTiles?.some(
+
+        const isInactive = this.isAnySanctuaryCellInactive(sanctuaryCells, config.inactiveSanctuaries ?? []);
+
+        const isGlowing = !isInactive && (config.actionHighlightTiles?.some(
             (h) => h.type === PlayerAction.Sanctuary && sanctuaryCells.some((c) => c.x === h.pos.x && c.y === h.pos.y),
-        ) ?? false;
+        ) ?? false);
 
         drawSanctuarySprite(
             config.ctx,
@@ -146,7 +148,13 @@ export class IsometricViewService {
                 west: vertices[row + 1][col - 1],
             },
             this.getImage,
-            isGlowing,
+            { isGlowing, isInactive },
+        );
+    }
+
+    private isAnySanctuaryCellInactive(sanctuaryCells: Vec2[], inactiveSanctuaries: Vec2[]): boolean {
+        return inactiveSanctuaries.some((inactivePos) =>
+            sanctuaryCells.some((cell) => cell.x === inactivePos.x && cell.y === inactivePos.y),
         );
     }
 

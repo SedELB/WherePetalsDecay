@@ -1,11 +1,11 @@
-import { Vec2 } from '@common/vec2';
-import { TileRenderParams, RenderBoardConfig, TileColorSet, TileDepthParams } from '@app/interfaces/isometric-interfaces';
-import { Tile } from '@common/tile';
+import { DEFAULT_COLOR, ISO_TEXTURE_ASSETS, RENDER_CONSTANTS, TILE_COLORS } from '@app/constants/isometric.constants';
+import { RenderBoardConfig, TileColorSet, TileDepthParams, TileRenderParams } from '@app/interfaces/isometric-interfaces';
 import { TileTexture } from '@common/enums';
+import { Tile } from '@common/tile';
+import { Vec2 } from '@common/vec2';
 import { getPortcullisCanvas } from './portcullis-tile';
-import { ISO_TEXTURE_ASSETS, TILE_COLORS, DEFAULT_COLOR, RENDER_CONSTANTS } from '@app/constants/isometric.constants';
 
-const OVERLAY_REACHABLE = 'rgba(255, 255, 255, 0.15)';
+const OVERLAY_REACHABLE = 'rgba(184, 134, 11, 0.3)';
 const OVERLAY_TELEPORTABLE = 'rgba(0, 255, 255, 0.25)';
 const OVERLAY_FALLBACK = 'rgba(255,255,255,0.9)';
 
