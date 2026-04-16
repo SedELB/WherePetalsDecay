@@ -5,7 +5,8 @@ import { SanctuaryType } from '@common/tile';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
-import { ActiveGame } from '../core/active-game.interface';
+import { ActiveGame } from '@app/services/game-logic/core/active-game.interface';
+import { NearestEnemyResult } from '@app/interfaces/game-logic.interface';
 import { VirtualPlayerPathfindingService } from './virtual-player-pathfinding.service';
 
 @Injectable()
@@ -41,10 +42,10 @@ export class VirtualPlayerScannerService {
         virtualPlayer: Player,
         vpPos: Vec2,
         withDoors = false,
-    ): { player: Player; position: Vec2 } | null {
+    ): NearestEnemyResult | null {
         const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, vpPos, withDoors);
         let lowestCost = Infinity;
-        let result: { player: Player; position: Vec2 } | null = null;
+        let result: NearestEnemyResult | null = null;
 
         for (const candidate of game.lobby.players) {
             if (candidate.socketId === virtualPlayer.socketId || candidate.hasAbandonned) continue;

@@ -27,15 +27,12 @@ import { MovementFlowService } from './services/game-logic/core/movement-flow.se
 import { MovementService } from './services/game-logic/core/movement.service';
 import { SanctuaryService } from './services/game-logic/core/sanctuary.service';
 import { TurnService } from './services/game-logic/core/turn.service';
-import { VirtualPlayerActionService } from './services/game-logic/virtual-player/virtual-player-action.service';
-import { VirtualPlayerCombatService } from './services/game-logic/virtual-player/virtual-player-combat.service';
-import { VirtualPlayerCtfService } from './services/game-logic/virtual-player/virtual-player-ctf.service';
-import { VirtualPlayerMovementService } from './services/game-logic/virtual-player/virtual-player-movement.service';
 import { VirtualPlayerPathfindingService } from './services/game-logic/virtual-player/virtual-player-pathfinding.service';
-import { VirtualPlayerProfileService } from './services/game-logic/virtual-player/virtual-player-profile.service';
-import { VirtualPlayerSanctuaryService } from './services/game-logic/virtual-player/virtual-player-sanctuary.service';
 import { VirtualPlayerScannerService } from './services/game-logic/virtual-player/virtual-player-scanner.service';
 import { VirtualPlayerService } from './services/game-logic/virtual-player/virtual-player.service';
+import { VPActionService } from './services/game-logic/virtual-player/vp-action.service';
+import { VPClassicStrategyService } from './services/game-logic/virtual-player/vp-classic-strategy.service';
+import { VPCtfStrategyService } from './services/game-logic/virtual-player/vp-ctf-strategy.service';
 import { GameValidatorService } from './services/game/game-validator.service';
 import { GameService } from './services/game/game.service';
 import { JournalService } from './services/journal/journal.service';
@@ -85,12 +82,9 @@ import { LobbyService } from './services/lobby/lobby.service';
         // Virtual player
         VirtualPlayerPathfindingService,
         VirtualPlayerScannerService,
-        VirtualPlayerMovementService,
-        VirtualPlayerCombatService,
-        VirtualPlayerSanctuaryService,
-        VirtualPlayerCtfService,
-        VirtualPlayerProfileService,
-        VirtualPlayerActionService,
+        VPActionService,
+        VPClassicStrategyService,
+        VPCtfStrategyService,
         VirtualPlayerService,
         // Gateways
         AdminGateway,

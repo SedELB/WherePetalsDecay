@@ -17,7 +17,7 @@ import {
 } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Inject, Injectable } from '@nestjs/common';
-import type { Namespace, Socket, Server } from 'socket.io';
+import type { Namespace, Server, Socket } from 'socket.io';
 import { CombatStateService } from './combat-state.service';
 import { GameLogicService } from './game-logic.service';
 import { GameTurnSyncService } from './game-turn-sync.service';

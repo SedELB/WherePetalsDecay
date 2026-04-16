@@ -1,23 +1,41 @@
-import { GameLogicService } from '@app/services/game-logic/core/game-logic.service';
+import { JournalService } from '@app/services/journal/journal.service';
 import { Test, TestingModule } from '@nestjs/testing';
-import { VirtualPlayerActionService } from './virtual-player-action.service';
-import { VirtualPlayerCtfService } from './virtual-player-ctf.service';
-import { VirtualPlayerMovementService } from './virtual-player-movement.service';
-import { VirtualPlayerProfileService } from './virtual-player-profile.service';
+import { GameLogicService } from './game-logic.service';
+import { VPActionService } from './vp-action.service';
+import { VPClassicStrategyService } from './vp-classic-strategy.service';
+import { VPCtfStrategyService } from './vp-ctf-strategy.service';
+import { VirtualPlayerPathfindingService } from './virtual-player-pathfinding.service';
+import { VirtualPlayerScannerService } from './virtual-player-scanner.service';
 import { VirtualPlayerService } from './virtual-player.service';
 
 describe('VirtualPlayerService', () => {
     let service: VirtualPlayerService;
 
+    const mockPathfindingService: Partial<VirtualPlayerPathfindingService> = {
+        computeFullDijkstra: jest.fn(),
+        reconstructPath: jest.fn(),
+        findFurthestReachablePositionOnPath: jest.fn(),
+        getReachableTilesWithinBudget: jest.fn(),
+        isTileOccupiedByAnotherPlayer: jest.fn().mockReturnValue(false),
+        positionKey: jest.fn((pos) => `${pos.x},${pos.y}`),
+    };
+
+    const mockGameLogicService: Partial<GameLogicService> = {
+        endTurn: jest.fn(),
+        checkWinCondition: jest.fn().mockReturnValue(null),
+    };
+
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 VirtualPlayerService,
-                { provide: GameLogicService, useValue: { endTurn: jest.fn(), checkWinCondition: jest.fn().mockReturnValue(null) } },
-                { provide: VirtualPlayerMovementService, useValue: {} },
-                { provide: VirtualPlayerProfileService, useValue: {} },
-                { provide: VirtualPlayerCtfService, useValue: {} },
-                { provide: VirtualPlayerActionService, useValue: { combat: {}, sanctuary: {} } },
+                VPActionService,
+                VPClassicStrategyService,
+                VPCtfStrategyService,
+                { provide: VirtualPlayerPathfindingService, useValue: mockPathfindingService },
+                { provide: GameLogicService, useValue: mockGameLogicService },
+                { provide: VirtualPlayerScannerService, useValue: {} },
+                { provide: JournalService, useValue: { addSanctuaryUsedEntry: jest.fn() } },
             ],
         }).compile();
 

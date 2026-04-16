@@ -3,7 +3,7 @@ import { TileItem, TileTexture } from '@common/enums';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
-import { ActiveGame } from '../core/active-game.interface';
+import { ActiveGame } from '@app/services/game-logic/core/active-game.interface';
 
 interface DijkstraNode {
     position: Vec2;
@@ -19,7 +19,6 @@ export interface DijkstraResult {
 
 @Injectable()
 export class VirtualPlayerPathfindingService {
-
     // Runs Dijkstra from 'startPos' across the game grid.
     // withDoors = true : closed doors are treated as cost 1 tile
     // withDoors = false : closed doors are impassable
