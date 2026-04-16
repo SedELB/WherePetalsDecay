@@ -20,7 +20,17 @@ export class VirtualPlayerService {
     getPosture(lobbyId: string, socketId: string): Player['character']['bonusPosture'] {
         const game = this.gameLogicService.getActiveGame(lobbyId);
         const player = game?.lobby.players.find((p) => p.socketId === socketId);
-        return player?.character.bonusPosture ?? null;
+        if (!player) return null;
+
+        // Virtual players must always provide a deterministic posture each round,
+        // derived from their profile rather than from potentially stale character state.
+        if (player.virtualProfile) {
+            const selectedPosture = this.actionService.postureForProfile(player.virtualProfile);
+            player.character.bonusPosture = { ...selectedPosture };
+            return player.character.bonusPosture;
+        }
+
+        return player.character.bonusPosture ?? null;
     }
 
     triggerTurn(
