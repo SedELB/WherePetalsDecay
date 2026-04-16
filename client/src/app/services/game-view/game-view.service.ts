@@ -3,10 +3,12 @@ import { Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
 import { GameViewCombatService } from '@app/services/game-view/game-view-combat.service';
+import { getFirstTurnNotification, getNextTurnNotification } from '@app/services/game-view/game-view-notification.utils';
+import { END_GAME_REDIRECT_DELAY, ONE_SECOND_DELAY, SANCTUARY_BLOCK_SIZE } from '@app/services/game-view/game-view.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Posture } from '@common/character';
 import { Direction } from '@common/direction';
-import { SocketNamespace, TileTexture, SanctuaryMode } from '@common/enums';
+import { SanctuaryMode, SocketNamespace, TileTexture } from '@common/enums';
 import { GameStats } from '@common/interfaces/game-stats';
 import {
     CombatLockStateData,
@@ -20,8 +22,6 @@ import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
-import { getFirstTurnNotification, getNextTurnNotification } from '@app/services/game-view/game-view-notification.utils';
-import { END_GAME_REDIRECT_DELAY, ONE_SECOND_DELAY, SANCTUARY_BLOCK_SIZE } from '@app/services/game-view/game-view.constants';
 
 @Injectable({
     providedIn: 'root',
@@ -289,6 +289,7 @@ export class GameViewService {
         this.gameViewCombatService.setupListeners(this.webSocketService, this.namespace, {
             getLocalSocketId: () => this.getLocalSocketId(),
             getGameLobby: () => this.gameLobby(),
+            getPlayerPositions: () => this.playerPositions(),
             updateGameLobby: (updater: (lobby: Lobby | null) => Lobby | null) => this.gameLobby.update(updater),
             updatePlayerPositions: (updater: (positions: Record<string, Vec2>) => Record<string, Vec2>) => this.playerPositions.update(updater),
             setFlagTaken: (value: boolean) => this.isFlagTaken.set(value),

@@ -50,6 +50,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   @Input() teamB: Player[] = [];
   @Input() showDirectionalKeys: boolean = true;
   @Input() playerFlipXMap?: Record<string, boolean>;
+  @Input() lockCamera: boolean = false;
 
   @Output() tileClick = new EventEmitter<Vec2>();
   @Output() rightClick = new EventEmitter<{ event: MouseEvent, pos: Vec2 }>();
@@ -156,10 +157,19 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
       const distance = this.getDistance(currentPosition, targetPosition);
       const shouldSmooth = this.shouldSmoothMovement(currentPosition, targetPosition, distance);
 
-      if (targetPosition.x < currentPosition.x) {
+      const deltaX = targetPosition.x - currentPosition.x;
+      const deltaY = targetPosition.y - currentPosition.y;
+
+      if (deltaX < -PLAYER_POSITION_EPSILON) {
         this.computedFlipXMap[socketId] = false;
-      } else if (targetPosition.x > currentPosition.x) {
+      } else if (deltaX > PLAYER_POSITION_EPSILON) {
         this.computedFlipXMap[socketId] = true;
+      } else if (deltaY < -PLAYER_POSITION_EPSILON) {
+        // W: same facing as D
+        this.computedFlipXMap[socketId] = true;
+      } else if (deltaY > PLAYER_POSITION_EPSILON) {
+        // S: same facing as A
+        this.computedFlipXMap[socketId] = false;
       }
 
       this.playerMotionStates.set(socketId, {
@@ -256,6 +266,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   }
 
   private onMouseDown(e: MouseEvent): void {
+    if (this.lockCamera) return;
     // Only pan on left click (button 0), ignore right-click
     if (e.button !== 0) return;
     this.isDragging = true;
@@ -267,6 +278,8 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   }
 
   private onMouseMove(e: MouseEvent): void {
+    if (this.lockCamera) return;
+
     if (this.isDragging) {
       const dx = e.clientX - this.dragStartX;
       const dy = e.clientY - this.dragStartY;
@@ -342,6 +355,8 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
 
 
   private onWheel(e: WheelEvent): void {
+    if (this.lockCamera) return;
+
     e.preventDefault();
 
     const rect = this.canvasRef.nativeElement.getBoundingClientRect();
