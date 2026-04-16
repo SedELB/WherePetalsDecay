@@ -74,7 +74,7 @@ export class VirtualPlayerMovementService {
             return;
         }
 
-        onDone();
+        this.gameLogicService.endTurn(context.lobbyId);
     }
 
     stepAlongPath(
