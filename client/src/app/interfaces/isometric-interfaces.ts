@@ -64,5 +64,6 @@ export interface RenderBoardConfig {
   teamA?: Player[];
   teamB?: Player[];
   showDirectionalKeys?: boolean;
+  pressedDirectionKey?: 'W' | 'A' | 'S' | 'D' | null;
   flipXMap?: Record<string, boolean>;
 }

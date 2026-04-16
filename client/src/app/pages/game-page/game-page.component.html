@@ -48,6 +48,7 @@
                     [isCTF]="gamePageSignalService.game()?.gameMode === gameMode.Ctf"
                     [teamA]="gamePageSignalService.lobby()?.teamA ?? []"
                     [teamB]="gamePageSignalService.lobby()?.teamB ?? []"
+                    [pressedDirectionKey]="gamePageSignalService.pressedDirectionKey()"
                     [actionHighlightTiles]="gamePageSignalService.actionHighlightTiles()"
                     (tileClick)="onTileClick($event.x, $event.y)"
                     (rightClick)="onRightClick($event.event, $event.pos)"
