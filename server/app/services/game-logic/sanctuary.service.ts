@@ -1,6 +1,6 @@
 import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS } from '@common/direction';
-import { TileItem, SanctuaryMode } from '@common/enums';
+import { SanctuaryMode, TileItem } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
