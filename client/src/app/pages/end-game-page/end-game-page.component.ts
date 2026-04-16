@@ -34,38 +34,47 @@ export class EndGamePageComponent implements OnDestroy, OnInit {
     });
 
     readonly sortedPlayers = computed(() => {
-        const col = this.sortColumn();
-        const asc = this.sortAscending();
-        const totalTerrain = this.gameStats()?.totalTerrainTiles ?? 1;
+        const column = this.sortColumn();
+        const isAscending = this.sortAscending();
 
-        return [...this.players()].sort((player1, player2) => {
-            let valA: number | string;
-            let valB: number | string;
-
-            if (col === 'name') {
-                valA = player1.character.name.toLowerCase();
-                valB = player2.character.name.toLowerCase();
-            } else if (col === 'visitedTilesPercent') {
-                valA = totalTerrain > 0 ? player1.visitedTilesCount / totalTerrain : 0;
-                valB = totalTerrain > 0 ? player2.visitedTilesCount / totalTerrain : 0;
-            } else {
-                valA = player1[col] ?? 0;
-                valB = player2[col] ?? 0;
+        return [...this.players()].sort((p1, p2) => {
+            const result = this.comparePlayersByColumn(p1, p2, column);
+            
+            if (result !== 0) {
+                return isAscending ? result : -result;
             }
-
-            if (valA < valB) return asc ? -1 : 1;
-            if (valA > valB) return asc ? 1 : -1;
-
-            if (col !== 'name') {
-                const nameA = player1.character.name.toLowerCase();
-                const nameB = player2.character.name.toLowerCase();
-                if (nameA < nameB) return -1;
-                if (nameA > nameB) return 1;
-            }
-
-            return 0;
+            
+            const tieBreaker = p1.character.name.localeCompare(p2.character.name);
+            return isAscending ? tieBreaker : -tieBreaker;
         });
     });
+
+    private comparePlayersByColumn(p1: Player, p2: Player, column: SortColumn): number {
+        if (column === 'name') {
+            return p1.character.name.localeCompare(p2.character.name);
+        }
+
+        const v1 = this.getNumericValue(p1, column);
+        const v2 = this.getNumericValue(p2, column);
+        return v1 - v2;
+    }
+
+    private getNumericValue(player: Player, column: SortColumn): number {
+        if (column === 'visitedTilesPercent') {
+            const total = this.gameStats()?.totalTerrainTiles ?? 1;
+            return total > 0 ? player.visitedTilesCount / total : 0;
+        }
+
+        const stats: Record<string, number> = {
+            winsCount: player.winsCount,
+            combatCount: player.combatCount,
+            lossCount: player.lossCount,
+            totalHpLost: player.totalHpLost,
+            totalHpDealt: player.totalHpDealt,
+        };
+
+        return stats[column] ?? 0;
+    }
 
     constructor(
         private readonly router: Router,
