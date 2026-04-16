@@ -9,9 +9,12 @@ import { applyCameraTransform, buildVertexMap, buildViewConfig, calculateAutoZoo
 import { drawIsometricTileBase } from './isometric-terrain.helper';
 import { drawPortcullisBars } from './portcullis-render.helper';
 import { drawSanctuarySprite } from './sanctuary-render.helper';
+
 const HALF_TILE_POSITION_OFFSET = 0.5;
-const isSanctuary = (item: TileItem): boolean =>
-    item === TileItem.HealingSanctuary || item === TileItem.CombatSanctuary;
+
+const isSanctuary = (item: TileItem): boolean => {
+    return item === TileItem.HealingSanctuary || item === TileItem.CombatSanctuary;
+};
 
 @Injectable({ providedIn: 'root' })
 export class IsometricViewService {
@@ -231,22 +234,29 @@ export class IsometricViewService {
         params: { x: number; y: number; w: number; h: number; isFlipped: boolean; glowColor: string | null },
     ): void {
         const { x, y, w, h, isFlipped, glowColor } = params;
+        const SHADOW_BLUR_L1 = 30;
+        const SHADOW_BLUR_L2 = 18;
+        const SHADOW_BLUR_L3 = 8;
+        const SHADOW_BLUR_OFF = 0;
+
         ctx.save();
         if (glowColor) {
             ctx.shadowColor = glowColor;
         }
 
         if (isFlipped) {
-            ctx.translate(x + w / 2, y + h / 2);
+            const centerX = x + w / 2;
+            const centerY = y + h / 2;
+            ctx.translate(centerX, centerY);
             ctx.scale(-1, 1);
-            ctx.translate(-(x + w / 2), -(y + h / 2));
+            ctx.translate(-centerX, -centerY);
         }
 
         if (glowColor) {
-            ctx.shadowBlur = 30; ctx.drawImage(img, x, y, w, h);
-            ctx.shadowBlur = 18; ctx.drawImage(img, x, y, w, h);
-            ctx.shadowBlur = 8; ctx.drawImage(img, x, y, w, h);
-            ctx.shadowBlur = 0; ctx.drawImage(img, x, y, w, h);
+            ctx.shadowBlur = SHADOW_BLUR_L1; ctx.drawImage(img, x, y, w, h);
+            ctx.shadowBlur = SHADOW_BLUR_L2; ctx.drawImage(img, x, y, w, h);
+            ctx.shadowBlur = SHADOW_BLUR_L3; ctx.drawImage(img, x, y, w, h);
+            ctx.shadowBlur = SHADOW_BLUR_OFF; ctx.drawImage(img, x, y, w, h);
         } else {
             ctx.drawImage(img, x, y, w, h);
         }
@@ -283,7 +293,7 @@ export class IsometricViewService {
         const topX = topLeft.x + ((topRight.x - topLeft.x) * tx);
         const topY = topLeft.y + ((topRight.y - topLeft.y) * tx);
         const bottomX = bottomLeft.x + ((bottomRight.x - bottomLeft.x) * tx);
-        const bottomY = bottomLeft.y + ((bottomRight.y - bottomLeft.y) * tx);
+        const bottomY = bottomLeft.y + ((bottomRight.y - bottomLeft.y) * ty);
 
         const cx = topX + ((bottomX - topX) * ty);
         const cy = topY + ((bottomY - topY) * ty);
@@ -318,7 +328,10 @@ export class IsometricViewService {
 
         const verticalShift = data.tileH * RENDER_CONSTANTS.itemVerticalOffset;
 
-        this.drawItemShadow(data.ctx, { cx: data.cx, cy: data.cy, tileW: data.tileW, tileH: data.tileH, floatOffset, verticalShift });
+        this.drawItemShadow(data.ctx, {
+            cx: data.cx, cy: data.cy, tileW: data.tileW, tileH: data.tileH,
+            floatOffset, verticalShift,
+        });
         data.ctx.drawImage(itemImg, data.cx - imgW / 2, data.cy - imgH / 2 + floatOffset + verticalShift, imgW, imgH);
     }
 
@@ -347,11 +360,13 @@ export class IsometricViewService {
         const shadowY = data.cy + (data.tileH * RENDER_CONSTANTS.shadowOffsetYRatio);
         const radiusX = data.imgW * RENDER_CONSTANTS.shadowRadiusXRatio;
         const radiusY = data.imgH * RENDER_CONSTANTS.shadowRadiusYRatio;
+        const ALPHA_SHADOW = 0.4;
+        const CIRCLE_RADIANS = 2 * Math.PI;
 
         ctx.save();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillStyle = `rgba(0, 0, 0, ${ALPHA_SHADOW})`;
         ctx.beginPath();
-        ctx.ellipse(data.cx, shadowY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+        ctx.ellipse(data.cx, shadowY, radiusX, radiusY, 0, 0, CIRCLE_RADIANS);
         ctx.fill();
         ctx.restore();
     }
@@ -367,31 +382,34 @@ export class IsometricViewService {
         const north = toIso(col, row, viewConfig);
         const east = toIso(col + 1, row, viewConfig);
         const west = toIso(col, row + 1, viewConfig);
-        const size = 60;
-        ctx.save();
+        const KEY_BG_SIZE = 60;
+        const KEY_STROKE_WIDTH = 4;
+        const KEY_RADIUS = 8;
+        const KEY_DIVISOR = 2;
+        const KEY_OFFSET_Y = 2;
 
+        ctx.save();
         ctx.transform(
-            (east.x - north.x) / size, (east.y - north.y) / size,
-            (west.x - north.x) / size, (west.y - north.y) / size,
+            (east.x - north.x) / KEY_BG_SIZE, (east.y - north.y) / KEY_BG_SIZE,
+            (west.x - north.x) / KEY_BG_SIZE, (west.y - north.y) / KEY_BG_SIZE,
             north.x, north.y,
         );
 
-        ctx.translate(-size / 2, -size / 2);
+        ctx.translate(-KEY_BG_SIZE / KEY_DIVISOR, -KEY_BG_SIZE / KEY_DIVISOR);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = KEY_STROKE_WIDTH;
 
-        const r = 8;
         ctx.beginPath();
-        ctx.moveTo(r, 0);
-        ctx.lineTo(size - r, 0);
-        ctx.quadraticCurveTo(size, 0, size, r);
-        ctx.lineTo(size, size - r);
-        ctx.quadraticCurveTo(size, size, size - r, size);
-        ctx.lineTo(r, size);
-        ctx.quadraticCurveTo(0, size, 0, size - r);
-        ctx.lineTo(0, r);
-        ctx.quadraticCurveTo(0, 0, r, 0);
+        ctx.moveTo(KEY_RADIUS, 0);
+        ctx.lineTo(KEY_BG_SIZE - KEY_RADIUS, 0);
+        ctx.quadraticCurveTo(KEY_BG_SIZE, 0, KEY_BG_SIZE, KEY_RADIUS);
+        ctx.lineTo(KEY_BG_SIZE, KEY_BG_SIZE - KEY_RADIUS);
+        ctx.quadraticCurveTo(KEY_BG_SIZE, KEY_BG_SIZE, KEY_BG_SIZE - KEY_RADIUS, KEY_BG_SIZE);
+        ctx.lineTo(KEY_RADIUS, KEY_BG_SIZE);
+        ctx.quadraticCurveTo(0, KEY_BG_SIZE, 0, KEY_BG_SIZE - KEY_RADIUS);
+        ctx.lineTo(0, KEY_RADIUS);
+        ctx.quadraticCurveTo(0, 0, KEY_RADIUS, 0);
         ctx.fill();
         ctx.stroke();
 
@@ -399,7 +417,7 @@ export class IsometricViewService {
         ctx.font = 'bold 36px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(keyChar, size / 2, size / 2 + 2);
+        ctx.fillText(keyChar, KEY_BG_SIZE / KEY_DIVISOR, KEY_BG_SIZE / KEY_DIVISOR + KEY_OFFSET_Y);
         ctx.restore();
     }
 }

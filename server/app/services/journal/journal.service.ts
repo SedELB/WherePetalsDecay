@@ -139,6 +139,14 @@ export class JournalService {
         });
     }
 
+    addSanctuaryUsedWithModeEntry(lobbyId: string, playerName: string, sanctuaryLabel: string, modeLabel: string): void {
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.SanctuaryUsed,
+            playerNames: [playerName],
+            message: `${playerName} a utilisé un sanctuaire de ${sanctuaryLabel}${modeLabel}.`,
+        });
+    }
+
     getEntries(lobbyId: string): JournalEntry[] {
         return this.entries.get(lobbyId) ?? [];
     }

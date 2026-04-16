@@ -2,12 +2,8 @@ import { NgClass } from '@angular/common';
 import { Component, Input, OnChanges, OnDestroy, OnInit } from '@angular/core';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { IsometricMapComponent } from '@app/components/isometric-map/isometric-map.component';
-import {
-    CombatLogicService,
-    FighterSide,
-    FighterStatType,
-    TypePosture,
-} from '@app/services/combat/combat-logic.service';
+import { FighterSide, FighterStatType, TypePosture } from '@app/interfaces/combat.interfaces';
+import { CombatLogicService } from '@app/services/combat/combat-logic.service';
 import { Player } from '@common/player';
 
 @Component({
@@ -24,31 +20,31 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
     constructor(private readonly combatLogicService: CombatLogicService) {}
 
     get playerPos() {
-        return this.combatLogicService.playerPos;
+        return this.combatLogicService.playerPos();
     }
 
     get combatStartPopup() {
-        return this.combatLogicService.combatStartPopup;
+        return this.combatLogicService.combatStartPopup();
     }
 
     get combatEndPopup() {
-        return this.combatLogicService.combatEndPopup;
+        return this.combatLogicService.combatEndPopup();
     }
 
     get roundAnnouncementPopup() {
-        return this.combatLogicService.roundAnnouncementPopup;
+        return this.combatLogicService.roundAnnouncementPopup();
     }
 
     get damagePopup() {
-        return this.combatLogicService.damagePopup;
+        return this.combatLogicService.damagePopup();
     }
 
     get diceRollDisplay() {
-        return this.combatLogicService.diceRollDisplay;
+        return this.combatLogicService.diceRollDisplay();
     }
 
     get impactDamagePopups() {
-        return this.combatLogicService.impactDamagePopups;
+        return this.combatLogicService.impactDamagePopups();
     }
 
     get combatMap() {

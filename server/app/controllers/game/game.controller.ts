@@ -22,7 +22,8 @@ export class GameController {
             const allGames = await this.gameService.getAllGames();
             response.status(HttpStatus.OK).json(allGames);
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).json(error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            response.status(HttpStatus.NOT_FOUND).json(errorMessage);
         }
     }
 
@@ -32,7 +33,8 @@ export class GameController {
             const game = await this.gameService.getGameById(id);
             response.status(HttpStatus.OK).json(game);
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).json(error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            response.status(HttpStatus.NOT_FOUND).json(errorMessage);
         }
     }
 
@@ -42,7 +44,8 @@ export class GameController {
             const allVisibleGames = await this.gameService.getAllVisibleGames();
             response.status(HttpStatus.OK).json(allVisibleGames);
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).json(error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            response.status(HttpStatus.NOT_FOUND).json(errorMessage);
         }
     }
 
@@ -56,7 +59,8 @@ export class GameController {
             }
             response.status(HttpStatus.CREATED).json('Le jeu a été créé avec succès !');
         } catch (error) {
-            response.status(HttpStatus.BAD_REQUEST).json(error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            response.status(HttpStatus.BAD_REQUEST).json(errorMessage);
         }
     }
 
@@ -73,8 +77,9 @@ export class GameController {
 
             response.status(HttpStatus.OK).json('Le jeu a été modifié avec succès !');
         } catch (error) {
-            const status = error.message.includes('Aucun jeu trouvé avec cet identifiant.') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            response.status(status).json(error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const status = errorMessage.includes('Aucun jeu trouvé avec cet identifiant.') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            response.status(status).json(errorMessage);
         }
     }
 
@@ -92,7 +97,8 @@ export class GameController {
 
             response.status(HttpStatus.OK).json('Le jeu a été modifié avec succès !');
         } catch (error) {
-            response.status(HttpStatus.BAD_REQUEST).json(error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            response.status(HttpStatus.BAD_REQUEST).json(errorMessage);
         }
     }
 
@@ -104,7 +110,8 @@ export class GameController {
             this.gameCatalogGateway.notifyGameDeleted(id);
             response.status(HttpStatus.NO_CONTENT).json('Le jeu a été supprimé avec succès !');
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).json(error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            response.status(HttpStatus.NOT_FOUND).json(errorMessage);
         }
     }
 }

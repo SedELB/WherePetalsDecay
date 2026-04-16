@@ -7,10 +7,12 @@ import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { GamePageComponent } from '@app/pages/game-page/game-page.component';
+import { GameLogicService } from '@app/services/game-view/game-logic.service';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { GameMode, PlayerAction, PlayerType } from '@common/enums';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
+import { Vec2 } from '@common/vec2';
 
 @Component({ template: '', standalone: true })
 class DummyComponent {}
@@ -124,29 +126,16 @@ describe('GamePageComponent', () => {
     };
 
     const resetMockSignals = () => {
-        mockGameViewService.gameLobby.set(null);
-        mockGameViewService.playerPositions.set({});
-        mockGameViewService.turnOrder.set([]);
-        mockGameViewService.activePlayerSocketId.set(null);
-        mockGameViewService.turnCountdown.set(0);
-        mockGameViewService.reachableTiles.set([]);
-        mockGameViewService.reachableTilesForTeleport.set([]);
-        mockGameViewService.movementPoints.set(0);
-        mockGameViewService.actionPoints.set(0);
-        mockGameViewService.disableEndTurn.set(false);
-        mockGameViewService.isDebugModeActive.set(false);
-        mockGameViewService.tileInfo.set(null);
-        mockGameViewService.gameOver.set(null);
-        mockGameViewService.inactiveSanctuaries.set([]);
-        mockGameViewService.journalEntries.set([]);
-        mockGameViewService.combatLockState.set(null);
-        mockGameViewService.isCombatStarted.set(false);
-        mockGameViewService.fighters.set({ player: {} as Player, enemy: {} as Player, roomId: '' });
-        [mockGameViewService.getLocalSocketId, mockGameViewService.isHost, mockGameViewService.sendMove, mockGameViewService.sendEndTurn,
-        mockGameViewService.sendAbandon, mockGameViewService.sendAbandonWithoutPrompt, mockGameViewService.sendCombat,
-        mockGameViewService.sendTileInfoRequest, mockGameViewService.sendToggleDoor, mockGameViewService.sendUseSanctuary,
-        mockGameViewService.toggleDebugMode, mockGameViewService.teleportMove, mockGameViewService.setLobby,
-        mockGameViewService.resetGameState].forEach((spy) => spy.calls.reset());
+        const m = mockGameViewService;
+        m.gameLobby.set(null); m.playerPositions.set({}); m.turnOrder.set([]); m.activePlayerSocketId.set(null);
+        m.turnCountdown.set(0); m.reachableTiles.set([]); m.reachableTilesForTeleport.set([]);
+        m.movementPoints.set(0); m.actionPoints.set(0); m.disableEndTurn.set(false); m.isDebugModeActive.set(false);
+        m.tileInfo.set(null); m.gameOver.set(null); m.inactiveSanctuaries.set([]); m.journalEntries.set([]);
+        m.combatLockState.set(null); m.isCombatStarted.set(false);
+        m.fighters.set({ player: {} as Player, enemy: {} as Player, roomId: '' });
+        [m.getLocalSocketId, m.isHost, m.sendMove, m.sendEndTurn, m.sendAbandon, m.sendAbandonWithoutPrompt,
+        m.sendCombat, m.sendTileInfoRequest, m.sendToggleDoor, m.sendUseSanctuary, m.toggleDebugMode,
+        m.teleportMove, m.setLobby, m.resetGameState].forEach((spy) => spy.calls.reset());
     };
 
     beforeEach(async () => {
@@ -189,19 +178,19 @@ describe('GamePageComponent', () => {
     describe('isMyTurn', () => {
         it('should be true when the active player is me', () => {
             mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
-            expect(component.gamePageSignalService.isMyTurn()).toBe(true);
+            expect(component.signals.isMyTurn()).toBe(true);
         });
 
         /** Ensures the local player's turn indicator remains deactivated while an opponent is currently taking their turn. */
         it('should be false when it is someone else turn', () => {
             mockGameViewService.activePlayerSocketId.set(OTHER_SOCKET);
-            expect(component.gamePageSignalService.isMyTurn()).toBe(false);
+            expect(component.signals.isMyTurn()).toBe(false);
         });
 
         /** Verifies that no player is flagged as active during the brief transitional delay between two separate turns. */
         it('should be false between turns (no active player)', () => {
             mockGameViewService.activePlayerSocketId.set(null);
-            expect(component.gamePageSignalService.isMyTurn()).toBe(false);
+            expect(component.signals.isMyTurn()).toBe(false);
         });
     });
 
@@ -209,12 +198,12 @@ describe('GamePageComponent', () => {
         /** Successfully isolates and retrieves the local player's specific character data from the general lobby player list. */
         it('should find the player matching our socket ID', () => {
             mockGameViewService.gameLobby.set(createLobby());
-            expect(component.gamePageSignalService.localPlayer()?.socketId).toBe(LOCAL_SOCKET);
+            expect(component.signals.localPlayer()?.socketId).toBe(LOCAL_SOCKET);
         });
 
         /** Gracefully handles the absence of lobby data by returning undefined rather than throwing a read error. */
         it('should be undefined when the lobby is not set', () => {
-            expect(component.gamePageSignalService.localPlayer()).toBeUndefined();
+            expect(component.signals.localPlayer()).toBeUndefined();
         });
     });
 
@@ -222,7 +211,7 @@ describe('GamePageComponent', () => {
         /** Validates that standard player characters accurately reflect the default maximum health pool. */
         it('should be DEFAULT_LIFE for a regular player (no life bonus)', () => {
             mockGameViewService.gameLobby.set(createLobby());
-            expect(component.gamePageSignalService.maxLife()).toBe(DEFAULT_LIFE);
+            expect(component.signals.maxLife()).toBe(DEFAULT_LIFE);
         });
 
         /** Ensures that players who selected the specific life bonus trait during character creation correctly receive a higher maximum health pool. */
@@ -240,7 +229,7 @@ describe('GamePageComponent', () => {
                 ],
             });
             mockGameViewService.gameLobby.set(lobby);
-            expect(component.gamePageSignalService.maxLife()).toBe(BONUS_LIFE);
+            expect(component.signals.maxLife()).toBe(BONUS_LIFE);
         });
     });
 
@@ -249,7 +238,7 @@ describe('GamePageComponent', () => {
         it('should return players in the turn order', () => {
             mockGameViewService.gameLobby.set(createLobby());
             mockGameViewService.turnOrder.set([OTHER_SOCKET, LOCAL_SOCKET]);
-            expect(component.gamePageSignalService.orderedPlayers()[0].socketId).toBe(OTHER_SOCKET);
+            expect(component.signals.orderedPlayers()[0].socketId).toBe(OTHER_SOCKET);
         });
 
         /** Verifies that the UI list dynamically rotates so that the player whose turn it currently is always appears at the top of the display. */
@@ -257,7 +246,7 @@ describe('GamePageComponent', () => {
             mockGameViewService.gameLobby.set(createLobby());
             mockGameViewService.turnOrder.set([LOCAL_SOCKET, OTHER_SOCKET]);
             mockGameViewService.activePlayerSocketId.set(OTHER_SOCKET);
-            expect(component.gamePageSignalService.orderedPlayers()[0].socketId).toBe(OTHER_SOCKET);
+            expect(component.signals.orderedPlayers()[0].socketId).toBe(OTHER_SOCKET);
         });
     });
 
@@ -267,8 +256,8 @@ describe('GamePageComponent', () => {
             mockGameViewService.gameLobby.set(createLobby());
             mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
             mockGameViewService.playerPositions.set({ [LOCAL_SOCKET]: { x: 2, y: 2 }, [OTHER_SOCKET]: { x: 3, y: 2 } });
-            expect(component.gamePageSignalService.adjacentPlayers().length).toBe(1);
-            expect(component.gamePageSignalService.adjacentPlayers()[0].socketId).toBe(OTHER_SOCKET);
+            expect(component.signals.adjacentPlayers().length).toBe(1);
+            expect(component.signals.adjacentPlayers()[0].socketId).toBe(OTHER_SOCKET);
         });
 
         /** Prevents initiating out-of-sequence combat actions by returning an empty list of targets if it is not the local player's turn. */
@@ -276,7 +265,7 @@ describe('GamePageComponent', () => {
             mockGameViewService.gameLobby.set(createLobby());
             mockGameViewService.activePlayerSocketId.set(OTHER_SOCKET);
             mockGameViewService.playerPositions.set({ [LOCAL_SOCKET]: { x: 2, y: 2 }, [OTHER_SOCKET]: { x: 3, y: 2 } });
-            expect(component.gamePageSignalService.adjacentPlayers()).toEqual([]);
+            expect(component.signals.adjacentPlayers()).toEqual([]);
         });
 
         /** Strictly enforces grid combat rules by completely ignoring opponents placed on diagonal tiles. */
@@ -284,7 +273,7 @@ describe('GamePageComponent', () => {
             mockGameViewService.gameLobby.set(createLobby());
             mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
             mockGameViewService.playerPositions.set({ [LOCAL_SOCKET]: { x: 2, y: 2 }, [OTHER_SOCKET]: { x: 3, y: 3 } });
-            expect(component.gamePageSignalService.adjacentPlayers()).toEqual([]);
+            expect(component.signals.adjacentPlayers()).toEqual([]);
         });
 
         /** Ensures that players who have already quit the session are completely ignored and cannot be targeted for combat. */
@@ -295,7 +284,7 @@ describe('GamePageComponent', () => {
             mockGameViewService.gameLobby.set(lobby);
             mockGameViewService.activePlayerSocketId.set(LOCAL_SOCKET);
             mockGameViewService.playerPositions.set({ [LOCAL_SOCKET]: { x: 2, y: 2 }, [OTHER_SOCKET]: { x: 3, y: 2 } });
-            expect(component.gamePageSignalService.adjacentPlayers()).toEqual([]);
+            expect(component.signals.adjacentPlayers()).toEqual([]);
         });
     });
 
@@ -344,9 +333,9 @@ describe('GamePageComponent', () => {
                 [OTHER_SOCKET]: { x: 1, y: 0 },
             });
             mockGameViewService.actionPoints.set(1);
-            component.gamePageSignalService.isSubMenuOpen.set(true);
-            component.gamePageSignalService.activeSubAction.set(PlayerAction.Attack);
-            spyOn(component, 'isOnIce').and.returnValue(0);
+            component.signals.isSubMenuOpen.set(true);
+            component.signals.activeSubAction.set(PlayerAction.Attack);
+            spyOn(component as unknown as { isOnIce: (pos: Vec2) => number }, 'isOnIce').and.returnValue(0);
             component.onTileClick(1, 0);
             expect(mockGameViewService.sendCombat).toHaveBeenCalledWith(
                 'lobby-1',
@@ -379,31 +368,37 @@ describe('GamePageComponent', () => {
         });
     });
 
-    describe('isReachable', () => {
+    describe('reachableTiles', () => {
         /** Evaluates to true when the requested tile coordinates are present within the server-validated set of reachable positions. */
-        it('should return true for tiles in the reachable set', () => {
+        it('should include tiles in the reachable set', () => {
             mockGameViewService.reachableTiles.set([{ x: TILE_X, y: 2 }]);
-            expect(component.isReachable(TILE_X, 2)).toBe(true);
+            expect(component.signals.reachableTiles().some((t) => t.x === TILE_X && t.y === 2)).toBe(true);
         });
 
         /** Evaluates to false when checking a tile that is outside the character's current movement capabilities. */
-        it('should return false for tiles not in the set', () => {
+        it('should not include tiles outside the set', () => {
             mockGameViewService.reachableTiles.set([{ x: TILE_X, y: 2 }]);
-            expect(component.isReachable(0, 0)).toBe(false);
+            expect(component.signals.reachableTiles().some((t) => t.x === 0 && t.y === 0)).toBe(false);
         });
     });
 
     describe('getPlayerAtPosition', () => {
+        let gameLogicService: GameLogicService;
+
+        beforeEach(() => {
+            gameLogicService = TestBed.inject(GameLogicService);
+        });
+
         /** Correctly identifies and returns the unique socket ID of the player currently occupying the specified coordinates. */
         it('should return the socket ID of whoever is standing there', () => {
-            mockGameViewService.playerPositions.set({ [LOCAL_SOCKET]: { x: 2, y: TILE_X } });
-            expect(component.getPlayerAtPosition(2, TILE_X)).toBe(LOCAL_SOCKET);
+            const positions = { [LOCAL_SOCKET]: { x: 2, y: TILE_X } };
+            expect(gameLogicService.getPlayerAtPosition(2, TILE_X, positions)).toBe(LOCAL_SOCKET);
         });
 
         /** Returns a null value gracefully when querying a set of coordinates that currently contain no player. */
         it('should return null for an empty tile', () => {
-            mockGameViewService.playerPositions.set({ [LOCAL_SOCKET]: { x: 2, y: TILE_X } });
-            expect(component.getPlayerAtPosition(0, 0)).toBeNull();
+            const positions = { [LOCAL_SOCKET]: { x: 2, y: TILE_X } };
+            expect(gameLogicService.getPlayerAtPosition(0, 0, positions)).toBeNull();
         });
     });
 

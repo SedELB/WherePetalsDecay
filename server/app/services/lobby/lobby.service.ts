@@ -266,7 +266,20 @@ export class LobbyService {
         const updatedLobby = this.joinLobby(lobbyId, virtualPlayer);
         return updatedLobby;
     }
-    
+
+    initializeRealPlayer(player: Player, socketId: string, isHost: boolean): void {
+        player.socketId = socketId;
+        player.isHost = isHost;
+        player.winsCount = 0;
+        player.hasAbandonned = false;
+        player.playerType = PlayerType.Reel;
+        player.combatCount = 0;
+        player.lossCount = 0;
+        player.totalHpLost = 0;
+        player.totalHpDealt = 0;
+        player.visitedTilesCount = 0;
+    }
+
     private isAvatarOccupiedByAnother(lobby: Lobby, avatar: string, socketId: string | null): boolean {
         const isTakenByConfirmedPlayer = lobby.players.some(
             (existingPlayer) => existingPlayer.socketId !== socketId && existingPlayer.character?.avatar === avatar,

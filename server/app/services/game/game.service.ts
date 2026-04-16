@@ -116,7 +116,8 @@ export class GameService {
             const createdGame = await this.gameModel.create(game);
             return createdGame;
         } catch (error) {
-            throw new Error(`${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`${errorMessage}`);
         }
     }
 
@@ -137,7 +138,8 @@ export class GameService {
             const updatedGame = await this.gameModel.findByIdAndUpdate(id, fullGameData, { new: true }).exec();
             return updatedGame;
         } catch (error) {
-            throw new Error(`${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`${errorMessage}`);
         }
     }
 
@@ -149,7 +151,8 @@ export class GameService {
             }
             this.logger.log(`Game with ID: ${id} was successfully deleted.`);
         } catch (error) {
-            throw new Error(`${GAME_DELETION_FAILED} : ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`${GAME_DELETION_FAILED} : ${errorMessage}`);
         }
     }
 
@@ -161,7 +164,8 @@ export class GameService {
             }
             return updatedGame;
         } catch (error) {
-            throw new Error(`${GAME_VISIBILITY_UPDATE_FAILED} : ${error.message}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`${GAME_VISIBILITY_UPDATE_FAILED} : ${errorMessage}`);
         }
     }
 }
