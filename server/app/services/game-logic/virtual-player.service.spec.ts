@@ -1,3 +1,4 @@
+import { JournalService } from '@app/services/journal/journal.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { GameLogicService } from './game-logic.service';
 import { VirtualPlayerPathfindingService } from './virtual-player-pathfinding.service';
@@ -28,6 +29,7 @@ describe('VirtualPlayerService', () => {
                 { provide: VirtualPlayerPathfindingService, useValue: mockPathfindingService },
                 { provide: GameLogicService, useValue: mockGameLogicService },
                 { provide: VirtualPlayerScannerService, useValue: {} },
+                { provide: JournalService, useValue: { addSanctuaryUsedEntry: jest.fn() } },
             ],
         }).compile();
 

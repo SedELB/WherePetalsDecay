@@ -24,7 +24,7 @@ import {
     STATUS_BUFFER_DURATION_MS,
 } from '@common/constants/combat-timeline.constants';
 import { Direction } from '@common/direction';
-import { GameMode, PlayerType, SanctuaryMode, SocketNamespace, TileItem, TileTexture, VirtualPlayerProfile } from '@common/enums';
+import { GameMode, PlayerType, SanctuaryMode, SocketNamespace, TileTexture, VirtualPlayerProfile } from '@common/enums';
 import {
     CombatEndedData,
     CombatLockStateData,
@@ -37,7 +37,6 @@ import {
     PostureReceivedData,
 } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { JournalEventType } from '@common/journal-entry';
 import { Player } from '@common/player';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
@@ -194,14 +193,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
         if (flagJustTaken) {
             this.journalService.addFlagPickedUpEntry(lobbyId, playerName);
-        }
-
-        const tile = activeGame.lobby.game.grid[position.y]?.[position.x];
-        if (tile?.type === TileTexture.DoorOpened) {
-            this.journalService.addDoorOpenEntry(lobbyId, playerName);
-        }
-        if (tile?.item === TileItem.HealingSanctuary || tile?.item === TileItem.CombatSanctuary) {
-            this.journalService.addSanctuaryUsedEntry(lobbyId, playerName);
         }
     }
 
@@ -460,10 +451,17 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (!result) return;
 
         const game = this.gameLogicService.getActiveGame(lobbyId);
+        const playerName = game?.lobby.players.find((p) => p.socketId === socket.id)?.character?.name ?? 'Joueur';
         this.server.to(lobbyId).emit(JoinGameEvents.DoorToggled, {
             position,
             newType: game.lobby.game.grid[position.y][position.x].type,
         });
+
+        if (result === TileTexture.DoorOpened) {
+            this.journalService.addDoorOpenEntry(lobbyId, playerName);
+        } else if (result === TileTexture.DoorClosed) {
+            this.journalService.addDoorCloseEntry(lobbyId, playerName);
+        }
 
         this.sendActionPoints(lobbyId, socket.id);
         this.autoEndTurnIfNoActions(lobbyId, socket.id);
@@ -503,10 +501,15 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             });
         }
 
-        const sanctuaryLabel = result.sanctuaryType === TileItem.HealingSanctuary ? 'soin' : 'combat';
-        const modeLabel = mode === SanctuaryMode.DoubleOrNothing ? ' (double ou rien)' : '';
-        this.server.to(lobbyId).emit(JoinGameEvents.JournalEntry,
-            `${result.playerName} a utilisé un sanctuaire de ${sanctuaryLabel}${modeLabel}.`,
+        this.journalService.addSanctuaryUsedEntry(
+            lobbyId,
+            result.playerName,
+            {
+                sanctuaryType: result.sanctuaryType,
+                mode: result.mode,
+                healAmount: result.healAmount,
+                combatBonusApplied: result.combatBonusApplied,
+            },
         );
 
         this.sendActionPoints(lobbyId, socket.id);
@@ -1056,70 +1059,17 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const attackerName = activeGame.lobby.players.find((p) => p.socketId === session.attackerId)?.character?.name ?? 'Attaquant';
         const defenderName = activeGame.lobby.players.find((p) => p.socketId === session.defenderId)?.character?.name ?? 'Défenseur';
 
-        const atkAtk = combatResult.attacker.attack;
-        const atkDef = combatResult.attacker.defense;
-        const defAtk = combatResult.defender.attack;
-        const defDef = combatResult.defender.defense;
-
-        // Attacker's attack detail
-        this.journalService.addEntry(session.lobbyId, {
-            eventType: JournalEventType.CombatAttackDetail,
-            playerNames: [attackerName],
-            message: `Attaque de ${attackerName} : base=${atkAtk.base}, posture=+${atkAtk.postureBonus}, ` +
-                `dé=+${atkAtk.diceBonus}, malus=-${atkAtk.penalty}, total=${atkAtk.total}`,
-            isPrivate: true,
-            involvedPlayerIds: [session.attackerId, session.defenderId],
+        this.journalService.addCombatRoundEntries(session.lobbyId, {
+            attackerId: session.attackerId,
+            attackerName,
+            attackerAttack: combatResult.attacker.attack,
+            attackerDefense: combatResult.attacker.defense,
+            defenderId: session.defenderId,
+            defenderName,
+            defenderAttack: combatResult.defender.attack,
+            defenderDefense: combatResult.defender.defense,
+            damageToDefender: combatResult.attacker.damageDealt,
+            damageToAttacker: combatResult.defender.damageDealt,
         });
-
-        // Attacker's defense detail
-        this.journalService.addEntry(session.lobbyId, {
-            eventType: JournalEventType.CombatDefenseDetail,
-            playerNames: [attackerName],
-            message: `Défense de ${attackerName} : base=${atkDef.base}, posture=+${atkDef.postureBonus}, ` +
-                `dé=+${atkDef.diceBonus}, malus=-${atkDef.penalty}, total=${atkDef.total}`,
-            isPrivate: true,
-            involvedPlayerIds: [session.attackerId, session.defenderId],
-        });
-
-        // Defender's attack detail
-        this.journalService.addEntry(session.lobbyId, {
-            eventType: JournalEventType.CombatAttackDetail,
-            playerNames: [defenderName],
-            message: `Attaque de ${defenderName} : base=${defAtk.base}, posture=+${defAtk.postureBonus}, ` +
-                `dé=+${defAtk.diceBonus}, malus=-${defAtk.penalty}, total=${defAtk.total}`,
-            isPrivate: true,
-            involvedPlayerIds: [session.attackerId, session.defenderId],
-        });
-
-        // Defender's defense detail
-        this.journalService.addEntry(session.lobbyId, {
-            eventType: JournalEventType.CombatDefenseDetail,
-            playerNames: [defenderName],
-            message: `Défense de ${defenderName} : base=${defDef.base}, posture=+${defDef.postureBonus}, ` +
-                `dé=+${defDef.diceBonus}, malus=-${defDef.penalty}, total=${defDef.total}`,
-            isPrivate: true,
-            involvedPlayerIds: [session.attackerId, session.defenderId],
-        });
-
-        // Damage differences
-        const dmgToDefender = combatResult.attacker.damageDealt;
-        const dmgToAttacker = combatResult.defender.damageDealt;
-
-        this.journalService.addEntry(session.lobbyId, {
-            eventType: JournalEventType.CombatDamageResult,
-            playerNames: [attackerName, defenderName],
-            message: `${attackerName} attaque(${atkAtk.total}) - ${defenderName} défense(${defDef.total}) = ${dmgToDefender} dégât(s). ` +
-                `${defenderName} attaque(${defAtk.total}) - ${attackerName} défense(${atkDef.total}) = ${dmgToAttacker} dégât(s).`,
-            isPrivate: true,
-            involvedPlayerIds: [session.attackerId, session.defenderId],
-        });
-
-        // Round damage result
-        if (dmgToDefender > 0) {
-            this.journalService.addCombatDamageEntry(session.lobbyId, attackerName, defenderName, session.attackerId, session.defenderId);
-        }
-        if (dmgToAttacker > 0) {
-            this.journalService.addCombatDamageEntry(session.lobbyId, defenderName, attackerName, session.attackerId, session.defenderId);
-        }
     }
 }

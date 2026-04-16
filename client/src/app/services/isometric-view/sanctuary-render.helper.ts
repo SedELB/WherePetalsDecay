@@ -1,10 +1,11 @@
-import { Vec2 } from '@common/vec2';
 import { TileItem } from '@common/enums';
+import { Vec2 } from '@common/vec2';
 
 const PULSE_BASE = 20;
 const PULSE_SPEED = 150;
 const PULSE_AMPLITUDE = 12;
 const DOUBLE_PASS_MULTIPLIER = 2.0;
+const INACTIVE_SANCTUARY_ALPHA = 0.6;
 
 const SANCTUARY_ASSETS: Partial<Record<TileItem, string>> = {
     [TileItem.HealingSanctuary]: './assets/tiles/health_sanctuary.png',
@@ -28,8 +29,10 @@ export function drawSanctuarySprite(
     item: TileItem,
     footprint: { north: Vec2; east: Vec2; south: Vec2; west: Vec2 },
     getImage: (src: string) => HTMLImageElement | null,
-    isGlowing = false,
+    options: { isGlowing?: boolean; isInactive?: boolean } = {},
 ): void {
+    const { isGlowing = false, isInactive = false } = options;
+
     const src = SANCTUARY_ASSETS[item];
     if (!src) return;
 
@@ -45,7 +48,7 @@ export function drawSanctuarySprite(
     const anchorX = (footprint.west.x + footprint.east.x) / 2;
     const anchorY = footprint.south.y;
 
-    const GAME_ISO_RATIO = 2.5; 
+    const GAME_ISO_RATIO = 2.5;
     const ASSET_ISO_RATIO = 2.0;
     const squashY = ASSET_ISO_RATIO / GAME_ISO_RATIO;
 
@@ -54,6 +57,13 @@ export function drawSanctuarySprite(
     ctx.scale(1, squashY);
 
     const yOffset = drawH * (SANCTUARY_Y_OFFSET_RATIO[item] ?? 0);
+    const spriteLeft = -drawW / 2;
+    const spriteTop = -drawH + yOffset;
+
+    if (isInactive) {
+        ctx.filter = 'grayscale(1)';
+        ctx.globalAlpha = INACTIVE_SANCTUARY_ALPHA;
+    }
 
     if (isGlowing) {
         const pulse = PULSE_BASE + Math.sin(Date.now() / PULSE_SPEED) * PULSE_AMPLITUDE;
@@ -64,11 +74,12 @@ export function drawSanctuarySprite(
         // Double shadow pass for an intensified golden atmospheric glow
         ctx.shadowBlur = pulse * DOUBLE_PASS_MULTIPLIER;
         ctx.drawImage(img, -drawW / 2, -drawH + yOffset, drawW, drawH);
-        
+
         ctx.shadowBlur = 0;
         ctx.shadowColor = 'transparent';
     }
 
-    ctx.drawImage(img, -drawW / 2, -drawH + yOffset, drawW, drawH);
+    ctx.drawImage(img, spriteLeft, spriteTop, drawW, drawH);
+
     ctx.restore();
 }

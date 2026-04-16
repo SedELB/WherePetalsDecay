@@ -22,7 +22,6 @@ import {
     PostureReceivedData,
 } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { JournalEventType } from '@common/journal-entry';
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
@@ -276,70 +275,17 @@ export class CombatRoundGateway {
         const attackerName = activeGame.lobby.players.find((p) => p.socketId === session.attackerId)?.character?.name ?? 'Attaquant';
         const defenderName = activeGame.lobby.players.find((p) => p.socketId === session.defenderId)?.character?.name ?? 'Défenseur';
 
-        const atkAtk = combatResult.attacker.attack;
-        const atkDef = combatResult.attacker.defense;
-        const defAtk = combatResult.defender.attack;
-        const defDef = combatResult.defender.defense;
-
-        // Attacker's attack detail
-        this.journalService.addEntry(session.lobbyId, {
-            eventType: JournalEventType.CombatAttackDetail,
-            playerNames: [attackerName],
-            message: `Attaque de ${attackerName} : base=${atkAtk.base}, posture=+${atkAtk.postureBonus}, ` +
-                `dé=+${atkAtk.diceBonus}, malus=-${atkAtk.penalty}, total=${atkAtk.total}`,
-            isPrivate: true,
-            involvedPlayerIds: [session.attackerId, session.defenderId],
+        this.journalService.addCombatRoundEntries(session.lobbyId, {
+            attackerId: session.attackerId,
+            attackerName,
+            attackerAttack: combatResult.attacker.attack,
+            attackerDefense: combatResult.attacker.defense,
+            defenderId: session.defenderId,
+            defenderName,
+            defenderAttack: combatResult.defender.attack,
+            defenderDefense: combatResult.defender.defense,
+            damageToDefender: combatResult.attacker.damageDealt,
+            damageToAttacker: combatResult.defender.damageDealt,
         });
-
-        // Attacker's defense detail
-        this.journalService.addEntry(session.lobbyId, {
-            eventType: JournalEventType.CombatDefenseDetail,
-            playerNames: [attackerName],
-            message: `Défense de ${attackerName} : base=${atkDef.base}, posture=+${atkDef.postureBonus}, ` +
-                `dé=+${atkDef.diceBonus}, malus=-${atkDef.penalty}, total=${atkDef.total}`,
-            isPrivate: true,
-            involvedPlayerIds: [session.attackerId, session.defenderId],
-        });
-
-        // Defender's attack detail
-        this.journalService.addEntry(session.lobbyId, {
-            eventType: JournalEventType.CombatAttackDetail,
-            playerNames: [defenderName],
-            message: `Attaque de ${defenderName} : base=${defAtk.base}, posture=+${defAtk.postureBonus}, ` +
-                `dé=+${defAtk.diceBonus}, malus=-${defAtk.penalty}, total=${defAtk.total}`,
-            isPrivate: true,
-            involvedPlayerIds: [session.attackerId, session.defenderId],
-        });
-
-        // Defender's defense detail
-        this.journalService.addEntry(session.lobbyId, {
-            eventType: JournalEventType.CombatDefenseDetail,
-            playerNames: [defenderName],
-            message: `Défense de ${defenderName} : base=${defDef.base}, posture=+${defDef.postureBonus}, ` +
-                `dé=+${defDef.diceBonus}, malus=-${defDef.penalty}, total=${defDef.total}`,
-            isPrivate: true,
-            involvedPlayerIds: [session.attackerId, session.defenderId],
-        });
-
-        // Damage differences
-        const dmgToDefender = combatResult.attacker.damageDealt;
-        const dmgToAttacker = combatResult.defender.damageDealt;
-
-        this.journalService.addEntry(session.lobbyId, {
-            eventType: JournalEventType.CombatDamageResult,
-            playerNames: [attackerName, defenderName],
-            message: `${attackerName} attaque(${atkAtk.total}) - ${defenderName} défense(${defDef.total}) = ${dmgToDefender} dégât(s). ` +
-                `${defenderName} attaque(${defAtk.total}) - ${attackerName} défense(${atkDef.total}) = ${dmgToAttacker} dégât(s).`,
-            isPrivate: true,
-            involvedPlayerIds: [session.attackerId, session.defenderId],
-        });
-
-        // Round damage result
-        if (dmgToDefender > 0) {
-            this.journalService.addCombatDamageEntry(session.lobbyId, attackerName, defenderName, session.attackerId, session.defenderId);
-        }
-        if (dmgToAttacker > 0) {
-            this.journalService.addCombatDamageEntry(session.lobbyId, defenderName, attackerName, session.attackerId, session.defenderId);
-        }
     }
 }

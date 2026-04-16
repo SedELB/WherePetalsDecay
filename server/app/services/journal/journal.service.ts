@@ -1,3 +1,5 @@
+import { SanctuaryMode, TileItem } from '@common/enums';
+import { CombatStatBreakdown } from '@common/interfaces/game-view';
 import { JournalEntry, JournalEventType } from '@common/journal-entry';
 import { Injectable } from '@nestjs/common';
 
@@ -9,6 +11,26 @@ export interface JournalEntryOptions {
     message: string;
     isPrivate?: boolean;
     involvedPlayerIds?: string[];
+}
+
+export interface SanctuaryJournalDetails {
+    sanctuaryType?: TileItem;
+    mode?: SanctuaryMode;
+    healAmount?: number;
+    combatBonusApplied?: boolean;
+}
+
+export interface CombatRoundJournalEntryDetails {
+    attackerId: string;
+    attackerName: string;
+    attackerAttack: CombatStatBreakdown;
+    attackerDefense: CombatStatBreakdown;
+    defenderId: string;
+    defenderName: string;
+    defenderAttack: CombatStatBreakdown;
+    defenderDefense: CombatStatBreakdown;
+    damageToDefender: number;
+    damageToAttacker: number;
 }
 
 @Injectable()
@@ -24,8 +46,8 @@ export class JournalService {
         const entry: JournalEntry = {
             timestamp: new Date(),
             eventType: options.eventType,
-            playerNames: options.playerNames,
-            message: options.message,
+            playerNames: options.playerNames.map((name) => name.trim()).filter((name) => name.length > 0),
+            message: this.normalizeMessage(options.message),
             isPrivate: options.isPrivate ?? false,
             involvedPlayerIds: options.involvedPlayerIds ?? [],
         };
@@ -91,6 +113,57 @@ export class JournalService {
         });
     }
 
+    addCombatRoundEntries(lobbyId: string, details: CombatRoundJournalEntryDetails): void {
+        const involvedPlayerIds = [details.attackerId, details.defenderId];
+
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatAttackDetail,
+            playerNames: [details.attackerName],
+            message: this.buildCombatStatMessage('Attaque', details.attackerName, details.attackerAttack),
+            isPrivate: true,
+            involvedPlayerIds,
+        });
+
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatDefenseDetail,
+            playerNames: [details.attackerName],
+            message: this.buildCombatStatMessage('Défense', details.attackerName, details.attackerDefense),
+            isPrivate: true,
+            involvedPlayerIds,
+        });
+
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatAttackDetail,
+            playerNames: [details.defenderName],
+            message: this.buildCombatStatMessage('Attaque', details.defenderName, details.defenderAttack),
+            isPrivate: true,
+            involvedPlayerIds,
+        });
+
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatDefenseDetail,
+            playerNames: [details.defenderName],
+            message: this.buildCombatStatMessage('Défense', details.defenderName, details.defenderDefense),
+            isPrivate: true,
+            involvedPlayerIds,
+        });
+
+        this.addEntry(lobbyId, {
+            eventType: JournalEventType.CombatDamageResult,
+            playerNames: [details.attackerName, details.defenderName],
+            message: this.buildCombatRoundDamageMessage(details),
+            isPrivate: true,
+            involvedPlayerIds,
+        });
+
+        if (details.damageToDefender > 0) {
+            this.addCombatDamageEntry(lobbyId, details.attackerName, details.defenderName, details.attackerId, details.defenderId);
+        }
+        if (details.damageToAttacker > 0) {
+            this.addCombatDamageEntry(lobbyId, details.defenderName, details.attackerName, details.attackerId, details.defenderId);
+        }
+    }
+
     addFlagTransferEntry(lobbyId: string, giverName: string, receiverName: string): void {
         this.addEntry(lobbyId, {
             eventType: JournalEventType.FlagTransfer,
@@ -131,11 +204,18 @@ export class JournalService {
         });
     }
 
-    addSanctuaryUsedEntry(lobbyId: string, playerName: string): void {
+    addSanctuaryUsedEntry(lobbyId: string, playerName: string, details: SanctuaryJournalDetails = {}): void {
+        const {
+            sanctuaryType,
+            mode = SanctuaryMode.Normal,
+            healAmount = 0,
+            combatBonusApplied = false,
+        } = details;
+
         this.addEntry(lobbyId, {
             eventType: JournalEventType.SanctuaryUsed,
             playerNames: [playerName],
-            message: `${playerName} a utilisé un sanctuaire.`,
+            message: this.buildSanctuaryMessage(playerName, sanctuaryType, mode, healAmount, combatBonusApplied),
         });
     }
 
@@ -145,5 +225,66 @@ export class JournalService {
 
     clearEntries(lobbyId: string): void {
         this.entries.delete(lobbyId);
+    }
+
+    private buildSanctuaryMessage(
+        playerName: string,
+        sanctuaryType?: TileItem,
+        mode: SanctuaryMode = SanctuaryMode.Normal,
+        healAmount = 0,
+        combatBonusApplied = false,
+    ): string {
+        const sanctuaryLabel = sanctuaryType === TileItem.HealingSanctuary
+            ? ' de soin'
+            : sanctuaryType === TileItem.CombatSanctuary
+                ? ' de combat'
+                : '';
+        const modeLabel = mode === SanctuaryMode.DoubleOrNothing ? ' (double ou rien)' : '';
+        const base = `${playerName} a utilisé un sanctuaire${sanctuaryLabel}${modeLabel}`;
+
+        if (sanctuaryType === TileItem.HealingSanctuary) {
+            if (healAmount > 0) return `${base} et a récupéré ${healAmount} PV`;
+            return `${base}, sans récupération de PV`;
+        }
+
+        if (sanctuaryType === TileItem.CombatSanctuary) {
+            if (combatBonusApplied) return `${base} et a obtenu un bonus de combat`;
+            return `${base}, sans bonus de combat`;
+        }
+
+        return base;
+    }
+
+    private buildCombatStatMessage(statType: 'Attaque' | 'Défense', playerName: string, stat: CombatStatBreakdown): string {
+        return `${statType} de ${playerName} : base ${stat.base}, posture ${this.formatSignedValue(stat.postureBonus)}, ` +
+            `dé ${this.formatSignedValue(stat.diceBonus)}, malus ${this.formatPenaltyValue(stat.penalty)}, total ${stat.total}`;
+    }
+
+    private buildCombatRoundDamageMessage(details: CombatRoundJournalEntryDetails): string {
+        return `${details.attackerName} inflige ${this.formatDamageValue(details.damageToDefender)} à ${details.defenderName} ` +
+            `(attaque ${details.attackerAttack.total} vs défense ${details.defenderDefense.total}); ` +
+            `${details.defenderName} inflige ${this.formatDamageValue(details.damageToAttacker)} à ${details.attackerName} ` +
+            `(attaque ${details.defenderAttack.total} vs défense ${details.attackerDefense.total})`;
+    }
+
+    private formatSignedValue(value: number): string {
+        if (value > 0) return `+${value}`;
+        return `${value}`;
+    }
+
+    private formatPenaltyValue(penalty: number): string {
+        if (penalty > 0) return `-${penalty}`;
+        if (penalty < 0) return `+${Math.abs(penalty)}`;
+        return '0';
+    }
+
+    private formatDamageValue(damage: number): string {
+        return `${damage} ${damage === 1 ? 'dégât' : 'dégâts'}`;
+    }
+
+    private normalizeMessage(message: string): string {
+        const normalized = message.replace(/\s+/g, ' ').trim();
+        if (normalized.length === 0) return '';
+        return /[.!?…]$/.test(normalized) ? normalized : `${normalized}.`;
     }
 }

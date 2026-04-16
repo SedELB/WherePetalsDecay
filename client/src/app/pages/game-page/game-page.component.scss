@@ -60,17 +60,19 @@
     align-items: center;
     justify-content: center;
     gap: 0.375rem 0.875rem;
+
 }
 
 .controls-title {
     width: 100%;
     text-align: center;
     font-weight: 700;
-    font-size: 0.95em;
+    font-size: 1.5em;
     color: rgba(255, 255, 255, 0.92);
 }
 
 .control {
+    font-size: 1.2em;
     white-space: nowrap;
 
     .key {
@@ -201,12 +203,6 @@
         border-radius: 0.5rem;
         transition: all 0.2s ease;
 
-        &:hover {
-            background: rgba(237, 222, 167, 0.06);
-            border-color: rgba(237, 222, 167, 0.2);
-            transform: translateX(4px);
-        }
-
         .info-label {
             font-size: 0.75rem;
             color: rgba(237, 222, 167, 0.6);
@@ -272,7 +268,7 @@
 
     .timer-line {
         width: 4.5rem;
-        height: 3px;
+        height: 5px;
         border-radius: 999px;
         background: rgba(255, 255, 255, 0.2);
         overflow: hidden;
@@ -289,7 +285,7 @@
 
 .timer-label {
     font-weight: 600;
-    font-size: 0.74em;
+    font-size: 1em;
     color: #eddea7;
     max-width: 14rem;
     overflow: hidden;
@@ -299,7 +295,7 @@
 
 .timer-countdown {
     font-weight: 800;
-    font-size: 0.84em;
+    font-size: 1em;
     min-width: 2.25rem;
     text-align: right;
 }

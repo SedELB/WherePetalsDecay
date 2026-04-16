@@ -87,7 +87,7 @@ export class CombatService {
         if (!participants) return null;
 
         const statsSnapshot = this.computeCombatStats(game, participants, diceStrategy);
-        this.applyCombatDamageAndTracking(participants, statsSnapshot);
+        this.applyCombatDamageAndTracking(participants, statsSnapshot, consumeActionPoint);
 
         const deathResolution = this.resolveCombatDeaths(game, participants, attackerId, defenderId);
 
@@ -210,12 +210,18 @@ export class CombatService {
         };
     }
 
-    private applyCombatDamageAndTracking(participants: CombatParticipants, statsSnapshot: CombatStatsSnapshot): void {
+    private applyCombatDamageAndTracking(
+        participants: CombatParticipants,
+        statsSnapshot: CombatStatsSnapshot,
+        isCombatStart: boolean,
+    ): void {
         participants.attacker.character.life = Math.max(statsSnapshot.attackerLifeBefore - statsSnapshot.damageToAttacker, 0);
         participants.defender.character.life = Math.max(statsSnapshot.defenderLifeBefore - statsSnapshot.damageToDefender, 0);
 
-        participants.attacker.combatCount++;
-        participants.defender.combatCount++;
+        if (isCombatStart) {
+            participants.attacker.combatCount++;
+            participants.defender.combatCount++;
+        }
 
         participants.attacker.totalHpDealt += statsSnapshot.damageToDefender;
         participants.attacker.totalHpLost += statsSnapshot.damageToAttacker;
