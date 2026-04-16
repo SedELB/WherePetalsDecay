@@ -204,7 +204,6 @@ export class GamePageComponent implements OnInit {
         const lobbyId = this.signals.lobby()?.lobbyId;
         if (lobbyId && this.pendingSanctuaryPosition) {
             this.gameViewService.sendUseSanctuary(lobbyId, this.pendingSanctuaryPosition, mode);
-            this.showToast('Sanctuaire utilisé !', 'success');
             this.onCancelSanctuary();
         }
     }

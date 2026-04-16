@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
 import { ONE_SECOND_DELAY } from '@app/services/game-view/game-view.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
-import { SocketNamespace, TileTexture } from '@common/enums';
+import { SanctuaryMode, SocketNamespace, TileItem, TileTexture } from '@common/enums';
 import {
     CombatLockStateData,
     GameOverEventData,
@@ -14,6 +14,7 @@ import {
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Vec2 } from '@common/vec2';
+import swal from 'sweetalert2';
 import { GameLogicService } from './game-logic.service';
 import { GameViewCombatService } from './game-view-combat.service';
 import { GameViewService } from './game-view.service';
@@ -228,6 +229,7 @@ export class GameViewListenerService {
                     return this.gameLogicService.updatePlayerStats(lobby, playerStats);
                 });
             }
+            this.showSanctuaryResultToast(data);
         });
 
         this.webSocketService.onNamespace<{ socketId: string; attack: number; defense: number; life: number }>(
@@ -262,6 +264,56 @@ export class GameViewListenerService {
             setFlagTaken: (value: boolean) => {
                 this.gameViewService.isFlagTaken.set(value);
             },
+        });
+    }
+
+    private showSanctuaryResultToast(data: {
+        playerName: string;
+        sanctuaryType: string;
+        mode: string;
+        healAmount: number;
+        combatBonusApplied: boolean;
+    }): void {
+        const isDoubleOrNothing = data.mode === SanctuaryMode.DoubleOrNothing;
+        const isHealing = data.sanctuaryType === TileItem.HealingSanctuary;
+
+        let title: string;
+        let text: string;
+        let icon: 'success' | 'warning' | 'info';
+
+        if (isHealing) {
+            if (data.healAmount > 0) {
+                title = isDoubleOrNothing ? 'Double ou rien — Gagné !' : 'Sanctuaire de soin';
+                text = `${data.playerName} a récupéré ${data.healAmount} PV`;
+                icon = 'success';
+            } else {
+                title = 'Double ou rien — Raté !';
+                text = `${data.playerName} n'a récupéré aucun PV`;
+                icon = 'warning';
+            }
+        } else {
+            if (data.combatBonusApplied) {
+                title = isDoubleOrNothing ? 'Double ou rien — Gagné !' : 'Sanctuaire de combat';
+                text = isDoubleOrNothing
+                    ? `${data.playerName} a obtenu un double bonus de combat`
+                    : `${data.playerName} a obtenu un bonus de combat`;
+                icon = 'success';
+            } else {
+                title = 'Double ou rien — Raté !';
+                text = `${data.playerName} n'a obtenu aucun bonus de combat`;
+                icon = 'warning';
+            }
+        }
+
+        void swal.fire({
+            toast: true,
+            position: 'top',
+            icon,
+            title,
+            text,
+            showConfirmButton: false,
+            timer: 3500,
+            timerProgressBar: true,
         });
     }
 }
