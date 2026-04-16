@@ -6,11 +6,11 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { GamePageComponent } from '@app/pages/game-page/game-page.component';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { GameMode, PlayerAction, PlayerType } from '@common/enums';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
-import { GamePageComponent } from '@app/pages/game-page/game-page.component';
 
 @Component({ template: '', standalone: true })
 class DummyComponent {}

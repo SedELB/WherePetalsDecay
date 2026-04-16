@@ -4,8 +4,27 @@ import { VirtualPlayerService } from '@app/services/game-logic/virtual-player.se
 import { JournalService } from '@app/services/journal/journal.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Posture } from '@common/character';
+import {
+    COMBAT_POST_ABANDON_RESUME_DELAY_MS,
+    COMBAT_POST_DEATH_RESUME_DELAY_MS,
+    COMBAT_POSTURE_TIMEOUT_MS,
+    COMBAT_ROUND_DELAY_MS,
+    COMBAT_START_ANNOUNCEMENT_DELAY_MS,
+    COUNTDOWN_TICK_MS,
+    DAMAGE_DISPLAY_DURATION_MS,
+    DEFAULT_POSTURE,
+    DICE_RESULT_DISPLAY_DURATION_MS,
+    DICE_ROLL_DURATION_MS,
+    FIGHTER_ADVANCE_DURATION_MS,
+    FIGHTER_HOLD_DURATION_MS,
+    FIGHTER_RETREAT_DURATION_MS,
+    NEXT_ROUND_ANNOUNCEMENT_DURATION_MS,
+    POSTURE_RESULT_DISPLAY_DURATION_MS,
+    ROUND_PHASE_BUFFER_MS,
+    STATUS_BUFFER_DURATION_MS,
+} from '@common/constants/combat-timeline.constants';
 import { Direction } from '@common/direction';
-import { GameMode, PlayerType, SocketNamespace, TileItem, TileTexture, VirtualPlayerProfile, SanctuaryMode } from '@common/enums';
+import { GameMode, PlayerType, SanctuaryMode, SocketNamespace, TileItem, TileTexture } from '@common/enums';
 import {
     CombatEndedData,
     CombatLockStateData,
@@ -34,24 +53,6 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { GameTurnSyncService } from './game-turn-sync.service';
-import {
-    COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS,
-    COMBAT_POSTURE_TIMEOUT_MS,
-    COMBAT_ROUND_DELAY_MS,
-    COMBAT_START_ANNOUNCEMENT_DELAY_MS,
-    COUNTDOWN_TICK_MS,
-    DAMAGE_DISPLAY_DURATION_MS,
-    DEFAULT_POSTURE,
-    DICE_RESULT_DISPLAY_DURATION_MS,
-    DICE_ROLL_DURATION_MS,
-    FIGHTER_ADVANCE_DURATION_MS,
-    FIGHTER_HOLD_DURATION_MS,
-    FIGHTER_RETREAT_DURATION_MS,
-    NEXT_ROUND_ANNOUNCEMENT_DURATION_MS,
-    POSTURE_RESULT_DISPLAY_DURATION_MS,
-    ROUND_PHASE_BUFFER_MS,
-    STATUS_BUFFER_DURATION_MS,
-} from './game.gateway.constants';
 
 interface CombatSession {
     lobbyId: string;
@@ -63,11 +64,8 @@ interface CombatSession {
     awaitingPostures: boolean;
     consumeActionPointOnNextRound: boolean;
     timeoutHandle?: ReturnType<typeof setTimeout>;
-    countdownStartHandle?: ReturnType<typeof setTimeout>;
     countdownHandle?: ReturnType<typeof setInterval>;
-    vpPostureHandles: ReturnType<typeof setTimeout>[];
 }
-
 
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
@@ -78,6 +76,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     private fightCounter = 0;
     private readonly endGamePlayers = new Map<string, Set<string>>();
     private readonly combatSessions = new Map<string, CombatSession>();
+    private readonly pendingPostCombatTurnResumes = new Map<string, ReturnType<typeof setTimeout>>();
 
     constructor(
         private readonly logger: Logger,
@@ -141,6 +140,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             socket.emit(JoinGameEvents.LobbyError, 'Impossible de demarrer la partie. (Minimum 2 joueurs requis.)');
             return;
         }
+
+        this.clearPendingPostCombatTurnResume(lobbyId);
 
         const activeGame = this.gameLogicService.initializeGame(finalLobby);
 
@@ -296,19 +297,17 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
         if (!activeGame) return;
 
+        this.clearPendingPostCombatTurnResume(lobbyId);
+
         const attacker = activeGame.lobby.players.find((player) => player.socketId === socket.id);
         const defender = activeGame.lobby.players.find((player) => player.socketId === enemy.socketId);
         if (!attacker || !defender) return;
 
+        const enemySocket = socket.nsp.sockets.get(defender.socketId);
+        if (!enemySocket) return;
+
         socket.join(roomId);
-        if (defender.playerType !== PlayerType.Virtual) {
-            const enemySocket = socket.nsp.sockets.get(defender.socketId);
-            if (!enemySocket) {
-                socket.leave(roomId);
-                return;
-            }
-            enemySocket.join(roomId);
-        }
+        enemySocket.join(roomId);
 
         const combatSession: CombatSession = {
             lobbyId,
@@ -319,7 +318,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             roundIndex: 1,
             awaitingPostures: false,
             consumeActionPointOnNextRound: true,
-            vpPostureHandles: [],
         };
 
         this.combatSessions.set(roomId, combatSession);
@@ -511,9 +509,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
 
     @SubscribeMessage(JoinGameEvents.PlayerAbandon)
     handlePlayerAbandon(@ConnectedSocket() socket: Socket): void {
-        const combatSession = this.findCombatSessionByPlayer(socket.id);
-        if (combatSession) return;
-
         this.processGameDisconnect(socket);
         socket.emit(JoinGameEvents.LeftLobby);
     }
@@ -529,12 +524,21 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         }
 
         const combatSession = this.findCombatSessionByPlayer(socket.id);
+        const shouldDeferTurnAdvance = Boolean(combatSession) && this.gameLogicService.isPlayerTurn(lobbyId, socket.id);
+
         if (combatSession) {
             const winnerId = combatSession.attackerId === socket.id ? combatSession.defenderId : combatSession.attackerId;
             this.resolveCombatByAbandon(combatSession, socket.id, winnerId);
         }
 
-        const isGameOver = this.gameLogicService.executePlayerAbandon(lobbyId, socket, this.server);
+        const isGameOver = this.gameLogicService.executePlayerAbandon(lobbyId, socket, this.server, shouldDeferTurnAdvance);
+
+        if (!isGameOver && shouldDeferTurnAdvance) {
+            this.schedulePostCombatTurnResume(lobbyId, COMBAT_POST_ABANDON_RESUME_DELAY_MS, () => {
+                this.gameLogicService.endTurn(lobbyId);
+            });
+        }
+
         if (!isGameOver) return;
 
         const remainingPlayers = activeGame.lobby.players
@@ -544,6 +548,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     }
 
     private handleGameOver(lobbyId: string, winnerSocketId: string | null): void {
+        this.clearPendingPostCombatTurnResume(lobbyId);
+
         const gameStats = this.gameLogicService.getGameStats(lobbyId);
         const activeGame = this.gameLogicService.getActiveGame(lobbyId);
         const players = activeGame ? [...activeGame.lobby.players] : [];
@@ -628,6 +634,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const session = this.combatSessions.get(roomId);
         if (!session) return;
 
+        const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
+        const debugDiceMode = Boolean(activeGame?.isDebugMode);
+
         const timeline: CombatRoundTimelineData = {
             postureResultDisplayDurationMs: POSTURE_RESULT_DISPLAY_DURATION_MS,
             roundPhaseBufferMs: ROUND_PHASE_BUFFER_MS,
@@ -667,6 +676,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             result: combatResult,
             resolvedAtEpochMs: Date.now(),
             timeline,
+            debugDiceMode,
             ...(timedOutSocketIds.length > 0 ? { timedOutSocketIds } : {}),
         };
         this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundResolved, roundResolvedData);
@@ -738,16 +748,11 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (finalResult.winnerId === session.attackerId) {
             this.gameLogicService.resumeTurnCycle(session.lobbyId);
             this.sendActionPoints(session.lobbyId, session.attackerId);
-
-            const winnerGame = this.gameLogicService.getActiveGame(session.lobbyId);
-            const winnerPlayer = winnerGame?.lobby.players.find((p) => p.socketId === session.attackerId);
-            if (winnerPlayer?.playerType === PlayerType.Virtual) {
-                this.triggerVirtualPlayerTurnIfNeeded(session.lobbyId, session.attackerId);
-            } else {
-                this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
-            }
+            this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
         } else {
-            this.gameLogicService.endTurn(session.lobbyId);
+            this.schedulePostCombatTurnResume(session.lobbyId, COMBAT_POST_DEATH_RESUME_DELAY_MS, () => {
+                this.gameLogicService.endTurn(session.lobbyId);
+            });
         }
 
         this.cleanupCombatSession(session.roomId);
@@ -803,17 +808,33 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (winnerId === session.attackerId) {
             this.gameLogicService.resumeTurnCycle(session.lobbyId);
             this.sendActionPoints(session.lobbyId, session.attackerId);
-
-            const abandonWinnerGame = this.gameLogicService.getActiveGame(session.lobbyId);
-            const abandonWinnerPlayer = abandonWinnerGame?.lobby.players.find((p) => p.socketId === session.attackerId);
-            if (abandonWinnerPlayer?.playerType === PlayerType.Virtual) {
-                this.triggerVirtualPlayerTurnIfNeeded(session.lobbyId, session.attackerId);
-            } else {
-                this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
-            }
+            this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
         }
 
         this.cleanupCombatSession(session.roomId);
+    }
+
+    private schedulePostCombatTurnResume(lobbyId: string, delayMs: number, callback: () => void): void {
+        this.clearPendingPostCombatTurnResume(lobbyId);
+
+        const timeout = setTimeout(() => {
+            this.pendingPostCombatTurnResumes.delete(lobbyId);
+
+            const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+            if (!activeGame) return;
+
+            callback();
+        }, delayMs);
+
+        this.pendingPostCombatTurnResumes.set(lobbyId, timeout);
+    }
+
+    private clearPendingPostCombatTurnResume(lobbyId: string): void {
+        const timeout = this.pendingPostCombatTurnResumes.get(lobbyId);
+        if (!timeout) return;
+
+        clearTimeout(timeout);
+        this.pendingPostCombatTurnResumes.delete(lobbyId);
     }
 
     private cleanupCombatSession(roomId: string): void {
@@ -845,11 +866,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             roomId: session.roomId,
             roundIndex: session.roundIndex,
             postureTimeoutMs: COMBAT_POSTURE_TIMEOUT_MS,
-            postureCountdownDelayMs: COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS,
         };
         this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundStarted, roundStartedData);
-
-        this.scheduleVirtualPlayerPostures(session);
 
         let secondsLeft = Math.ceil(COMBAT_POSTURE_TIMEOUT_MS / COUNTDOWN_TICK_MS);
         const emitCountdown = () => {
@@ -861,33 +879,24 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundCountdown, roundCountdownData);
         };
 
-        const startCountdown = () => {
-            if (!session.awaitingPostures) return;
+        emitCountdown();
+        session.countdownHandle = setInterval(() => {
+            if (!session.awaitingPostures) {
+                this.clearCombatSessionTimers(session);
+                return;
+            }
+
+            secondsLeft--;
+            if (secondsLeft <= 0) {
+                if (session.countdownHandle) {
+                    clearInterval(session.countdownHandle);
+                    session.countdownHandle = undefined;
+                }
+                return;
+            }
 
             emitCountdown();
-            session.countdownHandle = setInterval(() => {
-                if (!session.awaitingPostures) {
-                    this.clearCombatSessionTimers(session);
-                    return;
-                }
-
-                secondsLeft--;
-                if (secondsLeft <= 0) {
-                    if (session.countdownHandle) {
-                        clearInterval(session.countdownHandle);
-                        session.countdownHandle = undefined;
-                    }
-                    return;
-                }
-
-                emitCountdown();
-            }, COUNTDOWN_TICK_MS);
-        };
-
-        session.countdownStartHandle = setTimeout(() => {
-            session.countdownStartHandle = undefined;
-            startCountdown();
-        }, COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS);
+        }, COUNTDOWN_TICK_MS);
 
         session.timeoutHandle = setTimeout(() => {
             if (!session.awaitingPostures) return;
@@ -898,7 +907,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             }
 
             this.resolveCombatSession(session.roomId, timedOutSocketIds);
-        }, COMBAT_POSTURE_TIMEOUT_MS + COMBAT_POSTURE_COUNTDOWN_START_DELAY_MS);
+        }, COMBAT_POSTURE_TIMEOUT_MS);
     }
 
     private clearCombatSessionTimers(session: CombatSession): void {
@@ -907,41 +916,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             session.timeoutHandle = undefined;
         }
 
-        if (session.countdownStartHandle) {
-            clearTimeout(session.countdownStartHandle);
-            session.countdownStartHandle = undefined;
-        }
-
         if (session.countdownHandle) {
             clearInterval(session.countdownHandle);
             session.countdownHandle = undefined;
-        }
-
-        for (const handle of session.vpPostureHandles) {
-            clearTimeout(handle);
-        }
-        session.vpPostureHandles = [];
-    }
-
-    private scheduleVirtualPlayerPostures(session: CombatSession): void {
-        const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
-        if (!activeGame) return;
-
-        for (const participantId of [session.attackerId, session.defenderId]) {
-            const participant = activeGame.lobby.players.find((p) => p.socketId === participantId);
-            if (!participant || participant.playerType !== PlayerType.Virtual) continue;
-
-            const posture: Posture = participant.virtualProfile === VirtualPlayerProfile.Aggressive
-                ? { type: 'atk', bonus: 2 }
-                : { type: 'def', bonus: 2 };
-
-            session.postures.set(participantId, posture);
-            const postureData: PostureReceivedData = { socketId: participantId, posture };
-            this.server.to(session.roomId).emit(JoinGameEvents.PostureReceived, postureData);
-        }
-
-        if (session.postures.has(session.attackerId) && session.postures.has(session.defenderId)) {
-            this.resolveCombatSession(session.roomId);
         }
     }
 
@@ -977,6 +954,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         const defender = activeGame.lobby.players.find((player) => player.socketId === defenderId);
         if (!attacker || !defender) return;
 
+        this.clearPendingPostCombatTurnResume(lobbyId);
+
         this.fightCounter++;
         const roomId = `fight-vp-${this.fightCounter}`;
 
@@ -993,7 +972,6 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             roundIndex: 1,
             awaitingPostures: false,
             consumeActionPointOnNextRound: true,
-            vpPostureHandles: [],
         };
 
         this.combatSessions.set(roomId, combatSession);

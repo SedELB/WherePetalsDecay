@@ -257,6 +257,7 @@ export class GameViewListenersService {
         this.gameViewCombatService.setupListeners(this.webSocketService, ns, {
             getLocalSocketId: () => signals.getLocalSocketId(),
             getGameLobby: () => signals.gameLobby(),
+            getPlayerPositions: () => signals.playerPositions(),
             updateGameLobby: (updater: (lobby: Lobby | null) => Lobby | null) => signals.gameLobby.update(updater),
             updatePlayerPositions: (updater: (positions: Record<string, Vec2>) => Record<string, Vec2>) =>
                 signals.playerPositions.update(updater),
