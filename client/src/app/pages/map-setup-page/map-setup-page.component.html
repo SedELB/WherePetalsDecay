@@ -75,9 +75,8 @@
             type="button"
             class="object-tool"
             [class.object-tool--active]="activeTileItem === objTool.type"
-            [class.object-tool--complete]="isObjectTypeComplete(objTool.type)"
-            [disabled]="objTool.type === tileItemEnum.Flag && game.gameMode === gameMode.Classic"
-            [class.disabled]="objTool.type === tileItemEnum.Flag && game.gameMode === gameMode.Classic"
+            [class.object-tool--exhausted]="isObjectExhausted(objTool.type)"
+            [disabled]="isObjectExhausted(objTool.type) || (objTool.type === tileItemEnum.Flag && game.gameMode === gameMode.Classic)"
             (click)="selectTileItem(objTool.type)">
 
             <span class="object-tool__label">{{ objTool.label }}</span>
@@ -91,10 +90,10 @@
               <span class="object-tool__count">{{ getPlacedFlagCount() }} / {{ getRequiredFlagCount() }}</span>
             }
             @if (objTool.type === tileItemEnum.HealingSanctuary) {
-              <span class="object-tool__count">{{ getPlacedHealingSanctuaryCount() }} / {{ getRequiredHealingSanctuaryCount() }}</span>
+              <span class="object-tool__count">{{ getPlacedHealingSanctuaryCount() }} / {{ getMaxHealingSanctuaryCount() }}</span>
             }
             @if (objTool.type === tileItemEnum.CombatSanctuary) {
-              <span class="object-tool__count">{{ getPlacedCombatSanctuaryCount() }} / {{ getRequiredCombatSanctuaryCount() }}</span>
+              <span class="object-tool__count">{{ getPlacedCombatSanctuaryCount() }} / {{ getMaxCombatSanctuaryCount() }}</span>
             }
             <span class="tool__desc" role="tooltip">{{ objTool.description }}</span>
 

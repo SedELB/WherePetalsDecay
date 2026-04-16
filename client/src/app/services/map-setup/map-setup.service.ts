@@ -8,13 +8,13 @@ import {
     TileItemCounts,
     TileParams,
 } from '@app/services/map-setup.types';
+import { canPlaceSanctuary, drawStraightLine, findSanctuaryTopLeft, inverseDoor, isSanctuary } from '@app/services/map-setup/map-setup.helper';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { TileItem, TileTexture } from '@common/enums';
 import { type PlacedObject, Game } from '@common/game';
 import type { GameDraftForValidation } from '@common/interfaces/game-validation';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
-import { canPlaceSanctuary, drawStraightLine, findSanctuaryTopLeft, inverseDoor, isSanctuary } from '@app/services/map-setup/map-setup.helper';
 
 @Injectable({ providedIn: 'root' })
 export class MapSetupService {
@@ -70,7 +70,6 @@ export class MapSetupService {
             game.grid[rowIndex + 1][colIndex + 1],
         ];
         for (const cell of cells) {
-            cell.type = TileTexture.Floor;
             cell.item = item;
         }
         this.tileItemCountService.decreaseTileItemCount(counts, item);

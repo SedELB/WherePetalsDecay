@@ -220,14 +220,12 @@ export class GameValidatorService {
         return SanctuaryCount.Large;
     }
     private areSanctuariesValid(game: CreateGameDto): boolean {
+        const max = this.getRequiredSanctuaryCount(game);
         const errors: string[] = [];
-        const required = this.getRequiredSanctuaryCount(game);
         const healingCount = this.countSanctuaryBlocks(game, TileItem.HealingSanctuary);
-        if (healingCount < 1 || healingCount > required)
-            errors.push(HEALING_SANCTUARIES_NOT_PLACED);
+        if (healingCount > max) errors.push(HEALING_SANCTUARIES_NOT_PLACED);
         const combatCount = this.countSanctuaryBlocks(game, TileItem.CombatSanctuary);
-        if (combatCount < 1 || combatCount > required)
-            errors.push(COMBAT_SANCTUARIES_NOT_PLACED);
+        if (combatCount > max) errors.push(COMBAT_SANCTUARIES_NOT_PLACED);
         if (errors.length > 0) throw errors;
         return true;
     }

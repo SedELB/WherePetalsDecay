@@ -156,16 +156,20 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
         return this.tileItemCountService.getPlacedCombatSanctuaryCount(this.game);
     }
 
-    getRequiredHealingSanctuaryCount(): number {
-        return this.tileItemCountService.getRequiredHealingSanctuaryCount(this.game);
+    getMaxHealingSanctuaryCount(): number {
+        return this.tileItemCountService.getMaxHealingSanctuaryCount(this.game);
     }
 
-    getRequiredCombatSanctuaryCount(): number {
-        return this.tileItemCountService.getRequiredCombatSanctuaryCount(this.game);
+    getMaxCombatSanctuaryCount(): number {
+        return this.tileItemCountService.getMaxCombatSanctuaryCount(this.game);
     }
 
     isObjectTypeComplete(type: TileItem): boolean {
         return this.tileItemCountService.isObjectTypeComplete(this.game, type);
+    }
+
+    isObjectExhausted(type: TileItem): boolean {
+        return !this.tileItemCountService.verifyEnoughTileItem(this.itemCounts, type);
     }
 
     getObjectAt(x: number, y: number): Tile | undefined {
