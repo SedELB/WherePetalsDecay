@@ -8,8 +8,6 @@ import { Injectable } from '@nestjs/common';
 import { ActiveGame } from './active-game.interface';
 import { VirtualPlayerPathfindingService } from './virtual-player-pathfinding.service';
 
-const DEFAULT_SANCTUARY_TYPES: SanctuaryType[] = [TileItem.HealingSanctuary, TileItem.CombatSanctuary];
-
 @Injectable()
 export class VirtualPlayerScannerService {
     constructor(private readonly pathfindingService: VirtualPlayerPathfindingService) {}
@@ -111,32 +109,6 @@ export class VirtualPlayerScannerService {
         if (bestTile && bestTile.x === vpPos.x && bestTile.y === vpPos.y) return null;
 
         return bestTile;
-    }
-
-    findNearestReachableSanctuary(
-        game: ActiveGame,
-        virtualPlayer: Player,
-        vpPos: Vec2,
-        sanctuaryTypes: SanctuaryType[] = DEFAULT_SANCTUARY_TYPES,
-        precomputedCostToPosition?: Map<string, number>,
-    ): Vec2 | null {
-        const costToPosition = precomputedCostToPosition ?? this.pathfindingService.computeFullDijkstra(game, vpPos).costToPosition;
-        const remainingMvtPts = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
-        let nearestCost = Infinity;
-        let result: Vec2 | null = null;
-
-        for (const sanctuaryType of sanctuaryTypes) {
-            for (const pos of game.sanctuaryPositions.get(sanctuaryType) ?? []) {
-                const cost = costToPosition.get(this.pathfindingService.positionKey(pos)) ?? Infinity;
-                if (cost <= remainingMvtPts && cost < nearestCost &&
-                    !this.pathfindingService.isTileOccupiedByAnotherPlayer(game, pos, virtualPlayer.socketId)) {
-                    nearestCost = cost;
-                    result = pos;
-                }
-            }
-        }
-
-        return result;
     }
 
     findNearestTileAdjacentToSanctuary(
@@ -256,9 +228,6 @@ export class VirtualPlayerScannerService {
         return null;
     }
 
-    private isSanctuaryOfType(item: TileItem | null, sanctuaryTypes: SanctuaryType[]): boolean {
-        return item !== null && sanctuaryTypes.includes(item as SanctuaryType);
-    }
 
     private isInsideBounds(grid: ActiveGame['lobby']['game']['grid'], pos: Vec2): boolean {
         return pos.y >= 0 && pos.y < grid.length && pos.x >= 0 && pos.x < grid[0].length;
