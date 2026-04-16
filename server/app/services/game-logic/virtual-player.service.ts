@@ -1,8 +1,9 @@
 /* eslint-disable max-lines */
+import { JournalService } from '@app/services/journal/journal.service';
 import { Posture } from '@common/character';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS } from '@common/direction';
-import { GameMode, TileItem, TileTexture, VirtualPlayerProfile, SanctuaryMode } from '@common/enums';
+import { GameMode, SanctuaryMode, TileItem, TileTexture, VirtualPlayerProfile } from '@common/enums';
 import { Player } from '@common/player';
 import { SanctuaryType } from '@common/tile';
 import { TILE_COSTS } from '@common/tile-costs';
@@ -25,6 +26,8 @@ const DEFENSIVE_POSTURE: Posture = { type: 'def', bonus: 2 };
 const EVENT_PLAYER_MOVED = 'playerMoved';
 const EVENT_DOOR_TOGGLED = 'doorToggled';
 const EVENT_ACTION_POINTS = 'actionPoints';
+const EVENT_SANCTUARY_USED = 'sanctuaryUsed';
+const EVENT_PLAYER_STATS_UPDATE = 'playerStatsUpdate';
 
 // Function used by VirtualPlayerService to ask the gateway to start VP combat
 type StartVirtualPlayerCombat = (lobbyId: string, attackerId: string, defenderId: string) => void;
@@ -45,6 +48,7 @@ export class VirtualPlayerService {
         private readonly pathfindingService: VirtualPlayerPathfindingService,
         private readonly gameLogicService: GameLogicService,
         private readonly scanner: VirtualPlayerScannerService,
+        private readonly journalService: JournalService,
     ) {}
 
     // Called by the gateway the moment a VP's turn starts
@@ -442,7 +446,41 @@ export class VirtualPlayerService {
         if (!sanctuaryPos) return false;
 
         const useResult = this.gameLogicService.useSanctuary(lobbyId, virtualPlayer.socketId, sanctuaryPos, SanctuaryMode.Normal);
-        return Boolean(useResult);
+        if (!useResult) return false;
+
+        context.server.to(lobbyId).emit(EVENT_SANCTUARY_USED, {
+            socketId: virtualPlayer.socketId,
+            position: sanctuaryPos,
+            sanctuaryType: useResult.sanctuaryType,
+            mode: useResult.mode,
+            healAmount: useResult.healAmount,
+            combatBonusApplied: useResult.combatBonusApplied,
+            playerNewLife: useResult.playerNewLife,
+            playerName: useResult.playerName,
+            inactiveSanctuaries: useResult.inactiveSanctuaries,
+        });
+
+        if (useResult.combatBonusApplied) {
+            context.server.to(lobbyId).emit(EVENT_PLAYER_STATS_UPDATE, {
+                socketId: virtualPlayer.socketId,
+                attack: virtualPlayer.character.attack,
+                defense: virtualPlayer.character.defense,
+                life: virtualPlayer.character.life,
+            });
+        }
+
+        this.journalService.addSanctuaryUsedEntry(
+            lobbyId,
+            useResult.playerName,
+            {
+                sanctuaryType: useResult.sanctuaryType,
+                mode: useResult.mode,
+                healAmount: useResult.healAmount,
+                combatBonusApplied: useResult.combatBonusApplied,
+            },
+        );
+
+        return true;
     }
 
     private tryMoveAndUseSanctuary(context: TurnContext, currentPos: Vec2, sanctuaryType: SanctuaryType): boolean {

@@ -4,7 +4,7 @@ import { GameLogicService, SanctuaryUseResult } from '@app/services/game-logic/g
 import { JournalService } from '@app/services/journal/journal.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { Direction } from '@common/direction';
-import { GameMode, SocketNamespace, TileItem, TileTexture, SanctuaryMode } from '@common/enums';
+import { GameMode, SanctuaryMode, SocketNamespace, TileTexture } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
@@ -112,10 +112,17 @@ export class MovementGateway {
         if (!result) return;
 
         const game = this.gameLogicService.getActiveGame(lobbyId);
+        const playerName = game?.lobby.players.find((p) => p.socketId === socket.id)?.character?.name ?? 'Joueur';
         this.server.to(lobbyId).emit(JoinGameEvents.DoorToggled, {
             position,
             newType: game.lobby.game.grid[position.y][position.x].type,
         });
+
+        if (result === TileTexture.DoorOpened) {
+            this.journalService.addDoorOpenEntry(lobbyId, playerName);
+        } else if (result === TileTexture.DoorClosed) {
+            this.journalService.addDoorCloseEntry(lobbyId, playerName);
+        }
 
         this.sendActionPoints(lobbyId, socket.id);
         this.autoEndTurnIfNoActions(lobbyId, socket.id);
@@ -155,10 +162,15 @@ export class MovementGateway {
             });
         }
 
-        const sanctuaryLabel = result.sanctuaryType === TileItem.HealingSanctuary ? 'soin' : 'combat';
-        const modeLabel = mode === SanctuaryMode.DoubleOrNothing ? ' (double ou rien)' : '';
-        this.server.to(lobbyId).emit(JoinGameEvents.JournalEntry,
-            `${result.playerName} a utilisé un sanctuaire de ${sanctuaryLabel}${modeLabel}.`,
+        this.journalService.addSanctuaryUsedEntry(
+            lobbyId,
+            result.playerName,
+            {
+                sanctuaryType: result.sanctuaryType,
+                mode: result.mode,
+                healAmount: result.healAmount,
+                combatBonusApplied: result.combatBonusApplied,
+            },
         );
 
         this.sendActionPoints(lobbyId, socket.id);
@@ -173,14 +185,6 @@ export class MovementGateway {
 
         if (flagJustTaken) {
             this.journalService.addFlagPickedUpEntry(lobbyId, playerName);
-        }
-
-        const tile = activeGame.lobby.game.grid[position.y]?.[position.x];
-        if (tile?.type === TileTexture.DoorOpened) {
-            this.journalService.addDoorOpenEntry(lobbyId, playerName);
-        }
-        if (tile?.item === TileItem.HealingSanctuary || tile?.item === TileItem.CombatSanctuary) {
-            this.journalService.addSanctuaryUsedEntry(lobbyId, playerName);
         }
     }
 
