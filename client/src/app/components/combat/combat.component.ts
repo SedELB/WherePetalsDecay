@@ -47,6 +47,10 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
         return this.combatLogicService.diceRollDisplay;
     }
 
+    get impactDamagePopups() {
+        return this.combatLogicService.impactDamagePopups;
+    }
+
     get combatMap() {
         return this.combatLogicService.combatMap;
     }

@@ -106,6 +106,17 @@
                 [playerFlipXMap]="combatFlipMap"
             ></app-isometric-map>
 
+            @for (impactPopup of impactDamagePopups; track impactPopup.id) {
+                <div
+                    class="impact-damage-float"
+                    [style.left.%]="impactPopup.leftPercent"
+                    [style.top.%]="impactPopup.topPercent"
+                    [style.--impact-tilt]="impactPopup.tiltDeg + 'deg'"
+                >
+                    {{ impactPopup.text }}
+                </div>
+            }
+
             @if (combatEndPopup; as popup) {
                 <div class="damage-popup-overlay">
                     <div class="damage-popup damage-popup--end">

@@ -10,6 +10,14 @@ import {
     EASE_DIVISOR,
     EASE_POWER,
     EASE_PROGRESS_MIDDLE_POINT,
+    IMPACT_POPUP_DEFAULT_GRID_DIMENSION,
+    IMPACT_POPUP_DURATION_MS,
+    IMPACT_POPUP_ENEMY_TILT_DEG,
+    IMPACT_POPUP_MAX_PERCENT,
+    IMPACT_POPUP_MIN_PERCENT,
+    IMPACT_POPUP_PLAYER_TILT_DEG,
+    IMPACT_POPUP_TILE_CENTER_OFFSET,
+    IMPACT_POPUP_VERTICAL_OFFSET_PERCENT,
     POSTURE_BONUS,
     TO_PERCENT,
 } from '@app/components/combat/combat.constants';
@@ -54,6 +62,13 @@ interface PendingRoundResult {
     debugDiceMode: boolean;
 }
 interface RoundAnnouncementPopupData { roundIndex: number; message: string; }
+interface ImpactDamagePopupData {
+    id: number;
+    text: string;
+    leftPercent: number;
+    topPercent: number;
+    tiltDeg: number;
+}
 type LifeBySide = Record<FighterSide, number>;
 interface FighterDiceDisplayData {
     fighterName: string;
@@ -120,6 +135,7 @@ export class CombatLogicService {
     roundAnnouncementPopup: RoundAnnouncementPopupData | null = null;
     damagePopup: DamagePopupData | null = null;
     diceRollDisplay: DiceRollDisplayData | null = null;
+    impactDamagePopups: ImpactDamagePopupData[] = [];
 
     private duelKey = '';
     private hasShownStartPopup = false;
@@ -136,8 +152,10 @@ export class CombatLogicService {
     private displayedLifeBySide: LifeBySide = { player: 0, enemy: 0 };
     private pendingLifeBySide: LifeBySide | null = null;
     private roundDamageByAttackerSocket: Record<string, number> = {};
+    private impactDamagePopupIdCounter = 0;
     private roundSequenceTimeouts: ReturnType<typeof setTimeout>[] = [];
     private diceRollAnimationTimeouts: ReturnType<typeof setTimeout>[] = [];
+    private impactDamagePopupTimeouts: ReturnType<typeof setTimeout>[] = [];
     private movementAnimationFrameId: number | null = null;
     private diceRollInterval: ReturnType<typeof setInterval> | null = null;
     private combatStartPopupTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -310,6 +328,7 @@ export class CombatLogicService {
 
     dispose(): void {
         this.cancelRoundSequence();
+        this.clearImpactDamagePopups();
         this.clearCombatStartPopupTimeout();
         this.clearCombatEndPopupTimeout();
     }
@@ -366,6 +385,7 @@ export class CombatLogicService {
         this.pendingCombatEndPopup = null;
         this.pendingLifeBySide = null;
         this.roundDamageByAttackerSocket = {};
+        this.clearImpactDamagePopups();
         this.cancelRoundSequence();
         this.hideCombatStartPopup();
         this.hideCombatEndPopup();
@@ -485,6 +505,17 @@ export class CombatLogicService {
         this.diceRollDisplay = null;
     }
 
+    private clearImpactDamagePopupTimeouts(): void {
+        if (this.impactDamagePopupTimeouts.length === 0) return;
+        this.impactDamagePopupTimeouts.forEach((timeout) => clearTimeout(timeout));
+        this.impactDamagePopupTimeouts = [];
+    }
+
+    private clearImpactDamagePopups(): void {
+        this.clearImpactDamagePopupTimeouts();
+        this.impactDamagePopups = [];
+    }
+
     private clearRoundSequenceTimeouts(): void {
         if (this.roundSequenceTimeouts.length === 0) return;
         this.roundSequenceTimeouts.forEach((timeout) => clearTimeout(timeout));
@@ -501,6 +532,7 @@ export class CombatLogicService {
         this.activeRoundSequenceToken++;
         this.clearRoundSequenceTimeouts();
         this.clearDiceRollAnimations();
+        this.clearImpactDamagePopups();
         this.clearMovementAnimationFrame();
         this.isRoundSequenceInProgress = false;
         this.isAttackAnimationInProgress = false;
@@ -646,12 +678,50 @@ export class CombatLogicService {
         };
     }
 
+    private spawnImpactDamagePopup(targetSocketId: string, damage: number): void {
+        if (damage <= 0) return;
+
+        const targetPosition = this.playerPos[targetSocketId] ?? this.getBaseCombatPositions()[targetSocketId];
+        if (!targetPosition) return;
+
+        const gridRows = this.combatMap.length || IMPACT_POPUP_DEFAULT_GRID_DIMENSION;
+        const gridColumns = this.combatMap[0]?.length || IMPACT_POPUP_DEFAULT_GRID_DIMENSION;
+        const horizontalCenterPercent = ((targetPosition.x + IMPACT_POPUP_TILE_CENTER_OFFSET) / gridColumns) * TO_PERCENT;
+        const verticalCenterPercent = ((targetPosition.y + IMPACT_POPUP_TILE_CENTER_OFFSET) / gridRows) * TO_PERCENT;
+
+        const popupId = ++this.impactDamagePopupIdCounter;
+        const targetIsPlayer = targetSocketId === this.player.socketId;
+
+        const popup: ImpactDamagePopupData = {
+            id: popupId,
+            text: `-${damage}`,
+            leftPercent: Math.min(IMPACT_POPUP_MAX_PERCENT, Math.max(IMPACT_POPUP_MIN_PERCENT, horizontalCenterPercent)),
+            topPercent: Math.min(
+                IMPACT_POPUP_MAX_PERCENT,
+                Math.max(IMPACT_POPUP_MIN_PERCENT, verticalCenterPercent - IMPACT_POPUP_VERTICAL_OFFSET_PERCENT),
+            ),
+            tiltDeg: targetIsPlayer ? IMPACT_POPUP_PLAYER_TILT_DEG : IMPACT_POPUP_ENEMY_TILT_DEG,
+        };
+
+        this.impactDamagePopups = [...this.impactDamagePopups, popup];
+
+        const popupTimeout = setTimeout(() => {
+            this.impactDamagePopups = this.impactDamagePopups.filter((activePopup) => activePopup.id !== popupId);
+            this.impactDamagePopupTimeouts = this.impactDamagePopupTimeouts.filter((activeTimeout) => activeTimeout !== popupTimeout);
+        }, this.scaleDuration(IMPACT_POPUP_DURATION_MS));
+
+        this.impactDamagePopupTimeouts.push(popupTimeout);
+    }
+
     private applyImpactDamageForAttacker(attackerSocketId: string): void {
         const damage = this.roundDamageByAttackerSocket[attackerSocketId] ?? 0;
         if (damage <= 0) return;
 
         const targetSide: FighterSide = attackerSocketId === this.player.socketId ? 'enemy' : 'player';
+        const targetSocketId = targetSide === 'player' ? this.player.socketId : this.enemy.socketId;
+
         this.applySequentialLifeDamage(targetSide, damage);
+        this.spawnImpactDamagePopup(targetSocketId, damage);
     }
 
     private clearRoundBonusesAfterAttackAnimation(): void {
