@@ -109,7 +109,7 @@ void main(void) {
     // vec3(R, G, B) — values between 0.0 and 1.0
     // Current: reddish pink. For soft pink: vec3(1.0, 0.7, 0.75), vec3(1.0, 0.85, 0.87)
 
-    vec3 col = mix(vec3(1.0, 0.5, 0.75), vec3(1.0, 0.85, 0.87), r);
+    vec3 col = mix(vec3(0.55, 0.19, 0.20), vec3(0.65, 0.25, 0.26), r);
 
     // ***** GRADIENT: darkens the top of each petal (coord.y gradient). Increase exponent to sharpen.
     float gy = mix(0.0, 1.0, pow(coord.y * 0.5 + 0.5, 0.35));

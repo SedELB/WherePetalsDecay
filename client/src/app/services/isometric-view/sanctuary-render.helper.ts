@@ -1,6 +1,11 @@
 import { Vec2 } from '@common/vec2';
 import { TileItem } from '@common/enums';
 
+const PULSE_BASE = 20;
+const PULSE_SPEED = 150;
+const PULSE_AMPLITUDE = 12;
+const DOUBLE_PASS_MULTIPLIER = 2.0;
+
 const SANCTUARY_ASSETS: Partial<Record<TileItem, string>> = {
     [TileItem.HealingSanctuary]: './assets/tiles/health_sanctuary.png',
     [TileItem.CombatSanctuary]: './assets/tiles/combat_sanctuary.png',
@@ -23,6 +28,7 @@ export function drawSanctuarySprite(
     item: TileItem,
     footprint: { north: Vec2; east: Vec2; south: Vec2; west: Vec2 },
     getImage: (src: string) => HTMLImageElement | null,
+    isGlowing = false,
 ): void {
     const src = SANCTUARY_ASSETS[item];
     if (!src) return;
@@ -48,6 +54,20 @@ export function drawSanctuarySprite(
     ctx.scale(1, squashY);
 
     const yOffset = drawH * (SANCTUARY_Y_OFFSET_RATIO[item] ?? 0);
+
+    if (isGlowing) {
+        const pulse = PULSE_BASE + Math.sin(Date.now() / PULSE_SPEED) * PULSE_AMPLITUDE;
+        ctx.shadowColor = '#eddea7';
+        ctx.shadowBlur = pulse;
+        ctx.drawImage(img, -drawW / 2, -drawH + yOffset, drawW, drawH);
+
+        // Double shadow pass for an intensified golden atmospheric glow
+        ctx.shadowBlur = pulse * DOUBLE_PASS_MULTIPLIER;
+        ctx.drawImage(img, -drawW / 2, -drawH + yOffset, drawW, drawH);
+        
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'transparent';
+    }
 
     ctx.drawImage(img, -drawW / 2, -drawH + yOffset, drawW, drawH);
     ctx.restore();

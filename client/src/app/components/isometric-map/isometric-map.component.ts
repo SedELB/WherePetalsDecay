@@ -48,6 +48,8 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   @Input() isCTF: boolean = false;
   @Input() teamA: Player[] = [];
   @Input() teamB: Player[] = [];
+  @Input() showDirectionalKeys: boolean = true;
+  @Input() playerFlipXMap?: Record<string, boolean>;
 
   @Output() tileClick = new EventEmitter<Vec2>();
   @Output() rightClick = new EventEmitter<{ event: MouseEvent, pos: Vec2 }>();
@@ -58,6 +60,9 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   private cameraY = 0;
   private zoom = 1;
   private needsRecenter = true;
+
+  // Flip State
+  private computedFlipXMap: Record<string, boolean> = {};
 
   // Drag state
   private isDragging = false;
@@ -150,6 +155,12 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
       const currentPosition = this.getMotionPosition(existingMotionState, frameTimestampMs);
       const distance = this.getDistance(currentPosition, targetPosition);
       const shouldSmooth = this.shouldSmoothMovement(currentPosition, targetPosition, distance);
+
+      if (targetPosition.x < currentPosition.x) {
+        this.computedFlipXMap[socketId] = false;
+      } else if (targetPosition.x > currentPosition.x) {
+        this.computedFlipXMap[socketId] = true;
+      }
 
       this.playerMotionStates.set(socketId, {
         from: currentPosition,
@@ -387,6 +398,8 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
       isCTF: this.isCTF,
       teamA: this.teamA,
       teamB: this.teamB,
+      showDirectionalKeys: this.showDirectionalKeys,
+      flipXMap: this.playerFlipXMap || this.computedFlipXMap,
       onRecenter: (zoom, x, y) => {
         this.zoom = zoom;
         this.cameraX = x;
