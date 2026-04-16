@@ -54,6 +54,16 @@
         border-radius: 0.5rem;
         object-fit: cover;
     }
+
+    &.is-dead {
+        filter: grayscale(0.75);
+        opacity: 0.78;
+
+        .stats-panel.compact .life-bar-fill {
+            transition: none;
+            animation: none;
+        }
+    }
 }
 
 .posture {
@@ -72,7 +82,7 @@
     gap: 0.8rem;
 
     h1 {
-        margin: 0;
+        margin: 0 0 0.45rem;
         color: $text-color;
     }
 }
@@ -80,7 +90,6 @@
 .subtitle {
     margin: 0;
     color: rgba(255, 255, 255, 0.75);
-    font-size: 0.9rem;
     text-align: center;
 }
 
@@ -283,6 +292,12 @@
             border-color: rgba(96, 165, 250, 0.7);
             color: #bfdbfe;
         }
+
+        &.bonus-badge--debuff {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(248, 113, 113, 0.7);
+            color: #fecaca;
+        }
     }
 
     .stat-value {
@@ -291,6 +306,7 @@
         font-weight: 800;
         color: #e9d5ff;
     }
+
 }
 
 .posture-status {
@@ -369,13 +385,7 @@ app-isometric-map {
     app-isometric-map {
         z-index: 1;
         pointer-events: none;
-    }
-
-    .combat-map-overlays {
-        position: absolute;
-        inset: 0;
-        z-index: 2;
-        pointer-events: none;
+        transform: translatey(-50px);
     }
 
     .damage-popup-overlay {
@@ -387,6 +397,20 @@ app-isometric-map {
         justify-content: center;
         padding: 0 0.75rem 0.75rem;
         pointer-events: none;
+    }
+
+    .dice-roll-overlay {
+        position: absolute;
+        left: 50%;
+        bottom: 0.75rem;
+        transform: translateX(-50%);
+        width: min(420px, calc(100% - 1.5rem));
+        z-index: 3;
+        pointer-events: none;
+
+        .dice-roll-panel {
+            width: 100%;
+        }
     }
 
     .damage-popup {
@@ -446,6 +470,41 @@ app-isometric-map {
                 color: #c4b5fd;
             }
         }
+    }
+
+    .impact-damage-float {
+        --impact-tilt: -12deg;
+
+        position: absolute;
+        z-index: 4;
+        pointer-events: none;
+        transform: translate(-50%, -50%) rotate(var(--impact-tilt));
+        font-size: 2.25rem;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: 0.04em;
+        color: #ff2e2e;
+        text-shadow:
+            0 0 0.25rem rgba(255, 255, 255, 0.55),
+            0 0 0.7rem rgba(255, 0, 0, 0.7),
+            0 0 1.15rem rgba(220, 38, 38, 0.9);
+        animation: impact-damage-float-up 0.9s ease-out forwards;
+        will-change: transform, opacity;
+    }
+}
+
+@keyframes impact-damage-float-up {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -25%) rotate(var(--impact-tilt)) scale(0.82);
+    }
+    15% {
+        opacity: 1;
+        transform: translate(-50%, -50%) rotate(var(--impact-tilt)) scale(1.06);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -135%) rotate(var(--impact-tilt)) scale(1.12);
     }
 }
 
@@ -540,6 +599,18 @@ app-isometric-map {
         color: rgba(255, 255, 255, 0.92);
         font-size: 0.95rem;
     }
+}
+
+#player-pfp {
+    transform: scaleX(-1);
+}
+
+.round-counter {
+    text-align: center;
+    width: 100%;
+    padding-top: 20px;
+    margin-bottom: 5px;
+    border-bottom: 0.5px solid rgb(109, 109, 109);
 }
 
 .roll-tag {
