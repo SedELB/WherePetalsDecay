@@ -10,6 +10,10 @@ import {
     EASE_DIVISOR,
     EASE_POWER,
     EASE_PROGRESS_MIDDLE_POINT,
+    IMPACT_POPUP_ADDITIONAL_VERTICAL_OFFSET_PX,
+    IMPACT_POPUP_AVATAR_VERTICAL_OFFSET_TILE_WIDTH_RATIO,
+    IMPACT_POPUP_COMBAT_MAP_HEIGHT_PX,
+    IMPACT_POPUP_COMBAT_MAP_WIDTH_PX,
     IMPACT_POPUP_DEFAULT_GRID_DIMENSION,
     IMPACT_POPUP_DURATION_MS,
     IMPACT_POPUP_ENEMY_TILT_DEG,
@@ -17,10 +21,10 @@ import {
     IMPACT_POPUP_MIN_PERCENT,
     IMPACT_POPUP_PLAYER_TILT_DEG,
     IMPACT_POPUP_TILE_CENTER_OFFSET,
-    IMPACT_POPUP_VERTICAL_OFFSET_PERCENT,
     POSTURE_BONUS,
     TO_PERCENT,
 } from '@app/components/combat/combat.constants';
+import { MIN_TILE_W, TILE_RATIO, TILE_THICKNESS } from '@app/constants/isometric.constants';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { Posture } from '@common/character';
 import { BASE_STATS } from '@common/constants/character.constants';
@@ -678,28 +682,50 @@ export class CombatLogicService {
         };
     }
 
+    private projectImpactPopupPosition(targetPosition: Vec2): { leftPercent: number; topPercent: number } {
+        const gridRows = this.combatMap.length || IMPACT_POPUP_DEFAULT_GRID_DIMENSION;
+        const gridColumns = this.combatMap[0]?.length || IMPACT_POPUP_DEFAULT_GRID_DIMENSION;
+        const totalGridDimensions = gridColumns + gridRows;
+
+        const fitTileWidthPx = (2 * IMPACT_POPUP_COMBAT_MAP_WIDTH_PX) / totalGridDimensions;
+        const tileWidthPx = Math.max(fitTileWidthPx, MIN_TILE_W);
+        const tileHeightPx = tileWidthPx / TILE_RATIO;
+
+        const originXPx = IMPACT_POPUP_COMBAT_MAP_WIDTH_PX / 2;
+        const diamondHeightPx = totalGridDimensions * (tileHeightPx / 2);
+        const originYPx = ((IMPACT_POPUP_COMBAT_MAP_HEIGHT_PX - TILE_THICKNESS) / 2) - (diamondHeightPx / 2);
+
+        const centerX = targetPosition.x + IMPACT_POPUP_TILE_CENTER_OFFSET;
+        const centerY = targetPosition.y + IMPACT_POPUP_TILE_CENTER_OFFSET;
+
+        const projectedCenterXPx = originXPx + ((centerX - centerY) * (tileWidthPx / 2));
+        const projectedCenterYPx = originYPx + ((centerX + centerY) * (tileHeightPx / 2));
+
+        const popupYPx = projectedCenterYPx
+            - (tileWidthPx * IMPACT_POPUP_AVATAR_VERTICAL_OFFSET_TILE_WIDTH_RATIO)
+            - IMPACT_POPUP_ADDITIONAL_VERTICAL_OFFSET_PX;
+
+        return {
+            leftPercent: (projectedCenterXPx / IMPACT_POPUP_COMBAT_MAP_WIDTH_PX) * TO_PERCENT,
+            topPercent: (popupYPx / IMPACT_POPUP_COMBAT_MAP_HEIGHT_PX) * TO_PERCENT,
+        };
+    }
+
     private spawnImpactDamagePopup(targetSocketId: string, damage: number): void {
-        if (damage <= 0) return;
+        if (damage < 0) return;
 
         const targetPosition = this.playerPos[targetSocketId] ?? this.getBaseCombatPositions()[targetSocketId];
         if (!targetPosition) return;
-
-        const gridRows = this.combatMap.length || IMPACT_POPUP_DEFAULT_GRID_DIMENSION;
-        const gridColumns = this.combatMap[0]?.length || IMPACT_POPUP_DEFAULT_GRID_DIMENSION;
-        const horizontalCenterPercent = ((targetPosition.x + IMPACT_POPUP_TILE_CENTER_OFFSET) / gridColumns) * TO_PERCENT;
-        const verticalCenterPercent = ((targetPosition.y + IMPACT_POPUP_TILE_CENTER_OFFSET) / gridRows) * TO_PERCENT;
+        const projectedPosition = this.projectImpactPopupPosition(targetPosition);
 
         const popupId = ++this.impactDamagePopupIdCounter;
         const targetIsPlayer = targetSocketId === this.player.socketId;
 
         const popup: ImpactDamagePopupData = {
             id: popupId,
-            text: `-${damage}`,
-            leftPercent: Math.min(IMPACT_POPUP_MAX_PERCENT, Math.max(IMPACT_POPUP_MIN_PERCENT, horizontalCenterPercent)),
-            topPercent: Math.min(
-                IMPACT_POPUP_MAX_PERCENT,
-                Math.max(IMPACT_POPUP_MIN_PERCENT, verticalCenterPercent - IMPACT_POPUP_VERTICAL_OFFSET_PERCENT),
-            ),
+            text: `-${Math.max(damage, 0)}`,
+            leftPercent: Math.min(IMPACT_POPUP_MAX_PERCENT, Math.max(IMPACT_POPUP_MIN_PERCENT, projectedPosition.leftPercent)),
+            topPercent: Math.min(IMPACT_POPUP_MAX_PERCENT, Math.max(IMPACT_POPUP_MIN_PERCENT, projectedPosition.topPercent)),
             tiltDeg: targetIsPlayer ? IMPACT_POPUP_PLAYER_TILT_DEG : IMPACT_POPUP_ENEMY_TILT_DEG,
         };
 
@@ -715,7 +741,7 @@ export class CombatLogicService {
 
     private applyImpactDamageForAttacker(attackerSocketId: string): void {
         const damage = this.roundDamageByAttackerSocket[attackerSocketId] ?? 0;
-        if (damage <= 0) return;
+        if (damage < 0) return;
 
         const targetSide: FighterSide = attackerSocketId === this.player.socketId ? 'enemy' : 'player';
         const targetSocketId = targetSide === 'player' ? this.player.socketId : this.enemy.socketId;
