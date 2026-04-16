@@ -15,6 +15,7 @@ import {
     IMPACT_POPUP_ENEMY_TILT_DEG,
     IMPACT_POPUP_DURATION_MS,
 } from '@app/components/combat/combat.constants';
+import { COMBAT_START_POPUP_DISPLAY_DURATION_MS } from '@common/constants/combat-timeline.constants';
 import { CombatStateService } from './combat-state.service';
 import { CombatAnimationService } from './combat-animation.service';
 
@@ -41,6 +42,7 @@ export class CombatUiService {
             title: 'Combat lancé',
             message: `${initiatorName} a initié le combat. Préparez votre posture.`,
         });
+        setTimeout(() => this.combatStartPopup.set(null), COMBAT_START_POPUP_DISPLAY_DURATION_MS);
     }
 
     showRoundAnnouncement(roundIndex: number): void {
