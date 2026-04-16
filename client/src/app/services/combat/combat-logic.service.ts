@@ -135,6 +135,7 @@ export class CombatLogicService {
     private pendingCombatEndPopup: CombatStartPopupData | null = null;
     private displayedLifeBySide: LifeBySide = { player: 0, enemy: 0 };
     private pendingLifeBySide: LifeBySide | null = null;
+    private roundDamageByAttackerSocket: Record<string, number> = {};
     private roundSequenceTimeouts: ReturnType<typeof setTimeout>[] = [];
     private diceRollAnimationTimeouts: ReturnType<typeof setTimeout>[] = [];
     private movementAnimationFrameId: number | null = null;
@@ -364,6 +365,7 @@ export class CombatLogicService {
         this.pendingRoundResult = null;
         this.pendingCombatEndPopup = null;
         this.pendingLifeBySide = null;
+        this.roundDamageByAttackerSocket = {};
         this.cancelRoundSequence();
         this.hideCombatStartPopup();
         this.hideCombatEndPopup();
@@ -634,6 +636,24 @@ export class CombatLogicService {
         this.pendingLifeBySide = null;
     }
 
+    private applySequentialLifeDamage(side: FighterSide, damage: number): void {
+        if (damage <= 0) return;
+
+        const nextLifeValue = Math.max(this.displayedLifeBySide[side] - damage, 0);
+        this.displayedLifeBySide = {
+            ...this.displayedLifeBySide,
+            [side]: nextLifeValue,
+        };
+    }
+
+    private applyImpactDamageForAttacker(attackerSocketId: string): void {
+        const damage = this.roundDamageByAttackerSocket[attackerSocketId] ?? 0;
+        if (damage <= 0) return;
+
+        const targetSide: FighterSide = attackerSocketId === this.player.socketId ? 'enemy' : 'player';
+        this.applySequentialLifeDamage(targetSide, damage);
+    }
+
     private clearRoundBonusesAfterAttackAnimation(): void {
         this.roundResult = null;
         this.player.character.bonusPosture = { type: null, bonus: 0 };
@@ -803,6 +823,8 @@ export class CombatLogicService {
             durationMs: advanceDurationMs,
             onComplete: () => {
                 if (!this.isRoundSequenceTokenActive(sequenceToken)) return;
+
+                this.applyImpactDamageForAttacker(attackerSocketId);
 
                 this.enqueueRoundStep(sequenceToken, holdDurationMs, () => {
                     this.animateFighterPosition({
@@ -1060,6 +1082,10 @@ export class CombatLogicService {
         this.pendingLifeBySide = {
             player: local.killed ? 0 : local.lifeAfter,
             enemy: enemy.killed ? 0 : enemy.lifeAfter,
+        };
+        this.roundDamageByAttackerSocket = {
+            [this.player.socketId]: Math.max(local.damageDealt, 0),
+            [this.enemy.socketId]: Math.max(enemy.damageDealt, 0),
         };
 
         const computedRoundResult: RoundDetailedResult = {
