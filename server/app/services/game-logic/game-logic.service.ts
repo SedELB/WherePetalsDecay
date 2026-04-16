@@ -481,5 +481,16 @@ export class GameLogicService {
         });
         return positions;
     }
+
+    getPlayerStartPositions(lobbyId: string): Record<string, Vec2> {
+        const game = this.activeGames.get(lobbyId);
+        if (!game) return {};
+
+        const positions: Record<string, Vec2> = {};
+        game.playerStartPositions.forEach((pos, socketId) => {
+            positions[socketId] = pos;
+        });
+        return positions;
+    }
 }
 
