@@ -32,7 +32,7 @@ const routes: Routes = [
     { path: 'character-selection/:lobbyId', component: CharacterSelectionComponent },
     { path: 'character-selection', component: CharacterSelectionComponent, title: 'WPD - Select your character' },
     { path: 'game/:id', component: GamePageComponent, title: title + ' - In-game' },
-    { path: 'waiting-room/:lobbyId', component: WaitingRoomComponent },
+    { path: 'waiting-room/:lobbyId', component: WaitingRoomComponent, title: title + ' - Waiting Room'},
     { path: 'join', component: JoinGamePageComponent, title: title + ' - Join a Game' },
     { path: 'end-game', component: EndGamePageComponent, title: title + ' - Game Statistics' },
     { path: '**', redirectTo: '/home' },
