@@ -298,13 +298,16 @@ export class MapSetupService {
 
     private extractPlacedObjects(game: Game): PlacedObject[] {
         const placed: PlacedObject[] = [];
+        const visited = new Set<string>();
         game.grid.forEach((row, y) => {
             row.forEach((tile, x) => {
                 if (!tile.item) return;
                 if (isSanctuary(tile.item)) {
-                    const aboveHasSame = game.grid[y - 1]?.[x]?.item === tile.item;
-                    const leftHasSame = game.grid[y]?.[x - 1]?.item === tile.item;
-                    if (!aboveHasSame && !leftHasSame) {
+                    if (!visited.has(`${y},${x}`)) {
+                        visited.add(`${y},${x}`);
+                        visited.add(`${y},${x + 1}`);
+                        visited.add(`${y + 1},${x}`);
+                        visited.add(`${y + 1},${x + 1}`);
                         placed.push({ type: tile.item, position: { x, y } });
                     }
                 } else {

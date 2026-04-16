@@ -303,19 +303,6 @@ export class GameViewService {
         }
         if (data.players) this.endGamePlayersSignal.set(data.players);
         if (data.gameStats) this.endGameStatsSignal.set(data.gameStats);
-        const gameOverMessage = this.buildGameOverMessage(data);
-
-        void swal.fire({
-            toast: true,
-            position: 'bottom-end',
-            icon: 'success',
-            title: 'Fin de partie',
-            text: gameOverMessage,
-            showConfirmButton: false,
-            showCloseButton: true,
-            timer: END_GAME_REDIRECT_DELAY,
-            timerProgressBar: true,
-        });
 
         setTimeout(() => {
             const destination = data.isForfeit || data.abandonTeam ? ROUTES.home : ROUTES.endGame;
@@ -337,13 +324,6 @@ export class GameViewService {
         }
 
         return true;
-    }
-
-    private buildGameOverMessage(data: GameOverEventData): string {
-        if (data.isForfeit || data.abandonTeam) return 'Fin de partie prématurée.';
-        const winnerName = data.players?.find((player) => player.socketId === data.winnerSocketId)?.character.name;
-        if (winnerName) return `${winnerName} remporte la partie.`;
-        return 'Partie terminée.';
     }
 
     sendPostureChoice(lobbyId: string, roomId: string, posture: Posture): void {
