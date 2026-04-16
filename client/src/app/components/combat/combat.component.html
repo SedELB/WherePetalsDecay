@@ -1,10 +1,10 @@
 ﻿<div class="combat-container">
     <section class="fighter-column">
-        <div class="profile-card">
-            <img class="pfp" [src]="player.character.avatar" [alt]="player.character.name">
+        <div class="profile-card" [ngClass]="{ 'is-dead': isFighterDead('player') }">
+            <img class="pfp" [src]="player.character.avatar" [alt]="player.character.name"  [ngClass]="{ 'is-dead': isFighterDead('player') }">
             <h3>{{ player.character.name }} (vous)</h3>
 
-            <div class="stats-panel compact unified" [ngClass]="{ 'is-dead': isFighterDead('player') }">
+            <div class="stats-panel compact unified">
                 <h4>Stats de combat</h4>
                 <div class="bonus-legend" aria-label="Légende des bonus">
                     <span class="bonus-badge bonus-badge--posture">Bonus posture</span>
@@ -150,11 +150,11 @@
     </main>
 
     <section class="fighter-column">
-        <div class="profile-card">
+        <div class="profile-card" [ngClass]="{ 'is-dead': isFighterDead('enemy') }">
             <img class="pfp" [src]="enemy.character.avatar" [alt]="enemy.character.name">
             <h3>{{ enemy.character.name }}</h3>
 
-            <div class="stats-panel compact unified" [ngClass]="{ 'is-dead': isFighterDead('enemy') }">
+            <div class="stats-panel compact unified">
                 <h4>Stats de combat</h4>
                 <div class="bonus-legend" aria-label="Légende des bonus">
                     <span class="bonus-badge bonus-badge--posture">Bonus posture</span>

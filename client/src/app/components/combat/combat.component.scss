@@ -54,6 +54,16 @@
         border-radius: 0.5rem;
         object-fit: cover;
     }
+
+    &.is-dead {
+        filter: grayscale(0.75);
+        opacity: 0.78;
+
+        .stats-panel.compact .life-bar-fill {
+            transition: none;
+            animation: none;
+        }
+    }
 }
 
 .posture {
@@ -298,15 +308,6 @@
         color: #e9d5ff;
     }
 
-    &.is-dead {
-        filter: grayscale(1);
-        opacity: 0.55;
-
-        .life-bar-fill {
-            transition: none;
-            animation: none;
-        }
-    }
 }
 
 .posture-status {

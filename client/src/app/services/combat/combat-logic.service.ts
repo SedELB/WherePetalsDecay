@@ -320,7 +320,7 @@ export class CombatLogicService {
 
         this.applyLatestServerResult();
 
-        if (!this.isRoundSequenceInProgress && !this.pendingLifeBySide) {
+        if (!this.isRoundSequenceInProgress && !this.pendingLifeBySide && !this.hasDeadFighter()) {
             this.syncDisplayedLivesWithCurrentFighters();
         }
 
@@ -1058,8 +1058,8 @@ export class CombatLogicService {
 
         this.rollCount++;
         this.pendingLifeBySide = {
-            player: local.lifeAfter,
-            enemy: enemy.lifeAfter,
+            player: local.killed ? 0 : local.lifeAfter,
+            enemy: enemy.killed ? 0 : enemy.lifeAfter,
         };
 
         const computedRoundResult: RoundDetailedResult = {
