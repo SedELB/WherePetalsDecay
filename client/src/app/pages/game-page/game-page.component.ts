@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, effect } from '@angular/core';
+import { Component, HostListener, OnInit, effect, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { CharacterSheetComponent } from '@app/components/character-sheet/character-sheet.component';
@@ -61,6 +61,7 @@ export class GamePageComponent implements OnInit {
     isChatFocused = false;
     isJournalOpen = false;
     isLeftPanelOpen = true;
+    readonly pressedDirectionKey = signal<'W' | 'A' | 'S' | 'D' | null>(null);
 
     private isMoveCoolingDown = false;
     private wasAutoCollapseActive = false;
@@ -90,22 +91,42 @@ export class GamePageComponent implements OnInit {
         if (!this.signals.lobby()) this.router.navigate([this.routes.home]);
     }
 
+    @HostListener('window:keydown', ['$event'])
+    onKeyDown(event: KeyboardEvent): void {
+        if (this.signals.showCombatInProgressModal()) return;
+        if (!this.canHandleMovementInput()) return;
+
+        const direction = KEY_TO_DIRECTION[event.key];
+        if (!direction) return;
+
+        this.pressedDirectionKey.set(direction);
+    }
+
     @HostListener('window:keyup', ['$event'])
     onKeyUp(event: KeyboardEvent): void {
         const lobbyId = this.signals.lobby()?.lobbyId;
+        const direction = KEY_TO_DIRECTION[event.key];
+        if (direction) this.pressedDirectionKey.set(null);
+
         if (this.signals.showCombatInProgressModal()) return;
+
         if (event.key === 'm' || event.key === 'M') {
             if (lobbyId) this.gameViewService.toggleDebugMode(lobbyId);
             return;
         }
-        if (!this.signals.isMyTurn() || this.isChatFocused || this.showSanctuaryModal || this.isMoveCoolingDown) return;
-        const direction = KEY_TO_DIRECTION[event.key];
+
+        if (!this.canHandleMovementInput()) return;
         if (!direction) return;
 
         this.isMoveCoolingDown = true;
         setTimeout(() => (this.isMoveCoolingDown = false), MOVE_COOLDOWN_MS);
         this.signals.closeSubMenu();
         if (lobbyId) this.gameViewService.sendMove(lobbyId, direction);
+    }
+
+    @HostListener('window:blur')
+    onWindowBlur(): void {
+        this.pressedDirectionKey.set(null);
     }
 
     @HostListener('window:beforeunload')
@@ -316,6 +337,10 @@ export class GamePageComponent implements OnInit {
 
     private showToast(title: string, icon: SweetAlertIcon) {
         void swal.fire({ toast: true, position: 'top-end', icon, title, showConfirmButton: false, timer: 2000 });
+    }
+
+    private canHandleMovementInput(): boolean {
+        return this.signals.isMyTurn() && !this.isChatFocused && !this.showSanctuaryModal && !this.isMoveCoolingDown;
     }
 }
 

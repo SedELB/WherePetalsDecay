@@ -335,15 +335,18 @@ export class CombatFlowService {
     private emitCombatJournalEntries(session: CombatSession, result: CombatResult): void {
         const attackerName = this.gameLogicService.getPlayerName(session.lobbyId, session.attackerId, 'Attaquant');
         const defenderName = this.gameLogicService.getPlayerName(session.lobbyId, session.defenderId, 'Défenseur');
-        if (result.attacker.damageDealt > 0) {
-            this.journalService.addCombatDamageEntry(
-                session.lobbyId,
-                attackerName,
-                defenderName,
-                session.attackerId,
-                session.defenderId,
-            );
-        }
+        this.journalService.addCombatRoundEntries(session.lobbyId, {
+            attackerId: session.attackerId,
+            attackerName,
+            attackerAttack: result.attacker.attack,
+            attackerDefense: result.attacker.defense,
+            defenderId: session.defenderId,
+            defenderName,
+            defenderAttack: result.defender.attack,
+            defenderDefense: result.defender.defense,
+            damageToDefender: result.attacker.damageDealt,
+            damageToAttacker: result.defender.damageDealt,
+        });
     }
 
     emitCombatLockState(data: CombatLockStateData): void {

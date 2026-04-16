@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { Vec2 } from '@common/vec2';
-import { GameMode, TileItem } from '@common/enums';
+import { GameMode } from '@common/enums';
 import { Player } from '@common/player';
 import { ActiveGame } from '@app/services/game-logic/core/active-game.interface';
 import { GameLogicService } from '@app/services/game-logic/core/game-logic.service';
@@ -84,18 +84,6 @@ export class VirtualPlayerService {
     }
 
     private runClassicTurn(context: TurnContext, currentPos: Vec2): void {
-        const { game, virtualPlayer } = context;
-        if (this.action.sanctuary.isInjured(virtualPlayer) &&
-            this.action.sanctuary.tryUseSanctuaryAtCurrentPosition(context, TileItem.HealingSanctuary)) {
-            this.continueAfterSanc(context);
-            return;
-        }
-        if (!this.action.sanctuary.hasCombatBonus(game, virtualPlayer.socketId) &&
-            this.action.sanctuary.tryUseSanctuaryAtCurrentPosition(context, TileItem.CombatSanctuary)) {
-            this.continueAfterSanc(context);
-            return;
-        }
-
         const h = {
             moveTowardThenActWithDoors: this.moveTowardThenActWithDoors.bind(this),
             tryAttackAdjacentEnemy: this.action.combat.tryAttackAdjacentEnemy.bind(this.action.combat),

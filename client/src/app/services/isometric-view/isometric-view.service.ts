@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { ISO_ITEM_ASSETS, RENDER_CONSTANTS, STROKE_COLOR, TILE_LINE_WIDTH, TILE_THICKNESS } from '@app/constants/isometric.constants';
 import { PlayerShadowData, RenderBoardConfig, TileDepthParams, TileItemRenderData, TileRenderParams } from '@app/interfaces/isometric-interfaces';
-import { TileItem, TileTexture, PlayerAction } from '@common/enums';
+import { PlayerAction, TileItem, TileTexture } from '@common/enums';
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
@@ -12,9 +12,9 @@ import { drawSanctuarySprite } from './sanctuary-render.helper';
 
 const HALF_TILE_POSITION_OFFSET = 0.5;
 
-const isSanctuary = (item: TileItem): boolean => {
-    return item === TileItem.HealingSanctuary || item === TileItem.CombatSanctuary;
-};
+const DIRECTION_KEY_PRESS_OFFSET = 8;
+const isSanctuary = (item: TileItem): boolean =>
+    item === TileItem.HealingSanctuary || item === TileItem.CombatSanctuary;
 
 @Injectable({ providedIn: 'root' })
 export class IsometricViewService {
@@ -39,6 +39,8 @@ export class IsometricViewService {
         const totalRows = config.grid.length;
         const totalColumns = config.grid[0].length;
         const rowOffset = 3;
+        const sideCenterColumn = totalColumns / 2 - HALF_TILE_POSITION_OFFSET;
+        const sideCenterRow = totalRows / 2 - HALF_TILE_POSITION_OFFSET;
 
         const { tileW, tileH } = calculateAutoZoom(totalRows, totalColumns, config);
         const viewConfig = buildViewConfig(totalRows, totalColumns, tileW, tileH, config);
@@ -53,15 +55,15 @@ export class IsometricViewService {
         const positions = {
             north: { col: Math.floor(totalColumns / 2) - 1, row: - rowOffset },
             west: { col: -2, row: Math.floor(totalRows / 2) - 1 },
-            south: { col: Math.floor(totalColumns / 2) - 1, row: totalRows + rowOffset },
-            east: { col: totalColumns + rowOffset, row: Math.floor(totalRows / 2) - 1 },
+            south: { col: sideCenterColumn, row: totalRows + rowOffset },
+            east: { col: totalColumns + rowOffset, row: sideCenterRow },
         };
 
         if (config.showDirectionalKeys !== false) {
-            this.drawDirectionKey(config.ctx, 'W', positions.north.col, positions.north.row, viewConfig);
-            this.drawDirectionKey(config.ctx, 'A', positions.west.col, positions.west.row, viewConfig);
-            this.drawDirectionKey(config.ctx, 'S', positions.south.col, positions.south.row, viewConfig);
-            this.drawDirectionKey(config.ctx, 'D', positions.east.col, positions.east.row, viewConfig);
+            this.drawDirectionKey(config.ctx, 'W', positions.north, viewConfig, config.pressedDirectionKey === 'W');
+            this.drawDirectionKey(config.ctx, 'A', positions.west, viewConfig, config.pressedDirectionKey === 'A');
+            this.drawDirectionKey(config.ctx, 'S', positions.south, viewConfig, config.pressedDirectionKey === 'S');
+            this.drawDirectionKey(config.ctx, 'D', positions.east, viewConfig, config.pressedDirectionKey === 'D');
         }
 
         config.ctx.restore();
@@ -98,7 +100,7 @@ export class IsometricViewService {
 
                 // 2. Draw Entities
                 this.drawAssetsOnTile(params);
-                
+
                 // 3. Draw Portcullis Bars (top layer)
                 if (tile.type === TileTexture.DoorClosed || tile.type === TileTexture.DoorOpened) {
                     drawPortcullisBars(
@@ -134,10 +136,12 @@ export class IsometricViewService {
             { x: col, y: row - 1 },
             { x: col - 1, y: row - 1 },
         ];
-        
-        const isGlowing = config.actionHighlightTiles?.some(
+
+        const isInactive = this.isAnySanctuaryCellInactive(sanctuaryCells, config.inactiveSanctuaries ?? []);
+
+        const isGlowing = !isInactive && (config.actionHighlightTiles?.some(
             (h) => h.type === PlayerAction.Sanctuary && sanctuaryCells.some((c) => c.x === h.pos.x && c.y === h.pos.y),
-        ) ?? false;
+        ) ?? false);
 
         drawSanctuarySprite(
             config.ctx,
@@ -149,7 +153,13 @@ export class IsometricViewService {
                 west: vertices[row + 1][col - 1],
             },
             this.getImage,
-            isGlowing,
+            { isGlowing, isInactive },
+        );
+    }
+
+    private isAnySanctuaryCellInactive(sanctuaryCells: Vec2[], inactiveSanctuaries: Vec2[]): boolean {
+        return inactiveSanctuaries.some((inactivePos) =>
+            sanctuaryCells.some((cell) => cell.x === inactivePos.x && cell.y === inactivePos.y),
         );
     }
 
@@ -375,39 +385,42 @@ export class IsometricViewService {
     private drawDirectionKey(
         ctx: CanvasRenderingContext2D,
         keyChar: string,
-        col: number,
-        row: number,
+        position: { col: number; row: number },
         viewConfig: { originX: number; originY: number; tileW: number; tileH: number },
+        isPressed = false,
     ): void {
-        const north = toIso(col, row, viewConfig);
-        const east = toIso(col + 1, row, viewConfig);
-        const west = toIso(col, row + 1, viewConfig);
-        const KEY_BG_SIZE = 60;
+        const north = toIso(position.col, position.row, viewConfig);
+        const east = toIso(position.col + 1, position.row, viewConfig);
+        const south = toIso(position.col + 1, position.row + 1, viewConfig);
+        const west = toIso(position.col, position.row + 1, viewConfig);
+        const size = 60;
+        const pressOffsetY = isPressed ? DIRECTION_KEY_PRESS_OFFSET : 0;
+        const centerX = (north.x + south.x) / 2;
+        const centerY = (north.y + south.y) / 2 + pressOffsetY;
+
         const KEY_STROKE_WIDTH = 4;
         const KEY_RADIUS = 8;
-        const KEY_DIVISOR = 2;
-        const KEY_OFFSET_Y = 2;
 
         ctx.save();
         ctx.transform(
-            (east.x - north.x) / KEY_BG_SIZE, (east.y - north.y) / KEY_BG_SIZE,
-            (west.x - north.x) / KEY_BG_SIZE, (west.y - north.y) / KEY_BG_SIZE,
-            north.x, north.y,
+            (east.x - north.x) / size, (east.y - north.y) / size,
+            (west.x - north.x) / size, (west.y - north.y) / size,
+            centerX, centerY,
         );
 
-        ctx.translate(-KEY_BG_SIZE / KEY_DIVISOR, -KEY_BG_SIZE / KEY_DIVISOR);
+        ctx.translate(-size / 2, -size / 2);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = KEY_STROKE_WIDTH;
 
         ctx.beginPath();
         ctx.moveTo(KEY_RADIUS, 0);
-        ctx.lineTo(KEY_BG_SIZE - KEY_RADIUS, 0);
-        ctx.quadraticCurveTo(KEY_BG_SIZE, 0, KEY_BG_SIZE, KEY_RADIUS);
-        ctx.lineTo(KEY_BG_SIZE, KEY_BG_SIZE - KEY_RADIUS);
-        ctx.quadraticCurveTo(KEY_BG_SIZE, KEY_BG_SIZE, KEY_BG_SIZE - KEY_RADIUS, KEY_BG_SIZE);
-        ctx.lineTo(KEY_RADIUS, KEY_BG_SIZE);
-        ctx.quadraticCurveTo(0, KEY_BG_SIZE, 0, KEY_BG_SIZE - KEY_RADIUS);
+        ctx.lineTo(size - KEY_RADIUS, 0);
+        ctx.quadraticCurveTo(size, 0, size, KEY_RADIUS);
+        ctx.lineTo(size, size - KEY_RADIUS);
+        ctx.quadraticCurveTo(size, size, size - KEY_RADIUS, size);
+        ctx.lineTo(KEY_RADIUS, size);
+        ctx.quadraticCurveTo(0, size, 0, size - KEY_RADIUS);
         ctx.lineTo(0, KEY_RADIUS);
         ctx.quadraticCurveTo(0, 0, KEY_RADIUS, 0);
         ctx.fill();
@@ -417,7 +430,7 @@ export class IsometricViewService {
         ctx.font = 'bold 36px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(keyChar, KEY_BG_SIZE / KEY_DIVISOR, KEY_BG_SIZE / KEY_DIVISOR + KEY_OFFSET_Y);
+        ctx.fillText(keyChar, size / 2, size / 2 + 2);
         ctx.restore();
     }
 }

@@ -31,6 +31,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
   @Input() teamA: Player[] = [];
   @Input() teamB: Player[] = [];
   @Input() showDirectionalKeys: boolean = true;
+  @Input() pressedDirectionKey: 'W' | 'A' | 'S' | 'D' | null = null;
   @Input() playerFlipXMap?: Record<string, boolean>;
   @Input() lockCamera: boolean = false;
 
@@ -230,6 +231,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
       inactiveSanctuaries: this.inactiveSanctuaries,
       isCTF: this.isCTF, teamA: this.teamA, teamB: this.teamB,
       showDirectionalKeys: this.showDirectionalKeys,
+      pressedDirectionKey: this.pressedDirectionKey,
       flipXMap: this.playerFlipXMap || this.animationService.getFlipXMap(),
       onRecenter: (zoom, x, y) => {
         this.zoom = zoom; this.cameraX = x; this.cameraY = y;

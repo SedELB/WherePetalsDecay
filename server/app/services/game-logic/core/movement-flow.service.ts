@@ -110,6 +110,13 @@ export class MovementFlowService {
             newType: game.lobby.game.grid[position.y][position.x].type,
         });
 
+        const playerName = this.gameLogicService.getPlayerName(lobbyId, socket.id);
+        if (result === TileTexture.DoorOpened) {
+            this.journalService.addDoorOpenEntry(lobbyId, playerName);
+        } else if (result === TileTexture.DoorClosed) {
+            this.journalService.addDoorCloseEntry(lobbyId, playerName);
+        }
+
         this.gameTurnSyncService.emitActionPoints(server, lobbyId, socket.id);
         this.gameTurnSyncService.autoEndTurnIfNoActions(lobbyId, socket.id);
     }
@@ -159,11 +166,5 @@ export class MovementFlowService {
 
         const playerName = this.gameLogicService.getPlayerName(lobbyId, socketId);
         if (flagJustTaken) this.journalService.addFlagPickedUpEntry(lobbyId, playerName);
-
-        const tile = activeGame.lobby.game.grid[position.y]?.[position.x];
-        if (tile?.type === TileTexture.DoorOpened) this.journalService.addDoorOpenEntry(lobbyId, playerName);
-        if (tile?.item === TileItem.HealingSanctuary || tile?.item === TileItem.CombatSanctuary) {
-            this.journalService.addSanctuaryUsedEntry(lobbyId, playerName);
-        }
     }
 }

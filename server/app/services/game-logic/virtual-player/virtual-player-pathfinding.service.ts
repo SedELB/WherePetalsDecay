@@ -22,8 +22,9 @@ export class VirtualPlayerPathfindingService {
     // Runs Dijkstra from 'startPos' across the game grid.
     // withDoors = true : closed doors are treated as cost 1 tile
     // withDoors = false : closed doors are impassable
-    // Tiles occupied by other players are NOT excluded here
-    computeFullDijkstra(game: ActiveGame, startPos: Vec2, withDoors = false): DijkstraResult {
+    // blockPlayersExcept : when set, tiles occupied by other players are treated as impassable
+    //                      (the given socketId is excluded from blocking)
+    computeFullDijkstra(game: ActiveGame, startPos: Vec2, withDoors = false, blockPlayersExcept?: string): DijkstraResult {
         const costToPosition = new Map<string, number>();
         const predecessorKey = new Map<string, string | null>();
         const queue: DijkstraNode[] = [];
@@ -55,6 +56,7 @@ export class VirtualPlayerPathfindingService {
                     : TILE_COSTS[tile.type];
                 if (moveCost === Infinity) continue;
                 if (this.isSanctuaryTile(game, neighbourPos)) continue;
+                if (blockPlayersExcept && this.isTileOccupiedByAnotherPlayer(game, neighbourPos, blockPlayersExcept)) continue;
 
                 const neighbourKey = this.positionKey(neighbourPos);
                 const newCost = currentNode.cumulativeCost + moveCost;
@@ -133,7 +135,7 @@ export class VirtualPlayerPathfindingService {
         excludedSocketId: string,
         withDoors = false,
     ): Vec2[] {
-        const { costToPosition } = this.computeFullDijkstra(game, startPos, withDoors);
+        const { costToPosition } = this.computeFullDijkstra(game, startPos, withDoors, excludedSocketId);
         const reachable: Vec2[] = [];
         const startKey = this.positionKey(startPos);
 
