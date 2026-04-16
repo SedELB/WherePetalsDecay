@@ -252,10 +252,16 @@ export class GamePageComponent implements OnInit {
     }
 
     isEndTurnDisabled(): boolean {
-        if (this.showCombatInProgressModal()) return true;
+        if (this.isCombatOverlayVisible() || this.showCombatInProgressModal()) return true;
         return !(this.isMyTurn() || (this.isDebugModeActive() && this.gameViewService.isHost()));
     }
+
+    isActionButtonDisabled(): boolean {
+        return this.isCombatOverlayVisible() || !this.gamePageSignalService.hasAnyAction();
+    }
+
     onEndTurn(): void {
+        if (this.isCombatOverlayVisible()) return;
         const lobbyId = this.lobby()?.lobbyId;
         if (!lobbyId) return;
         this.closeSubMenu();
@@ -323,10 +329,10 @@ export class GamePageComponent implements OnInit {
         return this.game()?.grid[pos.y][pos.x].type === TileTexture.Ice ? 2 : 0;
     }
 
-    onUseSanctuary(mode: SanctuaryMode): void {
+    onUseSanctuary(mode: SanctuaryMode | 'normal' | 'doubleOrNothing'): void {
         const lobbyId = this.lobby()?.lobbyId;
         if (!lobbyId || !this.pendingSanctuaryPosition) return;
-        this.gameViewService.sendUseSanctuary(lobbyId, this.pendingSanctuaryPosition, mode);
+        this.gameViewService.sendUseSanctuary(lobbyId, this.pendingSanctuaryPosition, mode as SanctuaryMode);
         this.showSanctuaryModal = false;
         this.pendingSanctuaryPosition = this.pendingSanctuaryType = null;
     }
