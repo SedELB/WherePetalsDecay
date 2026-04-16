@@ -63,6 +63,7 @@ const MESSAGE_ERROR = 'Êtes-vous sûr de vouloir abandonner la partie ? Vous ne
     styleUrl: './game-page.component.scss',
 })
 export class GamePageComponent implements OnInit {
+    readonly pressedDirectionKey = signal<'W' | 'A' | 'S' | 'D' | null>(null);
     readonly gamePageSignalService = this;
 
     readonly items = OBJECT_PLACEMENT_TOOL;
@@ -83,7 +84,6 @@ export class GamePageComponent implements OnInit {
     readonly frozenTurnCountdown = signal<number | null>(null);
     readonly frozenTurnCountdownMax = signal<number | null>(null);
     readonly frozenActivePlayerSocketId = signal<string | null>(null);
-    readonly pressedDirectionKey = signal<'W' | 'A' | 'S' | 'D' | null>(null);
     isJournalOpen = false;
     isLeftPanelOpen = true;
     private wasAutoCollapseActive = false;

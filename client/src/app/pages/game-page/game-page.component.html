@@ -40,6 +40,7 @@
                     [grid]="gamePageSignalService.game()?.grid ?? []"
                     [players]="gamePageSignalService.lobby()?.players ?? []"
                     [playerPositions]="gamePageSignalService.playerPositions()"
+                    [playerStartPositions]="gamePageSignalService.playerStartPositions()"
                     [reachableTiles]="gamePageSignalService.reachableTiles()"
                     [teleportableTiles]="gamePageSignalService.isDebugModeActive() ? gamePageSignalService.reachableTilesForTeleport() : []"
                     [localPlayerSocketId]="gamePageSignalService.localPlayer()?.socketId"
