@@ -1,4 +1,4 @@
-﻿<div class="combat-container">
+<div class="combat-container">
     <section class="fighter-column">
         <div class="profile-card" [ngClass]="{ 'is-dead': isFighterDead('player') }">
             <img class="pfp" [src]="player.character.avatar" [alt]="player.character.name"  [ngClass]="{ 'is-dead': isFighterDead('player') }">
@@ -102,6 +102,8 @@
                 [grid]="combatMap"
                 [players]="[player, enemy]"
                 [playerPositions]="playerPos"
+                [showDirectionalKeys]="false"
+                [playerFlipXMap]="combatFlipMap"
             ></app-isometric-map>
 
             @if (combatEndPopup; as popup) {

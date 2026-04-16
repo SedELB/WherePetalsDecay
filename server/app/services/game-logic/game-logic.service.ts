@@ -78,7 +78,7 @@ export class GameLogicService {
             movementPoints,
             actionPoints,
             sanctuaryCooldowns: new Map<string, number>(),
-            playerCombatBonusTurns: new Map<string, number>(),
+            playerCombatBonuses: new Map<string, { turns: number; amount: number }>(),
             visitedTilesPerPlayer: new Map(),
             globalVisitedTiles: new Set(),
             sanctuariesUsed: new Set(),

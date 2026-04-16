@@ -53,7 +53,7 @@
 
     <aside class="aside-panel">
       <div class="tools-panel" aria-label="Outils applicateurs de tuiles">
-        <h3 class="panel-title">Tuiles</h3>
+        <h3 class="panel-title">TUILES</h3>
         @for (tool of tileTools; track tool.type) {
           <button
             type="button"
@@ -69,13 +69,15 @@
       </div>
 
       <div class="object-tools-panel" aria-label="Outils de placement d'objets">
-        <h3 class="panel-title">Objets</h3>
+        <h3 class="panel-title">OBJETS</h3>
         @for (objTool of objectPlacementToolsArray; track objTool.type) {
           <button
             type="button"
             class="object-tool"
             [class.object-tool--active]="activeTileItem === objTool.type"
             [class.object-tool--complete]="isObjectTypeComplete(objTool.type)"
+            [disabled]="objTool.type === tileItemEnum.Flag && game.gameMode === gameMode.Classic"
+            [class.disabled]="objTool.type === tileItemEnum.Flag && game.gameMode === gameMode.Classic"
             (click)="selectTileItem(objTool.type)">
 
             <span class="object-tool__label">{{ objTool.label }}</span>

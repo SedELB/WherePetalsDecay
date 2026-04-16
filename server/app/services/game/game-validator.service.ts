@@ -101,25 +101,30 @@ export class GameValidatorService {
         return isNotWall && isNotVisited;
     }
 
-    private getSanctuaryOrigin(game: CreateGameDto, y: number, x: number): string {
-        const item = game.grid[y][x].item;
-        const aboveSame = y > 0 && game.grid[y - 1][x].item === item;
-        const leftSame = x > 0 && game.grid[y][x - 1].item === item;
-        const aboveLeftSame = y > 0 && x > 0 && game.grid[y - 1][x - 1].item === item;
+    private getSanctuaryOrigin(game: CreateGameDto, startY: number, startX: number): string {
+        const item = game.grid[startY][startX].item;
+        if (!item) return `${startY}, ${startX}`;
+        const visited = new Set<string>();
+        for (let y = 0; y < game.grid.length; y++) {
+            for (let x = 0; x < game.grid[y].length; x++) {
+                if (game.grid[y][x].item === item && !visited.has(`${y},${x}`)) {
+                    visited.add(`${y},${x}`);
+                    visited.add(`${y},${x + 1}`);
+                    visited.add(`${y + 1},${x}`);
+                    visited.add(`${y + 1},${x + 1}`);
 
-        let originY = y;
-        let originX = x;
-
-        if (aboveLeftSame && aboveSame && leftSame) {
-            originY = y - 1;
-            originX = x - 1;
-        } else if (aboveSame) {
-            originY = y - 1;
-        } else if (leftSame) {
-            originX = x - 1;
+                    if (
+                        (startY === y && startX === x) ||
+                        (startY === y && startX === x + 1) ||
+                        (startY === y + 1 && startX === x) ||
+                        (startY === y + 1 && startX === x + 1)
+                    ) {
+                        return `${y}, ${x}`;
+                    }
+                }
+            }
         }
-
-        return `${originY}, ${originX}`;
+        return `${startY}, ${startX}`;
     }
 
     private areThereUnreachableTiles(game: CreateGameDto): boolean {
@@ -193,12 +198,17 @@ export class GameValidatorService {
     }
     private countSanctuaryBlocks(game: CreateGameDto, item: TileItem): number {
         let count = 0;
+        const visited = new Set<string>();
         for (let y = 0; y < game.grid.length; y++) {
             for (let x = 0; x < game.grid[y].length; x++) {
                 if (game.grid[y][x].item === item) {
-                    const aboveHasSame = game.grid[y - 1]?.[x]?.item === item;
-                    const leftHasSame = game.grid[y]?.[x - 1]?.item === item;
-                    if (!aboveHasSame && !leftHasSame) count++;
+                    if (!visited.has(`${y},${x}`)) {
+                        visited.add(`${y},${x}`);
+                        visited.add(`${y},${x + 1}`);
+                        visited.add(`${y + 1},${x}`);
+                        visited.add(`${y + 1},${x + 1}`);
+                        count++;
+                    }
                 }
             }
         }

@@ -1,3 +1,4 @@
+@use "sass:color";
 @use '@src/styles.scss' as *;
 
 .button {
@@ -96,7 +97,6 @@
     }
 }
 
-/* Variant: Sauvegarder (maquette) */
 .btn--save {
     padding: 1.125rem 1.75rem;
     border-radius: 1.125rem;
@@ -169,7 +169,6 @@
         transition:
             width 0.3s ease,
             transform 0.3s ease;
-        // z-index: 2;
     }
 
     &::before {
@@ -342,9 +341,9 @@
     }
 }
 
-// Add Virtual Player button
-$vp-color: #8b5cf6;
-$vp-hover: #7c3aed;
+
+$vp-color: $red-button;
+$vp-hover: color.adjust($red-button, $lightness: -10%);
 $vp-size: 3.5rem;
 $vp-sub-size: 2.5rem;
 
@@ -353,7 +352,7 @@ $vp-sub-size: 2.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 15rem; // 13rem
+    width: 15rem;
     height: 6rem;
 
     &.disabled {
@@ -361,15 +360,17 @@ $vp-sub-size: 2.5rem;
         pointer-events: none;
     }
 
+    &.open .vp-sub-btn {
+        animation: enable-vp-interactivity 0.5s forwards;
+    }
+
     &.open .vp-sub-left {
         opacity: 1;
-        pointer-events: auto;
         transform: translateX(-4.5rem) scale(1);
     }
 
     &.open .vp-sub-right {
         opacity: 1;
-        pointer-events: auto;
         transform: translateX(4.5rem) scale(1);
     }
 
@@ -377,7 +378,6 @@ $vp-sub-size: 2.5rem;
         opacity: 1;
     }
 
-    // Hide the main label when sub-buttons are open
     &.open .vp-main-label {
         opacity: 0;
     }
@@ -431,13 +431,13 @@ $vp-sub-size: 2.5rem;
 .vp-sub-btn {
     position: absolute;
     z-index: 5;
-    top: calc(50% - ($vp-size / 2)); // to match the central button's top
+    top: calc(50% - ($vp-size / 2));
     width: $vp-sub-size;
     height: $vp-sub-size;
     border-radius: 50%;
-    border: none;
-    background: #fff;
-    color: #6b7280;
+    background: rgba(0, 0, 0, 0.85);
+    color: #eddea7;
+    border: 1px solid rgba(240, 198, 116, 0.3);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -455,18 +455,13 @@ $vp-sub-size: 2.5rem;
     .vp-icon {
         width: 1.2rem;
         height: 1.2rem;
-        filter: grayscale(1) brightness(0.2);
+        filter: invert(84%) sepia(21%) saturate(1000%) hue-rotate(345deg) brightness(101%) contrast(92%);
         transition: filter 0.3s ease;
     }
 
     .vp-menu.open &:hover:not(:disabled) {
-        background: #f3f4f6;
+        background: rgba(240, 198, 116, 0.15);
         transform: translateX(var(--menu-offset-x)) scale(1.1);
-
-        .vp-icon {
-            // Create $vp-color with filter
-            filter: brightness(0) saturate(100%) invert(34%) sepia(82%) saturate(1209%) hue-rotate(243deg) brightness(97%) contrast(93%);
-        }
     }
 
     .vp-menu.open &:active:not(:disabled) {
@@ -495,7 +490,7 @@ $vp-sub-size: 2.5rem;
     transform: translateX(-50%);
     font-size: 0.65rem;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.9);
+    color: #f0c674;
     white-space: nowrap;
     opacity: 0;
     transition: opacity 0.3s ease 0.25s;
@@ -516,4 +511,10 @@ $vp-sub-size: 2.5rem;
     transition: opacity 0.25s ease;
     pointer-events: none;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+@keyframes enable-vp-interactivity {
+    0% { pointer-events: none; }
+    99% { pointer-events: none; }
+    100% { pointer-events: auto; }
 }
