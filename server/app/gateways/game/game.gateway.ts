@@ -746,9 +746,18 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         }
 
         if (finalResult.winnerId === session.attackerId) {
-            this.gameLogicService.resumeTurnCycle(session.lobbyId);
-            this.sendActionPoints(session.lobbyId, session.attackerId);
-            this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
+            this.schedulePostCombatTurnResume(session.lobbyId, COMBAT_POST_DEATH_RESUME_DELAY_MS, () => {
+                this.gameLogicService.resumeTurnCycle(session.lobbyId);
+                this.sendActionPoints(session.lobbyId, session.attackerId);
+
+                const winnerGame = this.gameLogicService.getActiveGame(session.lobbyId);
+                const winnerPlayer = winnerGame?.lobby.players.find((p) => p.socketId === session.attackerId);
+                if (winnerPlayer?.playerType === PlayerType.Virtual) {
+                    this.triggerVirtualPlayerTurnIfNeeded(session.lobbyId, session.attackerId);
+                } else {
+                        this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
+                }
+            });
         } else {
             this.schedulePostCombatTurnResume(session.lobbyId, COMBAT_POST_DEATH_RESUME_DELAY_MS, () => {
                 this.gameLogicService.endTurn(session.lobbyId);
@@ -806,9 +815,18 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         }
 
         if (winnerId === session.attackerId) {
-            this.gameLogicService.resumeTurnCycle(session.lobbyId);
-            this.sendActionPoints(session.lobbyId, session.attackerId);
-            this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
+            this.schedulePostCombatTurnResume(session.lobbyId, COMBAT_POST_ABANDON_RESUME_DELAY_MS, () => {
+                this.gameLogicService.resumeTurnCycle(session.lobbyId);
+                this.sendActionPoints(session.lobbyId, session.attackerId);
+
+                const abandonWinnerGame = this.gameLogicService.getActiveGame(session.lobbyId);
+                const abandonWinnerPlayer = abandonWinnerGame?.lobby.players.find((p) => p.socketId === session.attackerId);
+                if (abandonWinnerPlayer?.playerType === PlayerType.Virtual) {
+                    this.triggerVirtualPlayerTurnIfNeeded(session.lobbyId, session.attackerId);
+                } else {
+                        this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
+                }
+            });
         }
 
         this.cleanupCombatSession(session.roomId);
