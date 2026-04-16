@@ -223,10 +223,10 @@ export class GameValidatorService {
         const errors: string[] = [];
         const required = this.getRequiredSanctuaryCount(game);
         const healingCount = this.countSanctuaryBlocks(game, TileItem.HealingSanctuary);
-        if (healingCount !== required)
+        if (healingCount < 1 || healingCount > required)
             errors.push(HEALING_SANCTUARIES_NOT_PLACED);
         const combatCount = this.countSanctuaryBlocks(game, TileItem.CombatSanctuary);
-        if (combatCount !== required)
+        if (combatCount < 1 || combatCount > required)
             errors.push(COMBAT_SANCTUARIES_NOT_PLACED);
         if (errors.length > 0) throw errors;
         return true;

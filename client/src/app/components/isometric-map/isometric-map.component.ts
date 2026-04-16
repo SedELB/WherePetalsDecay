@@ -11,6 +11,7 @@ import { Vec2 } from '@common/vec2';
   selector: 'app-isometric-map',
   standalone: true,
   imports: [],
+  providers: [IsometricAnimationService],
   templateUrl: './isometric-map.component.html',
   styleUrl: './isometric-map.component.scss',
 })
@@ -207,6 +208,15 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
     this.render();
   }
 
+  private getEffectivePlayerPositions(): Record<string, Vec2> {
+    const animated = this.animationService.getAnimatedPositions();
+    const result: Record<string, Vec2> = { ...this.playerPositions };
+    for (const [id, pos] of Object.entries(animated)) {
+      result[id] = pos;
+    }
+    return result;
+  }
+
   private render(): void {
     const canvas = this.canvasRef.nativeElement;
     const ctx = canvas.getContext('2d');
@@ -224,7 +234,7 @@ export class IsometricMapComponent implements OnChanges, AfterViewInit, OnDestro
       height: rect.height,
       grid: this.grid,
       players: this.players,
-      playerPositions: this.animationService.getAnimatedPositions(),
+      playerPositions: this.getEffectivePlayerPositions(),
       playerStartPositions: this.playerStartPositions,
       camera: { x: this.cameraX, y: this.cameraY, zoom: this.zoom },
       needsRecenter: this.needsRecenter,

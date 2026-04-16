@@ -20,7 +20,7 @@ const EASE_POWER_CUBIC = 3;
 const EASE_OFFSET = 2;
 const EASE_DIVISOR = 2;
 
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class IsometricAnimationService {
     private playerMotionStates = new Map<string, PlayerMotionState>();
     private computedFlipXMap: Record<string, boolean> = {};

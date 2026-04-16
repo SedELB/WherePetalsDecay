@@ -204,6 +204,7 @@ export class GamePageComponent implements OnInit {
         const lobbyId = this.signals.lobby()?.lobbyId;
         if (lobbyId && this.pendingSanctuaryPosition) {
             this.gameViewService.sendUseSanctuary(lobbyId, this.pendingSanctuaryPosition, mode);
+            this.showToast('Sanctuaire utilisé !', 'success');
             this.onCancelSanctuary();
         }
     }
@@ -252,6 +253,7 @@ export class GamePageComponent implements OnInit {
                 break;
             case PlayerAction.ToggleDoor:
                 this.gameViewService.sendToggleDoor(lobbyId, { x, y });
+                this.showToast('Porte interagie !', 'success');
                 break;
             case PlayerAction.Sanctuary:
                 this.handleSanctuaryAction(x, y);

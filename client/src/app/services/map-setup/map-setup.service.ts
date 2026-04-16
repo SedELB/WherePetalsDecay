@@ -63,8 +63,16 @@ export class MapSetupService {
     }
 
     private placeSanctuary(game: Game, rowIndex: number, colIndex: number, item: TileItem, counts: TileItemCounts): void {
-        game.grid[rowIndex][colIndex].item = game.grid[rowIndex][colIndex + 1].item = item;
-        game.grid[rowIndex + 1][colIndex].item = game.grid[rowIndex + 1][colIndex + 1].item = item;
+        const cells = [
+            game.grid[rowIndex][colIndex],
+            game.grid[rowIndex][colIndex + 1],
+            game.grid[rowIndex + 1][colIndex],
+            game.grid[rowIndex + 1][colIndex + 1],
+        ];
+        for (const cell of cells) {
+            cell.type = TileTexture.Floor;
+            cell.item = item;
+        }
         this.tileItemCountService.decreaseTileItemCount(counts, item);
     }
 

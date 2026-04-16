@@ -21,7 +21,7 @@
 .entries-list .list-container {
     background-color:#010202;
     min-height: 12.5rem;
-    overflow-y: scroll;
+    overflow-y: auto;
     padding: 0.75rem;
     display: flex;
     flex-direction: column;

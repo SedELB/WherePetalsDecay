@@ -52,7 +52,9 @@ export function canPlaceSanctuary(game: Game, rowIndex: number, colIndex: number
         game.grid[rowIndex + 1][colIndex],
         game.grid[rowIndex + 1][colIndex + 1],
     ];
-    return cells.every((tile) => tile.type === TileTexture.Floor && tile.item === null);
+    return cells.every((tile) =>
+        (tile.type === TileTexture.Floor || tile.type === TileTexture.Water || tile.type === TileTexture.Ice) && tile.item === null,
+    );
 }
 
 export function findSanctuaryTopLeft(game: Game, rowIndex: number, colIndex: number, item: TileItem): Vec2 {

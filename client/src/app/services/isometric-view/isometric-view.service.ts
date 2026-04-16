@@ -223,17 +223,21 @@ export class IsometricViewService {
         };
 
         if (tile.item === TileItem.Spawn) {
-            let isLocalSpawn = false;
-            if (config.localPlayerSocketId && config.playerStartPositions) {
-                const startPos = config.playerStartPositions[config.localPlayerSocketId];
-                if (startPos && startPos.x === col && startPos.y === row) {
-                    isLocalSpawn = true;
-                }
-            }
-            drawSpawnIcon(data.ctx, itemImg, drawRect, isLocalSpawn);
+            const { isLocalSpawn, isFlagCarrierSpawn } = this.resolveSpawnFlags(col, row, config);
+            drawSpawnIcon(data.ctx, itemImg, drawRect, isLocalSpawn, isFlagCarrierSpawn);
         } else {
             data.ctx.drawImage(itemImg, drawRect.x, drawRect.y, drawRect.width, drawRect.height);
         }
+    }
+
+    private resolveSpawnFlags(col: number, row: number, config: RenderBoardConfig): { isLocalSpawn: boolean; isFlagCarrierSpawn: boolean } {
+        if (!config.playerStartPositions) return { isLocalSpawn: false, isFlagCarrierSpawn: false };
+        const startPos = config.localPlayerSocketId ? config.playerStartPositions[config.localPlayerSocketId] : null;
+        const isLocalSpawn = !!(startPos && startPos.x === col && startPos.y === row);
+        const flagCarrier = config.players?.find((p) => p.hasFlag && !p.hasAbandonned);
+        const carrierStart = flagCarrier ? config.playerStartPositions[flagCarrier.socketId] : null;
+        const isFlagCarrierSpawn = !!(carrierStart && carrierStart.x === col && carrierStart.y === row);
+        return { isLocalSpawn, isFlagCarrierSpawn };
     }
 
 

@@ -20,7 +20,13 @@
                             <span class="control"><span class="key">Clic droit</span> Info tuile</span>
                         }
                     </div>
-                    <div class="panel-right"></div>
+                    <div class="panel-right">
+                        @if (gameViewService.isHost()) {
+                            <button class="debug-toggle-btn" (click)="gameViewService.toggleDebugMode(signals.lobby()?.lobbyId ?? '')" [class.active]="signals.isDebugModeActive()">
+                                {{ signals.isDebugModeActive() ? 'Désactiver debug' : 'Debug' }}
+                            </button>
+                        }
+                    </div>
                 </div>
                 <div class="timer-display">
                     <div class="timer-row">
