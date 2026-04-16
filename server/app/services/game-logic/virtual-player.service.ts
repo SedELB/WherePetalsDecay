@@ -74,6 +74,13 @@ export class VirtualPlayerService {
             return;
         }
 
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
+        const movementPoints = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
+        if (actionPoints <= 0 && movementPoints <= 0) {
+            this.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
+
         if (game.lobby.game.gameMode === GameMode.Ctf) {
             this.runCtfTurn(context, currentPos);
         } else {
@@ -572,6 +579,13 @@ export class VirtualPlayerService {
 
     private runCtfTurn(context: TurnContext, currentPos: Vec2): void {
         const { game, virtualPlayer, lobbyId } = context;
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
+        const movementPoints = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
+
+        if (actionPoints <= 0 && movementPoints <= 0) {
+            this.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
 
         // Highest priority: return the flag to start position.
         if (virtualPlayer.hasFlag) {
@@ -580,12 +594,17 @@ export class VirtualPlayerService {
                 this.endVirtualPlayerTurn(lobbyId);
                 return;
             }
-            this.moveTowardThenAct(context, currentPos, startPos, () => {
+            this.moveTowardThenActWithDoors(context, currentPos, startPos, () => {
                 const pos = game.playerPositions.get(virtualPlayer.socketId);
                 if (pos) {
                     const winner = this.gameLogicService.checkWinCondition(lobbyId, virtualPlayer.socketId, pos);
-                    if (winner) context.onGameEnded(lobbyId, winner.socketId);
+                    if (winner) {
+                        context.onGameEnded(lobbyId, winner.socketId);
+                        return;
+                    }
                 }
+                // if an enemy blocking the spawn, attack them to clear the path
+                if (this.tryAttackAdjacentEnemy(context)) return;
                 this.endVirtualPlayerTurn(lobbyId);
             });
             return;
@@ -594,7 +613,11 @@ export class VirtualPlayerService {
         // Flag is on the ground
         const flagOnGroundPos = this.scanner.findFlagOnMap(game);
         if (flagOnGroundPos) {
-            this.moveTowardThenAct(context, currentPos, flagOnGroundPos, () => this.endVirtualPlayerTurn(lobbyId));
+            this.moveTowardThenActWithDoors(context, currentPos, flagOnGroundPos, () => {
+                // if an enemy blocking the flag tile, attack them to clear the way
+                if (this.tryAttackAdjacentEnemy(context)) return;
+                this.endVirtualPlayerTurn(lobbyId);
+            });
             return;
         }
 
@@ -608,6 +631,13 @@ export class VirtualPlayerService {
             }
         }
 
+        // Flag is held by an ally
+        const allyCarrier = this.scanner.findAllyFlagCarrier(game, virtualPlayer);
+        if (allyCarrier) {
+            this.runCtfAllyHasFlag(context, currentPos, allyCarrier);
+            return;
+        }
+
         // No flag anywhere relevant – fall back to classic profile behaviour.
         this.runClassicTurn(context, currentPos);
     }
@@ -617,7 +647,7 @@ export class VirtualPlayerService {
 
         if (virtualPlayer.virtualProfile === VirtualPlayerProfile.Aggressive) {
             // Chase and attack the carrier.
-            this.moveTowardThenAct(context, currentPos, carrierPos, () => {
+            this.moveTowardThenActWithDoors(context, currentPos, carrierPos, () => {
                 const hasStartedCombat = this.tryAttackAdjacentEnemy(context);
                 if (!hasStartedCombat) this.endVirtualPlayerTurn(lobbyId);
             });
@@ -628,10 +658,120 @@ export class VirtualPlayerService {
                 ? this.scanner.findNearestFreePositionAround(game, carrierStartPos, virtualPlayer.socketId)
                 : null;
 
-            this.moveTowardThenAct(context, currentPos, blockadeTarget ?? carrierPos, () => {
+            this.moveTowardThenActWithDoors(context, currentPos, blockadeTarget ?? carrierPos, () => {
                 const hasStartedCombat = this.tryAttackAdjacentEnemy(context);
                 if (!hasStartedCombat) this.endVirtualPlayerTurn(lobbyId);
             });
+        }
+    }
+
+    // --------
+    // CTF ally-has-flag behaviour
+
+    private runCtfAllyHasFlag(context: TurnContext, currentPos: Vec2, allyCarrier: Player): void {
+        const { virtualPlayer } = context;
+
+        if (virtualPlayer.virtualProfile === VirtualPlayerProfile.Aggressive) {
+            this.runCtfAggressiveEscort(context, currentPos, allyCarrier);
+        } else {
+            this.runCtfDefensiveGuard(context, currentPos, allyCarrier);
+        }
+    }
+
+    // Defensive: guard the ally's spawn
+    //   1. If has AP and a reachable enemy exists: attack, then return near spawn.
+    //   2. Otherwise : move to an adjacent tile of the ally's spawn and stay
+    private runCtfDefensiveGuard(context: TurnContext, currentPos: Vec2, allyCarrier: Player): void {
+        const { game, virtualPlayer, lobbyId } = context;
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
+        const movementPoints = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
+
+        if (actionPoints <= 0 && movementPoints <= 0) {
+            this.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
+
+        const allySpawn = game.playerStartPositions.get(allyCarrier.socketId);
+        if (!allySpawn) {
+            this.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
+
+        // If has AP and movement, look for a reachable enemy to intercept
+        if (actionPoints > 0 && movementPoints > 0) {
+            const nearestEnemy = this.scanner.findNearestEnemy(game, virtualPlayer, currentPos, true);
+            if (nearestEnemy) {
+                const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, currentPos, true);
+                const enemyCost = costToPosition.get(this.pathfindingService.positionKey(nearestEnemy.position)) ?? Infinity;
+                if (enemyCost <= movementPoints) {
+                    this.moveTowardThenActWithDoors(context, currentPos, nearestEnemy.position, () => {
+                        if (this.tryAttackAdjacentEnemy(context)) return;
+                        // Could not attack – return near spawn
+                        this.moveBackToSpawnArea(context, allySpawn);
+                    });
+                    return;
+                }
+            }
+        }
+
+        // Default: move toward ally's spawn area
+        const guardTarget = this.scanner.findNearestFreePositionAround(game, allySpawn, virtualPlayer.socketId);
+        if (guardTarget && (guardTarget.x !== currentPos.x || guardTarget.y !== currentPos.y)) {
+            this.moveTowardThenActWithDoors(context, currentPos, guardTarget, () => {
+                this.endVirtualPlayerTurn(lobbyId);
+            });
+            return;
+        }
+
+        this.endVirtualPlayerTurn(lobbyId);
+    }
+
+    // Aggressive: escort the ally
+    //   - Move toward the ally's current position
+    //   - Attack any adjacent enemy encountered along the way
+    //   - Continue approaching after combat
+    //   - End turn when 0 AP and 0 MP
+    private runCtfAggressiveEscort(context: TurnContext, currentPos: Vec2, allyCarrier: Player): void {
+        const { game, virtualPlayer, lobbyId } = context;
+        const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
+        const movementPoints = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
+
+        if (actionPoints <= 0 && movementPoints <= 0) {
+            this.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
+
+        // If adjacent to an enemy and has AP, attack before moving
+        if (actionPoints > 0 && this.tryAttackAdjacentEnemy(context)) return;
+
+        const allyPos = game.playerPositions.get(allyCarrier.socketId);
+        if (!allyPos) {
+            this.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
+
+        this.moveTowardThenActWithDoors(context, currentPos, allyPos, () => {
+            // After moving, attack any adjacent enemy encountered along the way
+            if (this.tryAttackAdjacentEnemy(context)) return;
+            this.endVirtualPlayerTurn(lobbyId);
+        });
+    }
+
+    // Helper: move back toward spawn area after an interception, then end turn
+    private moveBackToSpawnArea(context: TurnContext, spawnPos: Vec2): void {
+        const { game, virtualPlayer, lobbyId } = context;
+        const currentPos = game.playerPositions.get(virtualPlayer.socketId);
+        const remainingMp = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
+        if (!currentPos || remainingMp <= 0) {
+            this.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
+
+        const returnTarget = this.scanner.findNearestFreePositionAround(game, spawnPos, virtualPlayer.socketId);
+        if (returnTarget && (returnTarget.x !== currentPos.x || returnTarget.y !== currentPos.y)) {
+            this.moveTowardThenActWithDoors(context, currentPos, returnTarget, () => this.endVirtualPlayerTurn(lobbyId));
+        } else {
+            this.endVirtualPlayerTurn(lobbyId);
         }
     }
 
