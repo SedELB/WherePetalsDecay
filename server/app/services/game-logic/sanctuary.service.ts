@@ -131,33 +131,35 @@ export class SanctuaryService {
     }
 
     private applyCombatEffect(game: ActiveGame, socketId: string, player: Player, mode: SanctuaryMode): boolean {
-        if (game.playerCombatBonusTurns.has(socketId)) return false;
+        if (game.playerCombatBonuses.has(socketId)) return false;
 
         const apply = mode !== SanctuaryMode.DoubleOrNothing || Math.random() < DOUBLE_OR_NOTHING_CHANCE;
         if (!apply) return false;
 
-        player.character.attack += SANCTUARY_COMBAT_BONUS;
-        player.character.defense += SANCTUARY_COMBAT_BONUS;
-        game.playerCombatBonusTurns.set(socketId, SANCTUARY_COOLDOWN_TURNS);
+        const amount = mode === SanctuaryMode.DoubleOrNothing ? SANCTUARY_COMBAT_BONUS * 2 : SANCTUARY_COMBAT_BONUS;
+
+        player.character.attack += amount;
+        player.character.defense += amount;
+        game.playerCombatBonuses.set(socketId, { turns: SANCTUARY_COOLDOWN_TURNS, amount });
         return true;
     }
 
     private expireCombatBonus(game: ActiveGame, socketId: string): string[] {
-        const bonusTurns = game.playerCombatBonusTurns.get(socketId);
-        if (bonusTurns === undefined) return [];
+        const bonusInfo = game.playerCombatBonuses.get(socketId);
+        if (bonusInfo === undefined) return [];
 
-        const newTurns = bonusTurns - 1;
+        const newTurns = bonusInfo.turns - 1;
         if (newTurns > 0) {
-            game.playerCombatBonusTurns.set(socketId, newTurns);
+            bonusInfo.turns = newTurns;
             return [];
         }
 
         const player = game.lobby.players.find((p) => p.socketId === socketId);
         if (player) {
-            player.character.attack -= SANCTUARY_COMBAT_BONUS;
-            player.character.defense -= SANCTUARY_COMBAT_BONUS;
+            player.character.attack -= bonusInfo.amount;
+            player.character.defense -= bonusInfo.amount;
         }
-        game.playerCombatBonusTurns.delete(socketId);
+        game.playerCombatBonuses.delete(socketId);
         return [socketId];
     }
 

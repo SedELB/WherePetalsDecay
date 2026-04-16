@@ -1,7 +1,7 @@
+import { PlayerAction } from '@common/enums';
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
-import { PlayerAction } from '@common/enums';
 
 export type ActionHighlightType = PlayerAction;
 
@@ -63,4 +63,6 @@ export interface RenderBoardConfig {
   isCTF?: boolean;
   teamA?: Player[];
   teamB?: Player[];
+  showDirectionalKeys?: boolean;
+  flipXMap?: Record<string, boolean>;
 }
