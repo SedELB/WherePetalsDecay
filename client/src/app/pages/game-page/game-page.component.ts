@@ -85,6 +85,7 @@ export class GamePageComponent implements OnInit {
     readonly frozenActivePlayerSocketId = signal<string | null>(null);
     isJournalOpen = false;
     isLeftPanelOpen = true;
+    private wasAutoCollapseActive = false;
     readonly isSubMenuOpen = signal(false);
     readonly activeSubAction = signal<ActionHighlightType | null>(null);
 
@@ -183,6 +184,16 @@ export class GamePageComponent implements OnInit {
         }));
 
     constructor(protected readonly gameViewService: GameViewService, private readonly router: Router) {
+        effect(() => {
+            const shouldAutoCollapse = this.shouldCollapseGameInfo();
+
+            if (shouldAutoCollapse && !this.wasAutoCollapseActive) {
+                this.isLeftPanelOpen = false;
+            }
+
+            this.wasAutoCollapseActive = shouldAutoCollapse;
+        });
+
         effect(() => {
             const activeId = this.activePlayerSocketId();
             const localId = this.gameViewService.getLocalSocketId();
