@@ -67,16 +67,21 @@ export function drawSanctuarySprite(
 
     if (isGlowing) {
         const pulse = PULSE_BASE + Math.sin(Date.now() / PULSE_SPEED) * PULSE_AMPLITUDE;
+        const localH = (footprint.south.y - footprint.north.y) / squashY;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(-drawW, -drawH * 2, drawW * 2, drawH * 2 - localH / 2);
+        ctx.clip();
+
         ctx.shadowColor = '#eddea7';
         ctx.shadowBlur = pulse;
-        ctx.drawImage(img, -drawW / 2, -drawH + yOffset, drawW, drawH);
+        ctx.drawImage(img, spriteLeft, spriteTop, drawW, drawH);
 
-        // Double shadow pass for an intensified golden atmospheric glow
         ctx.shadowBlur = pulse * DOUBLE_PASS_MULTIPLIER;
-        ctx.drawImage(img, -drawW / 2, -drawH + yOffset, drawW, drawH);
+        ctx.drawImage(img, spriteLeft, spriteTop, drawW, drawH);
 
-        ctx.shadowBlur = 0;
-        ctx.shadowColor = 'transparent';
+        ctx.restore();
     }
 
     ctx.drawImage(img, spriteLeft, spriteTop, drawW, drawH);

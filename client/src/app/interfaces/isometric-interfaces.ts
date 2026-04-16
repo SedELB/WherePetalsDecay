@@ -51,6 +51,7 @@ export interface RenderBoardConfig {
   grid: Tile[][];
   players: Player[];
   playerPositions: Record<string, Vec2>;
+  playerStartPositions?: Record<string, Vec2>;
   camera: { x: number; y: number; zoom: number };
   needsRecenter: boolean;
   onRecenter: (zoom: number, x: number, y: number) => void;
