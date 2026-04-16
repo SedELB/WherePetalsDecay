@@ -178,7 +178,7 @@
                 <app-button
                     id="action-toggle-btn"
                     (click)="gamePageSignalService.toggleSubMenu()"
-                    [disabled]="!gamePageSignalService.hasAnyAction()"
+                    [disabled]="isActionButtonDisabled()"
                     [class.active-action]="gamePageSignalService.isSubMenuOpen()"
                 >
                     {{ gamePageSignalService.isSubMenuOpen() ? 'Annuler' : 'Action' }}
