@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { Injectable, signal } from '@angular/core';
 import { CombatEndPopupData, CombatListenerDependencies } from '@app/interfaces/combat.interfaces';
 import { DEFAULT_COMBAT_POSTURE, ONE_SECOND_DELAY } from '@app/services/game-view/game-view.constants';
@@ -20,7 +21,6 @@ import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
 import { GameLogicService } from './game-logic.service';
-
 
 @Injectable({
     providedIn: 'root',
@@ -158,7 +158,7 @@ export class GameViewCombatService {
 
     handleCombatEnded(data: CombatEndedData, players: Player[], localId: string | undefined): void {
         if (!this.isLocalCombatEvent(data, localId)) return;
-        const message = this.buildCombatEndedMessage(data, players);
+        const message = this.buildCombatEndedMessage(data, players, localId);
         this.showCombatEndedPopup(message);
     }
 
@@ -166,22 +166,71 @@ export class GameViewCombatService {
         return !!localId && (localId === data.attackerSocketId || localId === data.defenderSocketId);
     }
 
-    private buildCombatEndedMessage(data: CombatEndedData, players: Player[]): string {
-        const attackerName = players.find((player) => player.socketId === data.attackerSocketId)?.character.name ?? 'Attaquant';
-        const defenderName = players.find((player) => player.socketId === data.defenderSocketId)?.character.name ?? 'Défenseur';
-        const winnerName = players.find((player) => player.socketId === data.winnerId)?.character.name;
-        const loserName = data.winnerId === data.attackerSocketId ? defenderName : attackerName;
-
-        if (data.reason === 'abandon') {
-            return `${loserName} a abandonné. ${winnerName ?? 'Un joueur'} gagne le combat.`;
-        }
+    private buildCombatEndedMessage(data: CombatEndedData, players: Player[], localId: string | undefined): string {
         if (data.attackerKilled && data.defenderKilled) {
             return 'Double K.O. Aucun gagnant du combat.';
         }
-        if (data.winnerId) {
-            return `${loserName} est mort. ${winnerName ?? 'Un joueur'} gagne le combat.`;
+
+        const messageContext = this.buildCombatEndedMessageContext(data, players, localId);
+        if (data.reason === 'abandon') {
+            return this.buildAbandonMessage(messageContext);
         }
+
+        if (data.winnerId) {
+            return this.buildDeathMessage(messageContext);
+        }
+
         return 'Combat terminé.';
+    }
+
+    private buildCombatEndedMessageContext(data: CombatEndedData, players: Player[], localId: string | undefined) {
+        const attackerName = this.getCombatantName(players, data.attackerSocketId, 'Attaquant');
+        const defenderName = this.getCombatantName(players, data.defenderSocketId, 'Défenseur');
+        const winnerName = data.winnerId ? this.getCombatantName(players, data.winnerId, 'Un joueur') : 'Un joueur';
+        const loserSocketId = this.getLoserSocketId(data);
+        const loserName = loserSocketId === data.attackerSocketId ? attackerName : defenderName;
+        const winnerIsLocal = !!localId && data.winnerId === localId;
+        const loserIsLocal = !!localId && loserSocketId === localId;
+
+        return {
+            winnerIsLocal,
+            loserIsLocal,
+            winnerDisplayName: winnerIsLocal ? 'Vous' : winnerName,
+            loserDisplayName: loserIsLocal ? 'Vous' : loserName,
+        };
+    }
+
+    private getLoserSocketId(data: CombatEndedData): string | null {
+        if (data.winnerId === data.attackerSocketId) return data.defenderSocketId;
+        if (data.winnerId === data.defenderSocketId) return data.attackerSocketId;
+        return null;
+    }
+
+    private buildAbandonMessage(context: {
+        winnerIsLocal: boolean;
+        loserIsLocal: boolean;
+        winnerDisplayName: string;
+        loserDisplayName: string;
+    }): string {
+        const abandonMessage = context.loserIsLocal ? 'Vous avez abandonné.' : `${context.loserDisplayName} a abandonné.`;
+        const winnerMessage = context.winnerIsLocal ? 'Vous gagnez le combat.' : `${context.winnerDisplayName} gagne le combat.`;
+        return `${abandonMessage} ${winnerMessage}`;
+    }
+
+    private buildDeathMessage(context: {
+        winnerIsLocal: boolean;
+        loserIsLocal: boolean;
+        winnerDisplayName: string;
+        loserDisplayName: string;
+    }): string {
+        const deathMessage = context.loserIsLocal ? 'Vous êtes mort.' : `${context.loserDisplayName} est mort.`;
+        const winnerMessage = context.winnerIsLocal ? 'Vous gagnez le combat.' : `${context.winnerDisplayName} gagne le combat.`;
+        return `${deathMessage} ${winnerMessage}`;
+    }
+
+    private getCombatantName(players: Player[], socketId: string | null, fallback: string): string {
+        if (!socketId) return fallback;
+        return players.find((player) => player.socketId === socketId)?.character.name ?? fallback;
     }
 
     private showCombatEndedPopup(message: string): void {

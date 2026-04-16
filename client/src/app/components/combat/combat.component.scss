@@ -53,11 +53,25 @@
         height: 110px;
         border-radius: 0.5rem;
         object-fit: cover;
+        transition: filter 0.2s ease, opacity 0.2s ease;
+
+        &.is-dead {
+            filter: grayscale(1);
+            opacity: 0.65;
+        }
+    }
+
+    .stats-panel.is-dead {
+        filter: grayscale(1);
+        opacity: 0.65;
     }
 
     &.is-dead {
-        filter: grayscale(0.75);
-        opacity: 0.78;
+        .pfp,
+        .stats-panel {
+            filter: grayscale(1);
+            opacity: 0.65;
+        }
 
         .stats-panel.compact .life-bar-fill {
             transition: none;
@@ -397,6 +411,12 @@ app-isometric-map {
         justify-content: center;
         padding: 0 0.75rem 0.75rem;
         pointer-events: none;
+
+        &.damage-popup-overlay--interactive {
+            .damage-popup--end {
+                pointer-events: auto;
+            }
+        }
     }
 
     .dice-roll-overlay {
@@ -429,6 +449,25 @@ app-isometric-map {
         p {
             margin: 0.35rem 0;
             color: rgba(255, 255, 255, 0.92);
+        }
+
+        .damage-popup-close-btn {
+            margin-top: 0.7rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.45rem;
+            border: 1px solid rgba(148, 163, 184, 0.75);
+            background: rgba(15, 23, 42, 0.8);
+            color: #e2e8f0;
+            font-weight: 700;
+            cursor: pointer;
+            transition: border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+
+            &:hover,
+            &:focus-visible {
+                border-color: rgba(248, 113, 113, 0.9);
+                color: #fecaca;
+                transform: translateY(-1px);
+            }
         }
 
         &.damage-popup--info {
@@ -490,6 +529,14 @@ app-isometric-map {
             0 0 1.15rem rgba(20, 5, 5, 0.9);
         animation: impact-damage-float-up 0.9s ease-out forwards;
         will-change: transform, opacity;
+
+        &.impact-damage-float--zero {
+            color: #cbd5e1;
+            text-shadow:
+                0 0 0.2rem rgba(255, 255, 255, 0.45),
+                0 0 0.55rem rgba(148, 163, 184, 0.6),
+                0 0 0.95rem rgba(15, 23, 42, 0.8);
+        }
     }
 }
 

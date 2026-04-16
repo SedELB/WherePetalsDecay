@@ -1,5 +1,12 @@
 import { Injectable, signal } from '@angular/core';
-import swal from 'sweetalert2';
+import {
+    COMBAT_TOAST_DEFAULT_DURATION_MS,
+    IMPACT_POPUP_DURATION_MS,
+    IMPACT_POPUP_ENEMY_TILT_DEG,
+    IMPACT_POPUP_MAX_PERCENT,
+    IMPACT_POPUP_MIN_PERCENT,
+    IMPACT_POPUP_PLAYER_TILT_DEG,
+} from '@app/components/combat/combat.constants';
 import {
     CombatStartPopupData,
     DamagePopupData,
@@ -7,17 +14,10 @@ import {
     ImpactDamagePopupData,
     RoundAnnouncementPopupData,
 } from '@app/interfaces/combat.interfaces';
-import {
-    COMBAT_TOAST_DEFAULT_DURATION_MS,
-    IMPACT_POPUP_MAX_PERCENT,
-    IMPACT_POPUP_MIN_PERCENT,
-    IMPACT_POPUP_PLAYER_TILT_DEG,
-    IMPACT_POPUP_ENEMY_TILT_DEG,
-    IMPACT_POPUP_DURATION_MS,
-} from '@app/components/combat/combat.constants';
 import { COMBAT_START_POPUP_DISPLAY_DURATION_MS } from '@common/constants/combat-timeline.constants';
-import { CombatStateService } from './combat-state.service';
+import swal from 'sweetalert2';
 import { CombatAnimationService } from './combat-animation.service';
+import { CombatStateService } from './combat-state.service';
 
 @Injectable({
     providedIn: 'root',
@@ -61,18 +61,18 @@ export class CombatUiService {
     }
 
     spawnImpactDamagePopup(targetSocketId: string, damage: number, gridDimensions: GridDimensions): void {
-        if (damage <= 0) return;
-
         const targetPosition = this.combatState.playerPos()[targetSocketId];
         if (!targetPosition) return;
 
         const projectedPosition = this.combatAnimation.projectImpactPopupPosition(targetPosition, gridDimensions);
         const popupId = ++this.impactDamagePopupIdCounter;
         const targetIsPlayer = targetSocketId === this.combatState.player()?.socketId;
+        const normalizedDamage = Math.max(damage, 0);
 
         const popup: ImpactDamagePopupData = {
             id: popupId,
-            text: `-${Math.max(damage, 0)}`,
+            text: `-${normalizedDamage}`,
+            isZeroDamage: normalizedDamage === 0,
             leftPercent: this.clamp(projectedPosition.leftPercent, IMPACT_POPUP_MIN_PERCENT, IMPACT_POPUP_MAX_PERCENT),
             topPercent: this.clamp(projectedPosition.topPercent, IMPACT_POPUP_MIN_PERCENT, IMPACT_POPUP_MAX_PERCENT),
             tiltDeg: targetIsPlayer ? IMPACT_POPUP_PLAYER_TILT_DEG : IMPACT_POPUP_ENEMY_TILT_DEG,

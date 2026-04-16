@@ -22,6 +22,7 @@ export interface RoundAnnouncementPopupData { roundIndex: number; message: strin
 export interface ImpactDamagePopupData {
     id: number;
     text: string;
+    isZeroDamage: boolean;
     leftPercent: number;
     topPercent: number;
     tiltDeg: number;

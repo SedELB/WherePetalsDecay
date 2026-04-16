@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { Injectable, effect } from '@angular/core';
 import {
     COMBAT_END_POPUP_DURATION_MS,
@@ -12,9 +13,8 @@ import {
     ROUND_PHASE_DELAY_MS,
     TO_PERCENT,
 } from '@app/components/combat/combat.constants';
-import { PostureType } from '@common/enums';
 import {
-    CombatStartPopupData,
+    CombatEndPopupData,
     FighterSide,
     FighterStatType,
     RoundDetailedResult,
@@ -25,6 +25,7 @@ import {
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { Posture } from '@common/character';
 import { BASE_STATS } from '@common/constants/character.constants';
+import { PostureType } from '@common/enums';
 import { CombatFighterResult, CombatResult, CombatRoundTimelineData } from '@common/interfaces/game-view';
 import { Player } from '@common/player';
 import { CombatAnimationService } from './combat-animation.service';
@@ -34,6 +35,9 @@ import { CombatUiService } from './combat-ui.service';
 
 @Injectable() // Note: providedIn is handled by component providers if needed, or root
 export class CombatLogicService {
+    private combatEndPopupTimeout: ReturnType<typeof setTimeout> | null = null;
+    private deferredCombatEndPopup: CombatEndPopupData | null = null;
+
     constructor(
         private readonly gameViewService: GameViewService,
         private readonly state: CombatStateService,
@@ -63,10 +67,16 @@ export class CombatLogicService {
     }
 
     dispose(): void {
+        this.clearCombatEndPopupTimeout();
+        this.deferredCombatEndPopup = null;
         this.animation.clearMovementAnimationFrame();
         this.ui.clearAll();
         this.dice.clearAnimations();
         this.state.reset();
+    }
+
+    dismissCombatEndPopup(): void {
+        this.closeCombatEndPopup();
     }
 
     setCombatants(player: Player, enemy: Player): void {
@@ -111,7 +121,7 @@ export class CombatLogicService {
     readonly isPosturePending = (f: Player): boolean => !f?.character?.bonusPosture?.type && this.isPostureCountdownVisible();
     readonly hasDeadFighter = (): boolean => this.isFighterDead('player') || this.isFighterDead('enemy');
     readonly isFighterDead = (side: FighterSide): boolean => this.state.displayedLifeBySide()[side] <= 0;
-    readonly getDisplayedLife = (side: FighterSide): number => this.state.displayedLifeBySide()[side];
+    readonly getDisplayedLife = (side: FighterSide): number => Math.max(0, this.state.displayedLifeBySide()[side]);
     getLifeProgressPercent(side: FighterSide): number {
         const max = this.getOriginalMaxLife(side);
         return max > 0 ? (this.getDisplayedLife(side) / max) * TO_PERCENT : 0;
@@ -152,7 +162,12 @@ export class CombatLogicService {
     private syncDisplayedLives(): void {
         const p = this.state.player();
         const e = this.state.enemy();
-        if (p && e) this.state.displayedLifeBySide.set({ player: p.character.life, enemy: e.character.life });
+        if (p && e) {
+            this.state.displayedLifeBySide.set({
+                player: Math.max(0, p.character.life),
+                enemy: Math.max(0, e.character.life),
+            });
+        }
     }
 
     private initializeDuelIfNeeded(player: Player, enemy: Player): void {
@@ -161,7 +176,10 @@ export class CombatLogicService {
 
         this.state.reset();
         this.state.duelKey.set(key);
-        this.state.displayedLifeBySide.set({ player: player.character.life, enemy: enemy.character.life });
+        this.state.displayedLifeBySide.set({
+            player: Math.max(0, player.character.life),
+            enemy: Math.max(0, enemy.character.life),
+        });
         this.state.playerPos.set({ [player.socketId]: { x: 1, y: 2 }, [enemy.socketId]: { x: 1, y: 0 } });
         this.ui.showCombatStartPopup(this.gameViewService.combatInitiatorName() || player.character.name);
     }
@@ -206,9 +224,11 @@ export class CombatLogicService {
         const localIsAtk = result.attacker.socketId === player.socketId;
         const local = localIsAtk ? result.attacker : result.defender;
         const remote = localIsAtk ? result.defender : result.attacker;
+        const displayedPlayerLife = local.killed ? 0 : Math.max(0, local.lifeAfter);
+        const displayedEnemyLife = remote.killed ? 0 : Math.max(0, remote.lifeAfter);
 
         this.state.rollCount.update((c) => c + 1);
-        this.state.pendingLifeBySide.set({ player: local.lifeAfter, enemy: remote.lifeAfter });
+        this.state.pendingLifeBySide.set({ player: displayedPlayerLife, enemy: displayedEnemyLife });
         this.state.roundDamageByAttackerSocket.set({
             [player.socketId]: local.damageDealt,
             [enemy.socketId]: remote.damageDealt,
@@ -335,6 +355,7 @@ export class CombatLogicService {
         if (this.state.activeRoundSequenceToken() !== token) return;
         this.state.isRoundSequenceInProgress.set(false);
         this.applyPendingRoundResult();
+        this.tryShowDeferredCombatEndPopup();
     }
 
     private applyPendingRoundResult(): void {
@@ -352,12 +373,45 @@ export class CombatLogicService {
         }, current.delayMs);
     }
 
-    private handleCombatEndPopupRequest(popup: CombatStartPopupData): void {
+    private handleCombatEndPopupRequest(popup: CombatEndPopupData): void {
+        this.deferredCombatEndPopup = popup;
+        this.tryShowDeferredCombatEndPopup();
+    }
+
+    private tryShowDeferredCombatEndPopup(): void {
+        if (!this.deferredCombatEndPopup || this.shouldDelayCombatEndPopup()) return;
+
+        const popup = this.deferredCombatEndPopup;
+        this.deferredCombatEndPopup = null;
+        this.clearCombatEndPopupTimeout();
         this.ui.showCombatEndPopup(popup);
-        setTimeout(() => {
-            this.ui.combatEndPopup.set(null);
-            this.gameViewService.completeCombatOverlay();
+        this.combatEndPopupTimeout = setTimeout(() => {
+            this.closeCombatEndPopup();
         }, COMBAT_END_POPUP_DURATION_MS);
+    }
+
+    private shouldDelayCombatEndPopup(): boolean {
+        if (this.state.isRoundSequenceInProgress()) return true;
+
+        const latestResolvedRound = this.gameViewService.lastCombatRoundResolved();
+        const roomId = this.gameViewService.getCurrentCombatRoomId();
+        if (!latestResolvedRound || latestResolvedRound.roomId !== roomId) return false;
+
+        const latestResolvedRoundKey = `${latestResolvedRound.roundIndex}:${latestResolvedRound.resolvedAtEpochMs}`;
+        return latestResolvedRoundKey !== this.state.lastAppliedResultKey();
+    }
+
+    private closeCombatEndPopup(): void {
+        this.clearCombatEndPopupTimeout();
+        this.deferredCombatEndPopup = null;
+        this.ui.combatEndPopup.set(null);
+        this.gameViewService.completeCombatOverlay();
+    }
+
+    private clearCombatEndPopupTimeout(): void {
+        if (!this.combatEndPopupTimeout) return;
+        clearTimeout(this.combatEndPopupTimeout);
+        this.combatEndPopupTimeout = null;
     }
 
     getDiceBonusDisplay(side: FighterSide, stat: FighterStatType): string {

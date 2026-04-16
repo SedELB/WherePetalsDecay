@@ -4,7 +4,7 @@
             <img class="pfp" id="player-pfp" [src]="player.character.avatar" [alt]="player.character.name"  [ngClass]="{ 'is-dead': isFighterDead('player') }">
             <h3>{{ player.character.name }} (vous)</h3>
 
-            <div class="stats-panel compact unified">
+            <div class="stats-panel compact unified" [ngClass]="{ 'is-dead': isFighterDead('player') }">
                 <h4>Stats de combat</h4>
                 <div class="bonus-legend" aria-label="Légende des bonus">
                     <span class="bonus-badge bonus-badge--posture">Bonus posture</span>
@@ -93,6 +93,7 @@
             @for (impactPopup of impactDamagePopups; track impactPopup.id) {
                 <div
                     class="impact-damage-float"
+                    [ngClass]="{ 'impact-damage-float--zero': impactPopup.isZeroDamage }"
                     [style.left.%]="impactPopup.leftPercent"
                     [style.top.%]="impactPopup.topPercent"
                     [style.--impact-tilt]="impactPopup.tiltDeg + 'deg'"
@@ -122,10 +123,11 @@
             }
 
             @if (combatEndPopup; as popup) {
-                <div class="damage-popup-overlay">
+                <div class="damage-popup-overlay damage-popup-overlay--interactive">
                     <div class="damage-popup damage-popup--end">
                         <h3>{{ popup.title }}</h3>
                         <p>{{ popup.message }}</p>
+                        <button class="damage-popup-close-btn" type="button" (click)="hideCombatEndPopup()">Masquer</button>
                     </div>
                 </div>
             } @else if (combatStartPopup) {
@@ -168,10 +170,10 @@
 
     <section class="fighter-column">
         <div class="profile-card" [ngClass]="{ 'is-dead': isFighterDead('enemy') }">
-            <img class="pfp" [src]="enemy.character.avatar" [alt]="enemy.character.name">
+            <img class="pfp" [src]="enemy.character.avatar" [alt]="enemy.character.name" [ngClass]="{ 'is-dead': isFighterDead('enemy') }">
             <h3>{{ enemy.character.name }}</h3>
 
-            <div class="stats-panel compact unified">
+            <div class="stats-panel compact unified" [ngClass]="{ 'is-dead': isFighterDead('enemy') }">
                 <h4>Stats de combat</h4>
                 <div class="bonus-legend" aria-label="Légende des bonus">
                     <span class="bonus-badge bonus-badge--posture">Bonus posture</span>

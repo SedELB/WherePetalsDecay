@@ -134,6 +134,10 @@ export class CombatComponent implements OnChanges, OnInit, OnDestroy {
         this.combatLogicService.choosePosture(posture);
     }
 
+    hideCombatEndPopup(): void {
+        this.combatLogicService.dismissCombatEndPopup();
+    }
+
     ngOnInit(): void {
         this.combatLogicService.initialize();
     }
