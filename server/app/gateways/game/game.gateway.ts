@@ -347,8 +347,16 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
-        const requesterName = this.gameLogicService.getActiveGame(lobbyId)
-            ?.lobby.players.find((player) => player.socketId === socket.id)?.character?.name ?? 'Un coéquipier';
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        if (!activeGame) return;
+
+        const targetPlayer = activeGame.lobby.players.find((p) => p.socketId === targetSocketId);
+        if (targetPlayer?.playerType === PlayerType.Virtual) {
+            this.executeFlagTransfer(lobbyId, socket.id, targetSocketId, socket.id);
+            return;
+        }
+
+        const requesterName = activeGame.lobby.players.find((player) => player.socketId === socket.id)?.character?.name ?? 'Un coéquipier';
 
         this.server.to(targetSocketId).emit(JoinGameEvents.GiveFlagResponse, {
             requesterId: socket.id,
@@ -363,8 +371,16 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
         if (this.hasActiveCombatInLobby(lobbyId)) return;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
 
-        const requesterName = this.gameLogicService.getActiveGame(lobbyId)
-            ?.lobby.players.find((player) => player.socketId === socket.id)?.character?.name ?? 'Un coéquipier';
+        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
+        if (!activeGame) return;
+
+        const targetPlayer = activeGame.lobby.players.find((p) => p.socketId === targetSocketId);
+        if (targetPlayer?.playerType === PlayerType.Virtual) {
+            this.executeFlagTransfer(lobbyId, targetSocketId, socket.id, socket.id);
+            return;
+        }
+
+        const requesterName = activeGame.lobby.players.find((player) => player.socketId === socket.id)?.character?.name ?? 'Un coéquipier';
 
         this.server.to(targetSocketId).emit(JoinGameEvents.RequestFlagResponse, {
             requesterId: socket.id,
@@ -733,7 +749,14 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             this.schedulePostCombatTurnResume(session.lobbyId, COMBAT_POST_DEATH_RESUME_DELAY_MS, () => {
                 this.gameLogicService.resumeTurnCycle(session.lobbyId);
                 this.sendActionPoints(session.lobbyId, session.attackerId);
-                this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
+
+                const winnerGame = this.gameLogicService.getActiveGame(session.lobbyId);
+                const winnerPlayer = winnerGame?.lobby.players.find((p) => p.socketId === session.attackerId);
+                if (winnerPlayer?.playerType === PlayerType.Virtual) {
+                    this.triggerVirtualPlayerTurnIfNeeded(session.lobbyId, session.attackerId);
+                } else {
+                        this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
+                }
             });
         } else {
             this.schedulePostCombatTurnResume(session.lobbyId, COMBAT_POST_DEATH_RESUME_DELAY_MS, () => {
@@ -795,7 +818,14 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
             this.schedulePostCombatTurnResume(session.lobbyId, COMBAT_POST_ABANDON_RESUME_DELAY_MS, () => {
                 this.gameLogicService.resumeTurnCycle(session.lobbyId);
                 this.sendActionPoints(session.lobbyId, session.attackerId);
-                this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
+
+                const abandonWinnerGame = this.gameLogicService.getActiveGame(session.lobbyId);
+                const abandonWinnerPlayer = abandonWinnerGame?.lobby.players.find((p) => p.socketId === session.attackerId);
+                if (abandonWinnerPlayer?.playerType === PlayerType.Virtual) {
+                    this.triggerVirtualPlayerTurnIfNeeded(session.lobbyId, session.attackerId);
+                } else {
+                        this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
+                }
             });
         }
 
