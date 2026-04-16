@@ -82,7 +82,7 @@
     gap: 0.8rem;
 
     h1 {
-        margin: 0;
+        margin: 0 0 0.45rem;
         color: $text-color;
     }
 }
@@ -385,6 +385,7 @@ app-isometric-map {
     app-isometric-map {
         z-index: 1;
         pointer-events: none;
+        transform: translatey(-50px);
     }
 
     .damage-popup-overlay {
@@ -396,6 +397,20 @@ app-isometric-map {
         justify-content: center;
         padding: 0 0.75rem 0.75rem;
         pointer-events: none;
+    }
+
+    .dice-roll-overlay {
+        position: absolute;
+        left: 50%;
+        bottom: 0.75rem;
+        transform: translateX(-50%);
+        width: min(420px, calc(100% - 1.5rem));
+        z-index: 3;
+        pointer-events: none;
+
+        .dice-roll-panel {
+            width: 100%;
+        }
     }
 
     .damage-popup {
@@ -584,6 +599,18 @@ app-isometric-map {
         color: rgba(255, 255, 255, 0.92);
         font-size: 0.95rem;
     }
+}
+
+#player-pfp {
+    transform: scaleX(-1);
+}
+
+.round-counter {
+    text-align: center;
+    width: 100%;
+    padding-top: 20px;
+    margin-bottom: 5px;
+    border-bottom: 0.5px solid rgb(109, 109, 109);
 }
 
 .roll-tag {
