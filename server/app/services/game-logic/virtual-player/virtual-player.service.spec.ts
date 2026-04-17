@@ -1,5 +1,6 @@
+import { Test, TestingModule } from '@nestjs/testing';
 import { VirtualPlayerProfile } from '@common/enums';
-import { GameLogicService } from '../core/game-logic.service';
+import { GameLogicService } from '@app/services/game-logic/core/game-logic.service';
 import { VirtualPlayerService } from './virtual-player.service';
 import { VPActionService } from './vp-action.service';
 import { VPClassicStrategyService } from './vp-classic-strategy.service';
@@ -7,31 +8,36 @@ import { VPCtfStrategyService } from './vp-ctf-strategy.service';
 
 describe('VirtualPlayerService', () => {
     let service: VirtualPlayerService;
-    const mockActionService = {
-        postureForProfile: jest.fn((profile: VirtualPlayerProfile) =>
-            profile === VirtualPlayerProfile.Aggressive
-                ? { type: 'atk', bonus: 2 }
-                : { type: 'def', bonus: 2 },
-        ),
-        getRandomTurnStartDelay: jest.fn().mockReturnValue(0),
-    } as unknown as VPActionService;
+    let mockActionService: { postureForProfile: jest.Mock; getRandomTurnStartDelay: jest.Mock };
+    let mockGameLogicService: { endTurn: jest.Mock; checkWinCondition: jest.Mock; getActiveGame: jest.Mock };
 
-    const mockClassicStrategy = {} as VPClassicStrategyService;
-    const mockCtfStrategy = {} as VPCtfStrategyService;
+    beforeEach(async () => {
+        mockActionService = {
+            postureForProfile: jest.fn((profile: VirtualPlayerProfile) =>
+                profile === VirtualPlayerProfile.Aggressive
+                    ? { type: 'atk', bonus: 2 }
+                    : { type: 'def', bonus: 2 },
+            ),
+            getRandomTurnStartDelay: jest.fn().mockReturnValue(0),
+        };
 
-    const mockGameLogicService = {
-        endTurn: jest.fn(),
-        checkWinCondition: jest.fn().mockReturnValue(null),
-        getActiveGame: jest.fn(),
-    } as unknown as GameLogicService;
+        mockGameLogicService = {
+            endTurn: jest.fn(),
+            checkWinCondition: jest.fn().mockReturnValue(null),
+            getActiveGame: jest.fn(),
+        };
 
-    beforeEach(() => {
-        service = new VirtualPlayerService(
-            mockActionService,
-            mockClassicStrategy,
-            mockCtfStrategy,
-            mockGameLogicService,
-        );
+        const module: TestingModule = await Test.createTestingModule({
+            providers: [
+                VirtualPlayerService,
+                { provide: VPActionService, useValue: mockActionService },
+                { provide: VPClassicStrategyService, useValue: {} },
+                { provide: VPCtfStrategyService, useValue: {} },
+                { provide: GameLogicService, useValue: mockGameLogicService },
+            ],
+        }).compile();
+
+        service = module.get<VirtualPlayerService>(VirtualPlayerService);
         jest.clearAllMocks();
     });
 
@@ -45,11 +51,7 @@ describe('VirtualPlayerService', () => {
             virtualProfile: VirtualPlayerProfile.Aggressive,
             character: { bonusPosture: null },
         };
-        (mockGameLogicService.getActiveGame as jest.Mock).mockReturnValue({
-            lobby: {
-                players: [player],
-            },
-        });
+        mockGameLogicService.getActiveGame.mockReturnValue({ lobby: { players: [player] } });
 
         const posture = service.getPosture('lobby-1', 'vp-1');
 
@@ -60,15 +62,8 @@ describe('VirtualPlayerService', () => {
 
     it('getPosture should fallback to current posture when player has no profile', () => {
         const existingPosture = { type: 'def', bonus: 2 };
-        const player = {
-            socketId: 'real-1',
-            character: { bonusPosture: existingPosture },
-        };
-        (mockGameLogicService.getActiveGame as jest.Mock).mockReturnValue({
-            lobby: {
-                players: [player],
-            },
-        });
+        const player = { socketId: 'real-1', character: { bonusPosture: existingPosture } };
+        mockGameLogicService.getActiveGame.mockReturnValue({ lobby: { players: [player] } });
 
         const posture = service.getPosture('lobby-1', 'real-1');
 

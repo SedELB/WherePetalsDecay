@@ -1,19 +1,16 @@
+import { ChatMessagePayload } from '@app/interfaces/gateway.interfaces';
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { ChatMessage } from '@common/chat-message';
 import { MAX_MESSAGE_LENGTH } from '@common/constants/validation.constants';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 
-export interface ChatMessagePayload {
-    lobbyId: string;
-    message: string;
-    senderName: string;
-}
+export { ChatMessagePayload };
 
 @Injectable()
 export class ChatFlowService {
-    constructor(private readonly lobbyService: LobbyService) {}
+    @Inject() private readonly lobbyService: LobbyService;
 
     handleMessage(server: Server, socket: Socket, payload: ChatMessagePayload): void {
         const lobbyId = payload.lobbyId;

@@ -36,11 +36,9 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     @Inject(CombatFlowService) private readonly combatFlow: CombatFlowService;
     @Inject(FlagTransferFlowService) private readonly flagFlow: FlagTransferFlowService;
 
-    constructor(
-        private readonly logger: Logger,
-        private readonly gameFlow: GameFlowService,
-        private readonly movementFlow: MovementFlowService,
-    ) {}
+    @Inject(Logger) private readonly logger: Logger;
+    @Inject(GameFlowService) private readonly gameFlow: GameFlowService;
+    @Inject(MovementFlowService) private readonly movementFlow: MovementFlowService;
 
     afterInit(): void {
         this.logger.log('GameGateway initialized on /join namespace');

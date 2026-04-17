@@ -41,9 +41,12 @@
               (contextmenu)="$event.preventDefault()"
             >
               @if (game.grid[rowIndex][colIndex].item; as obj) {
-                <span class="cell-object" [attr.data-object]="obj" [title]="objectPlacementTools[obj].description">
+                @if (isSanctuaryTopLeft(rowIndex, colIndex)) {
+                <span class="cell-object" [attr.data-object]="obj" [title]="objectPlacementTools[obj].description"
+                      [class.sanctuary-icon]="obj === tileItemEnum.HealingSanctuary || obj === tileItemEnum.CombatSanctuary">
                   <img class="cell-object__icon" [src]="objectPlacementTools[obj].image" [alt]="obj" />
                 </span>
+                }
               }
             </button>
           }

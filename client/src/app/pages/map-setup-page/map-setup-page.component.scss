@@ -481,3 +481,10 @@
     object-fit: contain;
     filter: drop-shadow(0 1px 0.125rem rgba(0, 0, 0, 0.5));
 }
+
+.sanctuary-icon {
+    width: 200%;
+    height: 200%;
+    z-index: 1;
+    pointer-events: none;
+}

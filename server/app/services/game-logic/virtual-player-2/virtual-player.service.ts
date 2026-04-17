@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { Vec2 } from '@common/vec2';
 import { GameMode } from '@common/enums';
@@ -14,13 +14,11 @@ import { VP_CONSTANTS } from '@app/constants/game-logic.constants';
 
 @Injectable()
 export class VirtualPlayerService {
-    constructor(
-        private readonly gameLogicService: GameLogicService,
-        private readonly movementService: VirtualPlayerMovementService,
-        private readonly profileService: VirtualPlayerProfileService,
-        private readonly ctfService: VirtualPlayerCtfService,
-        private readonly action: VirtualPlayerActionService,
-    ) {}
+    @Inject() private readonly gameLogicService: GameLogicService;
+    @Inject() private readonly movementService: VirtualPlayerMovementService;
+    @Inject() private readonly profileService: VirtualPlayerProfileService;
+    @Inject() private readonly ctfService: VirtualPlayerCtfService;
+    @Inject() private readonly action: VirtualPlayerActionService;
 
     executeTurn(
         server: Server,
@@ -30,7 +28,10 @@ export class VirtualPlayerService {
         onGameEnded: (lobbyId: string, winnerId: string) => void,
     ): void {
         const delay = VP_CONSTANTS.minActionDelayMs + Math.random() * VP_CONSTANTS.extraActionDelayMs;
-        const context: TurnContext = { server, game, virtualPlayer, lobbyId: game.lobby.lobbyId, startCombat, onGameEnded };
+        const context: TurnContext = {
+            server, game, virtualPlayer, lobbyId: game.lobby.lobbyId, startCombat, onGameEnded,
+            continueDecisionCycle: () => this.runDecisionCycle(context),
+        };
         setTimeout(() => this.runDecisionCycle(context), delay);
     }
 

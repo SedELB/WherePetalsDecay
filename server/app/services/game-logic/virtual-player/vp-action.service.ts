@@ -7,10 +7,10 @@ import { Player } from '@common/player';
 import { SanctuaryType } from '@common/tile';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Server } from 'socket.io';
-import { ActiveGame } from '../core/active-game.interface';
-import { GameLogicService } from '../core/game-logic.service';
+import { ActiveGame } from '@app/services/game-logic/core/active-game.interface';
+import { GameLogicService } from '@app/services/game-logic/core/game-logic.service';
 import { VirtualPlayerPathfindingService } from './virtual-player-pathfinding.service';
 import { VirtualPlayerScannerService } from './virtual-player-scanner.service';
 
@@ -47,12 +47,10 @@ export interface TurnContext {
 
 @Injectable()
 export class VPActionService {
-    constructor(
-        private readonly pathfindingService: VirtualPlayerPathfindingService,
-        private readonly gameLogicService: GameLogicService,
-        private readonly scanner: VirtualPlayerScannerService,
-        private readonly journalService: JournalService,
-    ) {}
+    @Inject() private readonly pathfindingService: VirtualPlayerPathfindingService;
+    @Inject() private readonly gameLogicService: GameLogicService;
+    @Inject() private readonly scanner: VirtualPlayerScannerService;
+    @Inject() private readonly journalService: JournalService;
 
     // --------
     // Movement

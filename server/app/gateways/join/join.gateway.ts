@@ -31,10 +31,8 @@ export class JoinGateway implements OnGatewayConnection, OnGatewayDisconnect, On
     @Inject(ChatFlowService) private readonly chatFlow: ChatFlowService;
     @Inject(JournalBroadcastService) private readonly journalBroadcast: JournalBroadcastService;
 
-    constructor(
-        private readonly logger: Logger,
-        private readonly joinFlow: JoinFlowService,
-    ) {}
+    @Inject(Logger) private readonly logger: Logger;
+    @Inject(JoinFlowService) private readonly joinFlow: JoinFlowService;
 
     afterInit(): void {
         this.logger.log('JoinGateway initialized on /join namespace');

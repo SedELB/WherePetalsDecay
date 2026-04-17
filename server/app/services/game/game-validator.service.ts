@@ -24,16 +24,11 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class GameValidatorService {
-
-    /*
-    @param property: string representing the property to count (e.g., 'type' or 'item')
-    ex. returns ex. {ice: 3, floor: 40, water: 21} ** only the types/items present in the grid + {item: null} is ignored**
-    */
     private countByProperty(game: CreateGameDto, property: string): Record<string, number> {
         return game.grid.flat().reduce((acc, tile) => {
-            const value = tile[property]; // ex. value = tile['type'] or tile['item'] = 'ice', 'floor', etc.
+            const value = tile[property];
             if (value) {
-                acc[value] = (acc[value] ?? 0) + 1; // acc[value] starts at 0 if undefined
+                acc[value] = (acc[value] ?? 0) + 1;
             }
             return acc;
         }, {});
@@ -133,14 +128,17 @@ export class GameValidatorService {
             throw new Error(NO_TERRAIN_TILES);
         }
 
-        const totalSanctuaryBlocks = this.getRequiredSanctuaryCount(game) * 2;
+        const FOUR = 4;
+        const actualHealingBlocks = this.countSanctuaryBlocks(game, TileItem.HealingSanctuary);
+        const actualCombatBlocks = this.countSanctuaryBlocks(game, TileItem.CombatSanctuary);
+        const totalSanctuaryTiles = (actualHealingBlocks + actualCombatBlocks) * FOUR;
 
         const totalWalkable = game.grid.flat().filter((tile) => {
             const isSanctuary = tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary;
             return tile.type !== TileTexture.Wall && !isSanctuary;
         }).length;
 
-        const expectedTotalReached = totalWalkable + totalSanctuaryBlocks;
+        const expectedTotalReached = totalWalkable + totalSanctuaryTiles;
 
         const queue = [startPos];
         const visited = new Set<string>();

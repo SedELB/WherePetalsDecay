@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Direction } from '@common/direction';
 import { SanctuaryMode } from '@common/enums';
 import { Vec2 } from '@common/vec2';
@@ -11,11 +11,9 @@ import { SanctuaryService } from './sanctuary.service';
 
 @Injectable()
 export class GameActionService {
-    constructor(
-        private readonly movementService: MovementService,
-        private readonly combatService: CombatService,
-        private readonly sanctuaryService: SanctuaryService,
-    ) {}
+    @Inject() private readonly movementService: MovementService;
+    @Inject() private readonly combatService: CombatService;
+    @Inject() private readonly sanctuaryService: SanctuaryService;
 
     movePlayer(game: ActiveGame, socketId: string, direction: Direction): Vec2 | null {
         return this.movementService.movePlayer(game, socketId, direction);

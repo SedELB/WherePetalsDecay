@@ -3,19 +3,17 @@ import { TileItem, TileTexture, VirtualPlayerProfile } from '@common/enums';
 import { Player } from '@common/player';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
-import { Injectable } from '@nestjs/common';
-import { ActiveGame } from '../core/active-game.interface';
+import { Inject, Injectable } from '@nestjs/common';
+import { ActiveGame } from '@app/services/game-logic/core/active-game.interface';
 import { HEALING_SANCTUARY_MIN_MISSING_HP, TurnContext, VPActionService } from './vp-action.service';
 import { VirtualPlayerPathfindingService } from './virtual-player-pathfinding.service';
 import { VirtualPlayerScannerService } from './virtual-player-scanner.service';
 
 @Injectable()
 export class VPClassicStrategyService {
-    constructor(
-        private readonly actionService: VPActionService,
-        private readonly pathfindingService: VirtualPlayerPathfindingService,
-        private readonly scanner: VirtualPlayerScannerService,
-    ) {}
+    @Inject() private readonly actionService: VPActionService;
+    @Inject() private readonly pathfindingService: VirtualPlayerPathfindingService;
+    @Inject() private readonly scanner: VirtualPlayerScannerService;
 
     // ------------
     // Classic mode

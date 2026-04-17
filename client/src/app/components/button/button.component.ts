@@ -1,7 +1,11 @@
 import { NgClass, NgStyle } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, Output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ButtonVariant } from '@common/enums';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
+
+const DEFAULT_DEBOUNCE_MS = 300;
 
 @Component({
     selector: 'app-button',
@@ -11,7 +15,7 @@ import { ButtonVariant } from '@common/enums';
     styleUrl: './button.component.scss',
 })
 
-export class ButtonComponent {
+export class ButtonComponent implements OnDestroy {
     protected readonly buttonVariant = ButtonVariant;
     isMenuOpen: boolean = false;
     @Input() color: string = 'white';
@@ -28,22 +32,45 @@ export class ButtonComponent {
     @Output() clicked = new EventEmitter<void>();
     @Output() profileSelected = new EventEmitter<string>();
 
+    private clickSubject = new Subject<void>();
+    private toggleSubject = new Subject<void>();
+    private profileSubject = new Subject<string>();
+    private subscriptions = new Subscription();
+
+    constructor() {
+        this.subscriptions.add(
+            this.clickSubject.pipe(debounceTime(DEFAULT_DEBOUNCE_MS)).subscribe(() => this.clicked.emit()),
+        );
+        this.subscriptions.add(
+            this.toggleSubject.pipe(debounceTime(DEFAULT_DEBOUNCE_MS)).subscribe(() => (this.isMenuOpen = !this.isMenuOpen)),
+        );
+        this.subscriptions.add(
+            this.profileSubject.pipe(debounceTime(DEFAULT_DEBOUNCE_MS)).subscribe((profile) => {
+                this.profileSelected.emit(profile);
+                this.isMenuOpen = false;
+            }),
+        );
+    }
+
+    ngOnDestroy(): void {
+        this.subscriptions.unsubscribe();
+    }
+
     onClick(): void {
         if (!this.disabled) {
-            this.clicked.emit();
+            this.clickSubject.next();
         }
     }
 
     toggleMenu(): void {
         if (!this.disabled) {
-            this.isMenuOpen = !this.isMenuOpen;
+            this.toggleSubject.next();
         }
     }
 
     onProfileSelected(profile: string): void {
         if (!this.disabled) {
-            this.profileSelected.emit(profile);
-            this.isMenuOpen = false;
+            this.profileSubject.next(profile);
         }
     }
 

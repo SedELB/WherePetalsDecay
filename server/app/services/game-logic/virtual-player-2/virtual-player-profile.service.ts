@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS } from '@common/direction';
 import { TileTexture, VirtualPlayerProfile, TileItem } from '@common/enums';
@@ -18,9 +18,7 @@ type ClassicHandlers = {
 
 @Injectable()
 export class VirtualPlayerProfileService {
-    constructor(
-        private readonly action: VirtualPlayerActionService,
-    ) {}
+    @Inject() private readonly action: VirtualPlayerActionService;
 
     runClassicTurn(context: TurnContext, currentPos: Vec2, handlers: ClassicHandlers): void {
         const { virtualPlayer } = context;

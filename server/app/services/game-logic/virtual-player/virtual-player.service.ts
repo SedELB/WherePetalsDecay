@@ -1,21 +1,19 @@
 import { GameMode } from '@common/enums';
 import { Player } from '@common/player';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Server } from 'socket.io';
-import { ActiveGame } from '../core/active-game.interface';
-import { GameLogicService } from '../core/game-logic.service';
+import { ActiveGame } from '@app/services/game-logic/core/active-game.interface';
+import { GameLogicService } from '@app/services/game-logic/core/game-logic.service';
 import { StartVirtualPlayerCombat, TurnContext, VPActionService } from './vp-action.service';
 import { VPClassicStrategyService } from './vp-classic-strategy.service';
 import { VPCtfStrategyService } from './vp-ctf-strategy.service';
 
 @Injectable()
 export class VirtualPlayerService {
-    constructor(
-        private readonly actionService: VPActionService,
-        private readonly classicStrategy: VPClassicStrategyService,
-        private readonly ctfStrategy: VPCtfStrategyService,
-        private readonly gameLogicService: GameLogicService,
-    ) {}
+    @Inject() private readonly actionService: VPActionService;
+    @Inject() private readonly classicStrategy: VPClassicStrategyService;
+    @Inject() private readonly ctfStrategy: VPCtfStrategyService;
+    @Inject() private readonly gameLogicService: GameLogicService;
 
     getPosture(lobbyId: string, socketId: string): Player['character']['bonusPosture'] {
         const game = this.gameLogicService.getActiveGame(lobbyId);

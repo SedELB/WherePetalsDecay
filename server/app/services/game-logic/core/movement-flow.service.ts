@@ -1,3 +1,4 @@
+import { GameOverCallback } from '@app/interfaces/game-logic.interface';
 import {
     MoveRequestPayload,
     RequestTileInfoPayload,
@@ -17,8 +18,6 @@ import { Vec2 } from '@common/vec2';
 import { Inject, Injectable } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 
-export type GameOverCallback = (lobbyId: string, winnerSocketId: string | null) => void;
-
 @Injectable()
 export class MovementFlowService {
     @Inject(LobbyService) private readonly lobbyService: LobbyService;
@@ -26,11 +25,9 @@ export class MovementFlowService {
 
     private onGameOverCallback: GameOverCallback | null = null;
 
-    constructor(
-        private readonly combatState: CombatStateService,
-        private readonly gameLogicService: GameLogicService,
-        private readonly gameTurnSyncService: GameTurnSyncService,
-    ) {}
+    @Inject() private readonly combatState: CombatStateService;
+    @Inject() private readonly gameLogicService: GameLogicService;
+    @Inject() private readonly gameTurnSyncService: GameTurnSyncService;
 
     setGameOverCallback(callback: GameOverCallback): void {
         this.onGameOverCallback = callback;

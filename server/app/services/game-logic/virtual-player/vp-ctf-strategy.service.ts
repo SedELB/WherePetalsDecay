@@ -1,8 +1,8 @@
 import { TileItem, VirtualPlayerProfile } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
-import { Injectable } from '@nestjs/common';
-import { GameLogicService } from '../core/game-logic.service';
+import { Inject, Injectable } from '@nestjs/common';
+import { GameLogicService } from '@app/services/game-logic/core/game-logic.service';
 import { VirtualPlayerPathfindingService } from './virtual-player-pathfinding.service';
 import { VirtualPlayerScannerService } from './virtual-player-scanner.service';
 import { HEALING_SANCTUARY_MIN_MISSING_HP, TurnContext, VPActionService } from './vp-action.service';
@@ -10,13 +10,11 @@ import { VPClassicStrategyService } from './vp-classic-strategy.service';
 
 @Injectable()
 export class VPCtfStrategyService {
-    constructor(
-        private readonly actionService: VPActionService,
-        private readonly scanner: VirtualPlayerScannerService,
-        private readonly classicStrategy: VPClassicStrategyService,
-        private readonly gameLogicService: GameLogicService,
-        private readonly pathfindingService: VirtualPlayerPathfindingService,
-    ) {}
+    @Inject() private readonly actionService: VPActionService;
+    @Inject() private readonly scanner: VirtualPlayerScannerService;
+    @Inject() private readonly classicStrategy: VPClassicStrategyService;
+    @Inject() private readonly gameLogicService: GameLogicService;
+    @Inject() private readonly pathfindingService: VirtualPlayerPathfindingService;
 
     // --------
     // CTF mode

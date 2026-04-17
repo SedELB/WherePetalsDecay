@@ -7,6 +7,7 @@ import { DESC_MAX_LENGTH, NAME_MAX_LENGTH } from '@app/services/game-validator/g
 import { MapSetupFacadeService } from '@app/services/map-setup-facade/map-setup-facade.service';
 import { TileItemCounts } from '@app/services/map-setup.types';
 import { MapSetupService } from '@app/services/map-setup/map-setup.service';
+import { isSanctuary } from '@app/services/map-setup/map-setup.helper';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { ButtonVariant, GameMode, MapSetupMode, TileItem, TileTexture } from '@common/enums';
 import { Game } from '@common/game';
@@ -170,6 +171,14 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
 
     isObjectExhausted(type: TileItem): boolean {
         return !this.tileItemCountService.verifyEnoughTileItem(this.itemCounts, type);
+    }
+
+    isSanctuaryTopLeft(rowIndex: number, colIndex: number): boolean {
+        const item = this.game.grid[rowIndex]?.[colIndex]?.item;
+        if (!item || !isSanctuary(item)) return true;
+        const above = this.game.grid[rowIndex - 1]?.[colIndex]?.item === item;
+        const left = this.game.grid[rowIndex]?.[colIndex - 1]?.item === item;
+        return !above && !left;
     }
 
     getObjectAt(x: number, y: number): Tile | undefined {
