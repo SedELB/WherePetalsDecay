@@ -1,10 +1,3 @@
-/**
- * Test suite for GameStatsService (server-side).
- * This service computes end-of-game statistics from an ActiveGame snapshot:
- * visited tile percentage, sanctuary usage, door manipulation, flag holder count,
- * and total game duration.
- * All tests build minimal ActiveGame objects to exercise each calculation path.
- */
 import { Test, TestingModule } from '@nestjs/testing';
 import { GameStatsService } from './game-stats.service';
 import { ActiveGame } from './active-game.interface';
@@ -13,13 +6,11 @@ import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 const PERCENT = 100;
 const MS_PER_SECOND = 1000;
 const DURATION_SECONDS = 5;
 const DEFAULT_LIFE = 6;
 
-// ─── Factories ────────────────────────────────────────────────────────────────
 
 const buildTile = (type: TileTexture, item: TileItem | null = null): Tile => ({ type, item });
 
@@ -96,7 +87,6 @@ const buildActiveGame = (overrides: Partial<ActiveGame>): ActiveGame => ({
     ...overrides,
 });
 
-// ─── Test Suite ───────────────────────────────────────────────────────────────
 
 describe('GameStatsService', () => {
     let service: GameStatsService;
@@ -113,7 +103,6 @@ describe('GameStatsService', () => {
         expect(service).toBeDefined();
     });
 
-    // ─── gameDurationSeconds ──────────────────────────────────────────────────
 
     describe('gameDurationSeconds', () => {
         /** Computes the elapsed game duration in whole seconds from start time to now. */
@@ -124,7 +113,6 @@ describe('GameStatsService', () => {
         });
     });
 
-    // ─── totalTurns ───────────────────────────────────────────────────────────
 
     describe('totalTurns', () => {
         /** Returns the total number of turns that occurred during the game. */
@@ -135,7 +123,6 @@ describe('GameStatsService', () => {
         });
     });
 
-    // ─── visitedTilesPercentage ───────────────────────────────────────────────
 
     describe('visitedTilesPercentage', () => {
         /** Returns 100% when every terrain tile has been visited at least once. */
@@ -179,7 +166,6 @@ describe('GameStatsService', () => {
         });
     });
 
-    // ─── sanctuaryUsagePercentage ─────────────────────────────────────────────
 
     describe('sanctuaryUsagePercentage', () => {
         /** Returns null when the grid has no sanctuary tiles to avoid division by zero. */
@@ -199,7 +185,6 @@ describe('GameStatsService', () => {
         });
     });
 
-    // ─── doorsManipulatedPercentage ───────────────────────────────────────────
 
     describe('doorsManipulatedPercentage', () => {
         /** Returns null when the grid has no door tiles. */
@@ -229,7 +214,6 @@ describe('GameStatsService', () => {
         });
     });
 
-    // ─── uniqueFlagHoldersCount ───────────────────────────────────────────────
 
     describe('uniqueFlagHoldersCount', () => {
         /** Returns null for classic game mode since flag mechanics do not apply. */
@@ -261,7 +245,6 @@ describe('GameStatsService', () => {
         });
     });
 
-    // ─── visitedTilesCount per player ─────────────────────────────────────────
 
     describe('per-player visitedTilesCount', () => {
         /** Writes back each player's individual visited tile count from the per-player map. */

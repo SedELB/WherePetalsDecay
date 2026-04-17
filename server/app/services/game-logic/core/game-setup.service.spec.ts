@@ -1,9 +1,3 @@
-/**
- * Test suite for GameSetupService (server-side).
- * This service provides deterministic setup utilities for initialising a game session:
- * spawn extraction, unused-spawn pruning, turn-order computation, sanctuary/door extraction.
- * The tests use minimal Game fixtures to avoid any database or socket dependencies.
- */
 import { Test, TestingModule } from '@nestjs/testing';
 import { GameSetupService } from './game-setup.service';
 import { GameStatsService } from './game-stats.service';
@@ -11,7 +5,6 @@ import { GameMode, TileItem, TileTexture } from '@common/enums';
 import { Game } from '@common/game';
 import { Player } from '@common/player';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 const DEFAULT_LIFE = 6;
 const DEFAULT_SPEED = 4;
 const FAST_SPEED = 8;
@@ -23,7 +16,6 @@ const SOCKET_A = 'socket-a';
 const SOCKET_B = 'socket-b';
 const SOCKET_C = 'socket-c';
 
-// ─── Factories ────────────────────────────────────────────────────────────────
 
 const buildPlayer = (socketId: string, speed = DEFAULT_SPEED): Player => ({
     socketId,
@@ -77,7 +69,6 @@ const buildGridWith = (positions: { row: number; col: number; item?: TileItem; t
     return grid;
 };
 
-// ─── Test Suite ───────────────────────────────────────────────────────────────
 
 describe('GameSetupService', () => {
     let service: GameSetupService;
@@ -97,7 +88,6 @@ describe('GameSetupService', () => {
         expect(service).toBeDefined();
     });
 
-    // ─── extractSpawnPositions ────────────────────────────────────────────────
 
     describe('extractSpawnPositions', () => {
         /** Collects the coordinates of every Spawn tile scattered across the game grid. */
@@ -119,7 +109,6 @@ describe('GameSetupService', () => {
         });
     });
 
-    // ─── removeUnusedSpawns ───────────────────────────────────────────────────
 
     describe('removeUnusedSpawns', () => {
         /** Clears spawn items from tiles that are not assigned to any of the participating players. */
@@ -147,7 +136,6 @@ describe('GameSetupService', () => {
         });
     });
 
-    // ─── computeTurnOrder ─────────────────────────────────────────────────────
 
     describe('computeTurnOrder', () => {
         /** Places the fastest player first in the turn order without randomisation. */
@@ -173,7 +161,6 @@ describe('GameSetupService', () => {
         });
     });
 
-    // ─── shuffle ──────────────────────────────────────────────────────────────
 
     describe('shuffle', () => {
         /** Returns a shuffled array that contains the same elements as the original. */
@@ -197,7 +184,6 @@ describe('GameSetupService', () => {
         });
     });
 
-    // ─── extractSanctuaryPositions ────────────────────────────────────────────
 
     describe('extractSanctuaryPositions', () => {
         /** Correctly separates healing and combat sanctuary tile positions into distinct map entries. */
@@ -220,7 +206,6 @@ describe('GameSetupService', () => {
         });
     });
 
-    // ─── extractDoorPositions ─────────────────────────────────────────────────
 
     describe('extractDoorPositions', () => {
         /** Returns both open and closed door positions from the grid. */

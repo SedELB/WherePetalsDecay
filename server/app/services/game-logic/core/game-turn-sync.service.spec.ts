@@ -1,23 +1,13 @@
-/**
- * Test suite for GameTurnSyncService (server-side).
- * This service synchronises player turn state by emitting movement points, action points,
- * and reachable tiles over WebSocket, and automatically ends the turn if no legal moves remain.
- * All tests mock the GameLogicService and a Socket.IO Server to keep them unit-level.
- */
 import { Test, TestingModule } from '@nestjs/testing';
 import { GameTurnSyncService } from './game-turn-sync.service';
 import { GameLogicService } from './game-logic.service';
 import { PlayerType } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { ActiveGame } from './active-game.interface';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
 const MOVEMENT_POINTS = 3;
 const ACTION_POINTS = 1;
 const LOBBY_ID = 'lobby-1';
 const SOCKET_ID = 'socket-a';
-
-// ─── Factories ────────────────────────────────────────────────────────────────
 
 type EmitSpy = { to: jest.Mock; emit: jest.Mock };
 
@@ -74,8 +64,6 @@ const buildMockActiveGame = (overrides: Partial<ActiveGame> = {}): ActiveGame =>
     ...overrides,
 });
 
-// ─── Test Suite ───────────────────────────────────────────────────────────────
-
 describe('GameTurnSyncService', () => {
     let service: GameTurnSyncService;
     let gameLogicMock: jest.Mocked<GameLogicService>;
@@ -106,8 +94,6 @@ describe('GameTurnSyncService', () => {
         expect(service).toBeDefined();
     });
 
-    // ─── emitMovementPoints ───────────────────────────────────────────────────
-
     describe('emitMovementPoints', () => {
         /** Emits the current movement points for the specified player to the lobby room. */
         it('should emit MovementPoints to the lobby', () => {
@@ -118,7 +104,6 @@ describe('GameTurnSyncService', () => {
         });
     });
 
-    // ─── emitActionPoints ─────────────────────────────────────────────────────
 
     describe('emitActionPoints', () => {
         /** Emits the current action points for the specified player to the lobby room. */
@@ -130,8 +115,6 @@ describe('GameTurnSyncService', () => {
         });
     });
 
-    // ─── emitReachableTiles ───────────────────────────────────────────────────
-
     describe('emitReachableTiles', () => {
         /** Emits the reachable tile set for the player to the lobby so the client can highlight them. */
         it('should emit ReachableTiles with the tiles from GameLogicService', () => {
@@ -141,7 +124,6 @@ describe('GameTurnSyncService', () => {
         });
     });
 
-    // ─── emitReachableTilesForTeleport ────────────────────────────────────────
 
     describe('emitReachableTilesForTeleport', () => {
         /** Emits the teleport-eligible tile set for debug-mode movement. */
@@ -156,7 +138,6 @@ describe('GameTurnSyncService', () => {
         });
     });
 
-    // ─── autoEndTurnIfNoActions ───────────────────────────────────────────────
 
     describe('autoEndTurnIfNoActions', () => {
         /** Does not end the turn automatically when the player can still move. */
@@ -212,7 +193,6 @@ describe('GameTurnSyncService', () => {
         });
     });
 
-    // ─── syncPlayerTurnState ──────────────────────────────────────────────────
 
     describe('syncPlayerTurnState', () => {
         /** Emits movement points, action points, and reachable tiles in a single sync call. */
