@@ -34,7 +34,6 @@ type GameValidatorServiceInternal = {
     getItemName: (t: TileItem | string) => string;
 };
 
-// ─── Named constants (avoids @typescript-eslint/no-magic-numbers) ─────────────
 const SIZE_SMALL = GridSizes.Small;
 const SIZE_MEDIUM = GridSizes.Medium;
 const SIZE_LARGE = GridSizes.Large;

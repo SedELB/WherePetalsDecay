@@ -181,21 +181,17 @@ export class MapSetupService {
     }
 
     private handleRightClick(params: CellInteractionParams): MapSetupInteractionState {
-        const { game, rowIndex, colIndex, event, activeTileTexture, activeTileItem, counts, isPaintingTiles } = params;
-        if (activeTileTexture) {
-            this.deleteTile({ game, rowIndex, colIndex, tileAttribute: activeTileTexture, event, counts });
-        } else if (activeTileItem) {
-            this.deleteTile({ game, rowIndex, colIndex, tileAttribute: activeTileItem, event, counts });
-        } else {
-            const tile = game.grid[rowIndex][colIndex];
-            if (event.shiftKey && tile.item) {
+        const { game, rowIndex, colIndex, event, counts, isPaintingTiles } = params;
+        const tile = game.grid[rowIndex][colIndex];
+
+        // Right click is an erase action and must not depend on the currently selected tool.
+        if (event.shiftKey && tile.item) {
+            this.deleteTile({ game, rowIndex, colIndex, tileAttribute: tile.item, event, counts });
+        } else if (!event.shiftKey) {
+            if (tile.type !== TileTexture.Floor) {
+                this.deleteTile({ game, rowIndex, colIndex, tileAttribute: TileTexture.Floor, event, counts });
+            } else if (tile.item) {
                 this.deleteTile({ game, rowIndex, colIndex, tileAttribute: tile.item, event, counts });
-            } else if (!event.shiftKey) {
-                if (tile.type !== TileTexture.Floor) {
-                    this.deleteTile({ game, rowIndex, colIndex, tileAttribute: TileTexture.Floor, event, counts });
-                } else if (tile.item) {
-                    this.deleteTile({ game, rowIndex, colIndex, tileAttribute: tile.item, event, counts });
-                }
             }
         }
         return { isPaintingTiles, isErasingTiles: true };
