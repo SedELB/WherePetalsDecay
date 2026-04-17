@@ -99,7 +99,7 @@ describe('CharacterSelectionComponent', () => {
   });
 
   it('should emit deselection event with null avatar when deselecting', () => {
-    component.lobbyId = 'test-lobby-id';
+    component['lobbyId'] = 'test-lobby-id';
     webSocketServiceSpy.emitNamespace.calls.reset();
 
     component.selectAvatar(TEST_AVATAR_PATH);
@@ -260,7 +260,7 @@ describe('CharacterSelectionComponent', () => {
   it('should navigate to create page on goBack when no gameId', () => {
     const router = TestBed.inject(Router);
     spyOn(router, 'navigate');
-    component.lobbyId = null;
+    component['lobbyId'] = null;
 
     component.goBack();
 

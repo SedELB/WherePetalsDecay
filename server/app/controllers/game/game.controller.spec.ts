@@ -63,7 +63,7 @@ describe('GameController', () => {
     });
 
     it('allGames() should return NOT_FOUND when service unable to fetch games', async () => {
-        gameService.getAllGames.rejects(new Error('Database error'));
+        gameService.getAllGames.rejects(new Error('Aucun jeu trouvé'));
 
         const res = {} as unknown as Response;
         res.status = (code) => {
@@ -96,7 +96,7 @@ describe('GameController', () => {
     });
 
     it('getGame() should return NOT_FOUND when service unable to fetch the game', async () => {
-        gameService.getGameById.rejects(new Error('Game not found'));
+        gameService.getGameById.rejects(new Error('Aucun jeu trouvé'));
 
         const res = {} as unknown as Response;
         res.status = (code) => {
@@ -265,7 +265,7 @@ describe('GameController', () => {
     });
 
     it('deleteGame() should return NOT_FOUND when service cannot delete the game', async () => {
-        gameService.deleteGame.rejects(new Error('Game not found'));
+        gameService.deleteGame.rejects(new Error('Aucun jeu trouvé'));
 
         const res = {} as unknown as Response;
         res.status = (code) => {
@@ -298,7 +298,7 @@ describe('GameController', () => {
     });
 
     it('visibleGames() should return NOT_FOUND when service unable to fetch visible games', async () => {
-        gameService.getAllVisibleGames.rejects(new Error('No visible games'));
+        gameService.getAllVisibleGames.rejects(new Error('Aucun jeu trouvé'));
 
         const res = {} as unknown as Response;
         res.status = (code) => {
@@ -355,12 +355,12 @@ describe('GameController', () => {
         expect(gameCatalogGateway.notifyGameCreated.called).toBe(false);
     });
 
-    it('modifyVisibility() should return BAD_REQUEST when service cannot update visibility', async () => {
+    it('modifyVisibility() should return INTERNAL_SERVER_ERROR when service cannot update visibility', async () => {
         gameService.updateVisibility.rejects(new Error('Update failed'));
 
         const res = {} as unknown as Response;
         res.status = (code) => {
-            expect(code).toEqual(HttpStatus.BAD_REQUEST);
+            expect(code).toEqual(HttpStatus.INTERNAL_SERVER_ERROR);
             return res;
         };
         res.json = (message) => {

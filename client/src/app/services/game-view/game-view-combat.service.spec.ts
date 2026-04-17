@@ -8,7 +8,7 @@
 import { TestBed } from '@angular/core/testing';
 import { GameViewCombatService } from '@app/services/game-view/game-view-combat.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
-import { ONE_SECOND_DELAY } from '@app/services/game-view/game-view.constants';
+import { ONE_SECOND_MS } from '@app/services/game-view/game-view.constants';
 import { Posture } from '@common/character';
 import { COMBAT_POSTURE_TIMEOUT_MS } from '@common/constants/combat-timeline.constants';
 import { DiceType, PlayerType, PostureType, SocketNamespace } from '@common/enums';
@@ -30,7 +30,7 @@ const LIFE_AFTER_HIT = 4;
 const DAMAGE_DEALT = 2;
 const ROUND_ONE = 1;
 const ROUND_TWO = 2;
-const EXPECTED_COUNTDOWN_MAX = Math.ceil(COMBAT_POSTURE_TIMEOUT_MS / ONE_SECOND_DELAY);
+const EXPECTED_COUNTDOWN_MAX = Math.ceil(COMBAT_POSTURE_TIMEOUT_MS / ONE_SECOND_MS);
 const COUNTDOWN_SEVEN = 7;
 const OVERFLOW_CONSTANT = 5;
 const COUNTDOWN_OVERFLOW = EXPECTED_COUNTDOWN_MAX + OVERFLOW_CONSTANT;

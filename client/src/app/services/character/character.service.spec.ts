@@ -121,18 +121,19 @@ describe('CharacterService', () => {
 
     // Test avatar validation accepts valid indices
     it('should validate avatar indices within range', () => {
-        expect(service.isValidAvatar(0)).toBe(true);
-        expect(service.isValidAvatar(AVATARS_PATH.length - 1)).toBe(true);
+        expect(service['isValidAvatar'](0)).toBe(true);
+        expect(service['isValidAvatar'](AVATARS_PATH.length - 1)).toBe(true);
 
         const middleIndex = Math.floor(AVATARS_PATH.length / 2);
-        expect(service.isValidAvatar(middleIndex)).toBe(true);
+        expect(service['isValidAvatar'](middleIndex)).toBe(true);
     });
 
     // Invalid avatar indices
     it('should reject null or out-of-range avatar indices', () => {
-        expect(service.isValidAvatar(null)).toBe(false);
-        expect(service.isValidAvatar(-1)).toBe(false);
-        expect(service.isValidAvatar(AVATARS_PATH.length)).toBe(false);
-        expect(service.isValidAvatar(AVATARS_PATH.length + 1)).toBe(false);
+        expect(service['isValidAvatar'](null as unknown as number)).toBe(false);
+        expect(service['isValidAvatar'](-1)).toBe(false);
+        expect(service['isValidAvatar'](AVATARS_PATH.length)).toBe(false);
+        expect(service['isValidAvatar'](AVATARS_PATH.length + 1)).toBe(false);
+        expect(service['isValidAvatar'](NaN)).toBe(false);
     });
 });
