@@ -179,9 +179,15 @@ export class GameValidatorService {
 
         for (const [type, required] of Object.entries(requiredCounts)) {
             const actual = actualCounts[type as TileItem] || 0;
-            if (actual !== required) {
-                const itemName = this.getItemName(type as TileItem);
-                errors.push(`On attend ${required} de ${itemName}(s) mais on trouve ${actual}!`);
+            const itemName = this.getItemName(type as TileItem);
+            const isSanctuary = type === TileItem.HealingSanctuary || type === TileItem.CombatSanctuary;
+
+            if (isSanctuary) {
+                if (actual > required) {
+                    errors.push(`Trop de ${itemName}s placés (${actual}/${required} max)`);
+                }
+            } else if (actual !== required) {
+                errors.push(`${actual}/${required} ${itemName}(s) placé(s)`);
             }
         }
 
@@ -223,15 +229,15 @@ export class GameValidatorService {
     private getItemName(type: TileItem): string {
         switch (type) {
             case TileItem.Spawn:
-                return 'spawn point';
+                return 'point de départ';
             case TileItem.Flag:
-                return 'flag';
+                return 'drapeau';
             case TileItem.HealingSanctuary:
-                return 'healing sanctuary';
+                return 'sanctuaire de soin';
             case TileItem.CombatSanctuary:
-                return 'combat sanctuary';
+                return 'sanctuaire de combat';
             default:
-                return 'item';
+                return 'objet';
         }
     }
 
