@@ -1,10 +1,3 @@
-/**
- * @file game-view-combat.service.spec.ts
- *
- * Test suite for GameViewCombatService.
- * Front-end state machine for combat WebSocket events.
- */
-
 import { TestBed } from '@angular/core/testing';
 import { GameViewCombatService } from '@app/services/game-view/game-view-combat.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
@@ -21,7 +14,6 @@ import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 const BASE_LIFE = 6;
 const BASE_ATTACK = 4;
 const BASE_DEFENSE = 4;
@@ -41,7 +33,6 @@ const SPECTATOR_SOCKET = 'spectator';
 const ROOM_ID = 'room-1';
 const LOBBY_ID = 'lobby-1';
 
-// ─── Factories ────────────────────────────────────────────────────────────────
 
 const buildPlayer = (socketId: string, overrides: Partial<Player> = {}): Player => ({
     socketId, isHost: false, winsCount: 0, hasAbandonned: false, playerType: PlayerType.Reel,
@@ -81,7 +72,6 @@ const buildBaseDeps = (localId: string | undefined) => ({
     },
 });
 
-// ─── Test Suite ───────────────────────────────────────────────────────────────
 
 describe('GameViewCombatService', () => {
     let service: GameViewCombatService;

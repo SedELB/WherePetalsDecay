@@ -355,12 +355,12 @@ describe('GameController', () => {
         expect(gameCatalogGateway.notifyGameCreated.called).toBe(false);
     });
 
-    it('modifyVisibility() should return INTERNAL_SERVER_ERROR when service cannot update visibility', async () => {
-        gameService.updateVisibility.rejects(new Error('Update failed'));
+    it('modifyVisibility() should return NOT_FOUND when service cannot update visibility', async () => {
+        gameService.updateVisibility.rejects(new Error('jeu non trouvé'));
 
         const res = {} as unknown as Response;
         res.status = (code) => {
-            expect(code).toEqual(HttpStatus.INTERNAL_SERVER_ERROR);
+            expect(code).toEqual(HttpStatus.NOT_FOUND);
             return res;
         };
         res.json = (message) => {
