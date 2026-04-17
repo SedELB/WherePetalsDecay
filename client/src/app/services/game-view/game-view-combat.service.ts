@@ -97,8 +97,16 @@ export class GameViewCombatService {
     }
 
     handleCombatResult(data: CombatResult, dependencies: CombatListenerDependencies): void {
+        const localSocketId = dependencies.getLocalSocketId();
+        const isLocalParticipant = this.isCombatParticipant(localSocketId, data);
+
         this.lastCombatResult.set(data);
-        dependencies.updateGameLobby((lobby) => lobby ? this.gameLogicService.processCombatResult(lobby, data) : lobby);
+        dependencies.updateGameLobby((lobby) => {
+            if (!lobby) return lobby;
+            return isLocalParticipant
+                ? this.gameLogicService.processCombatResultWithoutLife(lobby, data)
+                : this.gameLogicService.processCombatResult(lobby, data);
+        });
 
         if (data.attacker.newPosition || data.defender.newPosition) {
             dependencies.updatePlayerPositions((positions) => {
@@ -113,7 +121,11 @@ export class GameViewCombatService {
             dependencies.setFlagTaken(false);
         }
 
-        this.updateLocalFightersFromCombatResult(data, dependencies.getLocalSocketId());
+        this.updateLocalFightersFromCombatResult(data, localSocketId);
+    }
+
+    private isCombatParticipant(localSocketId: string | undefined, result: CombatResult): boolean {
+        return !!localSocketId && (localSocketId === result.attacker.socketId || localSocketId === result.defender.socketId);
     }
 
 

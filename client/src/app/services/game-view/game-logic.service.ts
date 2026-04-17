@@ -377,21 +377,63 @@ export class GameLogicService {
         return updatedLobby;
     }
 
-    updateLobbyFromCombatResult(lobby: Lobby, result: CombatResult): Lobby {
-        const updatedLobby = { ...lobby };
-        if (result.winnerId) {
-            const loser = updatedLobby.players.find((p) => p.socketId === result.loserId);
-            if (loser) loser.hasFlag = false;
-        }
+    processCombatResultWithoutLife(lobby: Lobby, data: CombatResult): Lobby {
+        let updatedLobby = this.updateLobbyFromCombatResult(lobby, data, false);
+        updatedLobby = this.updateDroppedFlagFromCombatResult(updatedLobby, data);
         return updatedLobby;
     }
 
+    updateLobbyFromCombatResult(lobby: Lobby, result: CombatResult, shouldUpdateLife: boolean = true): Lobby {
+        const lifeBySocketId = shouldUpdateLife
+            ? new Map<string, number>([
+                [result.attacker.socketId, result.attacker.lifeAfter],
+                [result.defender.socketId, result.defender.lifeAfter],
+            ])
+            : new Map<string, number>();
+
+        const updatedPlayers = lobby.players.map((player) => {
+            const nextLife = lifeBySocketId.get(player.socketId);
+            const shouldDropFlag = Boolean(result.winnerId) && player.socketId === result.loserId;
+            const shouldUpdateLife = nextLife !== undefined;
+
+            if (!shouldDropFlag && !shouldUpdateLife) return player;
+
+            return {
+                ...player,
+                ...(shouldDropFlag ? { hasFlag: false } : {}),
+                ...(shouldUpdateLife
+                    ? {
+                        character: {
+                            ...player.character,
+                            life: Math.max(0, nextLife),
+                        },
+                    }
+                    : {}),
+            };
+        });
+
+        return {
+            ...lobby,
+            players: updatedPlayers,
+        };
+    }
+
     updateDroppedFlagFromCombatResult(lobby: Lobby, result: CombatResult): Lobby {
-        const updatedLobby = { ...lobby };
-        if (result.winnerId && result.droppedFlagPosition) {
-            const { x, y } = result.droppedFlagPosition;
-            if (updatedLobby.game.grid[y]?.[x]) updatedLobby.game.grid[y][x].item = TileItem.Flag;
-        }
-        return updatedLobby;
+        if (!result.winnerId || !result.droppedFlagPosition) return lobby;
+
+        const { x, y } = result.droppedFlagPosition;
+        if (!lobby.game.grid[y]?.[x]) return lobby;
+
+        const updatedGrid = lobby.game.grid.map((row, rowIndex) =>
+            rowIndex === y ? row.map((tile, colIndex) => (colIndex === x ? { ...tile, item: TileItem.Flag } : tile)) : row,
+        );
+
+        return {
+            ...lobby,
+            game: {
+                ...lobby.game,
+                grid: updatedGrid,
+            },
+        };
     }
 }

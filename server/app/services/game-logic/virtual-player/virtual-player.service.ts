@@ -22,8 +22,6 @@ export class VirtualPlayerService {
         const player = game?.lobby.players.find((p) => p.socketId === socketId);
         if (!player) return null;
 
-        // Virtual players must always provide a deterministic posture each round,
-        // derived from their profile rather than from potentially stale character state.
         if (player.virtualProfile) {
             const selectedPosture = this.actionService.postureForProfile(player.virtualProfile);
             player.character.bonusPosture = { ...selectedPosture };

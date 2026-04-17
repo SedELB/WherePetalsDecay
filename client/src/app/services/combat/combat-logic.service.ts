@@ -17,6 +17,7 @@ import {
     CombatEndPopupData,
     FighterSide,
     FighterStatType,
+    LifeBySide,
     RoundDetailedResult,
     RoundPhaseStep,
     RoundResolutionSequenceParams,
@@ -347,8 +348,22 @@ export class CombatLogicService {
     private finalizeLives(): void {
         const pending = this.state.pendingLifeBySide();
         if (pending) {
-            this.state.displayedLifeBySide.set(pending); this.state.pendingLifeBySide.set(null);
+            this.state.displayedLifeBySide.set(pending);
+            this.syncCombatLivesToLobby(pending);
+            this.state.pendingLifeBySide.set(null);
         }
+    }
+
+    private syncCombatLivesToLobby(lifeBySide: LifeBySide): void {
+        const playerSocketId = this.state.player()?.socketId;
+        const enemySocketId = this.state.enemy()?.socketId;
+        if (!playerSocketId && !enemySocketId) return;
+
+        const syncedLives: Record<string, number> = {};
+        if (playerSocketId) syncedLives[playerSocketId] = Math.max(0, lifeBySide.player);
+        if (enemySocketId) syncedLives[enemySocketId] = Math.max(0, lifeBySide.enemy);
+
+        this.gameViewService.syncCombatParticipantLives(syncedLives);
     }
 
     private finish(token: number): void {

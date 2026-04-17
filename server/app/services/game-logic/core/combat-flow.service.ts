@@ -267,7 +267,10 @@ export class CombatFlowService {
             this.server.to(session.lobbyId).emit(JoinGameEvents.CombatRoundCountdown, data);
         };
 
-        broadcastCountdown(secondsLeft);
+        const roundStartedData: CombatRoundStartedData = {
+            roomId: session.roomId, roundIndex: session.roundIndex, postureTimeoutMs: COMBAT_POSTURE_TIMEOUT_MS,
+        };
+        this.server.to(session.lobbyId).emit(JoinGameEvents.CombatRoundStarted, roundStartedData);
 
         const attacker = this.lobbyService.getLobby(session.lobbyId)?.players.find((p) => p.socketId === session.attackerId);
         const defender = this.lobbyService.getLobby(session.lobbyId)?.players.find((p) => p.socketId === session.defenderId);
@@ -293,11 +296,6 @@ export class CombatFlowService {
             if (secondsLeft <= 0) this.handleCombatRoundTimeout(session.roomId);
             else broadcastCountdown(secondsLeft);
         }, COUNTDOWN_TICK_MS);
-
-        const roundStartedData: CombatRoundStartedData = {
-            roomId: session.roomId, roundIndex: session.roundIndex, postureTimeoutMs: COMBAT_POSTURE_TIMEOUT_MS,
-        };
-        this.server.to(session.lobbyId).emit(JoinGameEvents.CombatRoundStarted, roundStartedData);
     }
 
     private handleCombatRoundTimeout(roomId: string): void {

@@ -70,6 +70,32 @@ export class GameViewService {
         this.gameViewCombatService.sendPostureChoice(lobbyId, roomId, posture);
     }
 
+    syncCombatParticipantLives(lifeBySocketId: Record<string, number>): void {
+        if (Object.keys(lifeBySocketId).length === 0) return;
+
+        this.gameLobby.update((lobby) => {
+            if (!lobby) return lobby;
+
+            const updatedPlayers = lobby.players.map((player) => {
+                const syncedLife = lifeBySocketId[player.socketId];
+                if (syncedLife === undefined) return player;
+
+                return {
+                    ...player,
+                    character: {
+                        ...player.character,
+                        life: Math.max(0, syncedLife),
+                    },
+                };
+            });
+
+            return {
+                ...lobby,
+                players: updatedPlayers,
+            };
+        });
+    }
+
     completeCombatOverlay(): void {
         this.gameViewCombatService.completeCombatOverlay();
     }
