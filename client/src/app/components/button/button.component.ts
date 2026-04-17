@@ -5,7 +5,7 @@ import { ButtonVariant } from '@common/enums';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 
-const DEFAULT_DEBOUNCE_MS = 300;
+const DEFAULT_DEBOUNCE_MS = 100;
 
 @Component({
     selector: 'app-button',
