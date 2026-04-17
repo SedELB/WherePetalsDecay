@@ -94,20 +94,8 @@ export class VPCtfStrategyService {
             if (this.tryCtfPathSanctuary(context, currentPos, target, needsAp)) return;
 
             this.actionService.moveTowardThenActWithDoors(context, currentPos, target, () => {
-                if (carrierStartPos) {
-                    const vpPosNow = game.playerPositions.get(virtualPlayer.socketId) ?? currentPos;
-                    const adjacentEnemies = this.scanner.getAdjacentOpponents(game, virtualPlayer, vpPosNow);
-                    const enemyOnSpawn = adjacentEnemies.find((e) => {
-                        const ePos = game.playerPositions.get(e.socketId);
-                        return ePos && ePos.x === carrierStartPos.x && ePos.y === carrierStartPos.y;
-                    });
-                    if (enemyOnSpawn) {
-                        virtualPlayer.character.bonusPosture = this.actionService.postureForProfile(virtualPlayer.virtualProfile);
-                        context.startCombat(lobbyId, virtualPlayer.socketId, enemyOnSpawn.socketId);
-                        return;
-                    }
-                }
-                this.actionService.endVirtualPlayerTurn(lobbyId);
+                const hasStartedCombat = this.actionService.tryAttackAdjacentEnemy(context);
+                if (!hasStartedCombat) this.actionService.endVirtualPlayerTurn(lobbyId);
             });
         }
     }
@@ -157,11 +145,25 @@ export class VPCtfStrategyService {
             return;
         }
 
-        const hasClosedDoor = this.actionService.hasClosedDoorOnPath(game, currentPos, allyPos);
-        const hasAdjacentEnemy = this.scanner.getAdjacentOpponents(game, virtualPlayer, currentPos).length > 0;
-        if (this.tryCtfPathSanctuary(context, currentPos, allyPos, hasClosedDoor || hasAdjacentEnemy)) return;
+        const escortTarget = this.scanner.findNearestFreePositionAround(game, allyPos, virtualPlayer.socketId);
+        if (!escortTarget) {
+            this.actionService.endVirtualPlayerTurn(lobbyId);
+            return;
+        }
 
-        this.actionService.moveTowardThenActWithDoors(context, currentPos, allyPos, () => {
+        const threatToAlly = this.scanner.findNearestEnemy(game, virtualPlayer, allyPos, true);
+        const ESCORT_THREAT_DISTANCE = 3;
+        const isThreatClose = threatToAlly && 
+        (Math.abs(allyPos.x - threatToAlly.position.x) + 
+        Math.abs(allyPos.y - threatToAlly.position.y) <= ESCORT_THREAT_DISTANCE);
+
+        const finalTarget = isThreatClose ? threatToAlly.position : escortTarget;
+
+        const hasClosedDoor = this.actionService.hasClosedDoorOnPath(game, currentPos, finalTarget);
+        const hasAdjacentEnemy = this.scanner.getAdjacentOpponents(game, virtualPlayer, currentPos).length > 0;
+        if (this.tryCtfPathSanctuary(context, currentPos, finalTarget, hasClosedDoor || hasAdjacentEnemy)) return;
+
+        this.actionService.moveTowardThenActWithDoors(context, currentPos, finalTarget, () => {
             if (this.actionService.tryAttackAdjacentEnemy(context)) return;
             this.actionService.endVirtualPlayerTurn(lobbyId);
         });

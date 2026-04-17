@@ -36,7 +36,7 @@ export class VPActionService {
         const { game, virtualPlayer } = context;
         const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
 
-        const dijkstraResult = this.pathfindingService.computeFullDijkstra(game, currentPos, true);
+        const dijkstraResult = this.pathfindingService.computeFullDijkstra(game, currentPos, true, virtualPlayer.socketId);
         const fullPath = this.pathfindingService.reconstructPath(targetPos, dijkstraResult.predecessorKey);
 
         if (!fullPath || fullPath.length === 0) {
