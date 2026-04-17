@@ -47,7 +47,7 @@ export class CharacterService {
         return name.trim().length > 0;
     }
 
-    isValidAvatar(index: number | null): boolean {
+    protected isValidAvatar(index: number | null): boolean {
         return index !== null && index >= 0 && index < AVATARS_PATH.length;
     }
 }

@@ -129,12 +129,12 @@ export class MapSetupService {
 
     selectTileTexture(activeTileTexture: TileTexture | null, activeTileItem: TileItem | null, type: TileTexture): MapSetupSelection {
         const nextActiveTileTexture = activeTileTexture === type ? null : type;
-        return { activeTileTexture: nextActiveTileTexture, activeTileItem: nextActiveTileTexture != null ? null : activeTileItem };
+        return { activeTileTexture: nextActiveTileTexture, activeTileItem: nextActiveTileTexture ? null : activeTileItem };
     }
 
     selectTileItem(activeTileItem: TileItem | null, activeTileTexture: TileTexture | null, type: TileItem): MapSetupSelection {
         const nextActiveTileItem = activeTileItem === type ? null : type;
-        return { activeTileTexture: nextActiveTileItem != null ? null : activeTileTexture, activeTileItem: nextActiveTileItem };
+        return { activeTileTexture: nextActiveTileItem ? null : activeTileTexture, activeTileItem: nextActiveTileItem };
     }
 
     applyActiveSelection(params: TileParams): void {

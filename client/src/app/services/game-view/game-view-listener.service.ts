@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { ROUTES } from '@app/constants/routes.constants';
-import { ONE_SECOND_DELAY } from '@app/services/game-view/game-view.constants';
+import { ONE_SECOND_MS } from '@app/services/game-view/game-view.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { SanctuaryMode, SocketNamespace, TileItem, TileTexture } from '@common/enums';
 import {
@@ -72,7 +72,7 @@ export class GameViewListenerService {
             if (secondsLeft <= 1) {
                 setTimeout(() => {
                     this.gameViewService.disableEndTurn.set(false);
-                }, ONE_SECOND_DELAY);
+                }, ONE_SECOND_MS);
             }
         });
 

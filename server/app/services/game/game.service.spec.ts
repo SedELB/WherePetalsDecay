@@ -1,6 +1,6 @@
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { Game, GameDocument, gameSchema } from '@app/model/schema/game.schema';
-import { BASE_10, CUSTOM_GRID_CLASSIC_SMALL, CUSTOM_GRID_CLASSIC_SMALL_INVALID } from '@app/utils/game.constants';
+import { SMALL_MAP_COLS, CUSTOM_GRID_CLASSIC_SMALL, CUSTOM_GRID_CLASSIC_SMALL_INVALID } from '@app/utils/game.constants';
 import { GameMode, MaxPlayers } from '@common/enums';
 import { GAME_NOT_FOUND, NO_GAMES_FOUND, NO_VISIBLE_GAMES_FOUND } from '@common/error-messages';
 import { Logger } from '@nestjs/common';
@@ -53,7 +53,7 @@ describe('GameServiceE2E', () => {
         validGame = {
             name: 'Valid Game 1',
             description: 'Desc. 1',
-            size: { rows: BASE_10, cols: BASE_10 },
+            size: { rows: SMALL_MAP_COLS, cols: SMALL_MAP_COLS },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MaxPlayers.Small,
@@ -64,7 +64,7 @@ describe('GameServiceE2E', () => {
         invalidGame = {
             name: 'Invalid Game 3',
             description: 'Desc. 3',
-            size: { rows: BASE_10, cols: BASE_10 },
+            size: { rows: SMALL_MAP_COLS, cols: SMALL_MAP_COLS },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MaxPlayers.Small,

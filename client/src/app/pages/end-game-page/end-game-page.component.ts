@@ -119,11 +119,11 @@ export class EndGamePageComponent implements OnDestroy, OnInit {
     }
 
     formatDuration(seconds: number): string {
-        const TEN = 10;
-        const SIXTY = 60;
-        const m = Math.floor(seconds / SIXTY);
-        const s = seconds % SIXTY;
-        return `${m < TEN ? '0' : ''}${m}:${s < TEN ? '0' : ''}${s}`;
+        const FORMAT_THRESHOLD = 10;
+        const SECONDS_IN_MIN = 60;
+        const m = Math.floor(seconds / SECONDS_IN_MIN);
+        const s = seconds % SECONDS_IN_MIN;
+        return `${m < FORMAT_THRESHOLD ? '0' : ''}${m}:${s < FORMAT_THRESHOLD ? '0' : ''}${s}`;
     }
 
     formatPercent(value: number): string {

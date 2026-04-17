@@ -30,7 +30,7 @@ export class GameCardComponent implements OnInit {
   gameMode = GameMode;
   tooltipVerticalPos: number = 0;
   tooltipHorizontalPos: number = 0;
-  tooltipTopPadding: number = 140;
+  private readonly tooltipTopPadding: number = 140;
   private windowHeight: number = 0;
 
   ngOnInit(): void {

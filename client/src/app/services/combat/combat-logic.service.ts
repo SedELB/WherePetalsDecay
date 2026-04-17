@@ -87,7 +87,7 @@ export class CombatLogicService {
         this.initializeDuelIfNeeded(player, enemy);
         this.applyLatestServerResult();
 
-        if (!this.state.isRoundSequenceInProgress() && !this.state.pendingLifeBySide() && !this.hasDeadFighter()) {
+        if (this.canSyncDisplayedLives()) {
             this.syncDisplayedLives();
         }
 
@@ -113,7 +113,10 @@ export class CombatLogicService {
     readonly getCurrentRoundIndex = (): number => this.gameViewService.combatRoundIndex();
     readonly getPostureCountdown = (): number => (this.hasDeadFighter() ? 0 : this.gameViewService.combatPostureCountdown());
     readonly isPostureCountdownVisible = (): boolean => this.getPostureCountdown() > 0 && !this.gameViewService.isCombatRoundTransitioning();
-    readonly isPosturePending = (f: Player): boolean => !f?.character?.bonusPosture?.type && this.isPostureCountdownVisible();
+    readonly isPosturePending = (f: Player): boolean => {
+        if (this.hasChosenPosture(f)) return false;
+        return this.isPostureCountdownVisible();
+    };
     readonly hasDeadFighter = (): boolean => this.isFighterDead('player') || this.isFighterDead('enemy');
     readonly isFighterDead = (side: FighterSide): boolean => this.state.displayedLifeBySide()[side] <= 0;
     readonly getDisplayedLife = (side: FighterSide): number => Math.max(0, this.state.displayedLifeBySide()[side]);
@@ -151,6 +154,13 @@ export class CombatLogicService {
                 enemy: Math.max(0, e.character.life),
             });
         }
+    }
+
+    private canSyncDisplayedLives(): boolean {
+        if (this.state.isRoundSequenceInProgress()) return false;
+        if (this.state.pendingLifeBySide()) return false;
+        if (this.hasDeadFighter()) return false;
+        return true;
     }
 
     private initializeDuelIfNeeded(player: Player, enemy: Player): void {

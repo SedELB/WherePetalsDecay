@@ -48,7 +48,7 @@ export class GamePageComponent implements OnInit {
     readonly signals = this.gamePageSignalsService;
 
     readonly items = OBJECT_PLACEMENT_TOOL;
-    readonly routes = ROUTES;
+    private readonly routes = ROUTES;
     protected gameMode = GameMode;
     protected readonly playerAction = PlayerAction;
     readonly tileNames: Record<string, string> = TILE_NAMES;

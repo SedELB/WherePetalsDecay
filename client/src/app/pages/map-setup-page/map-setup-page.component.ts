@@ -55,8 +55,7 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
     readonly tileTools = Object.values(TILE_TOOLS).filter((tool) => ![TileTexture.Floor, TileTexture.DoorOpened].includes(tool.type));
 
     readonly tileItemEnum = TileItem;
-    readonly tileTextureEnum = TileTexture;
-
+    
     @ViewChild('thumbnailGrid') thumbnailGridRef!: ElementRef<HTMLElement>;
 
     isGameLoaded = false;
@@ -80,45 +79,49 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
         this.isGameLoaded = true;
 
         if (this.mode === MapSetupMode.Edit && this.game?._id) {
-            this.adminGameService.fetchAllGames().subscribe({
-                next: (games: Game[]) => this.adminGameService.setGames(games),
-            });
-            this.gameSubscription = this.adminGameService.games$.pipe(skip(1)).subscribe((games: Game[]) => {
-                const currentGame = games.find((g) => g._id === this.game._id);
+            this.initEditSubscription();
+        }
+    }
 
-                if (!currentGame) {
-                    if (!this.gameDeletedAlertShown) {
-                        this.gameDeletedAlertShown = true;
-                        swal.fire({
-                            title: 'Jeu supprimé',
-                            text:
-                                'Ce jeu a été supprimé par un autre administrateur.' +
-                                ' Vous pouvez continuer à travailler et il sera créé comme un nouveau jeu.',
-                            icon: 'warning',
-                            confirmButtonText: 'OK',
-                        });
-                    }
-                    this.mode = MapSetupMode.Create;
-                } else if (currentGame.updatedAt !== this.game.updatedAt) {
-                    if (this.isSaving) {
+    private initEditSubscription(): void {
+        this.adminGameService.fetchAllGames().subscribe({
+            next: (games: Game[]) => this.adminGameService.setGames(games),
+        });
+        this.gameSubscription = this.adminGameService.games$.pipe(skip(1)).subscribe((games: Game[]) => {
+            const currentGame = games.find((g) => g._id === this.game._id);
+
+            if (!currentGame) {
+                if (!this.gameDeletedAlertShown) {
+                    this.gameDeletedAlertShown = true;
+                    swal.fire({
+                        title: 'Jeu supprimé',
+                        text:
+                            'Ce jeu a été supprimé par un autre administrateur.' +
+                            ' Vous pouvez continuer à travailler et il sera créé comme un nouveau jeu.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                    });
+                }
+                this.mode = MapSetupMode.Create;
+            } else if (currentGame.updatedAt !== this.game.updatedAt) {
+                if (this.isSaving) {
+                    this.game = JSON.parse(JSON.stringify(currentGame));
+                    this.itemCounts = this.tileItemCountService.createRequiredCounts(this.game);
+                    this.tileItemCountService.adjustCountsForExistingItems(this.game, this.itemCounts);
+                    this.isSaving = false;
+                } else {
+                    const userWantsUpdate = confirm(
+                        'Ce jeu a été modifié par un autre administrateur. ' +
+                        'Voulez-vous charger les changements? (Vos modifications locales seront perdues)',
+                    );
+                    if (userWantsUpdate) {
                         this.game = JSON.parse(JSON.stringify(currentGame));
                         this.itemCounts = this.tileItemCountService.createRequiredCounts(this.game);
                         this.tileItemCountService.adjustCountsForExistingItems(this.game, this.itemCounts);
-                        this.isSaving = false;
-                    } else {
-                        const userWantsUpdate = confirm(
-                            'Ce jeu a été modifié par un autre administrateur. ' +
-                            'Voulez-vous charger les changements? (Vos modifications locales seront perdues)',
-                        );
-                        if (userWantsUpdate) {
-                            this.game = JSON.parse(JSON.stringify(currentGame));
-                            this.itemCounts = this.tileItemCountService.createRequiredCounts(this.game);
-                            this.tileItemCountService.adjustCountsForExistingItems(this.game, this.itemCounts);
-                        }
                     }
                 }
-            });
-        }
+            }
+        });
     }
 
     ngOnDestroy(): void {
@@ -137,7 +140,7 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
         return this.tileItemCountService.countTileTexture(this.game, tileTexture);
     }
 
-    countTileItem(tileItem: TileItem): number {
+    protected countTileItem(tileItem: TileItem): number {
         return this.tileItemCountService.countTileItem(this.game, tileItem);
     }
 
@@ -181,7 +184,7 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
         return !above && !left;
     }
 
-    getObjectAt(x: number, y: number): Tile | undefined {
+    protected getObjectAt(x: number, y: number): Tile | undefined {
         return this.mapSetupService.getObjectAt(this.game, x, y);
     }
 
@@ -229,7 +232,7 @@ export class MapSetupPageComponent implements OnInit, OnDestroy {
         this.isErasingTiles = interactionState.isErasingTiles;
     }
 
-    onGridMouseLeave(): void {
+    protected onGridMouseLeave(): void {
         const interactionState = this.mapSetupService.resetInteractionState();
         this.isPaintingTiles = interactionState.isPaintingTiles;
         this.isErasingTiles = interactionState.isErasingTiles;

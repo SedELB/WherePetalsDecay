@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { CombatEndPopupData, CombatListenerDependencies } from '@app/interfaces/combat.interfaces';
-import { DEFAULT_COMBAT_POSTURE, ONE_SECOND_DELAY } from '@app/services/game-view/game-view.constants';
+import { DEFAULT_COMBAT_POSTURE, ONE_SECOND_MS } from '@app/services/game-view/game-view.constants';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { Debuf, Posture } from '@common/character';
 import { COMBAT_POSTURE_TIMEOUT_MS } from '@common/constants/combat-timeline.constants';
@@ -248,7 +248,7 @@ export class GameViewCombatService {
             },
         }));
         const postureChoiceTimeoutMs = data.postureTimeoutMs > 0 ? data.postureTimeoutMs : COMBAT_POSTURE_TIMEOUT_MS;
-        const countdownMax = Math.ceil(postureChoiceTimeoutMs / ONE_SECOND_DELAY);
+        const countdownMax = Math.ceil(postureChoiceTimeoutMs / ONE_SECOND_MS);
         this.combatPostureCountdownMax.set(countdownMax);
         this.combatPostureCountdown.set(countdownMax);
     }

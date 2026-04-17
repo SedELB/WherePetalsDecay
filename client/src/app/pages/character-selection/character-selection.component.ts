@@ -32,13 +32,13 @@ export class CharacterSelectionComponent implements OnInit, OnDestroy {
     private previousLockState = false;
 
     nameMaxLength = NAME_MAX_LENGTH;
-    lobbyId: string | null = null;
+    private lobbyId: string | null = null;
     selectedGame: Game | null = null;
     currentlySelectedAvatars: string[] = [];
 
     readonly avatars = AVATARS_PATH;
-    readonly baseStats = BASE_STATS;
-    readonly routes = ROUTES;
+    private readonly baseStats = BASE_STATS;
+    private readonly routes = ROUTES;
 
     constructor(
         private route: ActivatedRoute,

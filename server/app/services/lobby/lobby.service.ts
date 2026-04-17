@@ -143,10 +143,10 @@ export class LobbyService {
         if (player && player.character) {
             if (avatarPath) player.character.avatar = avatarPath;
         } else {
-            if (!avatarPath) {
-                delete lobby.pendingAvatars[socketId];
-            } else {
+            if (avatarPath) {
                 lobby.pendingAvatars[socketId] = avatarPath;
+            } else {
+                delete lobby.pendingAvatars[socketId];
             }
         }
     }

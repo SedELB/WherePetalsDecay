@@ -21,7 +21,9 @@ export class GameController {
             response.status(HttpStatus.OK).json(allGames);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            response.status(HttpStatus.NOT_FOUND).json(errorMessage);
+            const isNotFound = errorMessage.includes('aucun') || errorMessage.includes('trouvé') || errorMessage.includes('trouve');
+            const status = isNotFound ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_SERVER_ERROR;
+            response.status(status).json(errorMessage);
         }
     }
 
@@ -32,7 +34,9 @@ export class GameController {
             response.status(HttpStatus.OK).json(game);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            response.status(HttpStatus.NOT_FOUND).json(errorMessage);
+            const isNotFound = errorMessage.includes('aucun') || errorMessage.includes('trouvé') || errorMessage.includes('trouve');
+            const status = isNotFound ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_SERVER_ERROR;
+            response.status(status).json(errorMessage);
         }
     }
 
@@ -43,7 +47,9 @@ export class GameController {
             response.status(HttpStatus.OK).json(allVisibleGames);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            response.status(HttpStatus.NOT_FOUND).json(errorMessage);
+            const isNotFound = errorMessage.includes('aucun') || errorMessage.includes('trouvé') || errorMessage.includes('trouve');
+            const status = isNotFound ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_SERVER_ERROR;
+            response.status(status).json(errorMessage);
         }
     }
 
@@ -58,7 +64,9 @@ export class GameController {
             response.status(HttpStatus.CREATED).json('Le jeu a été créé avec succès !');
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            response.status(HttpStatus.BAD_REQUEST).json(errorMessage);
+            const isBadRequest = errorMessage.includes('unique') || errorMessage.includes('validation') || errorMessage.includes('failed');
+            const status = isBadRequest ? HttpStatus.BAD_REQUEST : HttpStatus.INTERNAL_SERVER_ERROR;
+            response.status(status).json(errorMessage);
         }
     }
 
@@ -76,7 +84,9 @@ export class GameController {
             response.status(HttpStatus.OK).json('Le jeu a été modifié avec succès !');
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            const status = errorMessage.includes('Aucun jeu trouvé avec cet identifiant.') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            const isNotFound = errorMessage.includes('Aucun jeu trouvé') || errorMessage.includes('aucun jeu') || errorMessage.includes('trouve');
+            const isBadRequest = errorMessage.includes('unique') || errorMessage.includes('validation') || errorMessage.includes('failed');
+            const status = isNotFound ? HttpStatus.NOT_FOUND : isBadRequest ? HttpStatus.BAD_REQUEST : HttpStatus.INTERNAL_SERVER_ERROR;
             response.status(status).json(errorMessage);
         }
     }
@@ -96,7 +106,9 @@ export class GameController {
             response.status(HttpStatus.OK).json('Le jeu a été modifié avec succès !');
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            response.status(HttpStatus.BAD_REQUEST).json(errorMessage);
+            const isNotFound = errorMessage.includes('trouvé') || errorMessage.includes('trouve');
+            const status = isNotFound ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_SERVER_ERROR;
+            response.status(status).json(errorMessage);
         }
     }
 
@@ -109,7 +121,9 @@ export class GameController {
             response.status(HttpStatus.NO_CONTENT).json('Le jeu a été supprimé avec succès !');
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            response.status(HttpStatus.NOT_FOUND).json(errorMessage);
+            const isNotFound = errorMessage.includes('trouvé') || errorMessage.includes('trouve');
+            const status = isNotFound ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_SERVER_ERROR;
+            response.status(status).json(errorMessage);
         }
     }
 }

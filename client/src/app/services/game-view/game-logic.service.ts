@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
-import { TEN } from '@app/services/game-view/game-view.constants';
+import { FORMAT_THRESHOLD } from '@app/services/game-view/game-view.constants';
 import { DIRECTION_OFFSETS } from '@common/direction';
 import { PlayerAction, TileItem, TileTexture } from '@common/enums';
 import { Lobby } from '@common/lobby';
@@ -185,7 +185,7 @@ export class GameLogicService {
 
     getTimerDisplay(countdown: number, activeId: string | null): string {
         if (!activeId) return `00:0${countdown}`;
-        return `00:${countdown < TEN ? '0' : ''}${countdown}`;
+        return `00:${countdown < FORMAT_THRESHOLD ? '0' : ''}${countdown}`;
     }
 
     buildTileClickContext(args: {

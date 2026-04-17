@@ -139,8 +139,8 @@ export class MovementService {
         if (totalCost > remaining) return;
 
         const key = this.posKey(nextPos);
-        const previousCost = bestCost.get(key);
-        if (previousCost !== undefined && previousCost <= totalCost) return;
+        const previousCost = bestCost.get(key) ?? Infinity;
+        if (previousCost <= totalCost) return;
 
         bestCost.set(key, totalCost);
         queue.push({ pos: nextPos, cost: totalCost });
