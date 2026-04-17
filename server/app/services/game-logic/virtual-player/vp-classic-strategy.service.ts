@@ -15,9 +15,6 @@ export class VPClassicStrategyService {
     @Inject() private readonly pathfindingService: VirtualPlayerPathfindingService;
     @Inject() private readonly scanner: VirtualPlayerScannerService;
 
-    // ------------
-    // Classic mode
-
     runClassicTurn(context: TurnContext, currentPos: Vec2): void {
         const { virtualPlayer } = context;
         if (virtualPlayer.virtualProfile === VirtualPlayerProfile.Aggressive) {
@@ -27,12 +24,6 @@ export class VPClassicStrategyService {
         }
     }
 
-    // Aggressive classic:
-    //   1. if Adjacent enemy : attack immediately
-    //   2. if Enemy reachable this turn : move toward enemy (opening doors), then attack
-    //   3. Enemy NOT reachable:
-    //      a. Door on path : save AP for door, move toward enemy, skip sanctuaries
-    //      b. No door on path : check sanctuary on path, then move toward enemy
     private runAggressiveClassicTurn(context: TurnContext, currentPos: Vec2): void {
         const { game, virtualPlayer, lobbyId } = context;
         const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
@@ -42,7 +33,6 @@ export class VPClassicStrategyService {
             return;
         }
 
-        // Priority 1: attack adjacent enemy
         if (this.actionService.tryAttackAdjacentEnemy(context)) return;
 
         const nearestEnemy = this.scanner.findNearestEnemy(game, virtualPlayer, currentPos, true);
@@ -51,7 +41,6 @@ export class VPClassicStrategyService {
             return;
         }
 
-        // Priority 2: enemy reachable this turn → move and attack
         if (this.actionService.isEnemyReachableThisTurn(game, virtualPlayer, currentPos, nearestEnemy.position)) {
             this.actionService.moveTowardThenActWithDoors(context, currentPos, nearestEnemy.position, () => {
                 const hasStartedCombat = this.actionService.tryAttackAdjacentEnemy(context);
@@ -60,21 +49,16 @@ export class VPClassicStrategyService {
             return;
         }
 
-        // Priority 3: enemy NOT reachable this turn
         const hasDoorOnPath = this.actionService.hasClosedDoorOnPath(game, currentPos, nearestEnemy.position);
 
-        // 3a. No door on path : try sanctuary along the way to the enemy
         if (!hasDoorOnPath && this.tryClassicPathSanctuary(context, currentPos, nearestEnemy.position)) return;
 
-        // 3b. Move toward enemy (opening doors if needed along the way)
         this.actionService.moveTowardThenActWithDoors(context, currentPos, nearestEnemy.position, () => {
             const hasStartedCombat = this.actionService.tryAttackAdjacentEnemy(context);
             if (!hasStartedCombat) this.continueTurnAfterMovement(context);
         });
     }
 
-    // Post-combat aggressive movement (AP=0):
-    //   Move toward nearest enemy, no sanctuary detours
     private runAggressivePostCombatMovement(context: TurnContext, currentPos: Vec2): void {
         const { game, virtualPlayer, lobbyId } = context;
 
@@ -103,22 +87,14 @@ export class VPClassicStrategyService {
         });
     }
 
-    // Defensive classic:
-    //   1. Cornered (no reachable tile + enemy adjacent) : end turn (never attack)
-    //   2. Flee: maximize distance from enemies
-    //   3. Door on flee path : open door and flee, NO sanctuary
-    //   4. No door on flee path : check sanctuary on path (healing > combat)
     private runDefensiveClassicTurn(context: TurnContext, currentPos: Vec2): void {
         const { game, virtualPlayer, lobbyId } = context;
         const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
 
-        // Defensive door control: if cornered near a door with an enemy behind it,
-        // close the door to block the threat before ending turn.
         if (this.tryHandleDefensiveBlockedDoor(context, currentPos)) {
             return;
         }
 
-        // Cornered: no reachable tiles and enemy adjacent → end turn (never initiate combat)
         if (this.isDefensiveFullyCornered(context, currentPos)) {
             this.actionService.endVirtualPlayerTurn(lobbyId);
             return;
@@ -133,14 +109,12 @@ export class VPClassicStrategyService {
         const hasDoorOnFleePath = this.actionService.hasClosedDoorOnPath(game, currentPos, fleeTarget);
 
         if (hasDoorOnFleePath) {
-            // Door on flee path : open door and flee, no sanctuary usage
             this.actionService.moveTowardThenActWithDoors(context, currentPos, fleeTarget, () => {
                 this.continueTurnAfterMovement(context);
             });
             return;
         }
 
-        // No door on flee path : try sanctuary along the flee path
         if (actionPoints > 0) {
             const isInjured = virtualPlayer.character.life <= this.actionService.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
             const hasCombatBonus = this.actionService.hasCombatBonus(game, virtualPlayer.socketId);
@@ -148,14 +122,11 @@ export class VPClassicStrategyService {
             if ((isInjured || !hasCombatBonus) && this.tryClassicPathSanctuary(context, currentPos, fleeTarget)) return;
         }
 
-        // Just flee
         this.actionService.moveTowardThenActWithDoors(context, currentPos, fleeTarget, () => {
             this.continueTurnAfterMovement(context);
         });
     }
 
-    // Returns true if the VP cannot take any step from its current position.
-    // Checks direct neighbors instead of Dijkstra to avoid seeing through blocking players.
     private isDefensiveFullyCornered(context: TurnContext, currentPos: Vec2): boolean {
         const { game, virtualPlayer } = context;
         const remainingMovement = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
@@ -181,7 +152,6 @@ export class VPClassicStrategyService {
         const { game, virtualPlayer, lobbyId } = context;
         const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
 
-        // If an adjacent opened door has an enemy on the other side, close it to block the threat.
         const openedThreatDoor = this.findAdjacentThreatDoor(context, currentPos, true);
         if (openedThreatDoor) {
             if (actionPoints > 0) this.actionService.tryToggleDoorAtPosition(context, openedThreatDoor, TileTexture.DoorOpened);
@@ -189,7 +159,6 @@ export class VPClassicStrategyService {
             return true;
         }
 
-        // If the only adjacent tiles are doors and a closed door has an enemy behind it, don't open it.
         if (this.hasReachableNonDoorTile(game, virtualPlayer, currentPos)) return false;
 
         const threatDoor = this.findAdjacentThreatDoor(context, currentPos, false);
@@ -246,12 +215,6 @@ export class VPClassicStrategyService {
         });
     }
 
-    // ----------
-    // Sanctuary
-
-    // Finds the first usable sanctuary along the path to a target.
-    // If injured → healing, else if no combat bonus → combat.
-    // Moves to sanctuary border, uses it, then continues.
     private tryClassicPathSanctuary(context: TurnContext, currentPos: Vec2, targetPos: Vec2): boolean {
         const { game, virtualPlayer } = context;
         const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
@@ -260,7 +223,6 @@ export class VPClassicStrategyService {
         const isInjured = virtualPlayer.character.life <= this.actionService.getMaxLife(virtualPlayer) - HEALING_SANCTUARY_MIN_MISSING_HP;
         const hasCombatBonus = this.actionService.hasCombatBonus(game, virtualPlayer.socketId);
 
-        // Try at current position first
         if (isInjured && this.actionService.tryUseSanctuaryAtCurrentPosition(context, TileItem.HealingSanctuary)) {
             this.continueTurnAfterSanctuary(context);
             return true;
@@ -270,7 +232,6 @@ export class VPClassicStrategyService {
             return true;
         }
 
-        // Find first sanctuary on path to target
         const dijkstraResult = this.pathfindingService.computeFullDijkstra(game, currentPos, true);
         const path = this.pathfindingService.reconstructPath(targetPos, dijkstraResult.predecessorKey);
         if (!path || path.length === 0) return false;
@@ -285,9 +246,6 @@ export class VPClassicStrategyService {
         return true;
     }
 
-    // ----------
-    // Turn flow
-
     private continueTurnAfterSanctuary(context: TurnContext): void {
         const remainingMovement = context.game.movementPoints.get(context.virtualPlayer.socketId) ?? 0;
         if (remainingMovement <= 0) {
@@ -295,7 +253,6 @@ export class VPClassicStrategyService {
             return;
         }
 
-        // Recheck AP after sanctuary use: if 0 enter post-combat movement phase
         const actionPoints = context.game.actionPoints.get(context.virtualPlayer.socketId) ?? 0;
         if (actionPoints <= 0 && remainingMovement > 0) {
             const currentPos = context.game.playerPositions.get(context.virtualPlayer.socketId);
@@ -342,7 +299,6 @@ export class VPClassicStrategyService {
 
         const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
 
-        // If a closed door is adjacent and AP is available, opening it is still meaningful
         if (actionPoints > 0) {
             const hasAdjacentClosedDoor = (Object.values(DIRECTION_OFFSETS) as Vec2[]).some((offset) => {
                 const pos = { x: currentPos.x + offset.x, y: currentPos.y + offset.y };

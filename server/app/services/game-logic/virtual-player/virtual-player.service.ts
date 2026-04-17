@@ -4,7 +4,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { ActiveGame } from '@app/services/game-logic/core/active-game.interface';
 import { GameLogicService } from '@app/services/game-logic/core/game-logic.service';
-import { StartVirtualPlayerCombat, TurnContext, VPActionService } from './vp-action.service';
+import { OnGameEnded, StartVirtualPlayerCombat, TurnContext, VPActionService } from './vp-action.service';
 import { VPClassicStrategyService } from './vp-classic-strategy.service';
 import { VPCtfStrategyService } from './vp-ctf-strategy.service';
 
@@ -34,7 +34,7 @@ export class VirtualPlayerService {
         lobbyId: string,
         socketId: string,
         startCombat: StartVirtualPlayerCombat,
-        onGameEnded: (lobbyId: string, winnerId: string) => void,
+        onGameEnded: OnGameEnded,
     ): void {
         const game = this.gameLogicService.getActiveGame(lobbyId);
         const player = game?.lobby.players.find((p) => p.socketId === socketId);
@@ -42,13 +42,12 @@ export class VirtualPlayerService {
         this.executeTurn(server, game, player, startCombat, onGameEnded);
     }
 
-    // Called by the gateway the moment a VP's turn starts
     executeTurn(
         server: Server,
         game: ActiveGame,
         virtualPlayer: Player,
         startCombat: StartVirtualPlayerCombat,
-        onGameEnded: (lobbyId: string, winnerId: string) => void,
+        onGameEnded: OnGameEnded,
     ): void {
         const delay = this.actionService.getRandomTurnStartDelay();
         const context: TurnContext = {
@@ -58,7 +57,6 @@ export class VirtualPlayerService {
         setTimeout(() => this.runDecisionCycle(context), delay);
     }
 
-    // Decision cycle
     private runDecisionCycle(context: TurnContext): void {
         const { game, virtualPlayer, lobbyId } = context;
         if (!this.gameLogicService.isPlayerTurn(lobbyId, virtualPlayer.socketId)) return;

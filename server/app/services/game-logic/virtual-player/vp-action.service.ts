@@ -2,48 +2,28 @@ import { JournalService } from '@app/services/journal/journal.service';
 import { Posture } from '@common/character';
 import { BASE_STATS } from '@common/constants/character.constants';
 import { DIRECTION_OFFSETS } from '@common/direction';
-import { GameMode, PostureType, SanctuaryMode, TileItem, TileTexture, VirtualPlayerProfile } from '@common/enums';
+import { GameMode, SanctuaryMode, TileItem, TileTexture, VirtualPlayerProfile } from '@common/enums';
 import { Player } from '@common/player';
 import { SanctuaryType } from '@common/tile';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Inject, Injectable } from '@nestjs/common';
-import { Server } from 'socket.io';
 import { ActiveGame } from '@app/services/game-logic/core/active-game.interface';
 import { GameLogicService } from '@app/services/game-logic/core/game-logic.service';
+import { TurnContext, StartVirtualPlayerCombat, OnGameEnded } from '@app/interfaces/virtual-player.interface';
 import { VirtualPlayerPathfindingService } from './virtual-player-pathfinding.service';
 import { VirtualPlayerScannerService } from './virtual-player-scanner.service';
+import {
+    VP_ACTION_DELAY_MIN_MS, VP_ACTION_DELAY_MAX_MS,
+    VP_TURN_START_DELAY_MIN_MS, VP_TURN_START_DELAY_MAX_MS,
+    VP_STEP_DELAY_MIN_MS, VP_STEP_DELAY_MAX_MS,
+    HEALING_SANCTUARY_MIN_MISSING_HP,
+    AGGRESSIVE_POSTURE, DEFENSIVE_POSTURE,
+    EVENT_PLAYER_MOVED, EVENT_DOOR_TOGGLED, EVENT_ACTION_POINTS,
+    EVENT_SANCTUARY_USED, EVENT_PLAYER_STATS_UPDATE,
+} from './vp.constants';
 
-const VP_ACTION_DELAY_MIN_MS = 1000;
-const VP_ACTION_DELAY_MAX_MS = 2500;
-const VP_TURN_START_DELAY_MIN_MS = 3000;
-const VP_TURN_START_DELAY_MAX_MS = 5500;
-const VP_STEP_DELAY_MIN_MS = 200;
-const VP_STEP_DELAY_MAX_MS = 500;
-export const HEALING_SANCTUARY_MIN_MISSING_HP = 2;
-
-const AGGRESSIVE_POSTURE: Posture = { type: PostureType.Attack, bonus: 2 };
-const DEFENSIVE_POSTURE: Posture = { type: PostureType.Defense, bonus: 2 };
-
-const EVENT_PLAYER_MOVED = 'playerMoved';
-const EVENT_DOOR_TOGGLED = 'doorToggled';
-const EVENT_ACTION_POINTS = 'actionPoints';
-const EVENT_SANCTUARY_USED = 'sanctuaryUsed';
-const EVENT_PLAYER_STATS_UPDATE = 'playerStatsUpdate';
-
-// Function used by VirtualPlayerService to ask the gateway to start VP combat
-export type StartVirtualPlayerCombat = (lobbyId: string, attackerId: string, defenderId: string) => void;
-
-// Bundles the objects shared across every helper called during one VP turn
-export interface TurnContext {
-    server: Server;
-    game: ActiveGame;
-    virtualPlayer: Player;
-    lobbyId: string;
-    startCombat: StartVirtualPlayerCombat;
-    onGameEnded: (lobbyId: string, winnerId: string) => void;
-    continueDecisionCycle: () => void;
-}
+export { TurnContext, StartVirtualPlayerCombat, OnGameEnded, HEALING_SANCTUARY_MIN_MISSING_HP };
 
 @Injectable()
 export class VPActionService {
@@ -52,10 +32,6 @@ export class VPActionService {
     @Inject() private readonly scanner: VirtualPlayerScannerService;
     @Inject() private readonly journalService: JournalService;
 
-    // --------
-    // Movement
-
-    // Door aware: targeting enemies behind closed doors & depends on AP
     moveTowardThenActWithDoors(context: TurnContext, currentPos: Vec2, targetPos: Vec2, onDone: () => void): void {
         const { game, virtualPlayer } = context;
         const actionPoints = game.actionPoints.get(virtualPlayer.socketId) ?? 0;
@@ -93,16 +69,12 @@ export class VPActionService {
         const firstStep = fullPath[0];
         const firstTile = firstStep ? context.game.lobby.game.grid[firstStep.y]?.[firstStep.x] : null;
 
-        // If the VP is adjacent to a closed door and has AP but no movement left,
-        // open the door before ending turn.
         if (canOpenDoorsNow && remainingMovement <= 0 && firstTile?.type === TileTexture.DoorClosed) {
             this.tryToggleDoorAtPosition(context, firstStep, TileTexture.DoorClosed);
             onDone();
             return;
         }
 
-        // VP is already in front of a closed door with no AP to open it:
-        // no further progress is possible this turn, so end turn now.
         if (!canOpenDoorsNow && firstTile?.type === TileTexture.DoorClosed) {
             this.endVirtualPlayerTurn(context.lobbyId);
             return;
@@ -111,11 +83,9 @@ export class VPActionService {
         onDone();
     }
 
-    // Recursively executes one movement step per tick, broadcasting each move to clients.
     private stepAlongPath(context: TurnContext, path: Vec2[], stepIndex: number, onDone: () => void): void {
         const { server, game, virtualPlayer, lobbyId } = context;
 
-        // Abort if the turn was skipped (debug mode)
         if (!this.gameLogicService.isPlayerTurn(lobbyId, virtualPlayer.socketId)) return;
 
         if (stepIndex >= path.length) {
@@ -125,7 +95,6 @@ export class VPActionService {
 
         const targetStep = path[stepIndex];
 
-        // If the next tile is a closed door and the VP has an AP, open it before moving.
         const tileAtTarget = game.lobby.game.grid[targetStep.y]?.[targetStep.x];
         if (tileAtTarget?.type === TileTexture.DoorClosed) {
             const opened = this.tryToggleDoorAtPosition(context, targetStep, TileTexture.DoorClosed);
@@ -133,13 +102,12 @@ export class VPActionService {
                 onDone();
                 return;
             }
-            // Door opened: continue to the next step (we land on the opened door)
             setTimeout(() => this.stepAlongPath(context, path, stepIndex, onDone), this.getRandomActionDelay());
             return;
         }
 
         if (!this.applyMovementStep(game, virtualPlayer, targetStep)) {
-            onDone(); // Tile became blocked.
+            onDone();
             return;
         }
 
@@ -164,11 +132,6 @@ export class VPActionService {
         );
     }
 
-    // --------
-    // Doors
-
-    // Toggles a door (open or close) adjacent to the VP's current position if it matches expectedType
-    // Returns true on success, false if the VP has no AP or the door can't be toggled
     tryToggleDoorAtPosition(context: TurnContext, doorPos: Vec2, expectedType: TileTexture): boolean {
         const { server, game, virtualPlayer, lobbyId } = context;
 
@@ -192,7 +155,6 @@ export class VPActionService {
         return true;
     }
 
-    // Validates a move and syncs game state if valid. Returns 'true' on success.
     private applyMovementStep(game: ActiveGame, virtualPlayer: Player, targetPos: Vec2): boolean {
         const tile = game.lobby.game.grid[targetPos.y]?.[targetPos.x];
         if (!tile) return false;
@@ -213,7 +175,6 @@ export class VPActionService {
         return true;
     }
 
-    // Picks up the CTF flag if the VP stepped onto it. Returns 'true' if just taken
     private tryPickUpFlag(game: ActiveGame, virtualPlayer: Player, pos: Vec2): boolean {
         if (game.lobby.game.gameMode !== GameMode.Ctf) return false;
         if (game.lobby.game.grid[pos.y]?.[pos.x]?.item !== TileItem.Flag) return false;
@@ -224,11 +185,6 @@ export class VPActionService {
         return true;
     }
 
-    // ------
-    // Combat
-
-    // Picks the best adjacent opponent and delegates combat to the gateway.
-    // Returns 'true' if combat was initiated.
     tryAttackAdjacentEnemy(context: TurnContext): boolean {
         const { game, virtualPlayer, lobbyId, startCombat } = context;
 
@@ -243,15 +199,12 @@ export class VPActionService {
 
         const target = this.selectBestAttackTarget(adjacentEnemies, game, virtualPlayer);
 
-        // Pre-select the VP's posture before combat so CombatService uses the right bonus.
         virtualPlayer.character.bonusPosture = this.postureForProfile(virtualPlayer.virtualProfile);
 
         startCombat(lobbyId, virtualPlayer.socketId, target.socketId);
         return true;
     }
 
-    // In CTF aggressive mode, prefers attacking the enemy carrying the flag
-    // Otherwise targets the enemy with the least remaining HP
     private selectBestAttackTarget(candidates: Player[], game: ActiveGame, virtualPlayer: Player): Player {
         const preferFlagCarrier =
             game.lobby.game.gameMode === GameMode.Ctf && virtualPlayer.virtualProfile === VirtualPlayerProfile.Aggressive;
@@ -263,9 +216,6 @@ export class VPActionService {
 
         return candidates.reduce((weakest, current) => (current.character.life < weakest.character.life ? current : weakest));
     }
-
-    // ----------
-    // Sanctuary
 
     tryUseSanctuaryAtCurrentPosition(context: TurnContext, sanctuaryType: SanctuaryType): boolean {
         const { game, virtualPlayer, lobbyId } = context;
@@ -342,7 +292,6 @@ export class VPActionService {
         return null;
     }
 
-    // Walks along 'path' and returns the first tile (reachable within current MP) that borders a usable sanctuary
     findFirstReachableSanctuaryOnPath(
         context: TurnContext,
         path: Vec2[],
@@ -363,7 +312,6 @@ export class VPActionService {
             accumulatedCost += moveCost;
             if (accumulatedCost > remainingMp) break;
 
-            // Skip door tiles and occupied tiles
             if (tile.type === TileTexture.DoorClosed || tile.type === TileTexture.DoorOpened) continue;
             if (this.pathfindingService.isTileOccupiedByAnotherPlayer(game, step, virtualPlayer.socketId)) continue;
 
@@ -378,9 +326,6 @@ export class VPActionService {
         return null;
     }
 
-    // -------
-    // Helpers
-
     postureForProfile(profile: VirtualPlayerProfile): Posture {
         return profile === VirtualPlayerProfile.Aggressive ? AGGRESSIVE_POSTURE : DEFENSIVE_POSTURE;
     }
@@ -389,7 +334,6 @@ export class VPActionService {
         return player.character.lifeBonus ? BASE_STATS.life + BASE_STATS.bonus : BASE_STATS.life;
     }
 
-    // Returns true if the VP already has an active combat sanctuary bonus
     hasCombatBonus(game: ActiveGame, socketId: string): boolean {
         return game.playerCombatBonuses.has(socketId);
     }
@@ -401,7 +345,6 @@ export class VPActionService {
         return path.some((step) => game.lobby.game.grid[step.y]?.[step.x]?.type === TileTexture.DoorClosed);
     }
 
-    // Returns true if the VP can reach a tile adjacent to the enemy this turn
     isEnemyReachableThisTurn(game: ActiveGame, virtualPlayer: Player, currentPos: Vec2, enemyPos: Vec2): boolean {
         const remainingMp = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
         const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, currentPos, true);
@@ -421,14 +364,10 @@ export class VPActionService {
         });
     }
 
-    // Standard check: AP is needed if there's a closed door on the path or an enemy on the target tile
     ctfPathNeedsAp(game: ActiveGame, virtualPlayer: Player, currentPos: Vec2, targetPos: Vec2): boolean {
         return this.hasClosedDoorOnPath(game, currentPos, targetPos)
             || this.isEnemyOnTile(game, virtualPlayer, targetPos);
     }
-
-    // -------------------------------------------
-    // Statistics (MovementService.trackTileVisit)
 
     private trackTileVisitStats(game: ActiveGame, socketId: string, pos: Vec2): void {
         const tile = game.lobby.game.grid[pos.y]?.[pos.x];
@@ -448,9 +387,6 @@ export class VPActionService {
         if (tile.type === 'doorOpened') game.doorsInteracted.add(key);
         if (tile.item === TileItem.Flag) game.flagHolders.add(socketId);
     }
-
-    // --------
-    // Turn end & Random Utilities
 
     endVirtualPlayerTurn(lobbyId: string): void {
         setTimeout(() => this.gameLogicService.endTurn(lobbyId), this.getRandomActionDelay());

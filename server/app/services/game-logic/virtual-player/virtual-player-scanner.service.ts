@@ -7,6 +7,7 @@ import { Vec2 } from '@common/vec2';
 import { Inject, Injectable } from '@nestjs/common';
 import { ActiveGame } from '@app/services/game-logic/core/active-game.interface';
 import { VirtualPlayerPathfindingService } from './virtual-player-pathfinding.service';
+import { SanctuarySearchOptions } from './virtual-player-pathfinding.interface';
 
 @Injectable()
 export class VirtualPlayerScannerService {
@@ -33,15 +34,10 @@ export class VirtualPlayerScannerService {
         if (game.lobby.game.gameMode !== GameMode.Ctf) return true;
         const vpInTeamA = game.lobby.teamA.some((p) => p.socketId === virtualPlayer.socketId);
         const candidateInTeamA = game.lobby.teamA.some((p) => p.socketId === candidate.socketId);
-        return vpInTeamA !== candidateInTeamA; // Different team = opponent
+        return vpInTeamA !== candidateInTeamA;
     }
 
-    findNearestEnemy(
-        game: ActiveGame,
-        virtualPlayer: Player,
-        vpPos: Vec2,
-        withDoors = false,
-    ): { player: Player; position: Vec2 } | null {
+    findNearestEnemy(game: ActiveGame, virtualPlayer: Player, vpPos: Vec2, withDoors = false): { player: Player; position: Vec2 } | null {
         const { costToPosition } = this.pathfindingService.computeFullDijkstra(game, vpPos, withDoors);
         let lowestCost = Infinity;
         let result: { player: Player; position: Vec2 } | null = null;
@@ -89,7 +85,6 @@ export class VirtualPlayerScannerService {
 
         if (opponentPositions.length === 0) return null;
 
-        // Evaluate staying in the current position
         reachableTiles.push(vpPos);
 
         let bestTile: Vec2 | null = null;
@@ -105,22 +100,12 @@ export class VirtualPlayerScannerService {
             }
         }
 
-        // If staying put is the safest option, no need to flee
         if (bestTile && bestTile.x === vpPos.x && bestTile.y === vpPos.y) return null;
 
         return bestTile;
     }
 
-    findNearestTileAdjacentToSanctuary(
-        game: ActiveGame,
-        virtualPlayer: Player,
-        vpPos: Vec2,
-        options: {
-            sanctuaryType: SanctuaryType;
-            reachableThisTurn?: boolean;
-            precomputedCostToPosition?: Map<string, number>;
-        },
-    ): Vec2 | null {
+    findNearestTileAdjacentToSanctuary(game: ActiveGame, virtualPlayer: Player, vpPos: Vec2, options: SanctuarySearchOptions): Vec2 | null {
         const { sanctuaryType, reachableThisTurn = false, precomputedCostToPosition } = options;
         const remainingMvtPts = game.movementPoints.get(virtualPlayer.socketId) ?? 0;
         const costToPosition = precomputedCostToPosition ?? this.pathfindingService.computeFullDijkstra(game, vpPos).costToPosition;
@@ -140,11 +125,7 @@ export class VirtualPlayerScannerService {
         return nearestPos;
     }
 
-    private getSanctuaryBorderPositions(
-        game: ActiveGame,
-        virtualPlayer: Player,
-        sanctuaryType: SanctuaryType,
-    ): Map<string, Vec2> {
+    private getSanctuaryBorderPositions(game: ActiveGame, virtualPlayer: Player, sanctuaryType: SanctuaryType): Map<string, Vec2> {
         const candidatesPos = new Map<string, Vec2>();
         const { grid } = game.lobby.game;
 

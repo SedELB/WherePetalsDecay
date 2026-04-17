@@ -4,27 +4,13 @@ import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
 import { ActiveGame } from '@app/services/game-logic/core/active-game.interface';
+import { DijkstraNode, DijkstraResult } from './virtual-player-pathfinding.interface';
 
-interface DijkstraNode {
-    position: Vec2;
-    cumulativeCost: number;
-}
-
-export interface DijkstraResult {
-    // Minimum cost to reach each position from the start (without impassable tiles)
-    costToPosition: Map<string, number>;
-    // Maps each reachable position key to the key of the tile that precedes it on the shortest path
-    predecessorKey: Map<string, string | null>;
-}
+export { DijkstraResult };
 
 @Injectable()
 export class VirtualPlayerPathfindingService {
 
-    // Runs Dijkstra from 'startPos' across the game grid.
-    // withDoors = true : closed doors are treated as cost 1 tile
-    // withDoors = false : closed doors are impassable
-    // blockPlayersExcept : when set, tiles occupied by other players are treated as impassable
-    //                      (the given socketId is excluded from blocking)
     computeFullDijkstra(game: ActiveGame, startPos: Vec2, withDoors = false, blockPlayersExcept?: string): DijkstraResult {
         const costToPosition = new Map<string, number>();
         const predecessorKey = new Map<string, string | null>();
@@ -75,8 +61,6 @@ export class VirtualPlayerPathfindingService {
     }
 
 
-    // Step list from 'startPos' to 'targetPos' without the start position
-    // Returns null when 'targetPos' is unreachable
     reconstructPath(targetPos: Vec2, predecessorKey: Map<string, string | null>): Vec2[] | null {
         const targetKey = this.positionKey(targetPos);
         if (!predecessorKey.has(targetKey)) return null;
@@ -96,8 +80,6 @@ export class VirtualPlayerPathfindingService {
     }
 
 
-    // Walks step by step and returns the last position reachable within
-    // 'remainingMovementPoints' that is not occupied by another player
     findFurthestReachablePositionOnPath(
         game: ActiveGame,
         path: Vec2[],
@@ -127,8 +109,6 @@ export class VirtualPlayerPathfindingService {
     }
 
 
-    // Returns all positions reachable within 'remainingMovementPoints' that are not
-    // occupied by another player (excluding 'excludedSocketId').
     getReachableTilesWithinBudget(
         game: ActiveGame,
         startPos: Vec2,
