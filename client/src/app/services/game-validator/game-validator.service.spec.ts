@@ -385,8 +385,8 @@ describe('GameValidatorService', () => {
     describe('validateRequiredObjectCounts', () => {
         it('should report all missing item types for an empty placedObjects list', () => {
             const errors = internal.validateRequiredObjectCounts(buildDraft({ placedObjects: [] }));
-            expect(errors.some((e) => e.includes('spawn point'))).toBe(true);
-            expect(errors.some((e) => e.includes('healing sanctuary'))).toBe(true);
+            expect(errors.some((e) => e.includes("point(s) d'apparition"))).toBe(true);
+            expect(errors.some((e) => e.includes('sanctuaire(s) de soin'))).toBe(false);
         });
 
         it('should flag missing flag for CTF and not require one for Classic', () => {
@@ -398,8 +398,8 @@ describe('GameValidatorService', () => {
                 mode: GameMode.Classic,
                 placedObjects: buildValidObjects(GameMode.Classic),
             }));
-            expect(ctf.some((e) => e.includes('On attend 1') && e.includes('flag'))).toBe(true);
-            expect(classic.some((e) => e.includes('flag'))).toBe(false);
+            expect(ctf.some((e) => e.includes('On attend 1') && e.includes('drapeau(x)'))).toBe(true);
+            expect(classic.some((e) => e.includes('drapeau(x)'))).toBe(false);
         });
 
         it('should produce no count errors for a fully-valid draft', () => {
@@ -411,11 +411,11 @@ describe('GameValidatorService', () => {
 
     describe('getItemName', () => {
         it('should return correct human-readable labels for all TileItem types and fallback for unknown', () => {
-            expect(internal.getItemName(TileItem.Spawn)).toBe('spawn point');
-            expect(internal.getItemName(TileItem.Flag)).toBe('flag');
-            expect(internal.getItemName(TileItem.HealingSanctuary)).toBe('healing sanctuary');
-            expect(internal.getItemName(TileItem.CombatSanctuary)).toBe('combat sanctuary');
-            expect(internal.getItemName('unknown' as TileItem)).toBe('item');
+            expect(internal.getItemName(TileItem.Spawn)).toBe("point(s) d'apparition");
+            expect(internal.getItemName(TileItem.Flag)).toBe('drapeau(x)');
+            expect(internal.getItemName(TileItem.HealingSanctuary)).toBe('sanctuaire(s) de soin');
+            expect(internal.getItemName(TileItem.CombatSanctuary)).toBe('sanctuaire(s) de combat');
+            expect(internal.getItemName('unknown' as TileItem)).toBe('objet(s)');
         });
     });
 

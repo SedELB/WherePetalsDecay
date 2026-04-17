@@ -183,15 +183,11 @@ export class GameValidatorService {
             const isSanctuary = type === TileItem.HealingSanctuary || type === TileItem.CombatSanctuary;
 
             if (isSanctuary) {
-                if (actual !== required) {
-                    if (actual > required) {
-                        errors.push(`Trop de ${itemName}s placés (${actual}/${required} max)`);
-                    } else {
-                        errors.push(`On attend ${required} ${itemName}(s)`);
-                    }
+                if (actual > required) {
+                    errors.push(`Trop de ${itemName} placés (${actual}/${required} max)`);
                 }
             } else if (actual !== required) {
-                errors.push(`On attend ${required} ${itemName}(s)`);
+                errors.push(`On attend ${required} ${itemName}`);
             }
         }
 
@@ -233,15 +229,15 @@ export class GameValidatorService {
     private getItemName(type: TileItem): string {
         switch (type) {
             case TileItem.Spawn:
-                return 'spawn point';
+                return "point(s) d'apparition";
             case TileItem.Flag:
-                return 'flag';
+                return 'drapeau(x)';
             case TileItem.HealingSanctuary:
-                return 'healing sanctuary';
+                return 'sanctuaire(s) de soin';
             case TileItem.CombatSanctuary:
-                return 'combat sanctuary';
+                return 'sanctuaire(s) de combat';
             default:
-                return 'item';
+                return 'objet(s)';
         }
     }
 
