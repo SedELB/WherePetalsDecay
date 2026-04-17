@@ -1,12 +1,12 @@
 import { GameLogicService } from '@app/services/game-logic/core/game-logic.service';
 import { PlayerType } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Server } from 'socket.io';
 
 @Injectable()
 export class GameTurnSyncService {
-    constructor(private readonly gameLogicService: GameLogicService) {}
+    @Inject() private readonly gameLogicService: GameLogicService;
 
     syncPlayerTurnState(server: Server, lobbyId: string, socketId: string): void {
         this.emitMovementPoints(server, lobbyId, socketId);

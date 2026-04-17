@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Player } from '@common/player';
 import { GameMode, VirtualPlayerProfile } from '@common/enums';
 import { ActiveGame } from '@app/services/game-logic/core/active-game.interface';
@@ -9,7 +9,7 @@ import { Posture } from '@common/character';
 
 @Injectable()
 export class VirtualPlayerCombatService {
-    constructor(readonly scanner: VirtualPlayerScannerService) {}
+    @Inject() readonly scanner: VirtualPlayerScannerService;
 
     /**
      * Picks the best adjacent opponent and initiates combat.

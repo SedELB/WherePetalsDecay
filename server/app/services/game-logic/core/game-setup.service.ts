@@ -4,7 +4,7 @@ import { GameStats } from '@common/interfaces/game-stats';
 import { SanctuaryType } from '@common/tile';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ActiveGame } from './active-game.interface';
 import { GameStatsService } from './game-stats.service';
 
@@ -12,7 +12,7 @@ const RANDOM_THRESHOLD = 0.5;
 
 @Injectable()
 export class GameSetupService {
-    constructor(private readonly gameStatsService: GameStatsService) {}
+    @Inject() private readonly gameStatsService: GameStatsService;
 
     buildGameStats(game: ActiveGame): GameStats {
         return this.gameStatsService.buildGameStats(game);

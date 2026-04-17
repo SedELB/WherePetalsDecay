@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Vec2 } from '@common/vec2';
 import { ActiveGame } from '@app/services/game-logic/core/active-game.interface';
 import { Player } from '@common/player';
@@ -13,11 +13,9 @@ import { SanctuaryType } from '@common/tile';
 
 @Injectable()
 export class VirtualPlayerSanctuaryService {
-    constructor(
-        private readonly gameLogicService: GameLogicService,
-        private readonly scanner: VirtualPlayerScannerService,
-        private readonly pathfindingService: VirtualPlayerPathfindingService,
-    ) {}
+    @Inject() private readonly gameLogicService: GameLogicService;
+    @Inject() private readonly scanner: VirtualPlayerScannerService;
+    @Inject() private readonly pathfindingService: VirtualPlayerPathfindingService;
 
     /**
      * Attempts to use a sanctuary at the VP's current position.

@@ -1,5 +1,6 @@
 import { VP_CONSTANTS } from '@app/constants/game-logic.constants';
 import { CombatSession } from '@app/interfaces/combat.interface';
+import { GameOverCallback } from '@app/interfaces/game-logic.interface';
 import { VirtualPlayerService } from '@app/services/game-logic/virtual-player/virtual-player.service';
 import { JournalService } from '@app/services/journal/journal.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
@@ -27,17 +28,15 @@ export class CombatFlowService {
     @Inject(LobbyService) private readonly lobbyService: LobbyService;
     @Inject(JournalService) private readonly journalService: JournalService;
 
-    constructor(
-        @Inject(GameLogicService) private readonly gameLogicService: GameLogicService,
-        private readonly combatState: CombatStateService,
-        @Inject(VirtualPlayerService) private readonly virtualPlayerService: VirtualPlayerService,
-    ) {}
+    @Inject(GameLogicService) private readonly gameLogicService: GameLogicService;
+    @Inject() private readonly combatState: CombatStateService;
+    @Inject(VirtualPlayerService) private readonly virtualPlayerService: VirtualPlayerService;
 
     private server: Server;
     private syncService: GameTurnSyncService;
-    private onGameOverCallback?: (lobbyId: string, winnerId: string | null) => void;
+    private onGameOverCallback?: GameOverCallback;
 
-    initialize(server: Server, syncService: GameTurnSyncService, onGameOverCallback?: (lobbyId: string, winnerId: string | null) => void): void {
+    initialize(server: Server, syncService: GameTurnSyncService, onGameOverCallback?: GameOverCallback): void {
         this.server = server;
         this.syncService = syncService;
         this.onGameOverCallback = onGameOverCallback;

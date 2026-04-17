@@ -3,18 +3,16 @@ import { GameCatalogGateway } from '@app/gateways/game-catalog/game-catalog.gate
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
 import { GameService } from '@app/services/game/game.service';
-import { Body, Controller, Delete, Get, HttpStatus, Param, Patch, Post, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpStatus, Inject, Param, Patch, Post, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 
 @ApiTags('Games')
 @Controller('game')
 export class GameController {
-    constructor(
-        private readonly gameService: GameService,
-        private readonly adminGateway: AdminGateway,
-        private readonly gameCatalogGateway: GameCatalogGateway,
-    ) {}
+    @Inject() private readonly gameService: GameService;
+    @Inject() private readonly adminGateway: AdminGateway;
+    @Inject() private readonly gameCatalogGateway: GameCatalogGateway;
 
     @Get('/allGames')
     async allGames(@Res() response: Response) {

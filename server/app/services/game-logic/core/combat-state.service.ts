@@ -1,7 +1,7 @@
 import { CombatSession } from '@app/interfaces/combat.interface';
 import { Posture } from '@common/character';
 import { DEFAULT_POSTURE } from '@common/constants/combat-timeline.constants';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 
 @Injectable()
 export class CombatStateService {
@@ -9,7 +9,7 @@ export class CombatStateService {
     private readonly combatSessions = new Map<string, CombatSession>();
     private readonly pendingPostCombatTurnResumes = new Map<string, ReturnType<typeof setTimeout>>();
 
-    constructor(private readonly logger: Logger) {}
+    @Inject(Logger) private readonly logger: Logger;
 
     incrementFightCounter(): number {
         this.fightCounter += 1;

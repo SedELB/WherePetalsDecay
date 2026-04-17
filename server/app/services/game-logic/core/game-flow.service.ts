@@ -18,12 +18,10 @@ export class GameFlowService {
     private readonly endGamePlayers = new Map<string, Set<string>>();
     private server: Server;
 
-    constructor(
-        private readonly gameLogicService: GameLogicService,
-        private readonly combatFlowService: CombatFlowService,
-        private readonly combatState: CombatStateService,
-        private readonly gameTurnSyncService: GameTurnSyncService,
-    ) {}
+    @Inject() private readonly gameLogicService: GameLogicService;
+    @Inject() private readonly combatFlowService: CombatFlowService;
+    @Inject() private readonly combatState: CombatStateService;
+    @Inject() private readonly gameTurnSyncService: GameTurnSyncService;
 
     initialize(server: Server): void {
         this.server = server;

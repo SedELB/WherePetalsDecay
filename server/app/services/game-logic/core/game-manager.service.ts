@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Game } from '@common/game';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
@@ -8,10 +8,8 @@ import { GameSetupService } from './game-setup.service';
 
 @Injectable()
 export class GameManagerService {
-    constructor(
-        private readonly turnService: TurnService,
-        private readonly gameSetupService: GameSetupService,
-    ) {}
+    @Inject() private readonly turnService: TurnService;
+    @Inject() private readonly gameSetupService: GameSetupService;
 
     setCallbacks(callbacks: TurnCallbacks): void {
         this.turnService.setCallbacks(callbacks);

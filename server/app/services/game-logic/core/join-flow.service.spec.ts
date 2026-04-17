@@ -1,4 +1,5 @@
-import { JoinFlowService } from '@app/services/join-flow.service';
+import { JoinFlowService } from '@app/services/game-logic/core/join-flow.service';
+import { GameLogicService } from '@app/services/game-logic/core/game-logic.service';
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { DiceType, GameMode, PlayerType, VirtualPlayerProfile } from '@common/enums';
 import { Game } from '@common/game';

@@ -9,18 +9,16 @@ import {
 import { LobbyService } from '@app/services/lobby/lobby.service';
 import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 
 const LOBBIES_REFRESH_DELAY_MS = 0;
 
 @Injectable()
 export class JoinFlowService {
-    constructor(
-        private readonly logger: Logger,
-        private readonly lobbyService: LobbyService,
-        private readonly gameLogicService: GameLogicService,
-    ) {}
+    @Inject(Logger) private readonly logger: Logger;
+    @Inject() private readonly lobbyService: LobbyService;
+    @Inject() private readonly gameLogicService: GameLogicService;
 
     emitAvailableLobbies(server: Server): void {
         server.emit(JoinGameEvents.UpdatedLobbiesList, this.lobbyService.getAvailableLobbies());

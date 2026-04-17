@@ -7,7 +7,7 @@ import { GameStats } from '@common/interfaces/game-stats';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { AbandonResult, AbandonService } from './abandon.service';
 import { ActiveGame, TurnCallbacks } from './active-game.interface';
 import { CTFService } from './ctf.service';
@@ -20,16 +20,12 @@ const INITIAL_WINS_COUNT = 0;
 
 @Injectable()
 export class GameLogicService {
-    private activeGames: Map<string, ActiveGame>;
+    private activeGames: Map<string, ActiveGame> = new Map();
 
-    constructor(
-        private readonly manager: GameManagerService,
-        private readonly action: GameActionService,
-        private readonly ctfService: CTFService,
-        private readonly abandonService: AbandonService,
-    ) {
-        this.activeGames = new Map<string, ActiveGame>();
-    }
+    @Inject() private readonly manager: GameManagerService;
+    @Inject() private readonly action: GameActionService;
+    @Inject() private readonly ctfService: CTFService;
+    @Inject() private readonly abandonService: AbandonService;
 
     setCallbacks(callbacks: TurnCallbacks): void {
         this.manager.setCallbacks(callbacks);

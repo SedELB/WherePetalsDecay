@@ -1,12 +1,12 @@
 import { JournalService } from '@app/services/journal/journal.service';
 import { JournalEntry } from '@common/journal-entry';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 
 @Injectable()
 export class JournalBroadcastService {
-    constructor(private readonly journalService: JournalService) {}
+    @Inject() private readonly journalService: JournalService;
 
     initialize(server: Server): void {
         this.journalService.setOnEntryAdded((lobbyId: string, entry: JournalEntry) => {

@@ -4,14 +4,14 @@ import { Player } from '@common/player';
 import { SanctuaryType } from '@common/tile';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ActiveGame } from '@app/services/game-logic/core/active-game.interface';
 import { NearestEnemyResult } from '@app/interfaces/game-logic.interface';
 import { VirtualPlayerPathfindingService } from './virtual-player-pathfinding.service';
 
 @Injectable()
 export class VirtualPlayerScannerService {
-    constructor(private readonly pathfindingService: VirtualPlayerPathfindingService) {}
+    @Inject() private readonly pathfindingService: VirtualPlayerPathfindingService;
 
     getAdjacentOpponents(game: ActiveGame, virtualPlayer: Player, vpPos: Vec2): Player[] {
         const adjacentPositions = Object.values(DIRECTION_OFFSETS).map((offset) => ({

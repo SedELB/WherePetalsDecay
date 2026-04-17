@@ -3,7 +3,7 @@ import { TileItem, TileTexture } from '@common/enums';
 import { TILE_COSTS } from '@common/tile-costs';
 import { Vec2 } from '@common/vec2';
 import { Injectable } from '@nestjs/common';
-import { ActiveGame } from '../core/active-game.interface';
+import { ActiveGame } from '@app/services/game-logic/core/active-game.interface';
 
 interface DijkstraNode {
     position: Vec2;

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Vec2 } from '@common/vec2';
 import { ActiveGame } from '@app/services/game-logic/core/active-game.interface';
 import { Player } from '@common/player';
@@ -11,10 +11,8 @@ import { TurnContext } from '@app/interfaces/virtual-player.interface';
 
 @Injectable()
 export class VirtualPlayerMovementService {
-    constructor(
-        private readonly pathfindingService: VirtualPlayerPathfindingService,
-        private readonly gameLogicService: GameLogicService,
-    ) {}
+    @Inject() private readonly pathfindingService: VirtualPlayerPathfindingService;
+    @Inject() private readonly gameLogicService: GameLogicService;
 
     moveTowardThenActWithDoors(
         context: TurnContext,

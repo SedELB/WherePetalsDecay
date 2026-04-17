@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { GameMode, PlayerType } from '@common/enums';
@@ -21,7 +21,7 @@ export interface AbandonResult {
 
 @Injectable()
 export class AbandonService {
-    constructor(private readonly ctfService: CTFService) {}
+    @Inject() private readonly ctfService: CTFService;
 
     abandonPlayer(game: ActiveGame, socketId: string): Lobby | undefined {
         const player = game.lobby.players.find((p) => p.socketId === socketId);

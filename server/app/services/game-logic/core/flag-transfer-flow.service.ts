@@ -5,17 +5,15 @@ import { GameTurnSyncService } from '@app/services/game-logic/core/game-turn-syn
 import { JournalService } from '@app/services/journal/journal.service';
 import { PlayerType } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 
 @Injectable()
 export class FlagTransferFlowService {
-    constructor(
-        private readonly combatState: CombatStateService,
-        private readonly gameLogicService: GameLogicService,
-        private readonly gameTurnSyncService: GameTurnSyncService,
-        private readonly journalService: JournalService,
-    ) {}
+    @Inject() private readonly combatState: CombatStateService;
+    @Inject() private readonly gameLogicService: GameLogicService;
+    @Inject() private readonly gameTurnSyncService: GameTurnSyncService;
+    @Inject() private readonly journalService: JournalService;
 
     giveFlag(server: Server, socket: Socket, payload: TargetPlayerPayload): void {
         const { lobbyId, targetSocketId } = payload;

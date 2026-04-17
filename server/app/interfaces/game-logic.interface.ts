@@ -56,3 +56,5 @@ export interface TileVisitParams {
     tileType: TileTexture;
     tileItem: TileItem | null;
 }
+
+export type GameOverCallback = (lobbyId: string, winnerSocketId: string | null) => void;

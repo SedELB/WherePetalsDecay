@@ -15,18 +15,17 @@ import {
     NO_GAMES_FOUND,
     NO_VISIBLE_GAMES_FOUND,
 } from '@common/error-messages';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { GameValidatorService } from './game-validator.service';
 
 @Injectable()
 export class GameService {
-    constructor(
-        @InjectModel(Game.name) private gameModel: Model<GameDocument>,
-        private readonly logger: Logger,
-        private readonly gameValidatorService: GameValidatorService,
-    ) {
+    @Inject(Logger) private readonly logger: Logger;
+    @Inject() private readonly gameValidatorService: GameValidatorService;
+
+    constructor(@InjectModel(Game.name) private gameModel: Model<GameDocument>) {
         this.start();
     }
 

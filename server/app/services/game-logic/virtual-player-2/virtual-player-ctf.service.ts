@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Vec2 } from '@common/vec2';
 import { VirtualPlayerProfile } from '@common/enums';
 import { TurnContext } from '@app/interfaces/virtual-player.interface';
@@ -6,9 +6,7 @@ import { VirtualPlayerActionService } from './virtual-player-action.service';
 
 @Injectable()
 export class VirtualPlayerCtfService {
-    constructor(
-        private readonly action: VirtualPlayerActionService,
-    ) {}
+    @Inject() private readonly action: VirtualPlayerActionService;
 
     runCtfTurn(context: TurnContext, currentPos: Vec2, handlers: {
         moveTowardThenActWithDoors: (context: TurnContext, from: Vec2, to: Vec2, onDone: () => void) => void;

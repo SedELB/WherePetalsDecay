@@ -11,4 +11,5 @@ export interface TurnContext {
     lobbyId: string;
     startCombat: StartVirtualPlayerCombat;
     onGameEnded: (lobbyId: string, winnerId: string) => void;
+    continueDecisionCycle: () => void;
 }

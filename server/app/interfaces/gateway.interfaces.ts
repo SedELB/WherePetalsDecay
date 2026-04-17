@@ -92,3 +92,9 @@ export interface PostMoveJournalParams {
     position: Vec2;
     flagJustTaken: boolean;
 }
+
+export interface ChatMessagePayload {
+    lobbyId: string;
+    message: string;
+    senderName: string;
+}
