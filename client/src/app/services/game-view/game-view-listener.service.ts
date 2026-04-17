@@ -18,7 +18,6 @@ import swal from 'sweetalert2';
 import {
     applyFlagPickup,
     expandSanctuaryPositions,
-    removePlayerFromLobby,
     toggleDoor,
     updatePlayerStats,
 } from './game-lobby.utils';
@@ -181,7 +180,12 @@ export class GameViewListenerService {
                     delete updated[socketId];
                     return updated;
                 });
-                this.gameViewService.gameLobby.update((lobby) => lobby ? removePlayerFromLobby(lobby, socketId) : updatedLobby);
+                this.gameViewService.playerStartPositions.update((positions) => {
+                    const updated = { ...positions };
+                    delete updated[socketId];
+                    return updated;
+                });
+                this.gameViewService.setLobby(updatedLobby);
             },
         );
 
