@@ -5,20 +5,7 @@ import { BASE_STATS } from '@common/constants/character.constants';
 import { PlayerAction } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
-import {
-    checkHasAnyAction,
-    getActionHighlightTiles,
-    getAdjacentDoorTiles,
-    getAdjacentPlayers,
-    getAttackTargets,
-    getDoorActionLabel,
-    getGiveFlagTargets,
-    getOrderedPlayers,
-    getPlayerName,
-    getRequestFlagTargets,
-    getSanctuaryTargets,
-    getTeamPlayers,
-} from './game-page.helper';
+import { GameLogicService } from '@app/services/game-view/game-logic.service';
 
 @Injectable({
     providedIn: 'root',
@@ -48,6 +35,7 @@ export class GamePageSignalsService {
     readonly isCombatStarted = computed(() => this.gameViewService.isCombatStarted());
     readonly fighters = computed(() => this.gameViewService.fighters());
     readonly combatLockState = computed(() => this.gameViewService.combatLockState());
+    readonly shouldCollapseGameInfo = computed(() => this.isCombatStarted() || Boolean(this.combatLockState()?.isLocked));
 
     readonly isLocalCombatParticipant = computed(() => {
         const localId = this.currentPlayerId();
@@ -69,13 +57,13 @@ export class GamePageSignalsService {
         const lockState = this.combatLockState();
         if (!lockState?.isLocked || !this.lobby()) return '';
         const players = this.lobby()?.players ?? [];
-        const attackerName = lockState.attackerSocketId ? getPlayerName(lockState.attackerSocketId, players) : 'Un joueur';
-        const defenderName = lockState.defenderSocketId ? getPlayerName(lockState.defenderSocketId, players) : 'Un joueur';
+        const attackerName = lockState.attackerSocketId ? this.gameLogicService.getPlayerName(lockState.attackerSocketId, players) : 'Un joueur';
+        const defenderName = lockState.defenderSocketId ? this.gameLogicService.getPlayerName(lockState.defenderSocketId, players) : 'Un joueur';
         return `${attackerName} affronte ${defenderName}. La partie reprendra à la fin du combat.`;
     });
 
     readonly orderedPlayers = computed(() =>
-        getOrderedPlayers(this.gameViewService.turnOrder(), this.lobby()?.players ?? [], this.activePlayerSocketId()));
+        this.gameLogicService.getOrderedPlayers(this.gameViewService.turnOrder(), this.lobby()?.players ?? [], this.activePlayerSocketId()));
 
     readonly localPlayer = computed(() =>
         this.lobby()?.players.find((player) => player.socketId === this.gameViewService.getLocalSocketId()));
@@ -93,30 +81,30 @@ export class GamePageSignalsService {
     readonly journalEntries = computed(() => this.gameViewService.journalEntries());
 
     readonly allTeams = computed(() => [
-        getTeamPlayers('A', this.lobby(), this.orderedPlayers()),
-        getTeamPlayers('B', this.lobby(), this.orderedPlayers()),
+        this.gameLogicService.getTeamPlayers('A', this.lobby(), this.orderedPlayers()),
+        this.gameLogicService.getTeamPlayers('B', this.lobby(), this.orderedPlayers()),
     ]);
 
-    readonly adjacentPlayers = computed((): Player[] => getAdjacentPlayers(
+    readonly adjacentPlayers = computed((): Player[] => this.gameLogicService.getAdjacentPlayers(
         this.isMyTurn(), this.gameViewService.getLocalSocketId(), this.playerPositions(), this.lobby()?.players ?? []));
 
-    readonly attackTargets = computed((): Vec2[] => getAttackTargets(
+    readonly attackTargets = computed((): Vec2[] => this.gameLogicService.getAttackTargets(
         this.gameViewService.getLocalSocketId(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()));
 
-    readonly requestFlagTargets = computed((): Vec2[] => getRequestFlagTargets(
+    readonly requestFlagTargets = computed((): Vec2[] => this.gameLogicService.getRequestFlagTargets(
         this.localPlayer(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()));
 
-    readonly giveFlagTargets = computed((): Vec2[] => getGiveFlagTargets(
+    readonly giveFlagTargets = computed((): Vec2[] => this.gameLogicService.getGiveFlagTargets(
         this.localPlayer(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()));
 
-    readonly adjacentDoorTiles = computed((): Vec2[] => getAdjacentDoorTiles(
+    readonly adjacentDoorTiles = computed((): Vec2[] => this.gameLogicService.getAdjacentDoorTiles(
         this.isMyTurn(), this.gameViewService.getLocalSocketId(), this.playerPositions(), this.game()?.grid));
 
-    readonly doorActionLabel = computed(() => getDoorActionLabel(this.adjacentDoorTiles(), this.game()?.grid));
+    readonly doorActionLabel = computed(() => this.gameLogicService.getDoorActionLabel(this.adjacentDoorTiles(), this.game()?.grid));
 
     readonly sanctuaryTargets = computed((): Vec2[] => {
         if (!this.isMyTurn()) return [];
-        return getSanctuaryTargets(
+        return this.gameLogicService.getSanctuaryTargets(
             this.gameViewService.getLocalSocketId(),
             this.playerPositions(),
             this.game()?.grid ?? [],
@@ -124,7 +112,7 @@ export class GamePageSignalsService {
         );
     });
 
-    readonly actionHighlightTiles = computed((): ActionTileHighlight[] => getActionHighlightTiles({
+    readonly actionHighlightTiles = computed((): ActionTileHighlight[] => this.gameLogicService.getActionHighlightTiles({
         isSubMenuOpen: this.isSubMenuOpen(),
         activeSubAction: this.activeSubAction(),
         attackTargets: this.attackTargets(),
@@ -134,7 +122,7 @@ export class GamePageSignalsService {
         sanctuaryTargets: this.sanctuaryTargets(),
     }));
 
-    readonly hasAnyAction = computed(() => checkHasAnyAction({
+    readonly hasAnyAction = computed(() => this.gameLogicService.checkHasAnyAction({
         isMyTurn: this.isMyTurn(),
         actionPoints: this.actionPoints(),
         attackTargets: this.attackTargets(),
@@ -144,7 +132,10 @@ export class GamePageSignalsService {
         sanctuaryTargets: this.sanctuaryTargets(),
     }));
 
-    constructor(private readonly gameViewService: GameViewService) {}
+    constructor(
+        private readonly gameViewService: GameViewService,
+        private readonly gameLogicService: GameLogicService,
+    ) {}
 
     toggleSubMenu(): void {
         const next = !this.isSubMenuOpen();

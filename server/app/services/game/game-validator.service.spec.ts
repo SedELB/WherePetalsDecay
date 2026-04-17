@@ -1,6 +1,7 @@
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { GameValidatorService } from '@app/services/game/game-validator.service';
-import { BASE_10, BASE_15, CUSTOM_GRID_CLASSIC_SMALL, CUSTOM_GRID_CLASSIC_SMALL_INVALID, DESC_MAX_LENGTH } from '@app/utils/game.constants';
+import { SMALL_MAP_COLS, 
+        MED_MAP_COLS, CUSTOM_GRID_CLASSIC_SMALL, CUSTOM_GRID_CLASSIC_SMALL_INVALID, DESC_MAX_LENGTH } from '@app/utils/game.constants';
 import { GameMode, MaxPlayers, TileItem, TileTexture } from '@common/enums';
 import {
     DESCRIPTION_FIELD_EMPTY,
@@ -31,7 +32,7 @@ describe('GameValidator', () => {
         invalidGame = {
             name: 'Invalid Game 3',
             description: 'Desc. 3',
-            size: { rows: BASE_10, cols: BASE_10 },
+            size: { rows: SMALL_MAP_COLS, cols: SMALL_MAP_COLS },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MaxPlayers.Small,
@@ -102,8 +103,8 @@ describe('GameValidator', () => {
     it('isGameSurfaceValid() should fail if less than 50% walkable', () => {
         // Rejects maps with insufficient playable space
         const game = getCleanGame();
-        for (let i = 0; i < BASE_10; i++) {
-            for (let j = 0; j < BASE_15; j++) {
+        for (let i = 0; i < SMALL_MAP_COLS; i++) {
+            for (let j = 0; j < MED_MAP_COLS; j++) {
                 game.grid[i][j].type = TileTexture.Wall;
             }
         }
@@ -177,8 +178,8 @@ describe('GameValidator', () => {
         const game = getValidGame();
         const visited = new Set<string>();
         expect(gameValidatorService['isTileValidForPath'](game, -1, 0, visited)).toEqual(false);
-        expect(gameValidatorService['isTileValidForPath'](game, BASE_10, 0, visited)).toEqual(false);
-        expect(gameValidatorService['isTileValidForPath'](game, 0, BASE_10, visited)).toEqual(false);
+        expect(gameValidatorService['isTileValidForPath'](game, SMALL_MAP_COLS, 0, visited)).toEqual(false);
+        expect(gameValidatorService['isTileValidForPath'](game, 0, SMALL_MAP_COLS, visited)).toEqual(false);
     });
 
     it('areThereUnreachableTiles() should return true if all tiles are reachable', () => {
@@ -270,7 +271,7 @@ describe('GameValidator', () => {
 
     it('isDoorOnGridBorder() should return false for door on bottom border', () => {
         // Detects doors on the bottom edge (last row index) of the grid
-        expect(gameValidatorService['isDoorOnGridBorder'](getValidGame().grid, BASE_10 - 1, BASE_5)).toEqual(false);
+        expect(gameValidatorService['isDoorOnGridBorder'](getValidGame().grid, SMALL_MAP_COLS - 1, BASE_5)).toEqual(false);
     });
 
     it('isDoorOnGridBorder() should return false for door on left border', () => {
@@ -280,7 +281,7 @@ describe('GameValidator', () => {
 
     it('isDoorOnGridBorder() should return false for door on right border', () => {
         // Detects doors on the right edge (last column index) of the grid
-        expect(gameValidatorService['isDoorOnGridBorder'](getValidGame().grid, BASE_5, BASE_10 - 1)).toEqual(false);
+        expect(gameValidatorService['isDoorOnGridBorder'](getValidGame().grid, BASE_5, SMALL_MAP_COLS - 1)).toEqual(false);
     });
 
     it('isFlagPlaced() should return true if flag is placed on CTF gamemode', () => {
@@ -374,7 +375,7 @@ describe('GameValidator', () => {
 const getValidGame = (): CreateGameDto => ({
     name: 'GameName 1',
     description: 'Game Description 1',
-    size: { rows: BASE_10, cols: BASE_10 },
+    size: { rows: SMALL_MAP_COLS, cols: SMALL_MAP_COLS },
     gameMode: GameMode.Classic,
     thumbnail: 'N/A',
     maxPlayers: MaxPlayers.Small,
@@ -386,12 +387,12 @@ const getValidGame = (): CreateGameDto => ({
 const getCleanGame = (): CreateGameDto => ({
     name: 'Clean Game',
     description: 'Test game',
-    size: { rows: BASE_15, cols: BASE_15 },
+    size: { rows: MED_MAP_COLS, cols: MED_MAP_COLS },
     gameMode: GameMode.Classic,
     thumbnail: 'N/A',
     maxPlayers: MaxPlayers.Medium,
     isVisible: true,
-    grid: Array(BASE_15).fill(null).map(() =>
-        Array(BASE_15).fill(null).map(() => ({ type: TileTexture.Floor, item: null })),
+    grid: Array(MED_MAP_COLS).fill(null).map(() =>
+        Array(MED_MAP_COLS).fill(null).map(() => ({ type: TileTexture.Floor, item: null })),
     ),
 });

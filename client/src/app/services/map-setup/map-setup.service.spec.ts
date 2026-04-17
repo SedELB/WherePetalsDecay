@@ -314,6 +314,32 @@ describe('MapSetupService', () => {
         expect(state.isPaintingTiles).toBe(true);
     });
 
+    it('should erase tile on right click even when water texture is selected', () => {
+        const game = gameFactory(1, 1);
+        const counts = { spawnCount: 0, flagCount: 0, healingSanctuaryCount: 0, combatSanctuaryCount: 0 };
+        game.grid[0][0].type = TileTexture.Wall;
+
+        const rightEvent = {
+            button: MouseEventType.RightClick,
+            shiftKey: false,
+        } as unknown as MouseEvent;
+
+        const state = service.handleCellMouseDown({
+            game,
+            rowIndex: 0,
+            colIndex: 0,
+            event: rightEvent,
+            activeTileTexture: TileTexture.Water,
+            activeTileItem: null,
+            counts,
+            isPaintingTiles: false,
+            isErasingTiles: false,
+        });
+
+        expect(game.grid[0][0].type).toBe(TileTexture.Floor);
+        expect(state.isErasingTiles).toBe(true);
+    });
+
     // Left click without active tool should not start painting
     it('should not start painting when no active tool is selected', () => {
         const game = gameFactory(1, 1);

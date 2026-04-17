@@ -1,5 +1,4 @@
-/* eslint-disable max-lines */
-import { Component, HostListener, OnInit, computed, effect, signal } from '@angular/core';
+import { Component, HostListener, OnInit, effect, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
 import { CharacterSheetComponent } from '@app/components/character-sheet/character-sheet.component';
@@ -13,35 +12,17 @@ import { SakuraComponent } from '@app/components/sakura/sakura.component';
 import { SanctuaryModalComponent } from '@app/components/sanctuary-modal/sanctuary-modal.component';
 import { OBJECT_PLACEMENT_TOOL } from '@app/constants/map-setup-page-constant';
 import { ROUTES } from '@app/constants/routes.constants';
-import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
+import { ActionHighlightType } from '@app/interfaces/isometric-interfaces';
 import { ITEM_NAMES, MOVE_COOLDOWN_MS, TILE_NAMES, TO_PERCENT } from '@app/pages/game-page/game-page.constants';
+import { GameLogicService, TileClickContext } from '@app/services/game-view/game-logic.service';
+import { GameViewListenerService } from '@app/services/game-view/game-view-listener.service';
 import { GameViewService } from '@app/services/game-view/game-view.service';
-import { BASE_STATS } from '@common/constants/character.constants';
-import { DIRECTION_OFFSETS, KEY_TO_DIRECTION } from '@common/direction';
+import { KEY_TO_DIRECTION } from '@common/direction';
 import { GameMode, PlayerAction, SanctuaryMode, TileItem, TileTexture } from '@common/enums';
 import { Player } from '@common/player';
 import { Vec2 } from '@common/vec2';
-import swal from 'sweetalert2';
-import {
-    TileClickContext,
-    buildTileClickContext,
-    checkHasAnyAction,
-    getActionHighlightTiles,
-    getAdjacentDoorTiles,
-    getAdjacentPlayers,
-    getAttackTargets,
-    getCurrentPlayerIceDebuff,
-    getDoorActionLabel,
-    getGiveFlagTargets,
-    getOrderedPlayers,
-    getRequestFlagTargets,
-    getSanctuaryTargets,
-    getTeamPlayers,
-    getPlayerAtPosition as helperGetPlayerAtPosition,
-    getPlayerName as helperGetPlayerName,
-    getTimerDisplay as helperGetTimerDisplay,
-    getTimerLabel as helperGetTimerLabel,
-} from './game-page.helper';
+import swal, { SweetAlertIcon } from 'sweetalert2';
+import { GamePageSignalsService } from './game-page-signals.service';
 
 const MESSAGE_ERROR = 'Êtes-vous sûr de vouloir abandonner la partie ? Vous ne pourrez pas revenir dans cette partie si vous quittez.';
 
@@ -61,181 +42,58 @@ const MESSAGE_ERROR = 'Êtes-vous sûr de vouloir abandonner la partie ? Vous ne
     ],
     templateUrl: './game-page.component.html',
     styleUrl: './game-page.component.scss',
+    providers: [GamePageSignalsService],
 })
 export class GamePageComponent implements OnInit {
-    readonly pressedDirectionKey = signal<'W' | 'A' | 'S' | 'D' | null>(null);
-    readonly gamePageSignalService = this;
+    readonly signals = this.gamePageSignalsService;
 
     readonly items = OBJECT_PLACEMENT_TOOL;
-    readonly routes = ROUTES;
-    readonly costInfinity = Infinity;
+    private readonly routes = ROUTES;
     protected gameMode = GameMode;
-
+    protected readonly playerAction = PlayerAction;
     readonly tileNames: Record<string, string> = TILE_NAMES;
     readonly itemNames: Record<string, string> = ITEM_NAMES;
-    protected readonly playerAction = PlayerAction;
+    readonly costInfinity = Infinity;
 
     showSanctuaryModal = false;
     pendingSanctuaryPosition: Vec2 | null = null;
     pendingSanctuaryType: TileItem | null = null;
-
     isChatFocused = false;
-    private isMoveCoolingDown = false;
-    readonly frozenTurnCountdown = signal<number | null>(null);
-    readonly frozenTurnCountdownMax = signal<number | null>(null);
-    readonly frozenActivePlayerSocketId = signal<string | null>(null);
     isJournalOpen = false;
     isLeftPanelOpen = true;
+    readonly pressedDirectionKey = signal<'W' | 'A' | 'S' | 'D' | null>(null);
+
+    private isMoveCoolingDown = false;
     private wasAutoCollapseActive = false;
-    readonly isSubMenuOpen = signal(false);
-    readonly activeSubAction = signal<ActionHighlightType | null>(null);
 
-    readonly disableEndTurn = computed(() => this.gameViewService.disableEndTurn());
-    readonly isDebugModeActive = computed(() => this.gameViewService.isDebugModeActive());
-    readonly lobby = computed(() => this.gameViewService.gameLobby());
-    readonly game = computed(() => this.lobby()?.game);
-    readonly playerPositions = computed(() => this.gameViewService.playerPositions());
-    readonly playerStartPositions = computed(() => this.gameViewService.playerStartPositions());
-    readonly reachableTiles = computed(() => this.gameViewService.reachableTiles());
-    readonly reachableTilesForTeleport = computed(() => this.gameViewService.reachableTilesForTeleport());
-    readonly movementPoints = computed(() => this.gameViewService.movementPoints());
-    readonly actionPoints = computed(() => this.gameViewService.actionPoints());
-    readonly turnCountdown = computed(() => this.gameViewService.turnCountdown());
-    readonly activePlayerSocketId = computed(() => this.gameViewService.activePlayerSocketId());
-    readonly tileInfo = computed(() => this.gameViewService.tileInfo());
-    readonly gameOver = computed(() => this.gameViewService.gameOver());
-    readonly turnNotification = computed(() => this.gameViewService.turnNotification());
-    readonly currentPlayerId = computed(() => this.gameViewService.getLocalSocketId());
-    readonly isFlagTaken = computed(() => this.gameViewService.isFlagTaken());
-    readonly isCombatStarted = computed(() => this.gameViewService.isCombatStarted());
-    readonly shouldCollapseGameInfo = computed(() => this.isCombatStarted() || Boolean(this.gameViewService.combatLockState()?.isLocked));
-    readonly fighters = computed(() => this.gameViewService.fighters());
-    readonly combatLockState = computed(() => this.gameViewService.combatLockState());
-    readonly isLocalCombatParticipant = computed(() => {
-        const localId = this.currentPlayerId();
-        if (!localId) return false;
-
-        const fighterData = this.fighters();
-        return fighterData.player?.socketId === localId || fighterData.enemy?.socketId === localId;
-    });
-    readonly isCombatOverlayVisible = computed(() => this.isCombatStarted() && this.isLocalCombatParticipant());
-    readonly showCombatInProgressModal = computed(() => {
-        const lockState = this.combatLockState();
-        const localId = this.currentPlayerId();
-        if (!lockState?.isLocked || !localId) return false;
-        return localId !== lockState.attackerSocketId && localId !== lockState.defenderSocketId;
-    });
-    readonly combatInProgressMessage = computed(() => {
-        const lockState = this.combatLockState();
-        if (!lockState?.isLocked) return '';
-
-        const attackerName = lockState.attackerSocketId ? this.getPlayerName(lockState.attackerSocketId) : 'Un joueur';
-        const defenderName = lockState.defenderSocketId ? this.getPlayerName(lockState.defenderSocketId) : 'Un joueur';
-        return `${attackerName} affronte ${defenderName}. La partie reprendra à la fin du combat.`;
-    });
-
-    readonly orderedPlayers = computed(() =>
-        getOrderedPlayers(this.gameViewService.turnOrder(), this.lobby()?.players ?? [], this.activePlayerSocketId()));
-    readonly localPlayer = computed(() =>
-        this.lobby()?.players.find((player) => player.socketId === this.gameViewService.getLocalSocketId()));
-    readonly maxLife = computed(() => {
-        const p = this.localPlayer();
-        return !p ? BASE_STATS.life : p.character.lifeBonus ? BASE_STATS.life + BASE_STATS.bonus : BASE_STATS.life;
-    });
-    readonly activePlayer = computed(() =>
-        this.lobby()?.players.find((player) => player.socketId === this.activePlayerSocketId()));
-    readonly isMyTurn = computed(() => this.activePlayerSocketId() === this.gameViewService.getLocalSocketId());
-    readonly inactiveSanctuaries = computed(() => this.gameViewService.inactiveSanctuaries());
-    readonly journalEntries = computed(() => this.gameViewService.journalEntries());
-    readonly allTeams = computed(() => [
-        getTeamPlayers('A', this.lobby(), this.orderedPlayers()),
-        getTeamPlayers('B', this.lobby(), this.orderedPlayers()),
-    ]);
-    readonly adjacentPlayers = computed((): Player[] => getAdjacentPlayers(
-        this.isMyTurn(), this.gameViewService.getLocalSocketId(), this.playerPositions(), this.lobby()?.players ?? []));
-    readonly attackTargets = computed((): Vec2[] => getAttackTargets(
-        this.gameViewService.getLocalSocketId(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()));
-    readonly requestFlagTargets = computed((): Vec2[] => getRequestFlagTargets(
-        this.localPlayer(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()));
-    readonly giveFlagTargets = computed((): Vec2[] => getGiveFlagTargets(
-        this.localPlayer(), this.adjacentPlayers(), this.playerPositions(), this.allTeams()));
-    readonly adjacentDoorTiles = computed((): Vec2[] => getAdjacentDoorTiles(
-        this.isMyTurn(), this.gameViewService.getLocalSocketId(), this.playerPositions(), this.game()?.grid));
-    readonly doorActionLabel = computed(() => getDoorActionLabel(this.adjacentDoorTiles(), this.game()?.grid));
-    readonly sanctuaryTargets = computed((): Vec2[] => {
-        if (!this.isMyTurn()) return [];
-        return getSanctuaryTargets(
-            this.gameViewService.getLocalSocketId(),
-            this.playerPositions(),
-            this.game()?.grid ?? [],
-            this.inactiveSanctuaries(),
-        );
-    });
-    readonly actionHighlightTiles = computed((): ActionTileHighlight[] =>
-        getActionHighlightTiles({
-            isSubMenuOpen: this.isSubMenuOpen(), activeSubAction: this.activeSubAction(), attackTargets: this.attackTargets(),
-            requestFlagTargets: this.requestFlagTargets(), giveFlagTargets: this.giveFlagTargets(),
-            adjacentDoorTiles: this.adjacentDoorTiles(), sanctuaryTargets: this.sanctuaryTargets(),
-        }));
-    readonly hasAnyAction = computed(() =>
-        checkHasAnyAction({
-            isMyTurn: this.isMyTurn(), actionPoints: this.actionPoints(), attackTargets: this.attackTargets(),
-            requestFlagTargets: this.requestFlagTargets(), giveFlagTargets: this.giveFlagTargets(),
-            adjacentDoorTiles: this.adjacentDoorTiles(), sanctuaryTargets: this.sanctuaryTargets(),
-        }));
-
-    constructor(protected readonly gameViewService: GameViewService, private readonly router: Router) {
+    constructor(
+        protected readonly gameViewService: GameViewService,
+        private readonly gamePageSignalsService: GamePageSignalsService,
+        private readonly router: Router,
+        private readonly gameViewListenerService: GameViewListenerService,
+        private readonly gameLogicService: GameLogicService,
+    ) {
         effect(() => {
-            const shouldAutoCollapse = this.shouldCollapseGameInfo();
-
-            if (shouldAutoCollapse && !this.wasAutoCollapseActive) {
-                this.isLeftPanelOpen = false;
-            }
-
+            const shouldAutoCollapse = this.signals.shouldCollapseGameInfo();
+            if (shouldAutoCollapse && !this.wasAutoCollapseActive) this.isLeftPanelOpen = false;
             this.wasAutoCollapseActive = shouldAutoCollapse;
         });
 
         effect(() => {
-            const activeId = this.activePlayerSocketId();
+            const activeId = this.signals.activePlayerSocketId();
             const localId = this.gameViewService.getLocalSocketId();
-            if (activeId !== localId && this.showSanctuaryModal) {
-                this.showSanctuaryModal = false;
-                this.pendingSanctuaryPosition = null;
-                this.pendingSanctuaryType = null;
-            }
-        });
-
-        effect(() => {
-            const isCombatOverlayVisible = this.isCombatOverlayVisible();
-
-            if (isCombatOverlayVisible) {
-                if (this.frozenTurnCountdown() === null) {
-                    this.frozenTurnCountdown.set(this.turnCountdown());
-                    this.frozenTurnCountdownMax.set(this.gameViewService.turnCountdownMax());
-                    this.frozenActivePlayerSocketId.set(this.activePlayerSocketId());
-                }
-                return;
-            }
-
-            if (
-                this.frozenTurnCountdown() !== null ||
-                this.frozenTurnCountdownMax() !== null ||
-                this.frozenActivePlayerSocketId() !== null
-            ) {
-                this.frozenTurnCountdown.set(null);
-                this.frozenTurnCountdownMax.set(null);
-                this.frozenActivePlayerSocketId.set(null);
-            }
+            if (activeId !== localId && this.showSanctuaryModal) this.onCancelSanctuary();
         });
     }
 
     ngOnInit(): void {
-        if (!this.lobby()) this.router.navigate([this.routes.home]);
+        this.gameViewListenerService.registerListeners();
+        if (!this.signals.lobby()) this.router.navigate([this.routes.home]);
     }
 
     @HostListener('window:keydown', ['$event'])
     onKeyDown(event: KeyboardEvent): void {
-        if (this.showCombatInProgressModal()) return;
+        if (this.signals.showCombatInProgressModal()) return;
         if (!this.canHandleMovementInput()) return;
 
         const direction = KEY_TO_DIRECTION[event.key];
@@ -246,13 +104,13 @@ export class GamePageComponent implements OnInit {
 
     @HostListener('window:keyup', ['$event'])
     onKeyUp(event: KeyboardEvent): void {
-        const lobbyId = this.lobby()?.lobbyId;
+        const lobbyId = this.signals.lobby()?.lobbyId;
         const direction = KEY_TO_DIRECTION[event.key];
         if (direction) this.pressedDirectionKey.set(null);
 
-        if (this.showCombatInProgressModal()) return;
+        if (this.signals.showCombatInProgressModal()) return;
 
-        if (event.key === 'm' || event.key === 'M') {
+        if ((event.key === 'm' || event.key === 'M') && this.gameViewService.isHost()) {
             if (lobbyId) this.gameViewService.toggleDebugMode(lobbyId);
             return;
         }
@@ -262,9 +120,7 @@ export class GamePageComponent implements OnInit {
 
         this.isMoveCoolingDown = true;
         setTimeout(() => (this.isMoveCoolingDown = false), MOVE_COOLDOWN_MS);
-
-        this.gamePageSignalService.closeSubMenu();
-
+        this.signals.closeSubMenu();
         if (lobbyId) this.gameViewService.sendMove(lobbyId, direction);
     }
 
@@ -273,45 +129,32 @@ export class GamePageComponent implements OnInit {
         this.pressedDirectionKey.set(null);
     }
 
-    onChatFocusChange(focused: boolean): void {
-        this.isChatFocused = focused;
-    }
     @HostListener('window:beforeunload')
     onBeforeUnload(): void {
-        const lobbyId = this.lobby()?.lobbyId;
+        const lobbyId = this.signals.lobby()?.lobbyId;
         if (!lobbyId) return;
-        if (this.gameViewService.isHost() && this.isDebugModeActive()) this.gameViewService.toggleDebugMode(lobbyId);
+        if (this.gameViewService.isHost() && this.signals.isDebugModeActive()) this.gameViewService.toggleDebugMode(lobbyId);
         this.gameViewService.sendAbandonWithoutPrompt(lobbyId);
     }
 
-    isEndTurnDisabled(): boolean {
-        if (this.isCombatOverlayVisible() || this.showCombatInProgressModal()) return true;
-        return !(this.isMyTurn() || (this.isDebugModeActive() && this.gameViewService.isHost()));
-    }
-
-    isActionButtonDisabled(): boolean {
-        return this.isCombatOverlayVisible() || !this.gamePageSignalService.hasAnyAction();
+    onChatFocusChange(focused: boolean): void {
+        this.isChatFocused = focused;
     }
 
     onEndTurn(): void {
-        if (this.isCombatOverlayVisible()) return;
-        const lobbyId = this.lobby()?.lobbyId;
-        if (!lobbyId) return;
-        this.closeSubMenu();
-        this.gameViewService.sendEndTurn(lobbyId);
+        if (this.signals.isCombatOverlayVisible()) return;
+        const lobbyId = this.signals.lobby()?.lobbyId;
+        if (lobbyId) {
+            this.signals.closeSubMenu();
+            this.gameViewService.sendEndTurn(lobbyId);
+        }
     }
 
     onAbandon(): void {
-        if (this.gamePageSignalService.isLocalCombatParticipant()) {
-            swal.fire({
-                title: 'Impossible de quitter',
-                text: 'Vous ne pouvez pas abandonner la partie pendant un combat !',
-                icon: 'error',
-                confirmButtonText: 'OK',
-            });
+        if (this.signals.isLocalCombatParticipant()) {
+            this.showErrorToast('Impossible de quitter', 'Vous ne pouvez pas abandonner la partie pendant un combat !');
             return;
         }
-
         swal.fire({
             title: 'Quitter ?',
             text: MESSAGE_ERROR,
@@ -320,234 +163,185 @@ export class GamePageComponent implements OnInit {
             cancelButtonText: 'Annuler',
             showCancelButton: true,
         }).then((result) => {
-            if (!result.isConfirmed) return;
-            const lobbyId = this.lobby()?.lobbyId;
-            if (lobbyId) this.gameViewService.sendAbandon(lobbyId);
+            if (result.isConfirmed) {
+                const lobbyId = this.signals.lobby()?.lobbyId;
+                if (lobbyId) this.gameViewService.sendAbandon(lobbyId);
+            }
         });
     }
 
-    toggleSubMenu(): void {
-        const next = !this.isSubMenuOpen();
-        this.isSubMenuOpen.set(next);
-        if (!next) this.activeSubAction.set(null);
+    onTileClick(x: number, y: number): void {
+        if (this.signals.showCombatInProgressModal()) return;
+        const lobbyId = this.signals.lobby()?.lobbyId;
+        if (!lobbyId || !this.signals.isMyTurn()) return;
+
+        const action = this.signals.activeSubAction();
+        const context = this.resolveClickContext(x, y);
+        if (action && context) {
+            this.executeAction(action, context, x, y);
+            this.signals.closeSubMenu();
+        }
     }
 
-    selectSubAction(type: ActionHighlightType): void {
-        this.activeSubAction.set(this.activeSubAction() === type ? null : type);
+    onRightClick(event: MouseEvent, pos: Vec2): void {
+        event.preventDefault();
+        const lobbyId = this.signals.lobby()?.lobbyId;
+        if (!lobbyId || !this.signals.isMyTurn() || this.gameViewService.disableEndTurn()) return;
+
+        if (this.signals.isDebugModeActive() && this.isTeleportable(pos.x, pos.y)) {
+            this.signals.closeSubMenu();
+            this.gameViewService.teleportMove(lobbyId, pos);
+        } else {
+            this.gameViewService.sendTileInfoRequest(lobbyId, pos);
+        }
     }
 
     onSelectSanctuaryAction(): void {
-        this.selectSubAction(PlayerAction.Sanctuary);
+        this.signals.selectSubAction(PlayerAction.Sanctuary);
     }
 
-    onTileClick(x: number, y: number): void {
-        if (this.showCombatInProgressModal()) return;
-        const lobbyId = this.lobby()?.lobbyId;
-        if (!lobbyId || !this.isMyTurn()) return;
-
-        this.handleSubActionClick(x, y);
-    }
-
-    private handleSubActionClick(x: number, y: number): void {
-        const action = this.activeSubAction();
-        const clickContext = this.resolveTileClickContext(x, y);
-        if (!action || !clickContext) return;
-
-        this.executeTileAction(action, clickContext, x, y);
-
-        this.closeSubMenu();
-    }
-
-    isOnIce(pos: Vec2): 2 | 0 {
-        return this.game()?.grid[pos.y][pos.x].type === TileTexture.Ice ? 2 : 0;
-    }
-
-    onUseSanctuary(mode: SanctuaryMode | 'normal' | 'doubleOrNothing'): void {
-        const lobbyId = this.lobby()?.lobbyId;
-        if (!lobbyId || !this.pendingSanctuaryPosition) return;
-        this.gameViewService.sendUseSanctuary(lobbyId, this.pendingSanctuaryPosition, mode as SanctuaryMode);
-        this.showSanctuaryModal = false;
-        this.pendingSanctuaryPosition = this.pendingSanctuaryType = null;
+    onUseSanctuary(mode: SanctuaryMode): void {
+        const lobbyId = this.signals.lobby()?.lobbyId;
+        if (lobbyId && this.pendingSanctuaryPosition) {
+            this.gameViewService.sendUseSanctuary(lobbyId, this.pendingSanctuaryPosition, mode);
+            this.onCancelSanctuary();
+        }
     }
 
     onCancelSanctuary(): void {
         this.showSanctuaryModal = false;
-        this.pendingSanctuaryPosition = this.pendingSanctuaryType = null;
+        this.pendingSanctuaryPosition = null;
+        this.pendingSanctuaryType = null;
     }
+
     getSanctuaryLabel(): string {
         return this.pendingSanctuaryType === TileItem.HealingSanctuary ? 'Soin (+2 PV)' : 'Combat (+1 ATK / +1 DEF)';
     }
 
-    onRightClick(event: MouseEvent, position: Vec2): void {
-        event.preventDefault();
-        const lobbyId = this.lobby()?.lobbyId;
-        if (!lobbyId || !this.isMyTurn() || this.gamePageSignalService.disableEndTurn()) return;
-
-        if (this.isDebugModeActive()) {
-            if (this.isTeleportable(position.x, position.y)) {
-                this.gamePageSignalService.closeSubMenu();
-                this.gameViewService.teleportMove(lobbyId, position);
-            }
-            return;
-        }
-        this.gameViewService.sendTileInfoRequest(lobbyId, position);
+    private resolveClickContext(x: number, y: number) {
+        return this.gameLogicService.buildTileClickContext({
+            lobby: this.signals.lobby(),
+            currentSocketId: this.signals.currentPlayerId(),
+            actionPoints: this.signals.actionPoints(),
+            targetSocketId: this.gameLogicService.getPlayerAtPosition(x, y, this.signals.playerPositions()),
+            x,
+            y,
+            isHighlighted: this.signals.actionHighlightTiles().some((h) => h.pos.x === x && h.pos.y === y),
+        });
     }
 
-    isReachable(col: number, row: number): boolean {
-        return this.reachableTiles().some((tile) => tile.x === col && tile.y === row);
-    }
-
-    isTeleportable(col: number, row: number): boolean {
-        return this.isDebugModeActive() && this.reachableTilesForTeleport().some((tile) => tile.x === col && tile.y === row);
-    }
-
-    getPlayerAtPosition(x: number, y: number): string | null {
-        return helperGetPlayerAtPosition(x, y, this.playerPositions());
-    }
-
-    getPlayerName(socketId: string): string {
-        return helperGetPlayerName(socketId, this.lobby()?.players ?? []);
-    }
-
-    getTimerLabel(): string {
-        return helperGetTimerLabel(this.getEffectiveActivePlayerSocketId(), this.gameViewService.getLocalSocketId(), this.lobby()?.players ?? []);
-    }
-
-    getTimerDisplay(): string {
-        return helperGetTimerDisplay(this.getEffectiveTurnCountdown(), this.getEffectiveActivePlayerSocketId());
-    }
-
-    getTurnCountdownProgressPercent(): number {
-        const countdownMax = this.getEffectiveTurnCountdownMax();
-        if (countdownMax <= 0 || !this.getEffectiveActivePlayerSocketId()) return 0;
-
-        const progressPercent = (this.getEffectiveTurnCountdown() / countdownMax) * TO_PERCENT;
-        return Math.min(TO_PERCENT, Math.max(0, progressPercent));
-    }
-
-    getTimerActivePlayer(): Player | undefined {
-        const activeSocketId = this.getEffectiveActivePlayerSocketId();
-        if (!activeSocketId) return undefined;
-        return this.lobby()?.players.find((player) => player.socketId === activeSocketId);
-    }
-
-    hasTimerActivePlayer(): boolean {
-        return Boolean(this.getEffectiveActivePlayerSocketId());
-    }
-
-    private getEffectiveTurnCountdown(): number {
-        if (!this.isCombatOverlayVisible()) return this.turnCountdown();
-        return this.frozenTurnCountdown() ?? this.turnCountdown();
-    }
-
-    private getEffectiveTurnCountdownMax(): number {
-        if (!this.isCombatOverlayVisible()) return this.gameViewService.turnCountdownMax();
-        return this.frozenTurnCountdownMax() ?? this.gameViewService.turnCountdownMax();
-    }
-
-    private getEffectiveActivePlayerSocketId(): string | null {
-        if (!this.isCombatOverlayVisible()) return this.activePlayerSocketId();
-        return this.frozenActivePlayerSocketId() ?? this.activePlayerSocketId();
-    }
-
-    private handleAttackAction(lobbyId: string, currentPlayer: Player, targetPlayer: Player, x: number, y: number): void {
-        targetPlayer.character.debuf = this.isOnIce({ x, y }) ? 2 : 0;
-        currentPlayer.character.debuf = getCurrentPlayerIceDebuff(
-            this.currentPlayerId(),
-            this.playerPositions(),
-            (position) => this.isOnIce(position),
-        );
-        this.gameViewService.sendCombat(lobbyId, currentPlayer, targetPlayer);
-    }
-
-    private executeTileAction(action: ActionHighlightType, clickContext: TileClickContext, x: number, y: number): void {
+    private executeAction(action: ActionHighlightType, ctx: TileClickContext, x: number, y: number): void {
+        const lobbyId = ctx.lobbyId;
         switch (action) {
             case PlayerAction.Attack:
-                if (clickContext.targetPlayer) {
-                    this.handleAttackAction(clickContext.lobbyId, clickContext.currentPlayer, clickContext.targetPlayer, x, y);
+                if (ctx.targetPlayer) {
+                    ctx.targetPlayer.character.debuf = this.isOnIce({ x, y }) ? 2 : 0;
+                    ctx.currentPlayer.character.debuf = this.gameLogicService.getCurrentPlayerIceDebuff(
+                        this.signals.currentPlayerId(),
+                        this.signals.playerPositions(),
+                        (p) => this.isOnIce(p),
+                    );
+                    this.gameViewService.sendCombat(lobbyId, ctx.currentPlayer, ctx.targetPlayer);
                 }
-                return;
+                break;
             case PlayerAction.GiveFlag:
-                if (clickContext.targetSocketId) {
-                    this.gameViewService.giveFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
-                }
-                return;
+                if (ctx.targetSocketId) this.gameViewService.giveFlagTransfer(lobbyId, ctx.targetSocketId);
+                break;
             case PlayerAction.RequestFlag:
-                if (clickContext.targetSocketId) {
-                    this.gameViewService.requestFlagTransfer(clickContext.lobbyId, clickContext.targetSocketId);
-                }
-                return;
+                if (ctx.targetSocketId) this.gameViewService.requestFlagTransfer(lobbyId, ctx.targetSocketId);
+                break;
             case PlayerAction.ToggleDoor:
-                this.gameViewService.sendToggleDoor(clickContext.lobbyId, { x, y });
-                return;
+                this.gameViewService.sendToggleDoor(lobbyId, { x, y });
+                this.showToast('Porte interagie !', 'success');
+                break;
             case PlayerAction.Sanctuary:
                 this.handleSanctuaryAction(x, y);
-                return;
+                break;
         }
     }
 
     private handleSanctuaryAction(x: number, y: number): void {
-        const myId = this.currentPlayerId();
-        const myPos = myId ? this.playerPositions()[myId] : null;
-        const grid = this.game()?.grid;
-        if (!myPos || !grid) return;
+        const grid = this.signals.game()?.grid;
+        if (!grid) return;
 
-        const tileItem = grid[y]?.[x].item as TileItem;
-        let tlX = x;
-        let tlY = y;
-        while (grid[tlY - 1]?.[tlX]?.item === tileItem) tlY--;
-        while (grid[tlY]?.[tlX - 1]?.item === tileItem) tlX--;
-
-        const sanctuaryCells = [
-            { x: tlX, y: tlY }, { x: tlX + 1, y: tlY },
-            { x: tlX, y: tlY + 1 }, { x: tlX + 1, y: tlY + 1 },
-        ];
-
-        const isAdjacent = sanctuaryCells.some((cell) =>
-            Object.values(DIRECTION_OFFSETS).some(
-                (offset) => myPos.x + offset.x === cell.x && myPos.y + offset.y === cell.y,
-            ),
+        const tileItem = grid[y]?.[x].item;
+        if (!tileItem) return;
+        const result = this.gameLogicService.getSanctuaryCanonicalInfo(
+            { x, y },
+            {
+                item: tileItem,
+                grid,
+                currentSocketId: this.signals.currentPlayerId(),
+                positions: this.signals.playerPositions(),
+            },
         );
 
-        if (!isAdjacent) {
-            swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'warning',
-                title: 'Trop loin !',
-                showConfirmButton: false,
-                timer: 2000,
-            });
-            return;
-        }
-
-        this.pendingSanctuaryPosition = { x, y };
+        if (!result.isAdjacent) return this.showToast('Trop loin !', 'warning');
+        this.pendingSanctuaryPosition = result.canonicalPos;
         this.pendingSanctuaryType = tileItem;
         this.showSanctuaryModal = true;
     }
 
-    private resolveTileClickContext(x: number, y: number): TileClickContext | null {
-        if (!this.isSubMenuOpen()) return null;
-        const targetSocketId = this.getPlayerAtPosition(x, y);
-        const isHighlighted = this.actionHighlightTiles().some((highlightedTile) => highlightedTile.pos.x === x && highlightedTile.pos.y === y);
-
-        return buildTileClickContext({
-            lobby: this.lobby(),
-            currentSocketId: this.currentPlayerId(),
-            actionPoints: this.actionPoints(),
-            targetSocketId,
-            x,
-            y,
-            isHighlighted,
-        });
+    isEndTurnDisabled(): boolean {
+        if (this.signals.isCombatOverlayVisible() || this.signals.showCombatInProgressModal()) return true;
+        return !(this.signals.isMyTurn() || (this.signals.isDebugModeActive() && this.gameViewService.isHost()));
     }
 
-    private closeSubMenu(): void {
-        this.isSubMenuOpen.set(false);
-        this.activeSubAction.set(null);
+    isActionButtonDisabled(): boolean {
+        return this.signals.isCombatOverlayVisible() || !this.signals.hasAnyAction();
+    }
+
+    getPlayerName(socketId: string): string {
+        return this.gameLogicService.getPlayerName(socketId, this.signals.lobby()?.players ?? []);
+    }
+
+    getTimerLabel(): string {
+        const socketId = this.gameViewService.getLocalSocketId();
+        return this.gameLogicService.getTimerLabel(this.signals.activePlayerSocketId(), socketId, this.signals.lobby()?.players ?? []);
+    }
+    getTimerDisplay(): string {
+        return this.gameLogicService.getTimerDisplay(this.signals.turnCountdown(), this.signals.activePlayerSocketId());
+    }
+
+    getTimerActivePlayer(): Player | undefined {
+        return this.signals.lobby()?.players.find((p) => p.socketId === this.signals.activePlayerSocketId());
+    }
+
+    hasTimerActivePlayer(): boolean {
+        return Boolean(this.signals.activePlayerSocketId());
+    }
+
+    getTurnCountdownProgressPercent(): number {
+        const max = this.gameViewService.turnCountdownMax();
+        return max > 0 ? (this.signals.turnCountdown() / max) * TO_PERCENT : 0;
+    }
+
+    shouldCollapseGameInfo(): boolean {
+        return this.signals.shouldCollapseGameInfo();
+    }
+
+    isDebugModeActive(): boolean {
+        return this.signals.isDebugModeActive();
+    }
+
+    private isOnIce(pos: Vec2): 2 | 0 {
+        return this.signals.game()?.grid[pos.y][pos.x].type === TileTexture.Ice ? 2 : 0;
+    }
+
+    private isTeleportable(x: number, y: number): boolean {
+        return this.signals.isDebugModeActive() && this.signals.reachableTilesForTeleport().some((t) => t.x === x && t.y === y);
+    }
+
+    private showErrorToast(title: string, text: string) {
+        void swal.fire({ title, text, icon: 'error', confirmButtonText: 'OK' });
+    }
+
+    private showToast(title: string, icon: SweetAlertIcon) {
+        void swal.fire({ toast: true, position: 'top-end', icon, title, showConfirmButton: false, timer: 2000 });
     }
 
     private canHandleMovementInput(): boolean {
-        return this.isMyTurn() && !this.isChatFocused && !this.showSanctuaryModal && !this.isMoveCoolingDown;
+        return this.signals.isMyTurn() && !this.isChatFocused && !this.showSanctuaryModal && !this.isMoveCoolingDown;
     }
 }
+

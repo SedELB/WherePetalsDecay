@@ -3,10 +3,8 @@ import { Posture } from '@common/character';
 // Constants for timing, common to front-end and back-end.
 export const COMBAT_POSTURE_TIMEOUT_MS = 10000;
 export const COMBAT_START_ANNOUNCEMENT_DELAY_MS = 3000;
-
 export const COMBAT_START_POPUP_DISPLAY_DURATION_MS = 3000;
-export const COMBAT_END_POPUP_DISPLAY_DURATION_MS = 4000;
-
+export const COMBAT_END_POPUP_DISPLAY_DURATION_MS = 2500;
 export const POSTURE_RESULT_DISPLAY_DURATION_MS = 3000;
 export const ROUND_PHASE_BUFFER_MS = 1000;
 export const DICE_ROLL_DURATION_MS = 3000;
@@ -17,7 +15,6 @@ export const FIGHTER_HOLD_DURATION_MS = 500;
 export const FIGHTER_RETREAT_DURATION_MS = 1250;
 export const STATUS_BUFFER_DURATION_MS = 3000;
 export const NEXT_ROUND_ANNOUNCEMENT_DURATION_MS = 3000;
-
 export const COMBAT_ANIMATION_SPEED_MULTIPLIER = 0.6;
 export const COMBAT_END_SEQUENCE_ROUND_BUFFER_COUNT = 3;
 

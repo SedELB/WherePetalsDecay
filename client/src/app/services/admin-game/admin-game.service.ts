@@ -5,7 +5,8 @@ import { SocketNamespace } from '@common/enums';
 import { Game } from '@common/game';
 import { GameVisibilityPayload } from '@common/interfaces/admin';
 import { AdminGameEvents } from '@common/socket-events/admin.gateway.events';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { environment } from '@src/environments/environment';
 
 @Injectable({
@@ -63,6 +64,8 @@ export class AdminGameService {
     }
 
     fetchAllGames(): Observable<Game[]> {
-        return this.http.get<Game[]>(`${environment.serverUrl}/game/allGames`);
+        return this.http.get<Game[]>(`${environment.serverUrl}/game/allGames`).pipe(
+            catchError(() => of([])),
+        );
     }
 }

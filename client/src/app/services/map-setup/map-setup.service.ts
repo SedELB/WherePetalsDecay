@@ -8,13 +8,13 @@ import {
     TileItemCounts,
     TileParams,
 } from '@app/services/map-setup.types';
+import { canPlaceSanctuary, drawStraightLine, findSanctuaryTopLeft, inverseDoor, isSanctuary } from '@app/services/map-setup/map-setup.helper';
 import { TileItemCountService } from '@app/services/tile-item-count/tile-item-count.service';
 import { TileItem, TileTexture } from '@common/enums';
 import { type PlacedObject, Game } from '@common/game';
 import type { GameDraftForValidation } from '@common/interfaces/game-validation';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
-import { canPlaceSanctuary, drawStraightLine, findSanctuaryTopLeft, inverseDoor, isSanctuary } from '@app/services/map-setup/map-setup.helper';
 
 @Injectable({ providedIn: 'root' })
 export class MapSetupService {
@@ -63,8 +63,15 @@ export class MapSetupService {
     }
 
     private placeSanctuary(game: Game, rowIndex: number, colIndex: number, item: TileItem, counts: TileItemCounts): void {
-        game.grid[rowIndex][colIndex].item = game.grid[rowIndex][colIndex + 1].item = item;
-        game.grid[rowIndex + 1][colIndex].item = game.grid[rowIndex + 1][colIndex + 1].item = item;
+        const cells = [
+            game.grid[rowIndex][colIndex],
+            game.grid[rowIndex][colIndex + 1],
+            game.grid[rowIndex + 1][colIndex],
+            game.grid[rowIndex + 1][colIndex + 1],
+        ];
+        for (const cell of cells) {
+            cell.item = item;
+        }
         this.tileItemCountService.decreaseTileItemCount(counts, item);
     }
 
@@ -122,12 +129,12 @@ export class MapSetupService {
 
     selectTileTexture(activeTileTexture: TileTexture | null, activeTileItem: TileItem | null, type: TileTexture): MapSetupSelection {
         const nextActiveTileTexture = activeTileTexture === type ? null : type;
-        return { activeTileTexture: nextActiveTileTexture, activeTileItem: nextActiveTileTexture != null ? null : activeTileItem };
+        return { activeTileTexture: nextActiveTileTexture, activeTileItem: nextActiveTileTexture ? null : activeTileItem };
     }
 
     selectTileItem(activeTileItem: TileItem | null, activeTileTexture: TileTexture | null, type: TileItem): MapSetupSelection {
         const nextActiveTileItem = activeTileItem === type ? null : type;
-        return { activeTileTexture: nextActiveTileItem != null ? null : activeTileTexture, activeTileItem: nextActiveTileItem };
+        return { activeTileTexture: nextActiveTileItem ? null : activeTileTexture, activeTileItem: nextActiveTileItem };
     }
 
     applyActiveSelection(params: TileParams): void {
@@ -174,21 +181,17 @@ export class MapSetupService {
     }
 
     private handleRightClick(params: CellInteractionParams): MapSetupInteractionState {
-        const { game, rowIndex, colIndex, event, activeTileTexture, activeTileItem, counts, isPaintingTiles } = params;
-        if (activeTileTexture) {
-            this.deleteTile({ game, rowIndex, colIndex, tileAttribute: activeTileTexture, event, counts });
-        } else if (activeTileItem) {
-            this.deleteTile({ game, rowIndex, colIndex, tileAttribute: activeTileItem, event, counts });
-        } else {
-            const tile = game.grid[rowIndex][colIndex];
-            if (event.shiftKey && tile.item) {
+        const { game, rowIndex, colIndex, event, counts, isPaintingTiles } = params;
+        const tile = game.grid[rowIndex][colIndex];
+
+        // Right click is an erase action and must not depend on the currently selected tool.
+        if (event.shiftKey && tile.item) {
+            this.deleteTile({ game, rowIndex, colIndex, tileAttribute: tile.item, event, counts });
+        } else if (!event.shiftKey) {
+            if (tile.type !== TileTexture.Floor) {
+                this.deleteTile({ game, rowIndex, colIndex, tileAttribute: TileTexture.Floor, event, counts });
+            } else if (tile.item) {
                 this.deleteTile({ game, rowIndex, colIndex, tileAttribute: tile.item, event, counts });
-            } else if (!event.shiftKey) {
-                if (tile.type !== TileTexture.Floor) {
-                    this.deleteTile({ game, rowIndex, colIndex, tileAttribute: TileTexture.Floor, event, counts });
-                } else if (tile.item) {
-                    this.deleteTile({ game, rowIndex, colIndex, tileAttribute: tile.item, event, counts });
-                }
             }
         }
         return { isPaintingTiles, isErasingTiles: true };

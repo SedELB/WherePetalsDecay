@@ -42,8 +42,7 @@ describe('EndGamePageComponent', () => {
     });
 
     it('should call leaveEndGame on destroy if lobbyId exists', () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (gameViewServiceSpy.gameLobby as any).set({ lobbyId: '123' });
+        gameViewServiceSpy.gameLobby['set']({ lobbyId: '123' } as never);
         
         component.ngOnDestroy();
         

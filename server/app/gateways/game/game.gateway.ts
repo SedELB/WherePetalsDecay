@@ -1,45 +1,21 @@
-/* eslint-disable max-lines */
-import { GameLogicService, SanctuaryUseResult } from '@app/services/game-logic/game-logic.service';
-import { VirtualPlayerService } from '@app/services/game-logic/virtual-player.service';
-import { JournalService } from '@app/services/journal/journal.service';
-import { LobbyService } from '@app/services/lobby/lobby.service';
-import { Posture } from '@common/character';
 import {
-    COMBAT_POST_ABANDON_RESUME_DELAY_MS,
-    COMBAT_POST_DEATH_RESUME_DELAY_MS,
-    COMBAT_POSTURE_TIMEOUT_MS,
-    COMBAT_ROUND_DELAY_MS,
-    COMBAT_START_ANNOUNCEMENT_DELAY_MS,
-    COUNTDOWN_TICK_MS,
-    DAMAGE_DISPLAY_DURATION_MS,
-    DEFAULT_POSTURE,
-    DICE_RESULT_DISPLAY_DURATION_MS,
-    DICE_ROLL_DURATION_MS,
-    FIGHTER_ADVANCE_DURATION_MS,
-    FIGHTER_HOLD_DURATION_MS,
-    FIGHTER_RETREAT_DURATION_MS,
-    NEXT_ROUND_ANNOUNCEMENT_DURATION_MS,
-    POSTURE_RESULT_DISPLAY_DURATION_MS,
-    ROUND_PHASE_BUFFER_MS,
-    STATUS_BUFFER_DURATION_MS,
-} from '@common/constants/combat-timeline.constants';
-import { Direction } from '@common/direction';
-import { GameMode, PlayerType, SanctuaryMode, SocketNamespace, TileTexture, VirtualPlayerProfile } from '@common/enums';
-import {
-    CombatEndedData,
-    CombatLockStateData,
-    CombatResult,
-    CombatRoundCountdownData,
-    CombatRoundResolvedData,
-    CombatRoundStartedData,
-    CombatRoundTimelineData,
-    CombatStartedData,
-    PostureReceivedData,
-} from '@common/interfaces/game-view';
+    FlagTransferResponsePayload,
+    MoveRequestPayload,
+    RequestCombatPayload,
+    RequestTileInfoPayload,
+    RequestToggleDoorPayload,
+    RequestUseSanctuaryPayload,
+    SendPosturePayload,
+    TargetPlayerPayload,
+    TeleportPayload,
+    ToggleDebugPayload,
+} from '@app/interfaces/gateway.interfaces';
+import { CombatFlowService } from '@app/services/game-logic/core/combat-flow.service';
+import { FlagTransferFlowService } from '@app/services/game-logic/core/flag-transfer-flow.service';
+import { GameFlowService } from '@app/services/game-logic/core/game-flow.service';
+import { MovementFlowService } from '@app/services/game-logic/core/movement-flow.service';
+import { SocketNamespace } from '@common/enums';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { Player } from '@common/player';
-import { TILE_COSTS } from '@common/tile-costs';
-import { Vec2 } from '@common/vec2';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
     ConnectedSocket,
@@ -51,1025 +27,101 @@ import {
     WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { GameTurnSyncService } from './game-turn-sync.service';
-
-interface CombatSession {
-    lobbyId: string;
-    roomId: string;
-    attackerId: string;
-    defenderId: string;
-    postures: Map<string, Posture>;
-    roundIndex: number;
-    awaitingPostures: boolean;
-    consumeActionPointOnNextRound: boolean;
-    timeoutHandle?: ReturnType<typeof setTimeout>;
-    countdownHandle?: ReturnType<typeof setInterval>;
-    vpPostureHandles: ReturnType<typeof setTimeout>[];
-}
 
 @WebSocketGateway({ namespace: SocketNamespace.Join, cors: true })
 @Injectable()
 export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     @WebSocketServer() private server: Server;
-    @Inject(VirtualPlayerService) private readonly virtualPlayerService: VirtualPlayerService;
 
-    private fightCounter = 0;
-    private readonly endGamePlayers = new Map<string, Set<string>>();
-    private readonly combatSessions = new Map<string, CombatSession>();
-    private readonly pendingPostCombatTurnResumes = new Map<string, ReturnType<typeof setTimeout>>();
+    @Inject(CombatFlowService) private readonly combatFlow: CombatFlowService;
+    @Inject(FlagTransferFlowService) private readonly flagFlow: FlagTransferFlowService;
 
-    constructor(
-        private readonly logger: Logger,
-        private readonly gameLogicService: GameLogicService,
-        private readonly lobbyService: LobbyService,
-        private readonly gameTurnSyncService: GameTurnSyncService,
-        private readonly journalService: JournalService,
-    ) {}
+    @Inject(Logger) private readonly logger: Logger;
+    @Inject(GameFlowService) private readonly gameFlow: GameFlowService;
+    @Inject(MovementFlowService) private readonly movementFlow: MovementFlowService;
 
     afterInit(): void {
         this.logger.log('GameGateway initialized on /join namespace');
-        this.gameLogicService.setCallbacks({
-            onBetweenTurnCountdown: (lobbyId: string, secondsLeft: number) => {
-                this.server.to(lobbyId).emit(JoinGameEvents.BetweenTurnCountdown, secondsLeft);
-            },
-            onTurnCountdown: (lobbyId: string, secondsLeft: number) => {
-                this.server.to(lobbyId).emit(JoinGameEvents.TurnCountdown, secondsLeft);
-            },
-            onTurnStarted: (lobbyId: string, playerSocketId: string) => {
-                this.server.to(lobbyId).emit(JoinGameEvents.TurnStarted, playerSocketId);
-                this.gameTurnSyncService.syncPlayerTurnStateWithoutAutoEnd(this.server, lobbyId, playerSocketId);
-                setImmediate(() => {
-                    this.gameTurnSyncService.autoEndTurnIfNoActions(lobbyId, playerSocketId);
-                    this.triggerVirtualPlayerTurnIfNeeded(lobbyId, playerSocketId);
-                });
-                this.server.to(lobbyId).emit(JoinGameEvents.SanctuaryStateUpdate, {
-                    inactiveSanctuaries: this.gameLogicService.getInactiveSanctuaries(lobbyId),
-                });
-
-                const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-                const playerName = activeGame?.lobby.players.find((p) => p.socketId === playerSocketId)?.character?.name ?? 'Joueur inconnu';
-                this.journalService.addTurnStartEntry(lobbyId, playerName);
-            },
-            onTurnEnded: (lobbyId: string, playerSocketId: string) => {
-                const expiredBonusPlayers = this.gameLogicService.decrementSanctuaryCooldowns(lobbyId, playerSocketId);
-                for (const sid of expiredBonusPlayers) {
-                    const game = this.gameLogicService.getActiveGame(lobbyId);
-                    const player = game?.lobby.players.find((p) => p.socketId === sid);
-                    if (player) {
-                        this.server.to(lobbyId).emit(JoinGameEvents.PlayerStatsUpdate, {
-                            socketId: sid,
-                            attack: player.character.attack,
-                            defense: player.character.defense,
-                            life: player.character.life,
-                        });
-                    }
-                }
-                this.server.to(lobbyId).emit(JoinGameEvents.TurnEnded, playerSocketId);
-            },
-        });
+        this.gameFlow.initialize(this.server);
+        this.movementFlow.setGameOverCallback((lobbyId, winnerId) => this.gameFlow.handleGameOver(lobbyId, winnerId));
     }
 
     handleDisconnect(socket: Socket): void {
-        this.processGameDisconnect(socket);
+        this.gameFlow.processGameDisconnect(socket);
     }
 
     @SubscribeMessage(JoinGameEvents.StartGame)
     handleStartGame(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string): void {
-        const finalLobby = this.lobbyService.canStartGame(lobbyId, socket.id);
-        if (!finalLobby) {
-            socket.emit(JoinGameEvents.LobbyError, 'Impossible de demarrer la partie. (Minimum 2 joueurs requis.)');
-            return;
-        }
-
-        this.clearPendingPostCombatTurnResume(lobbyId);
-
-        const activeGame = this.gameLogicService.initializeGame(finalLobby);
-
-        this.server.to(lobbyId).emit(JoinGameEvents.GameStarting, activeGame.lobby);
-        this.server.to(lobbyId).emit(JoinGameEvents.GameStarted, {
-            lobby: activeGame.lobby,
-            turnOrder: activeGame.turnOrder,
-            playerPositions: this.gameLogicService.getPlayerPositions(lobbyId),
-            playerStartPositions: this.gameLogicService.getPlayerStartPositions(lobbyId),
-        });
-
-        this.gameLogicService.startTurnCycle(lobbyId);
-    }
-
-    @SubscribeMessage(JoinGameEvents.RequestMove)
-    handleRequestMove(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; direction: Direction }): void {
-        const { lobbyId, direction } = payload;
-        if (this.hasActiveCombatInLobby(lobbyId)) return;
-        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
-
-        const result = this.gameLogicService.movePlayer(lobbyId, socket.id, direction);
-        if (!result) return;
-
-        const movementPoints = this.gameLogicService.getMovementPoints(lobbyId, socket.id);
-        this.server.to(lobbyId).emit(JoinGameEvents.PlayerMoved, {
-            socketId: socket.id,
-            position: result.position,
-            movementPoints,
-            flagTaken: result.flagJustTaken,
-        });
-
-        this.handlePostMoveJournalEntries(lobbyId, socket.id, result.position, result.flagJustTaken);
-
-        this.gameTurnSyncService.refreshPlayerNavigationState(this.server, lobbyId, socket.id);
-
-        if (this.lobbyService.getLobby(lobbyId).game.gameMode === GameMode.Ctf) {
-            const winner = this.gameLogicService.checkWinCondition(lobbyId, socket.id, result.position);
-            if (winner) {
-                this.handleGameOver(lobbyId, winner.socketId);
-            }
-        }
-    }
-
-    private handlePostMoveJournalEntries(lobbyId: string, socketId: string, position: Vec2, flagJustTaken: boolean): void {
-        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-        if (!activeGame) return;
-
-        const playerName = activeGame.lobby.players.find((p) => p.socketId === socketId)?.character?.name ?? 'Joueur';
-
-        if (flagJustTaken) {
-            this.journalService.addFlagPickedUpEntry(lobbyId, playerName);
-        }
-    }
-
-    @SubscribeMessage(JoinGameEvents.Teleport)
-    handleTeleportMove(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; position: Vec2 }): void {
-        const { lobbyId, position } = payload;
-        if (this.hasActiveCombatInLobby(lobbyId)) return;
-        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
-
-        const newPosition = this.gameLogicService.teleportPlayer(lobbyId, socket.id, position);
-        if (!newPosition) return;
-
-        this.server.to(lobbyId).emit(JoinGameEvents.PlayerTeleported, {
-            socketId: socket.id,
-            position: newPosition.position,
-            flagTaken: newPosition.flagJustTaken,
-        });
-
-        this.gameTurnSyncService.refreshPlayerNavigationState(this.server, lobbyId, socket.id);
+        this.gameFlow.startGame(socket, lobbyId);
     }
 
     @SubscribeMessage(JoinGameEvents.ToggleDebugMode)
-    handleDebugToggle(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; state: boolean }): void {
-        const { lobbyId, state } = payload;
-        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-        if (!activeGame || activeGame.lobby.hostSocketId !== socket.id) return;
-
-        activeGame.isDebugMode = !state;
-        this.server.to(lobbyId).emit(JoinGameEvents.DebugToggled, !state);
-
-        const hostName = activeGame.lobby.players.find((p) => p.socketId === socket.id)?.character?.name ?? 'Hôte';
-        this.journalService.addDebugToggleEntry(lobbyId, hostName, activeGame.isDebugMode);
-
-        if (!activeGame.isDebugMode) {
-            const currentSocketId = activeGame.turnOrder[activeGame.currentTurnIndex];
-            if (currentSocketId) {
-                this.gameTurnSyncService.autoEndTurnIfNoActions(lobbyId, currentSocketId);
-            }
-        }
+    handleDebugToggle(@ConnectedSocket() socket: Socket, @MessageBody() payload: ToggleDebugPayload): void {
+        this.gameFlow.toggleDebug(socket, payload);
     }
 
     @SubscribeMessage(JoinGameEvents.EndTurn)
     handleEndTurn(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string): void {
-        if (this.hasActiveCombatInLobby(lobbyId)) return;
-
-        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-        if (!activeGame) return;
-
-        if (activeGame.lobby.hostSocketId === socket.id || this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) {
-            this.gameLogicService.endTurn(lobbyId);
-        }
-    }
-
-    @SubscribeMessage(JoinGameEvents.SendPosture)
-    handlePostureReceived(
-        @ConnectedSocket() socket: Socket,
-        @MessageBody() data: { lobbyId: string; roomId: string; posture: Posture },
-    ): void {
-        const { lobbyId, roomId, posture } = data;
-        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-        if (!activeGame) return;
-
-        const isPlayerInLobby = activeGame.lobby.players.some((player) => player.socketId === socket.id);
-        if (!isPlayerInLobby || !socket.rooms.has(roomId)) return;
-
-        const session = this.combatSessions.get(roomId);
-        if (!session || !session.awaitingPostures) return;
-        if (socket.id !== session.attackerId && socket.id !== session.defenderId) return;
-
-        const normalizedPosture = this.normalizePosture(posture);
-        session.postures.set(socket.id, normalizedPosture);
-
-        const postureData: PostureReceivedData = { socketId: socket.id, posture: normalizedPosture };
-        socket.to(roomId).emit(JoinGameEvents.PostureReceived, postureData);
-
-        const allPosturesReceived = session.postures.has(session.attackerId) && session.postures.has(session.defenderId);
-        if (allPosturesReceived) {
-            this.resolveCombatSession(roomId);
-        }
-    }
-
-    @SubscribeMessage(JoinGameEvents.RequestCombat)
-    handleRequestCombat(
-        @ConnectedSocket() socket: Socket,
-        @MessageBody() payload: { lobbyId: string; player: Player; enemy: Player },
-    ): void {
-        this.fightCounter++;
-        const roomId = `fight${this.fightCounter}`;
-
-        const { lobbyId, enemy } = payload;
-        if (this.hasActiveCombatInLobby(lobbyId)) return;
-        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
-
-        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-        if (!activeGame) return;
-
-        this.clearPendingPostCombatTurnResume(lobbyId);
-
-        const attacker = activeGame.lobby.players.find((player) => player.socketId === socket.id);
-        const defender = activeGame.lobby.players.find((player) => player.socketId === enemy.socketId);
-        if (!attacker || !defender) return;
-
-        socket.join(roomId);
-        if (defender.playerType !== PlayerType.Virtual) {
-            const enemySocket = socket.nsp.sockets.get(defender.socketId);
-            if (!enemySocket) {
-                socket.leave(roomId);
-                return;
-            }
-            enemySocket.join(roomId);
-        }
-
-        const combatSession: CombatSession = {
-            lobbyId,
-            roomId,
-            attackerId: socket.id,
-            defenderId: defender.socketId,
-            postures: new Map<string, Posture>(),
-            roundIndex: 1,
-            awaitingPostures: false,
-            consumeActionPointOnNextRound: true,
-            vpPostureHandles: [],
-        };
-
-        this.combatSessions.set(roomId, combatSession);
-        this.gameLogicService.pauseTurnCycle(lobbyId);
-        this.emitCombatLockState({
-            lobbyId,
-            isLocked: true,
-            roomId,
-            attackerSocketId: socket.id,
-            defenderSocketId: defender.socketId,
-        });
-
-        const combatStartedData: CombatStartedData = { player: attacker, enemy: defender, roomId };
-        this.server.to(roomId).emit(JoinGameEvents.CombatStarted, combatStartedData);
-        this.journalService.addCombatStartEntry(lobbyId, attacker.character.name, defender.character.name);
-
-        combatSession.timeoutHandle = setTimeout(() => {
-            const activeSession = this.combatSessions.get(roomId);
-            if (!activeSession) return;
-            this.startCombatRoundAwaitingPostures(activeSession);
-        }, COMBAT_START_ANNOUNCEMENT_DELAY_MS);
-    }
-
-    @SubscribeMessage(JoinGameEvents.GiveFlagRequest)
-    handleGiveFlagRequest(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; targetSocketId: string }): void {
-        const { lobbyId, targetSocketId } = payload;
-        if (this.hasActiveCombatInLobby(lobbyId)) return;
-        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
-
-        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-        if (!activeGame) return;
-
-        const targetPlayer = activeGame.lobby.players.find((p) => p.socketId === targetSocketId);
-        if (targetPlayer?.playerType === PlayerType.Virtual) {
-            this.executeFlagTransfer(lobbyId, socket.id, targetSocketId, socket.id);
-            return;
-        }
-
-        const requesterName = activeGame.lobby.players.find((player) => player.socketId === socket.id)?.character?.name ?? 'Un coéquipier';
-
-        this.server.to(targetSocketId).emit(JoinGameEvents.GiveFlagResponse, {
-            requesterId: socket.id,
-            requesterName,
-            lobbyId,
-        });
-    }
-
-    @SubscribeMessage(JoinGameEvents.RequestFlagRequest)
-    handleRequestFlagRequest(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; targetSocketId: string }): void {
-        const { lobbyId, targetSocketId } = payload;
-        if (this.hasActiveCombatInLobby(lobbyId)) return;
-        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
-
-        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-        if (!activeGame) return;
-
-        const targetPlayer = activeGame.lobby.players.find((p) => p.socketId === targetSocketId);
-        if (targetPlayer?.playerType === PlayerType.Virtual) {
-            this.executeFlagTransfer(lobbyId, targetSocketId, socket.id, socket.id);
-            return;
-        }
-
-        const requesterName = activeGame.lobby.players.find((player) => player.socketId === socket.id)?.character?.name ?? 'Un coéquipier';
-
-        this.server.to(targetSocketId).emit(JoinGameEvents.RequestFlagResponse, {
-            requesterId: socket.id,
-            requesterName,
-            lobbyId,
-        });
-    }
-
-    @SubscribeMessage(JoinGameEvents.FlagTransferResponse)
-    handleFlagTransferResponse(
-        @ConnectedSocket() socket: Socket,
-        @MessageBody() payload: { lobbyId: string; requesterId: string; accepted: boolean; isRequest?: boolean },
-    ): void {
-        const { lobbyId, requesterId, accepted, isRequest } = payload;
-        if (this.hasActiveCombatInLobby(lobbyId)) return;
-        if (!accepted) return;
-        if (!this.gameLogicService.isPlayerTurn(lobbyId, requesterId)) return;
-
-        if (!isRequest) {
-            this.executeFlagTransfer(lobbyId, requesterId, socket.id, requesterId);
-        } else {
-            this.executeFlagTransfer(lobbyId, socket.id, requesterId, requesterId);
-        }
-    }
-
-    private executeFlagTransfer(lobbyId: string, giverId: string, receiverId: string, actionPointUpdaterId: string): void {
-        const wasFlagTransfered = this.gameLogicService.transferFlag(lobbyId, giverId, receiverId, actionPointUpdaterId);
-        if (!wasFlagTransfered) return;
-
-        this.sendActionPoints(lobbyId, actionPointUpdaterId);
-        this.server.to(lobbyId).emit(JoinGameEvents.FlagTransferred, {
-            giverPlayerId: giverId,
-            targetPlayerId: receiverId,
-        });
-
-        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-        const giverName = activeGame?.lobby.players.find((p) => p.socketId === giverId)?.character?.name ?? 'Joueur';
-        const receiverName = activeGame?.lobby.players.find((p) => p.socketId === receiverId)?.character?.name ?? 'Joueur';
-        this.journalService.addFlagTransferEntry(lobbyId, giverName, receiverName);
-    }
-
-    @SubscribeMessage(JoinGameEvents.RequestTileInfo)
-    handleRequestTileInfo(@ConnectedSocket() socket: Socket, @MessageBody() payload: { lobbyId: string; position: Vec2 }): void {
-        const { lobbyId, position } = payload;
-        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-        if (!activeGame) return;
-
-        const tile = activeGame.lobby.game.grid[position.y]?.[position.x];
-        if (!tile) return;
-
-        const playerOnTile = activeGame.lobby.players.find((player) => {
-            const playerPos = activeGame.playerPositions.get(player.socketId);
-            return playerPos && playerPos.x === position.x && playerPos.y === position.y && !player.hasAbandonned;
-        });
-
-        socket.emit(JoinGameEvents.TileInfo, {
-            tile,
-            cost: TILE_COSTS[tile.type],
-            player: playerOnTile ? { name: playerOnTile.character.name, avatar: playerOnTile.character.avatar } : null,
-        });
-    }
-
-    @SubscribeMessage(JoinGameEvents.RequestToggleDoor) handleRequestToggleDoor(
-        @ConnectedSocket() socket: Socket,
-        @MessageBody() payload: { lobbyId: string; position: Vec2 },
-    ) {
-        const { lobbyId, position } = payload;
-        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
-
-        const result = this.gameLogicService.toggleDoor(lobbyId, socket.id, position);
-        if (!result) return;
-
-        const game = this.gameLogicService.getActiveGame(lobbyId);
-        const playerName = game?.lobby.players.find((p) => p.socketId === socket.id)?.character?.name ?? 'Joueur';
-        this.server.to(lobbyId).emit(JoinGameEvents.DoorToggled, {
-            position,
-            newType: game.lobby.game.grid[position.y][position.x].type,
-        });
-
-        if (result === TileTexture.DoorOpened) {
-            this.journalService.addDoorOpenEntry(lobbyId, playerName);
-        } else if (result === TileTexture.DoorClosed) {
-            this.journalService.addDoorCloseEntry(lobbyId, playerName);
-        }
-
-        this.sendActionPoints(lobbyId, socket.id);
-        this.autoEndTurnIfNoActions(lobbyId, socket.id);
-    }
-    @SubscribeMessage(JoinGameEvents.RequestUseSanctuary)
-    handleRequestUseSanctuary(
-        @ConnectedSocket() socket: Socket,
-        @MessageBody() payload: { lobbyId: string; position: { x: number; y: number }; mode: SanctuaryMode },
-    ) {
-        const { lobbyId, position, mode } = payload;
-        if (!this.gameLogicService.isPlayerTurn(lobbyId, socket.id)) return;
-
-        const result: SanctuaryUseResult = this.gameLogicService.useSanctuary(lobbyId, socket.id, position, mode);
-        if (!result) return;
-
-        const game = this.gameLogicService.getActiveGame(lobbyId);
-        const player = game?.lobby.players.find((p) => p.socketId === socket.id);
-
-        this.server.to(lobbyId).emit(JoinGameEvents.SanctuaryUsed, {
-            socketId: socket.id,
-            position,
-            sanctuaryType: result.sanctuaryType,
-            mode: result.mode,
-            healAmount: result.healAmount,
-            combatBonusApplied: result.combatBonusApplied,
-            playerNewLife: result.playerNewLife,
-            playerName: result.playerName,
-            inactiveSanctuaries: result.inactiveSanctuaries,
-        });
-
-        if (result.combatBonusApplied && player) {
-            this.server.to(lobbyId).emit(JoinGameEvents.PlayerStatsUpdate, {
-                socketId: socket.id,
-                attack: player.character.attack,
-                defense: player.character.defense,
-                life: player.character.life,
-            });
-        }
-
-        this.journalService.addSanctuaryUsedEntry(
-            lobbyId,
-            result.playerName,
-            {
-                sanctuaryType: result.sanctuaryType,
-                mode: result.mode,
-                healAmount: result.healAmount,
-                combatBonusApplied: result.combatBonusApplied,
-            },
-        );
-
-        this.sendActionPoints(lobbyId, socket.id);
-        this.autoEndTurnIfNoActions(lobbyId, socket.id);
+        this.gameFlow.endTurn(socket, lobbyId);
     }
 
     @SubscribeMessage(JoinGameEvents.PlayerAbandon)
     handlePlayerAbandon(@ConnectedSocket() socket: Socket): void {
-        this.processGameDisconnect(socket);
-        socket.emit(JoinGameEvents.LeftLobby);
-    }
-
-    private processGameDisconnect(socket: Socket): void {
-        const activeGame = this.gameLogicService.findActiveGameBySocketId(socket.id);
-        if (!activeGame) return;
-
-        const lobbyId = activeGame.lobby.lobbyId;
-        const abandoningPlayer = activeGame.lobby.players.find((p) => p.socketId === socket.id);
-        if (abandoningPlayer) {
-            this.journalService.addPlayerAbandonEntry(lobbyId, abandoningPlayer.character.name);
-        }
-
-        const combatSession = this.findCombatSessionByPlayer(socket.id);
-        const shouldDeferTurnAdvance = Boolean(combatSession) && this.gameLogicService.isPlayerTurn(lobbyId, socket.id);
-
-        if (combatSession) {
-            const winnerId = combatSession.attackerId === socket.id ? combatSession.defenderId : combatSession.attackerId;
-            this.resolveCombatByAbandon(combatSession, socket.id, winnerId);
-        }
-
-        const isGameOver = this.gameLogicService.executePlayerAbandon(lobbyId, socket, this.server, shouldDeferTurnAdvance);
-
-        if (!isGameOver && shouldDeferTurnAdvance) {
-            this.schedulePostCombatTurnResume(lobbyId, COMBAT_POST_ABANDON_RESUME_DELAY_MS, () => {
-                this.gameLogicService.endTurn(lobbyId);
-            });
-        }
-
-        if (!isGameOver) return;
-
-        const remainingPlayers = activeGame.lobby.players
-            .filter((player) => !player.hasAbandonned)
-            .map((player) => player.socketId);
-        this.endGamePlayers.set(lobbyId, new Set(remainingPlayers));
-    }
-
-    private handleGameOver(lobbyId: string, winnerSocketId: string | null): void {
-        this.clearPendingPostCombatTurnResume(lobbyId);
-
-        const gameStats = this.gameLogicService.getGameStats(lobbyId);
-        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-        const players = activeGame ? [...activeGame.lobby.players] : [];
-        const socketIds = new Set(players.map((player) => player.socketId));
-        this.endGamePlayers.set(lobbyId, socketIds);
-
-        const activeNames = players.filter((p) => !p.hasAbandonned).map((p) => p.character.name);
-        this.journalService.addGameOverEntry(lobbyId, activeNames);
-
-        this.server.to(lobbyId).emit(JoinGameEvents.GameOver, { winnerSocketId, isForfeit: false, players, gameStats });
-        this.gameLogicService.endGame(lobbyId);
+        this.gameFlow.playerAbandon(socket);
     }
 
     @SubscribeMessage(JoinGameEvents.LeaveEndGame)
     handleLeaveEndGame(@ConnectedSocket() socket: Socket, @MessageBody() lobbyId: string): void {
-        const remaining = this.endGamePlayers.get(lobbyId);
-        if (!remaining) return;
-
-        remaining.delete(socket.id);
-        socket.leave(lobbyId);
-
-        if (remaining.size > 0) return;
-        this.endGamePlayers.delete(lobbyId);
-        this.lobbyService.deleteLobby(lobbyId);
+        this.gameFlow.leaveEndGame(socket, lobbyId);
     }
 
-    private autoEndTurnIfNoActions(lobbyId: string, socketId: string): void {
-        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-        if (activeGame?.isDebugMode) return;
-
-        const reachable = this.gameLogicService.getReachableTiles(lobbyId, socketId);
-        const adjacent = this.gameLogicService.getAdjacentPlayers(lobbyId, socketId);
-        const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
-
-        const canMove = reachable.length > 0;
-        const canFight = adjacent.length > 0 && actionPoints > 0;
-
-        if (!canMove && !canFight) this.gameLogicService.endTurn(lobbyId);
+    @SubscribeMessage(JoinGameEvents.RequestCombat)
+    handleRequestCombat(@ConnectedSocket() socket: Socket, @MessageBody() payload: RequestCombatPayload): void {
+        this.combatFlow.initializeCombat(payload.lobbyId, socket.id, payload.enemy.socketId);
     }
 
-    private resolveCombatSession(roomId: string, timedOutSocketIds: string[] = []): void {
-        const session = this.combatSessions.get(roomId);
-        if (!session || !session.awaitingPostures) return;
-
-        this.clearCombatSessionTimers(session);
-
-        const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
-        if (!activeGame) {
-            this.emitCombatLockState({
-                lobbyId: session.lobbyId,
-                isLocked: false,
-                roomId: session.roomId,
-                attackerSocketId: session.attackerId,
-                defenderSocketId: session.defenderId,
-            });
-            this.cleanupCombatSession(session.roomId);
-            return;
-        }
-
-        const attacker = activeGame.lobby.players.find((player) => player.socketId === session.attackerId);
-        const defender = activeGame.lobby.players.find((player) => player.socketId === session.defenderId);
-        if (!attacker || !defender) {
-            this.emitCombatLockState({
-                lobbyId: session.lobbyId,
-                isLocked: false,
-                roomId: session.roomId,
-                attackerSocketId: session.attackerId,
-                defenderSocketId: session.defenderId,
-            });
-            this.cleanupCombatSession(session.roomId);
-            return;
-        }
-
-        attacker.character.bonusPosture = session.postures.get(session.attackerId) ?? { ...DEFAULT_POSTURE };
-        defender.character.bonusPosture = session.postures.get(session.defenderId) ?? { ...DEFAULT_POSTURE };
-
-        session.awaitingPostures = false;
-        this.executeCombatRound(session.roomId, session.consumeActionPointOnNextRound, timedOutSocketIds);
+    @SubscribeMessage(JoinGameEvents.SendPosture)
+    handlePostureReceived(@ConnectedSocket() socket: Socket, @MessageBody() payload: SendPosturePayload): void {
+        this.combatFlow.handlePostureReceived(payload.roomId, socket.id, payload.posture);
     }
 
-    private executeCombatRound(roomId: string, consumeActionPoint: boolean, timedOutSocketIds: string[] = []): void {
-        const session = this.combatSessions.get(roomId);
-        if (!session) return;
-
-        const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
-        const debugDiceMode = Boolean(activeGame?.isDebugMode);
-
-        const timeline: CombatRoundTimelineData = {
-            postureResultDisplayDurationMs: POSTURE_RESULT_DISPLAY_DURATION_MS,
-            roundPhaseBufferMs: ROUND_PHASE_BUFFER_MS,
-            diceRollDurationMs: DICE_ROLL_DURATION_MS,
-            diceResultDisplayDurationMs: DICE_RESULT_DISPLAY_DURATION_MS,
-            damageDisplayDurationMs: DAMAGE_DISPLAY_DURATION_MS,
-            fighterAdvanceDurationMs: FIGHTER_ADVANCE_DURATION_MS,
-            fighterHoldDurationMs: FIGHTER_HOLD_DURATION_MS,
-            fighterRetreatDurationMs: FIGHTER_RETREAT_DURATION_MS,
-            statusBufferDurationMs: STATUS_BUFFER_DURATION_MS,
-            nextRoundAnnouncementDurationMs: NEXT_ROUND_ANNOUNCEMENT_DURATION_MS,
-        };
-
-        const combatResult = this.gameLogicService.initiateCombat(
-            session.lobbyId,
-            session.attackerId,
-            session.defenderId,
-            consumeActionPoint,
-        ) as CombatResult | null;
-
-        if (!combatResult) {
-            this.emitCombatLockState({
-                lobbyId: session.lobbyId,
-                isLocked: false,
-                roomId: session.roomId,
-                attackerSocketId: session.attackerId,
-                defenderSocketId: session.defenderId,
-            });
-            this.gameLogicService.resumeTurnCycle(session.lobbyId);
-            this.cleanupCombatSession(session.roomId);
-            return;
-        }
-
-        const roundResolvedData: CombatRoundResolvedData = {
-            roomId: session.roomId,
-            roundIndex: session.roundIndex,
-            result: combatResult,
-            resolvedAtEpochMs: Date.now(),
-            timeline,
-            debugDiceMode,
-            ...(timedOutSocketIds.length > 0 ? { timedOutSocketIds } : {}),
-        };
-        this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundResolved, roundResolvedData);
-        this.server.to(session.lobbyId).emit(JoinGameEvents.CombatResult, combatResult);
-
-        this.emitCombatJournalEntries(session, combatResult);
-
-        const isFightOver = combatResult.attacker.killed || combatResult.defender.killed;
-        if (!isFightOver) {
-            session.consumeActionPointOnNextRound = false;
-            session.timeoutHandle = setTimeout(() => {
-                this.prepareNextCombatRound(session.roomId);
-            }, COMBAT_ROUND_DELAY_MS);
-            return;
-        }
-
-        this.handleCombatEnd(session, combatResult);
+    @SubscribeMessage(JoinGameEvents.RequestMove)
+    handleRequestMove(@ConnectedSocket() socket: Socket, @MessageBody() payload: MoveRequestPayload): void {
+        this.movementFlow.requestMove(this.server, socket, payload);
     }
 
-    private handleCombatEnd(session: CombatSession, combatResult: CombatResult): void {
-        const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
-        const attackerName = activeGame?.lobby.players.find((p) => p.socketId === session.attackerId)?.character?.name ?? 'Attaquant';
-        const defenderName = activeGame?.lobby.players.find((p) => p.socketId === session.defenderId)?.character?.name ?? 'Défenseur';
-        const winnerName = combatResult.winnerId === session.attackerId ? attackerName : defenderName;
-        const loserName = combatResult.winnerId === session.attackerId ? defenderName : attackerName;
-        this.journalService.addCombatEndEntry(session.lobbyId, winnerName, loserName);
-
-        const combatEndedData: CombatEndedData = {
-            roomId: session.roomId,
-            attackerSocketId: session.attackerId,
-            defenderSocketId: session.defenderId,
-            attackerKilled: combatResult.attacker.killed,
-            defenderKilled: combatResult.defender.killed,
-            winnerId: combatResult.winnerId,
-            reason: 'death',
-        };
-        this.server.to(session.roomId).emit(JoinGameEvents.CombatEnded, combatEndedData);
-
-        this.finalizeCombatSession(session, combatResult);
+    @SubscribeMessage(JoinGameEvents.Teleport)
+    handleTeleportMove(@ConnectedSocket() socket: Socket, @MessageBody() payload: TeleportPayload): void {
+        this.movementFlow.teleport(this.server, socket, payload);
     }
 
-    private prepareNextCombatRound(roomId: string): void {
-        const session = this.combatSessions.get(roomId);
-        if (!session) return;
-
-        session.postures.clear();
-        session.roundIndex++;
-        session.awaitingPostures = false;
-        this.startCombatRoundAwaitingPostures(session);
+    @SubscribeMessage(JoinGameEvents.RequestTileInfo)
+    handleRequestTileInfo(@ConnectedSocket() socket: Socket, @MessageBody() payload: RequestTileInfoPayload): void {
+        this.movementFlow.requestTileInfo(socket, payload);
     }
 
-    private finalizeCombatSession(session: CombatSession, finalResult: CombatResult): void {
-        this.clearCombatSessionTimers(session);
-        this.emitCombatLockState({
-            lobbyId: session.lobbyId,
-            isLocked: false,
-            roomId: session.roomId,
-            attackerSocketId: session.attackerId,
-            defenderSocketId: session.defenderId,
-        });
-
-        const winner = this.gameLogicService.checkWinCondition(session.lobbyId);
-        if (winner) {
-            this.handleGameOver(session.lobbyId, winner.socketId);
-            this.cleanupCombatSession(session.roomId);
-            return;
-        }
-
-        if (finalResult.winnerId === session.attackerId) {
-            this.schedulePostCombatTurnResume(session.lobbyId, COMBAT_POST_DEATH_RESUME_DELAY_MS, () => {
-                this.gameLogicService.resumeTurnCycle(session.lobbyId);
-                this.sendActionPoints(session.lobbyId, session.attackerId);
-
-                const winnerGame = this.gameLogicService.getActiveGame(session.lobbyId);
-                const winnerPlayer = winnerGame?.lobby.players.find((p) => p.socketId === session.attackerId);
-                if (winnerPlayer?.playerType === PlayerType.Virtual) {
-                    this.triggerVirtualPlayerTurnIfNeeded(session.lobbyId, session.attackerId);
-                } else {
-                    this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
-                }
-            });
-        } else {
-            this.schedulePostCombatTurnResume(session.lobbyId, COMBAT_POST_DEATH_RESUME_DELAY_MS, () => {
-                this.gameLogicService.endTurn(session.lobbyId);
-            });
-        }
-
-        this.cleanupCombatSession(session.roomId);
+    @SubscribeMessage(JoinGameEvents.RequestToggleDoor)
+    handleRequestToggleDoor(@ConnectedSocket() socket: Socket, @MessageBody() payload: RequestToggleDoorPayload): void {
+        this.movementFlow.toggleDoor(this.server, socket, payload);
     }
 
-    private findCombatSessionByPlayer(socketId: string): CombatSession | undefined {
-        return Array.from(this.combatSessions.values()).find((session) => session.attackerId === socketId || session.defenderId === socketId);
+    @SubscribeMessage(JoinGameEvents.RequestUseSanctuary)
+    handleRequestUseSanctuary(@ConnectedSocket() socket: Socket, @MessageBody() payload: RequestUseSanctuaryPayload): void {
+        this.movementFlow.useSanctuary(this.server, socket, payload);
     }
 
-    private resolveCombatByAbandon(session: CombatSession, loserId: string, winnerId: string): void {
-        const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
-        if (!activeGame) {
-            this.emitCombatLockState({
-                lobbyId: session.lobbyId,
-                isLocked: false,
-                roomId: session.roomId,
-                attackerSocketId: session.attackerId,
-                defenderSocketId: session.defenderId,
-            });
-            this.cleanupCombatSession(session.roomId);
-            return;
-        }
-
-        const winnerPlayer = activeGame.lobby.players.find((player) => player.socketId === winnerId);
-        if (winnerPlayer && !winnerPlayer.hasAbandonned) winnerPlayer.winsCount++;
-
-        const combatEndedData: CombatEndedData = {
-            roomId: session.roomId,
-            attackerSocketId: session.attackerId,
-            defenderSocketId: session.defenderId,
-            attackerKilled: loserId === session.attackerId,
-            defenderKilled: loserId === session.defenderId,
-            winnerId,
-            reason: 'abandon',
-        };
-        this.server.to(session.roomId).emit(JoinGameEvents.CombatEnded, combatEndedData);
-
-        const winner = this.gameLogicService.checkWinCondition(session.lobbyId);
-        this.emitCombatLockState({
-            lobbyId: session.lobbyId,
-            isLocked: false,
-            roomId: session.roomId,
-            attackerSocketId: session.attackerId,
-            defenderSocketId: session.defenderId,
-        });
-
-        if (winner) {
-            this.handleGameOver(session.lobbyId, winner.socketId);
-            this.cleanupCombatSession(session.roomId);
-            return;
-        }
-
-        if (winnerId === session.attackerId) {
-            this.schedulePostCombatTurnResume(session.lobbyId, COMBAT_POST_ABANDON_RESUME_DELAY_MS, () => {
-                this.gameLogicService.resumeTurnCycle(session.lobbyId);
-                this.sendActionPoints(session.lobbyId, session.attackerId);
-
-                const abandonWinnerGame = this.gameLogicService.getActiveGame(session.lobbyId);
-                const abandonWinnerPlayer = abandonWinnerGame?.lobby.players.find((p) => p.socketId === session.attackerId);
-                if (abandonWinnerPlayer?.playerType === PlayerType.Virtual) {
-                    this.triggerVirtualPlayerTurnIfNeeded(session.lobbyId, session.attackerId);
-                } else {
-                    this.autoEndTurnIfNoActions(session.lobbyId, session.attackerId);
-                }
-            });
-        }
-
-        this.cleanupCombatSession(session.roomId);
+    @SubscribeMessage(JoinGameEvents.GiveFlagRequest)
+    handleGiveFlagRequest(@ConnectedSocket() socket: Socket, @MessageBody() payload: TargetPlayerPayload): void {
+        this.flagFlow.giveFlag(this.server, socket, payload);
     }
 
-    private schedulePostCombatTurnResume(lobbyId: string, delayMs: number, callback: () => void): void {
-        this.clearPendingPostCombatTurnResume(lobbyId);
-
-        const timeout = setTimeout(() => {
-            this.pendingPostCombatTurnResumes.delete(lobbyId);
-
-            const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-            if (!activeGame) return;
-
-            callback();
-        }, delayMs);
-
-        this.pendingPostCombatTurnResumes.set(lobbyId, timeout);
+    @SubscribeMessage(JoinGameEvents.RequestFlagRequest)
+    handleRequestFlagRequest(@ConnectedSocket() socket: Socket, @MessageBody() payload: TargetPlayerPayload): void {
+        this.flagFlow.requestFlag(this.server, socket, payload);
     }
 
-    private clearPendingPostCombatTurnResume(lobbyId: string): void {
-        const timeout = this.pendingPostCombatTurnResumes.get(lobbyId);
-        if (!timeout) return;
-
-        clearTimeout(timeout);
-        this.pendingPostCombatTurnResumes.delete(lobbyId);
-    }
-
-    private cleanupCombatSession(roomId: string): void {
-        const session = this.combatSessions.get(roomId);
-        if (session) this.clearCombatSessionTimers(session);
-        this.server.in(roomId).socketsLeave(roomId);
-        this.combatSessions.delete(roomId);
-    }
-
-    private hasActiveCombatInLobby(lobbyId: string): boolean {
-        return Array.from(this.combatSessions.values()).some((session) => session.lobbyId === lobbyId);
-    }
-
-    private emitCombatLockState(data: CombatLockStateData): void {
-        this.server.to(data.lobbyId).emit(JoinGameEvents.CombatLockStateChanged, data);
-    }
-
-    private normalizePosture(posture: Posture | null | undefined): Posture {
-        const postureType = posture?.type === 'atk' || posture?.type === 'def' ? posture.type : null;
-        if (!postureType) return { ...DEFAULT_POSTURE };
-        return { type: postureType, bonus: 2 };
-    }
-
-    private startCombatRoundAwaitingPostures(session: CombatSession): void {
-        this.clearCombatSessionTimers(session);
-        session.awaitingPostures = true;
-
-        const roundStartedData: CombatRoundStartedData = {
-            roomId: session.roomId,
-            roundIndex: session.roundIndex,
-            postureTimeoutMs: COMBAT_POSTURE_TIMEOUT_MS,
-        };
-        this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundStarted, roundStartedData);
-
-        this.scheduleVirtualPlayerPostures(session);
-
-        let secondsLeft = Math.ceil(COMBAT_POSTURE_TIMEOUT_MS / COUNTDOWN_TICK_MS);
-        const emitCountdown = () => {
-            const roundCountdownData: CombatRoundCountdownData = {
-                roomId: session.roomId,
-                roundIndex: session.roundIndex,
-                secondsLeft,
-            };
-            this.server.to(session.roomId).emit(JoinGameEvents.CombatRoundCountdown, roundCountdownData);
-        };
-
-        emitCountdown();
-        session.countdownHandle = setInterval(() => {
-            if (!session.awaitingPostures) {
-                this.clearCombatSessionTimers(session);
-                return;
-            }
-
-            secondsLeft--;
-            if (secondsLeft <= 0) {
-                if (session.countdownHandle) {
-                    clearInterval(session.countdownHandle);
-                    session.countdownHandle = undefined;
-                }
-                return;
-            }
-
-            emitCountdown();
-        }, COUNTDOWN_TICK_MS);
-
-        session.timeoutHandle = setTimeout(() => {
-            if (!session.awaitingPostures) return;
-
-            const timedOutSocketIds = [session.attackerId, session.defenderId].filter((socketId) => !session.postures.has(socketId));
-            for (const socketId of timedOutSocketIds) {
-                session.postures.set(socketId, { ...DEFAULT_POSTURE });
-            }
-
-            this.resolveCombatSession(session.roomId, timedOutSocketIds);
-        }, COMBAT_POSTURE_TIMEOUT_MS);
-    }
-
-    private clearCombatSessionTimers(session: CombatSession): void {
-        if (session.timeoutHandle) {
-            clearTimeout(session.timeoutHandle);
-            session.timeoutHandle = undefined;
-        }
-
-        if (session.countdownHandle) {
-            clearInterval(session.countdownHandle);
-            session.countdownHandle = undefined;
-        }
-
-        for (const handle of session.vpPostureHandles) {
-            clearTimeout(handle);
-        }
-        session.vpPostureHandles = [];
-    }
-
-    private scheduleVirtualPlayerPostures(session: CombatSession): void {
-        const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
-        if (!activeGame) return;
-
-        for (const participantId of [session.attackerId, session.defenderId]) {
-            const participant = activeGame.lobby.players.find((p) => p.socketId === participantId);
-            if (!participant || participant.playerType !== PlayerType.Virtual) continue;
-
-            const posture: Posture = participant.virtualProfile === VirtualPlayerProfile.Aggressive
-                ? { type: 'atk', bonus: 2 }
-                : { type: 'def', bonus: 2 };
-
-            session.postures.set(participantId, posture);
-            const postureData: PostureReceivedData = { socketId: participantId, posture };
-            this.server.to(session.roomId).emit(JoinGameEvents.PostureReceived, postureData);
-        }
-
-        if (session.postures.has(session.attackerId) && session.postures.has(session.defenderId)) {
-            this.resolveCombatSession(session.roomId);
-        }
-    }
-
-    private sendActionPoints(lobbyId: string, socketId: string): void {
-        const actionPoints = this.gameLogicService.getActionPoints(lobbyId, socketId);
-        this.server.to(lobbyId).emit(JoinGameEvents.ActionPoints, { socketId, actionPoints });
-    }
-
-    private triggerVirtualPlayerTurnIfNeeded(lobbyId: string, playerSocketId: string): void {
-        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-        if (!activeGame) return;
-
-        const currentPlayer = activeGame.lobby.players.find((player) => player.socketId === playerSocketId);
-        if (!currentPlayer || currentPlayer.playerType !== PlayerType.Virtual) return;
-
-        this.virtualPlayerService.executeTurn(
-            this.server,
-            activeGame,
-            currentPlayer,
-            this.initiateVirtualPlayerCombat.bind(this),
-            (targetLobbyId: string, winnerSocketId: string) => this.handleGameOver(targetLobbyId, winnerSocketId),
-        );
-    }
-
-    private initiateVirtualPlayerCombat(lobbyId: string, attackerId: string, defenderId: string): void {
-        if (this.hasActiveCombatInLobby(lobbyId)) return;
-        if (!this.gameLogicService.isPlayerTurn(lobbyId, attackerId)) return;
-
-        const activeGame = this.gameLogicService.getActiveGame(lobbyId);
-        if (!activeGame) return;
-
-        const attacker = activeGame.lobby.players.find((player) => player.socketId === attackerId);
-        const defender = activeGame.lobby.players.find((player) => player.socketId === defenderId);
-        if (!attacker || !defender) return;
-
-        this.clearPendingPostCombatTurnResume(lobbyId);
-
-        this.fightCounter++;
-        const roomId = `fight-vp-${this.fightCounter}`;
-
-        // Real participants join the room (virtual players have no client socket)
-        this.server.in(attackerId).socketsJoin(roomId);
-        this.server.in(defenderId).socketsJoin(roomId);
-
-        const combatSession: CombatSession = {
-            lobbyId,
-            roomId,
-            attackerId,
-            defenderId,
-            postures: new Map<string, Posture>(),
-            roundIndex: 1,
-            awaitingPostures: false,
-            consumeActionPointOnNextRound: true,
-            vpPostureHandles: [],
-        };
-
-        this.combatSessions.set(roomId, combatSession);
-        this.gameLogicService.pauseTurnCycle(lobbyId);
-        this.emitCombatLockState({
-            lobbyId,
-            isLocked: true,
-            roomId,
-            attackerSocketId: attackerId,
-            defenderSocketId: defenderId,
-        });
-
-        const combatStartedData: CombatStartedData = { player: attacker, enemy: defender, roomId };
-        this.server.to(roomId).emit(JoinGameEvents.CombatStarted, combatStartedData);
-        this.journalService.addCombatStartEntry(lobbyId, attacker.character.name, defender.character.name);
-
-        combatSession.timeoutHandle = setTimeout(() => {
-            const activeSession = this.combatSessions.get(roomId);
-            if (!activeSession) return;
-            this.startCombatRoundAwaitingPostures(activeSession);
-        }, COMBAT_START_ANNOUNCEMENT_DELAY_MS);
-    }
-
-    private emitCombatJournalEntries(session: CombatSession, combatResult: CombatResult): void {
-        const activeGame = this.gameLogicService.getActiveGame(session.lobbyId);
-        if (!activeGame) return;
-
-        const attackerName = activeGame.lobby.players.find((p) => p.socketId === session.attackerId)?.character?.name ?? 'Attaquant';
-        const defenderName = activeGame.lobby.players.find((p) => p.socketId === session.defenderId)?.character?.name ?? 'Défenseur';
-
-        this.journalService.addCombatRoundEntries(session.lobbyId, {
-            attackerId: session.attackerId,
-            attackerName,
-            attackerAttack: combatResult.attacker.attack,
-            attackerDefense: combatResult.attacker.defense,
-            defenderId: session.defenderId,
-            defenderName,
-            defenderAttack: combatResult.defender.attack,
-            defenderDefense: combatResult.defender.defense,
-            damageToDefender: combatResult.attacker.damageDealt,
-            damageToAttacker: combatResult.defender.damageDealt,
-        });
+    @SubscribeMessage(JoinGameEvents.FlagTransferResponse)
+    handleFlagTransferResponse(@ConnectedSocket() socket: Socket, @MessageBody() payload: FlagTransferResponsePayload): void {
+        this.flagFlow.respond(this.server, socket, payload);
     }
 }

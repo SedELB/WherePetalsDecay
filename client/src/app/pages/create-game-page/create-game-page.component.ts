@@ -1,15 +1,9 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '@app/components/button/button.component';
+import { MapSizeConfig } from '@app/interfaces/page.interfaces';
 import { Game } from '@common/game';
 import { ButtonVariant, GameMode, GridSizes, MapSetupMode, MapSizeKey, MaxPlayers } from '@common/enums';
-
-
-interface MapSizeConfig {
-  rows: number;
-  cols: number;
-  maxPlayers: number;
-}
 
 const MAP_SIZE_CONFIG: Record<MapSizeKey, MapSizeConfig> = {
   [MapSizeKey.Small]: { rows: GridSizes.Small, cols: GridSizes.Small, maxPlayers: MaxPlayers.Small },
