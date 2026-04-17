@@ -16,6 +16,8 @@ const DEFAULT_LIFE = 6;
 const DEFAULT_SPEED = 4;
 const FAST_SPEED = 8;
 const GRID_SIZE = 3;
+const PLAYER_COUNT = 3;
+const SINGLE_ELEMENT = 42;
 
 const SOCKET_A = 'socket-a';
 const SOCKET_B = 'socket-b';
@@ -159,7 +161,7 @@ describe('GameSetupService', () => {
         it('should return all player socket IDs', () => {
             const players = [buildPlayer(SOCKET_A), buildPlayer(SOCKET_B), buildPlayer(SOCKET_C)];
             const order = service.computeTurnOrder(players);
-            expect(order.length).toBe(3);
+            expect(order.length).toBe(PLAYER_COUNT);
             expect(order).toContain(SOCKET_A);
             expect(order).toContain(SOCKET_B);
             expect(order).toContain(SOCKET_C);
@@ -176,7 +178,7 @@ describe('GameSetupService', () => {
     describe('shuffle', () => {
         /** Returns a shuffled array that contains the same elements as the original. */
         it('should return an array with the same elements as the input', () => {
-            const original = [1, 2, 3, 4, 5];
+            const original = [PLAYER_COUNT, DEFAULT_SPEED, GRID_SIZE, DEFAULT_LIFE, FAST_SPEED];
             const shuffled = service.shuffle([...original]);
             expect(shuffled.length).toBe(original.length);
             for (const item of original) {
@@ -191,7 +193,7 @@ describe('GameSetupService', () => {
 
         /** Returns a single-element array unchanged. */
         it('should return single-element array unchanged', () => {
-            expect(service.shuffle([42])).toEqual([42]);
+            expect(service.shuffle([SINGLE_ELEMENT])).toEqual([SINGLE_ELEMENT]);
         });
     });
 
