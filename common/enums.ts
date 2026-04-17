@@ -93,3 +93,19 @@ export enum SanctuaryMode {
     Normal = 'normal',
     DoubleOrNothing = 'doubleOrNothing',
 }
+
+export enum DiceType {
+    D4 = 'D4',
+    D6 = 'D6',
+}
+
+export enum DiceRollMode {
+    Random = 'random',
+    Max = 'max',
+    Min = 'min',
+}
+
+export enum PostureType {
+    Attack = 'atk',
+    Defense = 'def',
+}

@@ -3,18 +3,16 @@ import { GameCatalogGateway } from '@app/gateways/game-catalog/game-catalog.gate
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { UpdateGameDto } from '@app/model/dto/game/update-game.dto';
 import { GameService } from '@app/services/game/game.service';
-import { Body, Controller, Delete, Get, HttpStatus, Param, Patch, Post, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpStatus, Inject, Param, Patch, Post, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 
 @ApiTags('Games')
 @Controller('game')
 export class GameController {
-    constructor(
-        private readonly gameService: GameService,
-        private readonly adminGateway: AdminGateway,
-        private readonly gameCatalogGateway: GameCatalogGateway,
-    ) {}
+    @Inject() private readonly gameService: GameService;
+    @Inject() private readonly adminGateway: AdminGateway;
+    @Inject() private readonly gameCatalogGateway: GameCatalogGateway;
 
     @Get('/allGames')
     async allGames(@Res() response: Response) {
@@ -22,7 +20,10 @@ export class GameController {
             const allGames = await this.gameService.getAllGames();
             response.status(HttpStatus.OK).json(allGames);
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).json(error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const isNotFound = errorMessage.includes('aucun') || errorMessage.includes('trouvé') || errorMessage.includes('trouve');
+            const status = isNotFound ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_SERVER_ERROR;
+            response.status(status).json(errorMessage);
         }
     }
 
@@ -32,7 +33,10 @@ export class GameController {
             const game = await this.gameService.getGameById(id);
             response.status(HttpStatus.OK).json(game);
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).json(error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const isNotFound = errorMessage.includes('aucun') || errorMessage.includes('trouvé') || errorMessage.includes('trouve');
+            const status = isNotFound ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_SERVER_ERROR;
+            response.status(status).json(errorMessage);
         }
     }
 
@@ -42,7 +46,10 @@ export class GameController {
             const allVisibleGames = await this.gameService.getAllVisibleGames();
             response.status(HttpStatus.OK).json(allVisibleGames);
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).json(error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const isNotFound = errorMessage.includes('aucun') || errorMessage.includes('trouvé') || errorMessage.includes('trouve');
+            const status = isNotFound ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_SERVER_ERROR;
+            response.status(status).json(errorMessage);
         }
     }
 
@@ -56,7 +63,10 @@ export class GameController {
             }
             response.status(HttpStatus.CREATED).json('Le jeu a été créé avec succès !');
         } catch (error) {
-            response.status(HttpStatus.BAD_REQUEST).json(error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const isBadRequest = errorMessage.includes('unique') || errorMessage.includes('validation') || errorMessage.includes('failed');
+            const status = isBadRequest ? HttpStatus.BAD_REQUEST : HttpStatus.INTERNAL_SERVER_ERROR;
+            response.status(status).json(errorMessage);
         }
     }
 
@@ -73,8 +83,11 @@ export class GameController {
 
             response.status(HttpStatus.OK).json('Le jeu a été modifié avec succès !');
         } catch (error) {
-            const status = error.message.includes('Aucun jeu trouvé avec cet identifiant.') ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            response.status(status).json(error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const isNotFound = errorMessage.includes('Aucun jeu trouvé') || errorMessage.includes('aucun jeu') || errorMessage.includes('trouve');
+            const isBadRequest = errorMessage.includes('unique') || errorMessage.includes('validation') || errorMessage.includes('failed');
+            const status = isNotFound ? HttpStatus.NOT_FOUND : isBadRequest ? HttpStatus.BAD_REQUEST : HttpStatus.INTERNAL_SERVER_ERROR;
+            response.status(status).json(errorMessage);
         }
     }
 
@@ -92,7 +105,10 @@ export class GameController {
 
             response.status(HttpStatus.OK).json('Le jeu a été modifié avec succès !');
         } catch (error) {
-            response.status(HttpStatus.BAD_REQUEST).json(error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const isNotFound = errorMessage.includes('trouvé') || errorMessage.includes('trouve');
+            const status = isNotFound ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_SERVER_ERROR;
+            response.status(status).json(errorMessage);
         }
     }
 
@@ -104,7 +120,10 @@ export class GameController {
             this.gameCatalogGateway.notifyGameDeleted(id);
             response.status(HttpStatus.NO_CONTENT).json('Le jeu a été supprimé avec succès !');
         } catch (error) {
-            response.status(HttpStatus.NOT_FOUND).json(error.message);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const isNotFound = errorMessage.includes('trouvé') || errorMessage.includes('trouve');
+            const status = isNotFound ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_SERVER_ERROR;
+            response.status(status).json(errorMessage);
         }
     }
 }

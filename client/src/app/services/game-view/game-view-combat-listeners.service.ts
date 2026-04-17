@@ -1,4 +1,6 @@
 import { Injectable } from '@angular/core';
+import { CombatListenerDependencies } from '@app/interfaces/combat.interfaces';
+import { GameViewCombatService } from '@app/services/game-view/game-view-combat.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { SocketNamespace } from '@common/enums';
 import {
@@ -12,7 +14,6 @@ import {
     PostureReceivedData,
 } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { GameViewCombatService, CombatListenerDependencies } from '@app/services/game-view/game-view-combat.service';
 
 @Injectable({
     providedIn: 'root',
@@ -50,7 +51,7 @@ export class GameViewCombatListenersService {
 
     private registerCombatStartedListener(namespace: SocketNamespace, dependencies: CombatListenerDependencies): void {
         this.webSocketService.onNamespace<CombatStartedData>(namespace, JoinGameEvents.CombatStarted, (data) => {
-            this.gameViewCombatService.handleCombatStarted(data, dependencies.getLocalSocketId());
+            this.gameViewCombatService.handleCombatStarted(data, dependencies);
         });
     }
 

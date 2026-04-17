@@ -5,7 +5,9 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 import { SAKURA_FRAGMENT_SHADER, SAKURA_VERTEX_SHADER } from './sakura.constants';
 
-import { Petal, Vec3, buildLookAtMatrix, buildProjectionMatrix } from '@app/components/sakura/sakura.helper';
+import { buildLookAtMatrix, buildProjectionMatrix } from '@app/components/sakura/sakura.helper';
+import { Vec3 } from '@app/interfaces/sakura.interfaces';
+import { Petal } from '@app/classes/petal.class';
 
 @Component({
     selector: 'app-sakura',
@@ -18,34 +20,34 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
     @ViewChild('cvs') private canvasRef!: ElementRef<HTMLCanvasElement>;
 
     // ── Tunable constants ───────────────────────────────────────────────────
-    private readonly numPetals = 100;   // Total number of petals on screen (lower = better perf)
-    private readonly areaY = 20;    // Vertical half-size of the particle field
-    private readonly areaZ = 20;    // Depth half-size of the particle field
-    private readonly cameraInitZ = 100;   // Camera initial distance along Z
-    private readonly dofFocus = 10;    // Depth-of-field: focus distance
-    private readonly dofRadius = 4;     // Depth-of-field: sharp radius around focus
-    private readonly dofMax = 8;     // Depth-of-field: max blur radius beyond focus
-    private readonly faderStart = 10;    // Distance at which petals start fading in
-    private readonly sizeMin = 0.9;   // Minimum petal size (0.0 – 2.0 recommended)
-    private readonly sizeRange = 0.1;   // Random size variation added on top of sizeMin
-    private readonly speedBase = 2;     // Base movement speed of petals (higher = faster)
-    private readonly velXMag = 0.3;   // Horizontal (X) velocity spread
-    private readonly velXBias = 0.8;   // Horizontal (X) velocity bias (positive = drift right)
-    private readonly velYMag = 0.2;   // Vertical (Y) velocity spread
-    private readonly velYBias = -1;    // Vertical (Y) velocity bias (negative = fall down)
-    private readonly velZMag = 0.3;   // Depth (Z) velocity spread
-    private readonly velZBias = 0.5;   // Depth (Z) velocity bias
-    private readonly spinHalfScale = 0.5;   // Controls how fast petals spin (higher = faster)
-    private readonly nearPlane = 0.1;   // Near clipping plane
-    private readonly farPlane = 100;   // Far clipping plane
-    private readonly maxDeltaTime = 0.05;  // Max frame delta time cap (prevents large jumps)
-    private readonly msPerSec = 1000;  // Milliseconds per second
-    private readonly mat4Size = 16;    // Elements in a 4x4 matrix
+    private readonly numPetals = 100;
+    private readonly areaY = 20;
+    private readonly areaZ = 20;
+    private readonly cameraInitZ = 100;
+    private readonly dofFocus = 10;
+    private readonly dofRadius = 4;
+    private readonly dofMax = 8;
+    private readonly faderStart = 10;
+    private readonly sizeMin = 0.9;
+    private readonly sizeRange = 0.1;
+    private readonly speedBase = 2;
+    private readonly velXMag = 0.3;
+    private readonly velXBias = 0.8;
+    private readonly velYMag = 0.2;
+    private readonly velYBias = -1;
+    private readonly velZMag = 0.3;
+    private readonly velZBias = 0.5;
+    private readonly spinHalfScale = 0.5;
+    private readonly nearPlane = 0.1;
+    private readonly farPlane = 100;
+    private readonly maxDeltaTime = 0.05;
+    private readonly msPerSec = 1000;
+    private readonly mat4Size = 16;
 
-    private readonly degPerRotation = 360;   // Degrees in a full rotation
-    private readonly floatsPerPetal = 8;     // Floats per petal in the GPU buffer (3 pos + 3 euler + 2 misc)
-    private readonly posComponents = 3;     // Floats per position/euler vector
-    private readonly copyZOffset = -2;    // Z offset applied to tiled field copies
+    private readonly degPerRotation = 360;
+    private readonly floatsPerPetal = 8;
+    private readonly posComponents = 3;
+    private readonly copyZOffset = -2;
 
     // ── WebGL state ──────────────────────────────────────────────────────────
     private gl!: WebGLRenderingContext;
@@ -84,11 +86,11 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
     ngAfterViewInit(): void {
         const canvas = this.canvasRef.nativeElement;
         const glOptions: WebGLContextAttributes = { alpha: true, premultipliedAlpha: false };
-        const ctx = canvas.getContext('webgl', glOptions) ?? canvas.getContext('experimental-webgl', glOptions);
-        if (!ctx) {
+        const context = canvas.getContext('webgl', glOptions) ?? canvas.getContext('experimental-webgl', glOptions);
+        if (!context) {
             return;
         }
-        this.gl = ctx as WebGLRenderingContext;
+        this.gl = context as WebGLRenderingContext;
         this.dof = { x: this.dofFocus, y: this.dofRadius, z: this.dofMax };
         this.fader = { x: this.faderStart, y: this.areaZ, z: this.nearPlane };
         this.camPos = { x: 0, y: 0, z: this.cameraInitZ };
@@ -112,34 +114,34 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
 
     private buildProgram(): void {
         const gl = this.gl;
-        const vert = this.compileShader(gl.VERTEX_SHADER, SAKURA_VERTEX_SHADER);
-        const frag = this.compileShader(gl.FRAGMENT_SHADER, SAKURA_FRAGMENT_SHADER);
-        if (!vert || !frag) {
+        const vertexShader = this.compileShader(gl.VERTEX_SHADER, SAKURA_VERTEX_SHADER);
+        const fragmentShader = this.compileShader(gl.FRAGMENT_SHADER, SAKURA_FRAGMENT_SHADER);
+        if (!vertexShader || !fragmentShader) {
             return;
         }
-        const prog = gl.createProgram();
-        if (!prog) {
+        const shaderProgram = gl.createProgram();
+        if (!shaderProgram) {
             return;
         }
-        gl.attachShader(prog, vert);
-        gl.attachShader(prog, frag);
-        gl.deleteShader(vert);
-        gl.deleteShader(frag);
-        gl.linkProgram(prog);
-        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.deleteShader(vertexShader);
+        gl.deleteShader(fragmentShader);
+        gl.linkProgram(shaderProgram);
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
             return;
         }
-        this.program = prog;
+        this.program = shaderProgram;
 
-        this.uniforms.uProjection = gl.getUniformLocation(prog, 'uProjection');
-        this.uniforms.uModelview = gl.getUniformLocation(prog, 'uModelview');
-        this.uniforms.uResolution = gl.getUniformLocation(prog, 'uResolution');
-        this.uniforms.uDOF = gl.getUniformLocation(prog, 'uDOF');
-        this.uniforms.uFade = gl.getUniformLocation(prog, 'uFade');
-        this.uniforms.uOffset = gl.getUniformLocation(prog, 'uOffset');
-        this.attrs.aPosition = gl.getAttribLocation(prog, 'aPosition');
-        this.attrs.aEuler = gl.getAttribLocation(prog, 'aEuler');
-        this.attrs.aMisc = gl.getAttribLocation(prog, 'aMisc');
+        this.uniforms.uProjection = gl.getUniformLocation(shaderProgram, 'uProjection');
+        this.uniforms.uModelview = gl.getUniformLocation(shaderProgram, 'uModelview');
+        this.uniforms.uResolution = gl.getUniformLocation(shaderProgram, 'uResolution');
+        this.uniforms.uDOF = gl.getUniformLocation(shaderProgram, 'uDOF');
+        this.uniforms.uFade = gl.getUniformLocation(shaderProgram, 'uFade');
+        this.uniforms.uOffset = gl.getUniformLocation(shaderProgram, 'uOffset');
+        this.attrs.aPosition = gl.getAttribLocation(shaderProgram, 'aPosition');
+        this.attrs.aEuler = gl.getAttribLocation(shaderProgram, 'aEuler');
+        this.attrs.aMisc = gl.getAttribLocation(shaderProgram, 'aMisc');
 
         this.posOff = 0;
         this.eulOff = this.numPetals * this.posComponents;
@@ -152,55 +154,55 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
     }
 
     private compileShader(type: number, src: string): WebGLShader | null {
-        const sh = this.gl.createShader(type);
-        if (!sh) {
+        const shaderRef = this.gl.createShader(type);
+        if (!shaderRef) {
             return null;
         }
-        this.gl.shaderSource(sh, src);
-        this.gl.compileShader(sh);
-        if (!this.gl.getShaderParameter(sh, this.gl.COMPILE_STATUS)) {
-            this.gl.deleteShader(sh);
+        this.gl.shaderSource(shaderRef, src);
+        this.gl.compileShader(shaderRef);
+        if (!this.gl.getShaderParameter(shaderRef, this.gl.COMPILE_STATUS)) {
+            this.gl.deleteShader(shaderRef);
             return null;
         }
-        return sh;
+        return shaderRef;
     }
 
     private initParticles(): void {
         const PI2 = Math.PI * 2;
-        const rnd = (): number => Math.random() * 2 - 1;
+        const randomValue = (): number => Math.random() * 2 - 1;
         this.petals = [];
 
         for (let i = 0; i < this.numPetals; i++) {
-            const p = new Petal();
-            const dir = [
-                rnd() * this.velXMag + this.velXBias,
-                rnd() * this.velYMag + this.velYBias,
-                rnd() * this.velZMag + this.velZBias,
+            const petal = new Petal();
+            const direction = [
+                randomValue() * this.velXMag + this.velXBias,
+                randomValue() * this.velYMag + this.velYBias,
+                randomValue() * this.velZMag + this.velZBias,
             ];
-            const len = Math.hypot(dir[0], dir[1], dir[2]);
-            const spd = this.speedBase + Math.random();
+            const length = Math.hypot(direction[0], direction[1], direction[2]);
+            const speed = this.speedBase + Math.random();
 
-            p.vel = dir.map(v => v / len * spd);
-            p.spin = [rnd() * PI2 * this.spinHalfScale,
-            rnd() * PI2 * this.spinHalfScale,
-            rnd() * PI2 * this.spinHalfScale];
-            p.pos = [rnd() * this.areaX, rnd() * this.areaY, rnd() * this.areaZ];
-            p.euler = [Math.random() * PI2, Math.random() * PI2, Math.random() * PI2];
-            p.size = this.sizeMin + Math.random() * this.sizeRange;
-            this.petals.push(p);
+            petal.vel = direction.map(v => v / length * speed);
+            petal.spin = [randomValue() * PI2 * this.spinHalfScale,
+            randomValue() * PI2 * this.spinHalfScale,
+            randomValue() * PI2 * this.spinHalfScale];
+            petal.pos = [randomValue() * this.areaX, randomValue() * this.areaY, randomValue() * this.areaZ];
+            petal.euler = [Math.random() * PI2, Math.random() * PI2, Math.random() * PI2];
+            petal.size = this.sizeMin + Math.random() * this.sizeRange;
+            this.petals.push(petal);
         }
     }
 
     // ── Render loop ──────────────────────────────────────────────────────────
 
     private loop = (now: number): void => {
-        const dt = Math.min((now - this.prev) / this.msPerSec, this.maxDeltaTime);
+        const deltaTime = Math.min((now - this.prev) / this.msPerSec, this.maxDeltaTime);
         this.prev = now;
-        this.render(dt);
+        this.render(deltaTime);
         this.rafId = requestAnimationFrame(this.loop);
     };
 
-    private render(dt: number): void {
+    private render(deltaTime: number): void {
         if (!this.program || !this.buffer) {
             return;
         }
@@ -210,27 +212,31 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
         this.viewMatrix = buildLookAtMatrix(this.camPos, { x: 0, y: 0, z: 0 }, { x: 0, y: 1, z: 0 });
 
         const limits = [this.areaX, this.areaY, this.areaZ];
-        for (const p of this.petals) {
-            p.update(dt);
+        for (const petal of this.petals) {
+            petal.update(deltaTime);
             for (let c = 0; c < limits.length; c++) {
-                const lim = limits[c];
-                if (Math.abs(p.pos[c]) - p.size / 2 > lim) {
-                    p.pos[c] += p.pos[c] > 0 ? -lim * 2 : lim * 2;
+                const limit = limits[c];
+                if (Math.abs(petal.pos[c]) - petal.size / 2 > limit) {
+                    petal.pos[c] += petal.pos[c] > 0 ? -limit * 2 : limit * 2;
                 }
-                p.euler[c] = ((p.euler[c] % PI2) + PI2) % PI2;
+                petal.euler[c] = ((petal.euler[c] % PI2) + PI2) % PI2;
             }
-            const vm = this.viewMatrix;
-            p.zkey = vm[2] * p.pos[0] + vm[6] * p.pos[1] + vm[10] * p.pos[2] + vm[14];
+            const currentViewMatrix = this.viewMatrix;
+            petal.zkey = currentViewMatrix[2] * 
+            petal.pos[0] + currentViewMatrix[6] * 
+            petal.pos[1] + currentViewMatrix[10] * 
+            petal.pos[2] + currentViewMatrix[14];
         }
         this.petals.sort((a, b) => a.zkey - b.zkey);
 
-        let ip = this.posOff;
-        let ie = this.eulOff;
-        let im = this.miscOff;
-        for (const p of this.petals) {
-            this.dataArray[ip++] = p.pos[0]; this.dataArray[ip++] = p.pos[1]; this.dataArray[ip++] = p.pos[2];
-            this.dataArray[ie++] = p.euler[0]; this.dataArray[ie++] = p.euler[1]; this.dataArray[ie++] = p.euler[2];
-            this.dataArray[im++] = p.size; this.dataArray[im++] = 1;
+        let indexPos = this.posOff;
+        let indexEuler = this.eulOff;
+        let indexMisc = this.miscOff;
+        for (const petal of this.petals) {
+            this.dataArray[indexPos++] = petal.pos[0]; this.dataArray[indexPos++] = petal.pos[1]; this.dataArray[indexPos++] = petal.pos[2];
+            this.dataArray[indexEuler++] = petal.euler[0];
+            this.dataArray[indexEuler++] = petal.euler[1]; this.dataArray[indexEuler++] = petal.euler[2];
+            this.dataArray[indexMisc++] = petal.size; this.dataArray[indexMisc++] = 1;
         }
 
         gl.clearColor(0, 0, 0, 0);
@@ -239,9 +245,9 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
         gl.useProgram(this.program);
 
-        const w = gl.canvas.width;
-        const h = gl.canvas.height;
-        gl.uniform3fv(this.uniforms.uResolution, new Float32Array([w, h, w / h]));
+        const canvasWidth = gl.canvas.width;
+        const canvasHeight = gl.canvas.height;
+        gl.uniform3fv(this.uniforms.uResolution, new Float32Array([canvasWidth, canvasHeight, canvasWidth / canvasHeight]));
         gl.uniformMatrix4fv(this.uniforms.uProjection, false, this.projMatrix);
         gl.uniformMatrix4fv(this.uniforms.uModelview, false, this.viewMatrix);
         gl.uniform3fv(this.uniforms.uDOF, new Float32Array([this.dof.x, this.dof.y, this.dof.z]));
@@ -250,16 +256,16 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
         gl.bufferData(gl.ARRAY_BUFFER, this.dataArray, gl.DYNAMIC_DRAW);
 
-        const F = Float32Array.BYTES_PER_ELEMENT;
-        const aPos = this.attrs.aPosition;
-        const aEul = this.attrs.aEuler;
-        const aMsc = this.attrs.aMisc;
-        gl.enableVertexAttribArray(aPos);
-        gl.enableVertexAttribArray(aEul);
-        gl.enableVertexAttribArray(aMsc);
-        gl.vertexAttribPointer(aPos, this.posComponents, gl.FLOAT, false, 0, this.posOff * F);
-        gl.vertexAttribPointer(aEul, this.posComponents, gl.FLOAT, false, 0, this.eulOff * F);
-        gl.vertexAttribPointer(aMsc, 2, gl.FLOAT, false, 0, this.miscOff * F);
+        const floatSizeBytes = Float32Array.BYTES_PER_ELEMENT;
+        const attrPosition = this.attrs.aPosition;
+        const attrEuler = this.attrs.aEuler;
+        const attrMisc = this.attrs.aMisc;
+        gl.enableVertexAttribArray(attrPosition);
+        gl.enableVertexAttribArray(attrEuler);
+        gl.enableVertexAttribArray(attrMisc);
+        gl.vertexAttribPointer(attrPosition, this.posComponents, gl.FLOAT, false, 0, this.posOff * floatSizeBytes);
+        gl.vertexAttribPointer(attrEuler, this.posComponents, gl.FLOAT, false, 0, this.eulOff * floatSizeBytes);
+        gl.vertexAttribPointer(attrMisc, 2, gl.FLOAT, false, 0, this.miscOff * floatSizeBytes);
 
         const offsets: [number, number, number][] = [
             [0, 0, 0],
@@ -268,14 +274,14 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
             [this.areaX, -this.areaY, this.copyZOffset],
             [this.areaX, this.areaY, this.copyZOffset],
         ];
-        for (const [ox, oy, oz] of offsets) {
-            gl.uniform3f(this.uniforms.uOffset, ox, oy, oz);
+        for (const [offsetX, offsetY, offsetZ] of offsets) {
+            gl.uniform3f(this.uniforms.uOffset, offsetX, offsetY, offsetZ);
             gl.drawArrays(gl.POINTS, 0, this.numPetals);
         }
 
-        gl.disableVertexAttribArray(aPos);
-        gl.disableVertexAttribArray(aEul);
-        gl.disableVertexAttribArray(aMsc);
+        gl.disableVertexAttribArray(attrPosition);
+        gl.disableVertexAttribArray(attrEuler);
+        gl.disableVertexAttribArray(attrMisc);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
         gl.useProgram(null);
         gl.disable(gl.BLEND);
@@ -287,16 +293,16 @@ export class SakuraComponent implements AfterViewInit, OnDestroy {
         const canvas = this.canvasRef.nativeElement;
         canvas.width = canvas.offsetWidth;
         canvas.height = canvas.offsetHeight;
-        const w = canvas.width;
-        const h = canvas.height;
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
 
-        this.gl.viewport(0, 0, w, h);
-        this.areaX = this.areaY * (w / h);
+        this.gl.viewport(0, 0, canvasWidth, canvasHeight);
+        this.areaX = this.areaY * (canvasWidth / canvasHeight);
         this.fader.y = this.areaZ;
         this.camPos.z = this.areaZ + this.nearPlane;
 
         const angle = Math.atan2(this.areaY, this.camPos.z + this.areaZ) * this.degPerRotation / Math.PI;
-        this.projMatrix = buildProjectionMatrix(w / h, angle, this.nearPlane, this.farPlane);
+        this.projMatrix = buildProjectionMatrix(canvasWidth / canvasHeight, angle, this.nearPlane, this.farPlane);
     }
 
 

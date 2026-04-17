@@ -5,6 +5,7 @@ import { ButtonComponent } from '@app/components/button/button.component';
 import { ChatComponent } from '@app/components/chat/chat.component';
 import { ROUTES } from '@app/constants/routes.constants';
 import { ChatService } from '@app/services/chat/chat.service';
+import { GameViewListenerService } from '@app/services/game-view/game-view-listener.service';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { ButtonVariant, GameMode, SocketNamespace } from '@common/enums';
@@ -30,10 +31,12 @@ export class WaitingRoomComponent implements OnInit, OnDestroy {
     private readonly router = inject(Router);
     private readonly route = inject(ActivatedRoute);
     private readonly gameViewService = inject(GameViewService);
+    private readonly gameViewListenerService = inject(GameViewListenerService);
     private readonly routes = ROUTES;
     protected readonly buttonVariant = ButtonVariant;
 
     ngOnInit(): void {
+        this.gameViewListenerService.registerListeners();
         this.lobbyId.set(this.route.snapshot.paramMap.get('lobbyId'));
 
         if (!this.lobbyId()) {

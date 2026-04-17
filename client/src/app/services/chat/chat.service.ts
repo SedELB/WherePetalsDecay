@@ -13,7 +13,7 @@ export class ChatService {
     private readonly namespace = SocketNamespace.Join;
 
     private readonly chatHistorySubject = new BehaviorSubject<ChatMessage[]>([]);
-    readonly chatHistory$ = this.chatHistorySubject.asObservable();
+    private readonly chatHistory$ = this.chatHistorySubject.asObservable();
 
     constructor(private readonly webSocketService: WebSocketService) {
         this.webSocketService.onNamespace<ChatMessage>(this.namespace, JoinGameEvents.ReceivedChatMessage, (msg) => {

@@ -1,6 +1,6 @@
 import { Game } from '@app/model/schema/game.schema';
 import { SocketNamespace } from '@common/enums';
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { AdminGameEvents } from '@common/socket-events/admin.gateway.events';
@@ -10,7 +10,7 @@ import { AdminGameEvents } from '@common/socket-events/admin.gateway.events';
 export class AdminGateway implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit {
     @WebSocketServer() private server: Server;
 
-    constructor(private readonly logger: Logger) {}
+    @Inject(Logger) private readonly logger: Logger;
 
     afterInit() {
         this.logger.log('AdminGateway initialized on admin namespace');

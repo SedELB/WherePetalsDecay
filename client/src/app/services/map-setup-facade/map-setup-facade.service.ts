@@ -119,20 +119,23 @@ export class MapSetupFacadeService {
     };
 
     if (mode === MapSetupMode.Edit) {
-      this.communicationService.getAllGames().subscribe((allGames) => {
-        const originalGame = allGames.find((currentGame) => currentGame._id === game._id);
-        if (!originalGame) {
-          mode = MapSetupMode.Create;
-        }
+      this.communicationService.getAllGames().subscribe({
+        next: (allGames) => {
+          const originalGame = allGames.find((currentGame) => currentGame._id === game._id);
+          if (!originalGame) {
+            mode = MapSetupMode.Create;
+          }
 
-        const saveOperation = mode === MapSetupMode.Create
-          ? this.communicationService.createGame(game)
-          : this.communicationService.modifyGame(game);
+          const saveOperation = mode === MapSetupMode.Create
+            ? this.communicationService.createGame(game)
+            : this.communicationService.modifyGame(game);
 
-        saveOperation.subscribe({
-          next: () => handleSuccess(mode),
-          error: handleError,
-        });
+          saveOperation.subscribe({
+            next: () => handleSuccess(mode),
+            error: handleError,
+          });
+        },
+        error: handleError,
       });
     } else {
       this.communicationService.createGame(game).subscribe({

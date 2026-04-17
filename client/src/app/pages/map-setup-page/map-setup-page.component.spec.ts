@@ -269,7 +269,7 @@ describe('MapSetupPageComponent', () => {
     it('should delegate countTileItem to service', async () => {
         fixture.detectChanges();
         await fixture.whenStable();
-        expect(component.countTileItem(TileItem.Spawn)).toBe(1);
+        expect(component['countTileItem'](TileItem.Spawn)).toBe(1);
         expect(tileItemCountService.countTileItem).toHaveBeenCalledWith(game, TileItem.Spawn);
     });
 
@@ -298,7 +298,7 @@ describe('MapSetupPageComponent', () => {
     it('should delegate getObjectAt to service', async () => {
         fixture.detectChanges();
         await fixture.whenStable();
-        const tile = component.getObjectAt(0, 0);
+        const tile = component['getObjectAt'](0, 0);
         expect(tile).toBe(game.grid[0][0]);
         expect(service.getObjectAt).toHaveBeenCalledWith(game, 0, 0);
     });
@@ -353,7 +353,7 @@ describe('MapSetupPageComponent', () => {
     it('should reset interaction state on grid mouse leave', async () => {
         fixture.detectChanges();
         await fixture.whenStable();
-        component.onGridMouseLeave();
+        component['onGridMouseLeave']();
 
         expect(service.resetInteractionState).toHaveBeenCalled();
         expect((component as unknown as { isPaintingTiles: boolean }).isPaintingTiles).toBe(false);

@@ -425,9 +425,10 @@
         background: rgba(255, 255, 255, 0.14);
     }
 
-    &.object-tool--complete {
-        border-color: rgba(80, 200, 120, 0.8);
-        background: rgba(80, 200, 120, 0.12);
+    &.object-tool--exhausted {
+        opacity: 0.4;
+        cursor: not-allowed;
+        filter: grayscale(1);
     }
 }
 
@@ -479,4 +480,11 @@
     height: 80%;
     object-fit: contain;
     filter: drop-shadow(0 1px 0.125rem rgba(0, 0, 0, 0.5));
+}
+
+.sanctuary-icon {
+    width: 200%;
+    height: 200%;
+    z-index: 1;
+    pointer-events: none;
 }

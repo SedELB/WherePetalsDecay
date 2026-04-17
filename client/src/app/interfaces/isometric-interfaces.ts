@@ -44,6 +44,34 @@ export interface TileDepthParams {
   surfaceBottomLeft: Vec2;
 }
 
+export interface TileDimensions {
+  tileW: number;
+  tileH: number;
+}
+
+export interface IsoViewConfig {
+  originX: number;
+  originY: number;
+  tileW: number;
+  tileH: number;
+}
+
+export interface PlayerShadowData {
+  cx: number;
+  cy: number;
+  tileH: number;
+  imgW: number;
+  imgH: number;
+}
+
+export interface TileItemRenderData {
+  ctx: CanvasRenderingContext2D;
+  cx: number;
+  cy: number;
+  tileW: number;
+  tileH: number;
+}
+
 export interface RenderBoardConfig {
   ctx: CanvasRenderingContext2D;
   width: number;

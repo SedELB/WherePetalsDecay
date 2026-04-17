@@ -1,6 +1,6 @@
 import { CreateGameDto } from '@app/model/dto/game/create-game.dto';
 import { Game, GameDocument, gameSchema } from '@app/model/schema/game.schema';
-import { BASE_10, CUSTOM_GRID_CLASSIC_SMALL, CUSTOM_GRID_CLASSIC_SMALL_INVALID } from '@app/utils/game.constants';
+import { SMALL_MAP_COLS, CUSTOM_GRID_CLASSIC_SMALL, CUSTOM_GRID_CLASSIC_SMALL_INVALID } from '@app/utils/game.constants';
 import { GameMode, MaxPlayers } from '@common/enums';
 import { GAME_NOT_FOUND, NO_GAMES_FOUND, NO_VISIBLE_GAMES_FOUND } from '@common/error-messages';
 import { Logger } from '@nestjs/common';
@@ -53,7 +53,7 @@ describe('GameServiceE2E', () => {
         validGame = {
             name: 'Valid Game 1',
             description: 'Desc. 1',
-            size: { rows: BASE_10, cols: BASE_10 },
+            size: { rows: SMALL_MAP_COLS, cols: SMALL_MAP_COLS },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MaxPlayers.Small,
@@ -64,7 +64,7 @@ describe('GameServiceE2E', () => {
         invalidGame = {
             name: 'Invalid Game 3',
             description: 'Desc. 3',
-            size: { rows: BASE_10, cols: BASE_10 },
+            size: { rows: SMALL_MAP_COLS, cols: SMALL_MAP_COLS },
             gameMode: GameMode.Classic,
             thumbnail: 'N/A',
             maxPlayers: MaxPlayers.Small,
@@ -164,7 +164,7 @@ describe('GameServiceE2E', () => {
     it('addGame() should add a valid game to the DB', async () => {
         // Validates and inserts new game into database
         const spyIsGameNameUnique = jest.spyOn(gameService, 'isGameNameUnique');
-        const spyIsGameValid = jest.spyOn(gameValidatorService, 'isGameValid');
+        const spyIsGameValid = jest.spyOn(gameValidatorService, 'isGameValid').mockReturnValueOnce(true);
         await gameService.addGame(validGame);
         expect(await gameModel.countDocuments()).toEqual(1);
         expect(spyIsGameNameUnique).toHaveBeenCalledWith(validGame.name);
@@ -188,7 +188,7 @@ describe('GameServiceE2E', () => {
         const createdGame = await gameModel.create(validGame);
         const modifiedFakeGame = { ...validGame, name: 'Modified Game' };
         const spyIsGameNameUnique = jest.spyOn(gameService, 'isGameNameUnique');
-        const spyIsGameValid = jest.spyOn(gameValidatorService, 'isGameValid');
+        const spyIsGameValid = jest.spyOn(gameValidatorService, 'isGameValid').mockReturnValueOnce(true);
         await gameService.modifyGame(createdGame._id.toString(), modifiedFakeGame);
         expect(await gameService.getGameById(createdGame._id.toString())).toMatchObject(modifiedFakeGame);
         expect(spyIsGameNameUnique).toHaveBeenCalledWith('Modified Game', createdGame._id.toString());
@@ -264,6 +264,7 @@ describe('GameServiceE2E', () => {
     it('getAllVisibleGames() should fail if there are no visible games in the database', async () => {
         // Throws error when no public games are available
         const nonVisibleGame = { ...validGame, isVisible: false };
+        jest.spyOn(gameValidatorService, 'isGameValid').mockReturnValueOnce(true);
         await gameService.addGame(nonVisibleGame);
         await expect(gameService.getAllVisibleGames()).rejects.toThrow(NO_VISIBLE_GAMES_FOUND);
     });

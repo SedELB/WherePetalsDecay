@@ -1,3 +1,4 @@
+
 import { Vec2 } from '@common/vec2';
 
 export const POSTURE_BONUS = 2;
@@ -13,29 +14,6 @@ export const COMBAT_ANIMATION_RESET_MULTIPLIER = 6;
 export const COMBAT_ANIMATION_MIN_STEP_MS = 80;
 export const TILE_CENTER_OFFSET = 0.5;
 export const TO_PERCENT = 100;
-
-export type TypePosture = 'atk' | 'def' | null;
-
-export interface DetailedStatLine {
-    base: number;
-    postureBonus: number;
-    dice: number;
-    penalty: number;
-    total: number;
-}
-
-export interface FighterDetailedResult {
-    attack: DetailedStatLine;
-    defense: DetailedStatLine;
-}
-
-export interface RoundDetailedResult {
-    player: FighterDetailedResult;
-    enemy: FighterDetailedResult;
-    damageDealt: number;
-    damageReceived: number;
-    rollIndex: number;
-}
 
 export function getBaseCombatPositions(enemySocketId: string, playerSocketId: string): Record<string, Vec2> {
     return {
