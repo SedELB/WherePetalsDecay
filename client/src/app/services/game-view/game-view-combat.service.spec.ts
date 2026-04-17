@@ -3,18 +3,10 @@
  *
  * Test suite for GameViewCombatService.
  * Front-end state machine for combat WebSocket events.
- *
- * Tested API:
- *  - handleCombatStarted, handleCombatRoundStarted, handleCombatRoundCountdown
- *  - handleCombatRoundResolved, handleCombatResult, handleCombatEnded
- *  - handleCombatAttackAnimation, handlePostureReceived
- *  - resetCombatState, completeCombatOverlay, getCurrentCombatRoomId
- *  - sendPostureChoice, setupListeners
  */
 
 import { TestBed } from '@angular/core/testing';
 import { GameViewCombatService } from '@app/services/game-view/game-view-combat.service';
-import { GameLogicService } from '@app/services/game-view/game-logic.service';
 import { WebSocketService } from '@app/services/web-socket/web-socket.service';
 import { ONE_SECOND_DELAY } from '@app/services/game-view/game-view.constants';
 import { Posture } from '@common/character';
@@ -93,20 +85,14 @@ const buildBaseDeps = (localId: string | undefined) => ({
 
 describe('GameViewCombatService', () => {
     let service: GameViewCombatService;
-    let gameLogicServiceSpy: jasmine.SpyObj<GameLogicService>;
     let webSocketSpy: jasmine.SpyObj<WebSocketService>;
 
     beforeEach(() => {
-        gameLogicServiceSpy = jasmine.createSpyObj<GameLogicService>('GameLogicService', ['processCombatResult', 'getTileDebuff']);
-        gameLogicServiceSpy.processCombatResult.and.callFake((lobby: Lobby) => lobby);
-        gameLogicServiceSpy.getTileDebuff.and.returnValue(0);
-
         webSocketSpy = jasmine.createSpyObj<WebSocketService>('WebSocketService', ['emitNamespace', 'onNamespace', 'getSocketId']);
 
         TestBed.configureTestingModule({
             providers: [
                 GameViewCombatService,
-                { provide: GameLogicService, useValue: gameLogicServiceSpy },
                 { provide: WebSocketService, useValue: webSocketSpy },
             ],
         });
@@ -333,7 +319,7 @@ describe('GameViewCombatService', () => {
 
             service.handleCombatStarted(buildCombatStarted(ATTACKER_SOCKET, DEFENDER_SOCKET), buildBaseDeps(ATTACKER_SOCKET)); // reset state to defaults
             service.handlePostureReceived({ socketId: ATTACKER_SOCKET, posture });
-            expect(service.fighters().enemy.character.bonusPosture).toEqual({ type: null, bonus: 0 }); // DEFAULT_COMBAT_POSTURE
+            expect(service.fighters().enemy.character.bonusPosture).toEqual({ type: null, bonus: 0 } as unknown as Posture);
 
             service.resetCombatState();
             service.handlePostureReceived({ socketId: DEFENDER_SOCKET, posture });

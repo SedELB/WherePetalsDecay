@@ -33,7 +33,7 @@ describe('GameViewListenerService', () => {
     beforeEach(() => {
         wsSpy = jasmine.createSpyObj('WebSocketService', ['onNamespace']);
         wsSpy.onNamespace.and.callFake((ns, ev, cb) => {
-            if (ns === SocketNamespace.Join) listeners.set(ev, cb);
+            if (ns === SocketNamespace.Join) listeners.set(ev, cb as (data: unknown) => void);
         });
         
         routerSpy = jasmine.createSpyObj('Router', ['navigate']);

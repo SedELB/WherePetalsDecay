@@ -15,7 +15,13 @@ import { JoinGameEvents } from '@common/join.gateway.events';
 import { Lobby } from '@common/lobby';
 import { Vec2 } from '@common/vec2';
 import swal from 'sweetalert2';
-import { GameLogicService } from './game-logic.service';
+import {
+    applyFlagPickup,
+    expandSanctuaryPositions,
+    removePlayerFromLobby,
+    toggleDoor,
+    updatePlayerStats,
+} from './game-lobby.utils';
 import { GameViewCombatService } from './game-view-combat.service';
 import { GameViewService } from './game-view.service';
 
@@ -31,7 +37,6 @@ export class GameViewListenerService {
         private readonly router: Router,
         private readonly gameViewService: GameViewService,
         private readonly gameViewCombatService: GameViewCombatService,
-        private readonly gameLogicService: GameLogicService,
     ) {}
 
     registerListeners(): void {
@@ -93,7 +98,7 @@ export class GameViewListenerService {
             }
             if (data.flagTaken) {
                 this.gameViewService.gameLobby.update(
-                    (lobby) => lobby ? this.gameLogicService.applyFlagPickup(lobby, data.socketId, data.position) : lobby,
+                    (lobby) => lobby ? applyFlagPickup(lobby, data.socketId, data.position) : lobby,
                 );
                 this.gameViewService.isFlagTaken.set(true);
             }
@@ -145,7 +150,7 @@ export class GameViewListenerService {
             ({ giverPlayerId, targetPlayerId }) => {
                 this.gameViewService.gameLobby.update((lobby) => {
                     if (!lobby) return lobby;
-                    let updatedLobby = this.gameLogicService.applyFlagPickup(lobby, targetPlayerId);
+                    let updatedLobby = applyFlagPickup(lobby, targetPlayerId);
                     updatedLobby = {
                         ...updatedLobby,
                         players: updatedLobby.players.map((p) => p.socketId === giverPlayerId ? { ...p, hasFlag: false } : p),
@@ -176,7 +181,7 @@ export class GameViewListenerService {
                     delete updated[socketId];
                     return updated;
                 });
-                this.gameViewService.gameLobby.update((lobby) => lobby ? this.gameLogicService.removePlayerFromLobby(lobby, socketId) : updatedLobby);
+                this.gameViewService.gameLobby.update((lobby) => lobby ? removePlayerFromLobby(lobby, socketId) : updatedLobby);
             },
         );
 
@@ -200,7 +205,7 @@ export class GameViewListenerService {
             this.namespace,
             JoinGameEvents.DoorToggled,
             (data) => {
-                this.gameViewService.gameLobby.update((lobby) => lobby ? this.gameLogicService.toggleDoor(lobby, data.position) : lobby);
+                this.gameViewService.gameLobby.update((lobby) => lobby ? toggleDoor(lobby, data.position) : lobby);
             },
         );
 
@@ -208,7 +213,7 @@ export class GameViewListenerService {
             this.namespace,
             JoinGameEvents.SanctuaryStateUpdate,
             (data) => {
-                const expanded = this.gameLogicService.expandSanctuaryPositions(data.inactiveSanctuaries);
+                const expanded = expandSanctuaryPositions(data.inactiveSanctuaries);
                 this.gameViewService.inactiveSanctuaries.set(expanded);
             },
         );
@@ -218,7 +223,7 @@ export class GameViewListenerService {
             healAmount: number; combatBonusApplied: boolean;
             playerNewLife: number; playerName: string; inactiveSanctuaries: Vec2[];
         }>(this.namespace, JoinGameEvents.SanctuaryUsed, (data) => {
-            const expanded = this.gameLogicService.expandSanctuaryPositions(data.inactiveSanctuaries);
+            const expanded = expandSanctuaryPositions(data.inactiveSanctuaries);
             this.gameViewService.inactiveSanctuaries.set(expanded);
             if (data.healAmount > 0) {
                 this.gameViewService.gameLobby.update((lobby) => {
@@ -228,7 +233,7 @@ export class GameViewListenerService {
                             ? { ...p, character: { ...p.character, life: data.playerNewLife } }
                             : p,
                     );
-                    return this.gameLogicService.updatePlayerStats(lobby, playerStats);
+                    return updatePlayerStats(lobby, playerStats);
                 });
             }
             this.showSanctuaryResultToast(data);
@@ -244,7 +249,7 @@ export class GameViewListenerService {
                         if (p.socketId !== data.socketId) return p;
                         return { ...p, character: { ...p.character, attack: data.attack, defense: data.defense, life: data.life } };
                     });
-                    return this.gameLogicService.updatePlayerStats(lobby, updatedPlayers);
+                    return updatePlayerStats(lobby, updatedPlayers);
                 });
             },
         );

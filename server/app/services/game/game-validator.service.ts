@@ -128,17 +128,16 @@ export class GameValidatorService {
             throw new Error(NO_TERRAIN_TILES);
         }
 
-        const FOUR = 4;
         const actualHealingBlocks = this.countSanctuaryBlocks(game, TileItem.HealingSanctuary);
         const actualCombatBlocks = this.countSanctuaryBlocks(game, TileItem.CombatSanctuary);
-        const totalSanctuaryTiles = (actualHealingBlocks + actualCombatBlocks) * FOUR;
+        const totalSanctuaryBlocks = actualHealingBlocks + actualCombatBlocks;
 
         const totalWalkable = game.grid.flat().filter((tile) => {
             const isSanctuary = tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary;
             return tile.type !== TileTexture.Wall && !isSanctuary;
         }).length;
 
-        const expectedTotalReached = totalWalkable + totalSanctuaryTiles;
+        const expectedTotalReached = totalWalkable + totalSanctuaryBlocks;
 
         const queue = [startPos];
         const visited = new Set<string>();

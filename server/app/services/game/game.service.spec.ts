@@ -164,7 +164,7 @@ describe('GameServiceE2E', () => {
     it('addGame() should add a valid game to the DB', async () => {
         // Validates and inserts new game into database
         const spyIsGameNameUnique = jest.spyOn(gameService, 'isGameNameUnique');
-        const spyIsGameValid = jest.spyOn(gameValidatorService, 'isGameValid');
+        const spyIsGameValid = jest.spyOn(gameValidatorService, 'isGameValid').mockReturnValueOnce(true);
         await gameService.addGame(validGame);
         expect(await gameModel.countDocuments()).toEqual(1);
         expect(spyIsGameNameUnique).toHaveBeenCalledWith(validGame.name);
@@ -188,7 +188,7 @@ describe('GameServiceE2E', () => {
         const createdGame = await gameModel.create(validGame);
         const modifiedFakeGame = { ...validGame, name: 'Modified Game' };
         const spyIsGameNameUnique = jest.spyOn(gameService, 'isGameNameUnique');
-        const spyIsGameValid = jest.spyOn(gameValidatorService, 'isGameValid');
+        const spyIsGameValid = jest.spyOn(gameValidatorService, 'isGameValid').mockReturnValueOnce(true);
         await gameService.modifyGame(createdGame._id.toString(), modifiedFakeGame);
         expect(await gameService.getGameById(createdGame._id.toString())).toMatchObject(modifiedFakeGame);
         expect(spyIsGameNameUnique).toHaveBeenCalledWith('Modified Game', createdGame._id.toString());
@@ -264,6 +264,7 @@ describe('GameServiceE2E', () => {
     it('getAllVisibleGames() should fail if there are no visible games in the database', async () => {
         // Throws error when no public games are available
         const nonVisibleGame = { ...validGame, isVisible: false };
+        jest.spyOn(gameValidatorService, 'isGameValid').mockReturnValueOnce(true);
         await gameService.addGame(nonVisibleGame);
         await expect(gameService.getAllVisibleGames()).rejects.toThrow(NO_VISIBLE_GAMES_FOUND);
     });

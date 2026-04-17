@@ -1,23 +1,16 @@
-/* eslint-disable max-lines */
 import { Injectable, effect } from '@angular/core';
 import {
     COMBAT_END_POPUP_DURATION_MS,
     COMBAT_MAP_LAYOUT,
-    DAMAGE_POPUP_DURATION_MS,
     DICE_RESULT_DISPLAY_MS,
     DICE_ROLL_DURATION_MS,
-    FIGHTER_IMPACT_DELAY_MS,
-    FIGHTER_MOVEMENT_DURATION_MS,
     POSTURE_BONUS,
-    ROUND_ANNOUNCEMENT_DURATION_MS,
-    ROUND_PHASE_DELAY_MS,
-    TO_PERCENT,
 } from '@app/components/combat/combat.constants';
 import {
     CombatEndPopupData,
+    CombatSequenceDeps,
     FighterSide,
     FighterStatType,
-    LifeBySide,
     RoundDetailedResult,
     RoundPhaseStep,
     RoundResolutionSequenceParams,
@@ -25,16 +18,17 @@ import {
 } from '@app/interfaces/combat.interfaces';
 import { GameViewService } from '@app/services/game-view/game-view.service';
 import { Posture } from '@common/character';
-import { BASE_STATS } from '@common/constants/character.constants';
 import { PostureType } from '@common/enums';
 import { CombatFighterResult, CombatResult, CombatRoundTimelineData } from '@common/interfaces/game-view';
 import { Player } from '@common/player';
 import { CombatAnimationService } from './combat-animation.service';
 import { CombatDiceService } from './combat-dice.service';
+import * as utils from './combat-logic.utils';
+import * as seqHelper from './combat-sequence.helper';
 import { CombatStateService } from './combat-state.service';
 import { CombatUiService } from './combat-ui.service';
 
-@Injectable() // Note: providedIn is handled by component providers if needed, or root
+@Injectable()
 export class CombatLogicService {
     private combatEndPopupTimeout: ReturnType<typeof setTimeout> | null = null;
     private deferredCombatEndPopup: CombatEndPopupData | null = null;
@@ -124,42 +118,30 @@ export class CombatLogicService {
     readonly isFighterDead = (side: FighterSide): boolean => this.state.displayedLifeBySide()[side] <= 0;
     readonly getDisplayedLife = (side: FighterSide): number => Math.max(0, this.state.displayedLifeBySide()[side]);
     getLifeProgressPercent(side: FighterSide): number {
+        const displayed = this.getDisplayedLife(side);
         const max = this.getOriginalMaxLife(side);
-        return max > 0 ? (this.getDisplayedLife(side) / max) * TO_PERCENT : 0;
+        return utils.getLifeProgressPercent(displayed, max);
     }
 
     getOriginalMaxLife(side: FighterSide): number {
         const fighter = side === 'player' ? this.state.player() : this.state.enemy();
-        return fighter?.character ? BASE_STATS.life + (fighter.character.lifeBonus ? BASE_STATS.bonus : 0) : BASE_STATS.life;
+        return utils.getOriginalMaxLife(fighter);
     }
 
     getStatTotal(side: FighterSide, stat: FighterStatType): number {
-        const result = this.getStatFromResult(side, stat);
-        if (result) return result.total;
         const fighter = side === 'player' ? this.state.player() : this.state.enemy();
-        const base = stat === 'attack' ? fighter?.character?.attack : fighter?.character?.defense;
-        return (base ?? 0) + this.getPostureBonus(side, stat) - this.getIceDebuff(side, stat);
+        return utils.getStatTotal(side, stat, fighter, this.state.roundResult(), POSTURE_BONUS);
     }
 
     getPostureBonus(side: FighterSide, stat: FighterStatType): number {
-        const result = this.getStatFromResult(side, stat);
-        if (result) return result.postureBonus;
-        const type = (side === 'player' ? this.state.player() : this.state.enemy())?.character?.bonusPosture?.type;
-        return (stat === 'attack' && type === PostureType.Attack) || (stat === 'defense' && type === PostureType.Defense) ? POSTURE_BONUS : 0;
+        const fighter = side === 'player' ? this.state.player() : this.state.enemy();
+        return utils.getPostureBonus(side, stat, fighter, this.state.roundResult(), POSTURE_BONUS);
     }
 
     getIceDebuff(side: FighterSide, stat: FighterStatType): number {
-        const result = this.getStatFromResult(side, stat);
-        if (result) return result.penalty;
-        return (side === 'player' ? this.state.player() : this.state.enemy())?.character?.debuf ?? 0;
+        const fighter = side === 'player' ? this.state.player() : this.state.enemy();
+        return utils.getIceDebuff(side, stat, fighter, this.state.roundResult());
     }
-
-    private getStatFromResult(side: FighterSide, stat: FighterStatType) {
-        const res = this.state.roundResult();
-        const fRes = side === 'player' ? res?.player : res?.enemy;
-        return stat === 'attack' ? fRes?.attack : fRes?.defense;
-    }
-
     private syncDisplayedLives(): void {
         const p = this.state.player();
         const e = this.state.enemy();
@@ -187,7 +169,7 @@ export class CombatLogicService {
 
     private handleEnemyPostureNotification(enemy: Player): void {
         const type = enemy.character.bonusPosture?.type;
-        if (type && type !== this.state.lastAppliedResultKey()) { // Simple hack to check posture change
+        if (type && type !== this.state.lastAppliedResultKey()) {
             // Logic for posture toast if needed
         }
     }
@@ -222,30 +204,25 @@ export class CombatLogicService {
         const enemy = this.state.enemy();
         if (!player || !enemy) return;
 
-        const localIsAtk = result.attacker.socketId === player.socketId;
-        const local = localIsAtk ? result.attacker : result.defender;
-        const remote = localIsAtk ? result.defender : result.attacker;
-        const displayedPlayerLife = local.killed ? 0 : Math.max(0, local.lifeAfter);
-        const displayedEnemyLife = remote.killed ? 0 : Math.max(0, remote.lifeAfter);
-
+        const roundData = utils.calculateRoundLifeResults(result, player.socketId);
         this.state.rollCount.update((c) => c + 1);
-        this.state.pendingLifeBySide.set({ player: displayedPlayerLife, enemy: displayedEnemyLife });
+        this.state.pendingLifeBySide.set({ player: roundData.playerLife, enemy: roundData.enemyLife });
         this.state.roundDamageByAttackerSocket.set({
-            [player.socketId]: local.damageDealt,
-            [enemy.socketId]: remote.damageDealt,
+            [player.socketId]: roundData.playerDamage,
+            [enemy.socketId]: roundData.enemyDamage,
         });
 
         const mappedRes: RoundDetailedResult = {
-            player: this.mapFighterResult(local),
-            enemy: this.mapFighterResult(remote),
+            player: this.mapFighterResult(roundData.local),
+            enemy: this.mapFighterResult(roundData.remote),
             rollIndex: this.state.rollCount(),
         };
 
         this.runRoundResolutionSequence({
             sequenceToken: this.state.createSequenceToken(),
             roundResult: mappedRes,
-            damageDealt: local.damageDealt,
-            damageReceived: remote.damageDealt,
+            damageDealt: roundData.playerDamage,
+            damageReceived: roundData.enemyDamage,
             roundIndex: this.state.rollCount(),
             timeline,
             debugDiceMode: debug,
@@ -253,16 +230,7 @@ export class CombatLogicService {
     }
 
     private mapFighterResult(f: CombatFighterResult) {
-        return {
-            attack: {
-                base: f.attack.base, postureBonus: f.attack.postureBonus,
-                dice: f.attack.diceBonus, penalty: f.attack.penalty, total: f.attack.total,
-            },
-            defense: {
-                base: f.defense.base, postureBonus: f.defense.postureBonus,
-                dice: f.defense.diceBonus, penalty: f.defense.penalty, total: f.defense.total,
-            },
-        };
+        return utils.mapFighterResult(f);
     }
 
     private runRoundResolutionSequence(params: RoundResolutionSequenceParams): void {
@@ -270,78 +238,9 @@ export class CombatLogicService {
         const durations = { rollMs: DICE_ROLL_DURATION_MS, resultMs: DICE_RESULT_DISPLAY_MS };
         this.dice.playDiceAnimation(params.sequenceToken, params.roundResult, durations, params.debugDiceMode, () => {
             this.state.roundResult.set(params.roundResult);
-            this.runRoundPhasePipeline(params.sequenceToken, this.buildSteps(params));
-        });
-    }
-
-    private buildSteps(params: RoundResolutionSequenceParams): RoundPhaseStep[] {
-        const playerId = this.state.player()?.socketId ?? '';
-        const enemyId = this.state.enemy()?.socketId ?? '';
-        return [
-            { delayMs: ROUND_PHASE_DELAY_MS, action: (next) => this.animateMovement(params.sequenceToken, playerId, enemyId, next) },
-            { delayMs: ROUND_PHASE_DELAY_MS, action: (next) => this.animateMovement(params.sequenceToken, enemyId, playerId, next) },
-            {
-                delayMs: 0, action: (next) => {
-                    this.finalizeLives(); next();
-                },
-            },
-            {
-                delayMs: ROUND_PHASE_DELAY_MS, action: (next) => {
-                    this.ui.showDamagePopup(params.damageDealt, params.damageReceived, params.roundIndex);
-                    next();
-                },
-            },
-            {
-                delayMs: DAMAGE_POPUP_DURATION_MS, action: (next) => {
-                    this.ui.damagePopup.set(null); next();
-                },
-            },
-            {
-                delayMs: 0, action: (next) => {
-                    if (this.hasDeadFighter()) return this.finish(params.sequenceToken);
-                    this.ui.showRoundAnnouncement(params.roundIndex + 1);
-                    next();
-                },
-            },
-            {
-                delayMs: ROUND_ANNOUNCEMENT_DURATION_MS, action: () => {
-                    this.ui.roundAnnouncementPopup.set(null);
-                    this.finish(params.sequenceToken);
-                },
-            },
-        ];
-    }
-
-    private animateMovement(token: number, atkId: string, defId: string, next: () => void): void {
-        const player = this.state.player();
-        const enemy = this.state.enemy();
-        if (!player || !enemy) return next();
-
-        const base: Record<string, { x: number; y: number }> = {
-            [player.socketId]: { x: 1, y: 2 },
-            [enemy.socketId]: { x: 1, y: 0 },
-        };
-        const lunge = { x: base[atkId].x, y: base[atkId].y + (atkId === player.socketId ? -1 : 1) };
-        this.state.currentAttackerSocketId.set(atkId);
-        this.state.isAttackAnimationInProgress.set(true);
-        this.animation.animateFighterPosition({
-            sequenceToken: token, fighterSocketId: atkId,
-            from: base[atkId], to: lunge, durationMs: FIGHTER_MOVEMENT_DURATION_MS,
-            onComplete: () => {
-                const damage = this.state.roundDamageByAttackerSocket()[atkId];
-                this.ui.spawnImpactDamagePopup(defId, damage, { rows: 3, cols: 3 });
-                setTimeout(() => {
-                    this.animation.animateFighterPosition({
-                        sequenceToken: token, fighterSocketId: atkId,
-                        from: lunge, to: base[atkId], durationMs: FIGHTER_MOVEMENT_DURATION_MS,
-                        onComplete: () => {
-                            this.state.isAttackAnimationInProgress.set(false);
-                            this.state.currentAttackerSocketId.set(null);
-                            next();
-                        },
-                    });
-                }, FIGHTER_IMPACT_DELAY_MS);
-            },
+            const deps = { state: this.state, animation: this.animation, ui: this.ui, gameViewService: this.gameViewService };
+            const steps = seqHelper.buildRoundSteps(deps, params, (t) => this.finish(t), () => this.finalizeLives());
+            this.runRoundPhasePipeline(params.sequenceToken, steps);
         });
     }
 
@@ -349,21 +248,9 @@ export class CombatLogicService {
         const pending = this.state.pendingLifeBySide();
         if (pending) {
             this.state.displayedLifeBySide.set(pending);
-            this.syncCombatLivesToLobby(pending);
+            seqHelper.syncCombatLivesToLobby({ state: this.state, gameViewService: this.gameViewService } as CombatSequenceDeps, pending);
             this.state.pendingLifeBySide.set(null);
         }
-    }
-
-    private syncCombatLivesToLobby(lifeBySide: LifeBySide): void {
-        const playerSocketId = this.state.player()?.socketId;
-        const enemySocketId = this.state.enemy()?.socketId;
-        if (!playerSocketId && !enemySocketId) return;
-
-        const syncedLives: Record<string, number> = {};
-        if (playerSocketId) syncedLives[playerSocketId] = Math.max(0, lifeBySide.player);
-        if (enemySocketId) syncedLives[enemySocketId] = Math.max(0, lifeBySide.enemy);
-
-        this.gameViewService.syncCombatParticipantLives(syncedLives);
     }
 
     private finish(token: number): void {
@@ -406,14 +293,10 @@ export class CombatLogicService {
     }
 
     private shouldDelayCombatEndPopup(): boolean {
-        if (this.state.isRoundSequenceInProgress()) return true;
-
-        const latestResolvedRound = this.gameViewService.lastCombatRoundResolved();
-        const roomId = this.gameViewService.getCurrentCombatRoomId();
-        if (!latestResolvedRound || latestResolvedRound.roomId !== roomId) return false;
-
-        const latestResolvedRoundKey = `${latestResolvedRound.roundIndex}:${latestResolvedRound.resolvedAtEpochMs}`;
-        return latestResolvedRoundKey !== this.state.lastAppliedResultKey();
+        return seqHelper.shouldDelayCombatEndPopup(
+            { state: this.state, gameViewService: this.gameViewService } as CombatSequenceDeps,
+            this.state.lastAppliedResultKey(),
+        );
     }
 
     private closeCombatEndPopup(): void {
@@ -432,32 +315,37 @@ export class CombatLogicService {
     getDiceBonusDisplay(side: FighterSide, stat: FighterStatType): string {
         return `+${this.getDiceBonus(side, stat)}`;
     }
+
     getDiceBonus(side: FighterSide, stat: FighterStatType): number {
-        return this.getStatFromResult(side, stat)?.dice ?? 0;
+        return utils.getDiceBonus(side, stat, this.state.roundResult());
     }
+
     getIceDebuffDisplay(side: FighterSide, stat: FighterStatType): string {
         return `-${this.getIceDebuff(side, stat)}`;
     }
+
     getPostureStatusValue(fighter: Player): string {
-        const type = fighter?.character?.bonusPosture?.type;
-        return type === PostureType.Attack ? '⚔️ Offensive' : type === PostureType.Defense ? '🛡️ Défensive' : '⏳ Neutre';
+        return utils.getPostureStatusValue(fighter);
     }
+
     shouldShowAttackAnnouncement(): boolean {
         return this.state.isAttackAnimationInProgress() && !!this.state.currentAttackerSocketId();
     }
+
     getAttackAnnouncementMessage(): string {
         return `${this.getFighterName(this.state.currentAttackerSocketId())} avance...`;
     }
+
     getFighterName(id: string | null): string {
-        if (!id) return 'Joueur';
-        const fighter = id === this.state.player()?.socketId ? this.state.player() : this.state.enemy();
-        return fighter?.character?.name ?? 'Joueur';
+        return utils.getFighterName(id, this.state.player(), this.state.enemy());
     }
+
     shouldShowPosturePanel(): boolean {
         return this.state.isChoosingPosture() && this.isPostureCountdownVisible() && !this.state.isRoundSequenceInProgress();
     }
+
     getPostureCountdownProgressPercent(): number {
         const max = this.gameViewService.combatPostureCountdownMax();
-        return max > 0 ? (this.getPostureCountdown() / max) * TO_PERCENT : 0;
+        return utils.getLifeProgressPercent(this.getPostureCountdown(), max);
     }
 }

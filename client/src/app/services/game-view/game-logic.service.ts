@@ -1,13 +1,14 @@
 import { Injectable } from '@angular/core';
 import { ActionHighlightType, ActionTileHighlight } from '@app/interfaces/isometric-interfaces';
-import { ICE_DEBUFF, NO_DEBUFF, SANCTUARY_BLOCK_SIZE, TEN } from '@app/services/game-view/game-view.constants';
+import { TEN } from '@app/services/game-view/game-view.constants';
 import { DIRECTION_OFFSETS } from '@common/direction';
 import { PlayerAction, TileItem, TileTexture } from '@common/enums';
-import { CombatResult } from '@common/interfaces/game-view';
 import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
 import { Tile } from '@common/tile';
 import { Vec2 } from '@common/vec2';
+import { getSanctuaryCanonicalInfo, getSanctuaryTargets } from './game-sanctuary.utils';
+import { getTileDebuff, expandSanctuaryPositions } from './game-lobby.utils';
 
 export interface TileClickContext {
     lobbyId: string;
@@ -142,37 +143,11 @@ export class GameLogicService {
             });
     }
 
-    findSanctuaryTopLeft(grid: Tile[][], x: number, y: number, item: TileItem): Vec2 {
-        let tlX = x;
-        let tlY = y;
-        while (grid[tlY - 1]?.[tlX]?.item === item) tlY--;
-        while (grid[tlY]?.[tlX - 1]?.item === item) tlX--;
-        return { x: tlX, y: tlY };
-    }
-
     getSanctuaryCanonicalInfo(
         pos: Vec2,
         context: { item: TileItem; grid: Tile[][]; currentSocketId: string | undefined; positions: Record<string, Vec2> },
     ): { canonicalPos: Vec2; isAdjacent: boolean } {
-        const { item, grid, currentSocketId, positions } = context;
-        const tl = this.findSanctuaryTopLeft(grid, pos.x, pos.y, item);
-        const myPos = currentSocketId ? positions[currentSocketId] : null;
-
-        if (!myPos) return { canonicalPos: tl, isAdjacent: false };
-
-        const isAdjacent = [{ x: tl.x, y: tl.y }, { x: tl.x + 1, y: tl.y }, { x: tl.x, y: tl.y + 1 }, { x: tl.x + 1, y: tl.y + 1 }].some((c) =>
-            Object.values(DIRECTION_OFFSETS).some((o) => myPos.x + o.x === c.x && myPos.y + o.y === c.y),
-        );
-
-        return { canonicalPos: tl, isAdjacent };
-    }
-
-    private addSanctuaryBlock(results: Vec2[], tl: Vec2): void {
-        for (let dy = 0; dy < SANCTUARY_BLOCK_SIZE; dy++) {
-            for (let dx = 0; dx < SANCTUARY_BLOCK_SIZE; dx++) {
-                results.push({ x: tl.x + dx, y: tl.y + dy });
-            }
-        }
+        return getSanctuaryCanonicalInfo(pos, context);
     }
 
     getSanctuaryTargets(
@@ -181,29 +156,7 @@ export class GameLogicService {
         grid: Tile[][],
         inactiveSanctuaries: Vec2[],
     ): Vec2[] {
-        if (!localId || !positions[localId]) return [];
-        const myPos = positions[localId];
-        const results: Vec2[] = [];
-        const visitedTopLeft = new Set<string>();
-        const adjacent = Object.values(DIRECTION_OFFSETS).map((offset) => ({ x: myPos.x + offset.x, y: myPos.y + offset.y }));
-
-        for (const pos of adjacent) {
-            const tile = grid[pos.y]?.[pos.x];
-            if (!tile?.item) continue;
-
-            const isSanctuary = tile.item === TileItem.HealingSanctuary || tile.item === TileItem.CombatSanctuary;
-            const isInactive = inactiveSanctuaries.some((s) => s.x === pos.x && s.y === pos.y);
-
-            if (isSanctuary && !isInactive) {
-                const tl = this.findSanctuaryTopLeft(grid, pos.x, pos.y, tile.item as TileItem);
-                const key = `${tl.x},${tl.y}`;
-                if (!visitedTopLeft.has(key)) {
-                    visitedTopLeft.add(key);
-                    this.addSanctuaryBlock(results, tl);
-                }
-            }
-        }
-        return results;
+        return getSanctuaryTargets(localId, positions, grid, inactiveSanctuaries);
     }
 
     getPlayerAtPosition(x: number, y: number, playerPositions: Record<string, Vec2>): string | null {
@@ -316,124 +269,11 @@ export class GameLogicService {
         );
     }
 
-    applyFlagPickup(lobby: Lobby, socketId: string, position?: Vec2): Lobby {
-        const updatedLobby = { ...lobby };
-        const player = updatedLobby.players.find((p) => p.socketId === socketId);
-        if (player) player.hasFlag = true;
-
-        if (position) {
-            updatedLobby.game.grid = updatedLobby.game.grid.map((row, y) =>
-                y === position.y ? row.map((tile, x) => (x === position.x ? { ...tile, item: null } : tile)) : row,
-            );
-        }
-        return updatedLobby;
-    }
-
-    toggleDoor(lobby: Lobby, position: Vec2): Lobby {
-        const updatedLobby = { ...lobby };
-        const tile = updatedLobby.game.grid[position.y][position.x];
-        tile.type = tile.type === TileTexture.DoorClosed ? TileTexture.DoorOpened : TileTexture.DoorClosed;
-        return updatedLobby;
-    }
-
-    updatePlayerStats(lobby: Lobby, playerStats: Player[]): Lobby {
-        const updatedLobby = { ...lobby };
-        updatedLobby.players = updatedLobby.players.map((p) => {
-            const stats = playerStats.find((s) => s.socketId === p.socketId);
-            return stats ? { ...p, ...stats } : p;
-        });
-        return updatedLobby;
-    }
-
-    removePlayerFromLobby(lobby: Lobby, socketId: string): Lobby {
-        const updatedLobby = { ...lobby };
-        updatedLobby.players = updatedLobby.players.map((p) =>
-            p.socketId === socketId ? { ...p, hasAbandonned: true } : p,
-        );
-        return updatedLobby;
-    }
-
     getTileDebuff(grid: Lobby['game']['grid'], pos: Vec2): 2 | 0 {
-        const tile = grid[pos.y]?.[pos.x];
-        if (!tile) return NO_DEBUFF;
-        return tile.type === TileTexture.Ice ? ICE_DEBUFF : NO_DEBUFF;
+        return getTileDebuff(grid, pos);
     }
 
     expandSanctuaryPositions(topLeftList: Vec2[]): Vec2[] {
-        const expanded: Vec2[] = [];
-        for (const tl of topLeftList) {
-            for (let dy = 0; dy < SANCTUARY_BLOCK_SIZE; dy++) {
-                for (let dx = 0; dx < SANCTUARY_BLOCK_SIZE; dx++) {
-                    expanded.push({ x: tl.x + dx, y: tl.y + dy });
-                }
-            }
-        }
-        return expanded;
-    }
-
-    processCombatResult(lobby: Lobby, data: CombatResult): Lobby {
-        let updatedLobby = this.updateLobbyFromCombatResult(lobby, data);
-        updatedLobby = this.updateDroppedFlagFromCombatResult(updatedLobby, data);
-        return updatedLobby;
-    }
-
-    processCombatResultWithoutLife(lobby: Lobby, data: CombatResult): Lobby {
-        let updatedLobby = this.updateLobbyFromCombatResult(lobby, data, false);
-        updatedLobby = this.updateDroppedFlagFromCombatResult(updatedLobby, data);
-        return updatedLobby;
-    }
-
-    updateLobbyFromCombatResult(lobby: Lobby, result: CombatResult, shouldUpdateLife: boolean = true): Lobby {
-        const lifeBySocketId = shouldUpdateLife
-            ? new Map<string, number>([
-                [result.attacker.socketId, result.attacker.lifeAfter],
-                [result.defender.socketId, result.defender.lifeAfter],
-            ])
-            : new Map<string, number>();
-
-        const updatedPlayers = lobby.players.map((player) => {
-            const nextLife = lifeBySocketId.get(player.socketId);
-            const shouldDropFlag = Boolean(result.winnerId) && player.socketId === result.loserId;
-            const shouldUpdateLife = nextLife !== undefined;
-
-            if (!shouldDropFlag && !shouldUpdateLife) return player;
-
-            return {
-                ...player,
-                ...(shouldDropFlag ? { hasFlag: false } : {}),
-                ...(shouldUpdateLife
-                    ? {
-                        character: {
-                            ...player.character,
-                            life: Math.max(0, nextLife),
-                        },
-                    }
-                    : {}),
-            };
-        });
-
-        return {
-            ...lobby,
-            players: updatedPlayers,
-        };
-    }
-
-    updateDroppedFlagFromCombatResult(lobby: Lobby, result: CombatResult): Lobby {
-        if (!result.winnerId || !result.droppedFlagPosition) return lobby;
-
-        const { x, y } = result.droppedFlagPosition;
-        if (!lobby.game.grid[y]?.[x]) return lobby;
-
-        const updatedGrid = lobby.game.grid.map((row, rowIndex) =>
-            rowIndex === y ? row.map((tile, colIndex) => (colIndex === x ? { ...tile, item: TileItem.Flag } : tile)) : row,
-        );
-
-        return {
-            ...lobby,
-            game: {
-                ...lobby.game,
-                grid: updatedGrid,
-            },
-        };
+        return expandSanctuaryPositions(topLeftList);
     }
 }

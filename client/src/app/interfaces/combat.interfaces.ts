@@ -1,7 +1,11 @@
 import { PostureType } from '@common/enums';
-import { CombatResult, CombatRoundTimelineData } from '@common/interfaces/game-view';
+import { CombatFighterResult, CombatResult, CombatRoundTimelineData } from '@common/interfaces/game-view';
 import { Lobby } from '@common/lobby';
 import { Vec2 } from '@common/vec2';
+import type { CombatStateService } from '@app/services/combat/combat-state.service';
+import type { CombatAnimationService } from '@app/services/combat/combat-animation.service';
+import type { CombatUiService } from '@app/services/combat/combat-ui.service';
+import type { GameViewService } from '@app/services/game-view/game-view.service';
 
 export type TypePosture = PostureType | null;
 export type FighterSide = 'player' | 'enemy';
@@ -112,3 +116,27 @@ export interface CombatListenerDependencies {
     updatePlayerPositions: (updater: (positions: Record<string, Vec2>) => Record<string, Vec2>) => void;
     setFlagTaken: (value: boolean) => void;
 }
+
+export interface CombatMessageContext {
+    winnerIsLocal: boolean;
+    loserIsLocal: boolean;
+    winnerDisplayName: string;
+    loserDisplayName: string;
+}
+
+export interface RoundLifeResults {
+    playerLife: number;
+    enemyLife: number;
+    playerDamage: number;
+    enemyDamage: number;
+    local: CombatFighterResult;
+    remote: CombatFighterResult;
+}
+
+export interface CombatSequenceDeps {
+    state: CombatStateService;
+    animation: CombatAnimationService;
+    ui: CombatUiService;
+    gameViewService: GameViewService;
+}
+

@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { Injectable, signal } from '@angular/core';
 import { CombatEndPopupData, CombatListenerDependencies } from '@app/interfaces/combat.interfaces';
 import { DEFAULT_COMBAT_POSTURE, ONE_SECOND_DELAY } from '@app/services/game-view/game-view.constants';
@@ -17,10 +16,9 @@ import {
     PostureReceivedData,
 } from '@common/interfaces/game-view';
 import { JoinGameEvents } from '@common/join.gateway.events';
-import { Lobby } from '@common/lobby';
 import { Player } from '@common/player';
-import { Vec2 } from '@common/vec2';
-import { GameLogicService } from './game-logic.service';
+import { processCombatResult, processCombatResultWithoutLife } from './game-lobby.utils';
+import { buildCombatEndedMessage, buildCombatStartData } from './game-view-combat.utils';
 
 @Injectable({
     providedIn: 'root',
@@ -38,7 +36,6 @@ export class GameViewCombatService {
     readonly lastCombatRoundResolved = signal<CombatRoundResolvedData | null>(null);
     readonly combatEndPopup = signal<CombatEndPopupData | null>(null);
 
-    constructor(private readonly gameLogicService: GameLogicService) {}
     private webSocketService: WebSocketService | null = null;
     private namespace: SocketNamespace | null = null;
     private listenersRegistered = false;
@@ -104,8 +101,8 @@ export class GameViewCombatService {
         dependencies.updateGameLobby((lobby) => {
             if (!lobby) return lobby;
             return isLocalParticipant
-                ? this.gameLogicService.processCombatResultWithoutLife(lobby, data)
-                : this.gameLogicService.processCombatResult(lobby, data);
+                ? processCombatResultWithoutLife(lobby, data)
+                : processCombatResult(lobby, data);
         });
 
         if (data.attacker.newPosition || data.defender.newPosition) {
@@ -170,79 +167,12 @@ export class GameViewCombatService {
 
     handleCombatEnded(data: CombatEndedData, players: Player[], localId: string | undefined): void {
         if (!this.isLocalCombatEvent(data, localId)) return;
-        const message = this.buildCombatEndedMessage(data, players, localId);
+        const message = buildCombatEndedMessage(data, players, localId);
         this.showCombatEndedPopup(message);
     }
 
     private isLocalCombatEvent(data: CombatEndedData, localId: string | undefined): boolean {
         return !!localId && (localId === data.attackerSocketId || localId === data.defenderSocketId);
-    }
-
-    private buildCombatEndedMessage(data: CombatEndedData, players: Player[], localId: string | undefined): string {
-        if (data.attackerKilled && data.defenderKilled) {
-            return 'Double K.O. Aucun gagnant du combat.';
-        }
-
-        const messageContext = this.buildCombatEndedMessageContext(data, players, localId);
-        if (data.reason === 'abandon') {
-            return this.buildAbandonMessage(messageContext);
-        }
-
-        if (data.winnerId) {
-            return this.buildDeathMessage(messageContext);
-        }
-
-        return 'Combat terminé.';
-    }
-
-    private buildCombatEndedMessageContext(data: CombatEndedData, players: Player[], localId: string | undefined) {
-        const attackerName = this.getCombatantName(players, data.attackerSocketId, 'Attaquant');
-        const defenderName = this.getCombatantName(players, data.defenderSocketId, 'Défenseur');
-        const winnerName = data.winnerId ? this.getCombatantName(players, data.winnerId, 'Un joueur') : 'Un joueur';
-        const loserSocketId = this.getLoserSocketId(data);
-        const loserName = loserSocketId === data.attackerSocketId ? attackerName : defenderName;
-        const winnerIsLocal = !!localId && data.winnerId === localId;
-        const loserIsLocal = !!localId && loserSocketId === localId;
-
-        return {
-            winnerIsLocal,
-            loserIsLocal,
-            winnerDisplayName: winnerIsLocal ? 'Vous' : winnerName,
-            loserDisplayName: loserIsLocal ? 'Vous' : loserName,
-        };
-    }
-
-    private getLoserSocketId(data: CombatEndedData): string | null {
-        if (data.winnerId === data.attackerSocketId) return data.defenderSocketId;
-        if (data.winnerId === data.defenderSocketId) return data.attackerSocketId;
-        return null;
-    }
-
-    private buildAbandonMessage(context: {
-        winnerIsLocal: boolean;
-        loserIsLocal: boolean;
-        winnerDisplayName: string;
-        loserDisplayName: string;
-    }): string {
-        const abandonMessage = context.loserIsLocal ? 'Vous avez abandonné.' : `${context.loserDisplayName} a abandonné.`;
-        const winnerMessage = context.winnerIsLocal ? 'Vous gagnez le combat.' : `${context.winnerDisplayName} gagne le combat.`;
-        return `${abandonMessage} ${winnerMessage}`;
-    }
-
-    private buildDeathMessage(context: {
-        winnerIsLocal: boolean;
-        loserIsLocal: boolean;
-        winnerDisplayName: string;
-        loserDisplayName: string;
-    }): string {
-        const deathMessage = context.loserIsLocal ? 'Vous êtes mort.' : `${context.loserDisplayName} est mort.`;
-        const winnerMessage = context.winnerIsLocal ? 'Vous gagnez le combat.' : `${context.winnerDisplayName} gagne le combat.`;
-        return `${deathMessage} ${winnerMessage}`;
-    }
-
-    private getCombatantName(players: Player[], socketId: string | null, fallback: string): string {
-        if (!socketId) return fallback;
-        return players.find((player) => player.socketId === socketId)?.character.name ?? fallback;
     }
 
     private showCombatEndedPopup(message: string): void {
@@ -272,7 +202,9 @@ export class GameViewCombatService {
             ? data
             : { player: data.enemy, enemy: data.player, roomId: data.roomId };
 
-        const normalizedCombatData = this.buildCombatStartData(localPlayerData, dependencies);
+        const playerPositions = dependencies.getPlayerPositions();
+        const gameGrid = dependencies.getGameLobby()?.game.grid;
+        const normalizedCombatData = buildCombatStartData(localPlayerData, playerPositions, gameGrid);
 
         this.combatInitiatorName.set(data.player.character.name);
         this.isCombatStarted.set(true);
@@ -281,59 +213,6 @@ export class GameViewCombatService {
         this.combatPostureCountdown.set(0);
         this.combatPostureCountdownMax.set(0);
         this.fighters.set(normalizedCombatData);
-    }
-
-    private buildCombatStartData(
-        localPlayerData: CombatStartedData,
-        dependencies: CombatListenerDependencies,
-    ): CombatStartedData {
-        const playerPositions = dependencies.getPlayerPositions();
-        const gameGrid = dependencies.getGameLobby()?.game.grid;
-
-        const playerDebuff = this.resolveCombatStartIceDebuff(
-            localPlayerData.player.socketId,
-            localPlayerData.player.character.debuf,
-            playerPositions,
-            gameGrid,
-        );
-
-        const enemyDebuff = this.resolveCombatStartIceDebuff(
-            localPlayerData.enemy.socketId,
-            localPlayerData.enemy.character.debuf,
-            playerPositions,
-            gameGrid,
-        );
-
-        return {
-            roomId: localPlayerData.roomId,
-            player: {
-                ...localPlayerData.player,
-                character: {
-                    ...localPlayerData.player.character,
-                    bonusPosture: { ...DEFAULT_COMBAT_POSTURE },
-                    debuf: playerDebuff,
-                },
-            },
-            enemy: {
-                ...localPlayerData.enemy,
-                character: {
-                    ...localPlayerData.enemy.character,
-                    bonusPosture: { ...DEFAULT_COMBAT_POSTURE },
-                    debuf: enemyDebuff,
-                },
-            },
-        };
-    }
-
-    private resolveCombatStartIceDebuff(
-        socketId: string,
-        fallbackDebuff: Debuf | undefined,
-        playerPositions: Record<string, Vec2>,
-        gameGrid: Lobby['game']['grid'] | undefined,
-    ): Debuf {
-        const position = playerPositions[socketId];
-        if (!position || !gameGrid) return fallbackDebuff ?? 0;
-        return this.gameLogicService.getTileDebuff(gameGrid, position);
     }
 
     private registerCombatRoundStartedListener(): void {
