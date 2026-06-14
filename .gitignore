@@ -10,3 +10,14 @@ coverage/
 
 #Node Modules
 /node_modules
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Time tracking
+.ottotime
+
+# Package lock files
+package-lock.json

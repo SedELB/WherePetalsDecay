@@ -33,4 +33,14 @@ lerna-debug.log*
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
-!package-lock.json
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Time tracking
+.ottotime
+
+# Package lock files
+package-lock.json
