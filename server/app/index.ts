@@ -10,8 +10,8 @@ const bootstrap = async () => {
     app.enableCors();
 
     const config = new DocumentBuilder()
-        .setTitle('Cadriciel Serveur')
-        .setDescription('Serveur du projet de base pour le cours de LOG2995')
+        .setTitle('Where Petals Decay Online')
+        .setDescription('Multiplayer RPG web app')
         .setVersion('1.0.0')
         .build();
     const document = SwaggerModule.createDocument(app, config);
