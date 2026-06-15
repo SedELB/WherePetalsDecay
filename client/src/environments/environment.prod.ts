@@ -1,4 +1,4 @@
 export const environment = {
     production: true,
-    serverUrl: '',
+    serverUrl: 'wherepetalsdecay-production.up.railway.app',
 };
