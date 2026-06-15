@@ -1,3 +1,5 @@
 {
-  "provider": "node"
+  "packages": [
+    "nodejs"
+  ]
 }
