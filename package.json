@@ -1,0 +1,7 @@
+{
+  "name": "where-petals-decay-root",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}
