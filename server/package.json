@@ -8,7 +8,7 @@
         "build": "rimraf out && nest build",
         "format": "prettier --config ../.prettierrc.yaml --write \"app/**/*\"",
         "start": "rimraf out && nest start --watch",
-        "start:prod": "node out/server-nestjs/app/index.js",
+        "start:prod": "node out/server/app/index.js",
         "start:debug": "rimraf out && nest start --watch --debug",
         "lint": "eslint --config eslint.config.mjs \"./app/**/*.ts\"",
         "lint:fix": "eslint --config eslint.config.mjs \"./app/**/*.ts\" --fix",
@@ -61,7 +61,7 @@
         "typescript": "5.9.2"
     },
     "_moduleAliases": {
-        "@app": "out/server-nestjs/app",
+        "@app": "out/server/app",
         "@common": "out/common"
     },
     "jest": {
