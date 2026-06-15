@@ -1,5 +1,5 @@
 import { AppModule } from '@app/app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
@@ -21,7 +21,9 @@ const bootstrap = async () => {
     // Railway route le trafic vers le conteneur via son réseau privé IPv6 :
     // il faut écouter sur '::' (wildcard IPv6, dual-stack => IPv6 + IPv4),
     // sinon ('0.0.0.0' = IPv4 only) le proxy se prend un "connection refused" -> 502.
-    await app.listen(process.env.PORT || 3000, '::');
+    const port = process.env.PORT || 3000;
+    await app.listen(port, '::');
+    Logger.log(`>>> LISTENING host=:: port=${port} url=${await app.getUrl()}`, 'Bootstrap');
 };
 
 bootstrap();
