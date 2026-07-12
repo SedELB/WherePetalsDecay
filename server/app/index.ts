@@ -23,13 +23,8 @@ const bootstrap = async () => {
     // Railway route le trafic vers le conteneur via son réseau privé IPv6 :
     // il faut écouter sur '::' (wildcard IPv6, dual-stack => IPv6 + IPv4),
     // sinon ('0.0.0.0' = IPv4 only) le proxy se prend un "connection refused" -> 502.
-<<<<<<< Updated upstream
-    const port = process.env.PORT || DEFAULT_PORT;
-    await app.listen(port, '::');
-=======
     const port = process.env.PORT || 3000;
     await app.listen(port, '0.0.0.0');
->>>>>>> Stashed changes
     Logger.log(`>>> LISTENING host=:: port=${port} url=${await app.getUrl()}`, 'Bootstrap');
 };
 
