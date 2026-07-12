@@ -1,8 +1,9 @@
 @use 'sass:color';
 
+$red: #8a2f33;
 $text-color: white;
 $green-button: #78bc75;
-$red-button: #8A2F33;
+$red-button: $red;
 $frame-color: #242153;
 $card-background: rgba(138, 47, 51, 0.15);
 $transparent-background: rgba(0, 0, 0, 0.5);
@@ -25,8 +26,13 @@ body {
 }
 body {
     margin: 0;
-    font-family: "PT Sans", sans-serif;
+    font-family: 'PT Sans', sans-serif;
     overflow: hidden;
+}
+
+::selection {
+    background-color: $red-button;
+    color: black;
 }
 
 .list-container {
@@ -63,18 +69,17 @@ body {
     background: rgba(0, 0, 0, 0.85);
     border: 1px solid rgba(240, 198, 116, 0.2);
     border-radius: 0.5rem;
-    font-family: "PT Sans", sans-serif;
+    font-family: 'PT Sans', sans-serif;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
 
-    .swal2-title { 
-        color: #eddea7; 
-        font-family: "PT Sans", sans-serif;
+    .swal2-title {
+        color: #eddea7;
+        font-family: 'PT Sans', sans-serif;
     }
-    .swal2-html-container { 
-        color: rgba(237, 222, 167, 0.8); 
+    .swal2-html-container {
+        color: rgba(237, 222, 167, 0.8);
     }
 }
-
 
 .swal2-popup.swal2-toast {
     padding: 0.6rem 1rem;
@@ -89,7 +94,7 @@ body {
         font-size: 1rem;
         margin: 0;
         color: #eddea7;
-        font-family: "PT Sans", sans-serif;
+        font-family: 'PT Sans', sans-serif;
         font-weight: 700;
     }
 
@@ -98,7 +103,6 @@ body {
         height: 0.125rem;
     }
 }
-
 
 .swal2-popup:not(.swal2-toast) {
     padding: 2.5rem;

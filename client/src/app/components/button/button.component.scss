@@ -283,7 +283,8 @@
         right: 0.75rem;
         fill: white;
         filter: invert(1);
-        transition: right 0.3s ease;
+        transition: right 0.3s ease, transform 0.3s ease;
+
     }
 
     &:hover:not(:disabled) {
@@ -293,7 +294,6 @@
         .eye-icon {
             right: 50%;
             transform: translateX(50%);
-            transition: right 0.3s ease;
         }
     }
 

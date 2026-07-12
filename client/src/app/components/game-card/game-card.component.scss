@@ -1,4 +1,4 @@
-@use "@src/styles.scss" as *;
+@use '@src/styles.scss' as *;
 
 .gameCard {
     background: rgba(0, 0, 0, 0.7);
@@ -39,7 +39,7 @@
         width: fit-content;
         z-index: 1;
         padding: 0.2rem 0;
-        font-family: "PT Sans", sans-serif;
+        font-family: 'PT Sans', sans-serif;
     }
 }
 
@@ -47,7 +47,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 1.5rem;
-    
+
     .stat-item {
         display: flex;
         flex-direction: column;
@@ -69,18 +69,19 @@
 }
 
 .card-buttons {
-    display: flex;
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
     margin-top: 0.5rem;
     width: 100%;
 
-    &:has(> :only-child),
-    & > :only-child {
-        justify-content: flex-end;
-        margin-left: auto;
+    ::ng-deep > :first-child:not(:only-child) {
+        margin-right: 3rem;
+    }
+
+    ::ng-deep > :last-child {
+        grid-column: 4;
+        justify-self: end;
     }
 }
 
@@ -112,7 +113,7 @@
     word-wrap: break-word;
     overflow-wrap: break-word;
     line-height: 1.5;
-    font-family: "PT Sans", sans-serif;
+    font-family: 'PT Sans', sans-serif;
 }
 
 .thumbnail {
