@@ -3,7 +3,7 @@
 .container {
     height: 100vh;
     overflow: hidden;
-    padding: 2rem;
+    padding: 1.5rem 2rem;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -135,14 +135,14 @@
 }
 
 .att-title {
-    margin-top: 1.875rem;
+    margin-top: 0;
 }
 
 .button-form-group { 
     display: flex;
     flex-direction: row;
     justify-content: space-around;
-    align-items: center;
+    align-items: flex-start;
 }
 
 .avatar-grid {
